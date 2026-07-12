@@ -114,10 +114,15 @@
   /* -- Type roles — semantic tokens composing the primitives into four
      role-based building blocks (headline, title, label, body). Each role
      covers four dimensions: size, weight, leading (line-height), and
-     tracking (letter-spacing). -- */
+     tracking (letter-spacing).
+
+     Sizes are stepped rem, never clamp() with a vw term: a vw component in
+     font-size doesn't track browser zoom or user font-size preferences
+     (WCAG 1.4.4 Resize Text). Each role steps down through the width tiers
+     below this block. -- */
 
   /* Headline — the biggest thing on a page; one per page (h1). */
-  --headline-size:     clamp(var(--font-3xl), 0.8rem + 3vw, var(--font-8xl));
+  --headline-size:     var(--font-8xl);  /* 56px · 48px ≤1439 · 28px ≤959 */
   --headline-weight:   400;
   --headline-leading:  var(--line-height-s);
   --headline-tracking: -0.04em;
@@ -125,12 +130,12 @@
 
   /* Subline — sub-heading scale, sits between title and body. Independent
      of --text-size-l so it can be tuned without dragging modifier text. */
-  --subline-size:    clamp(var(--font-l), 0.9rem + 0.6vw, var(--font-2xl));
+  --subline-size:    var(--font-2xl);    /* 24px · 20px ≤1439 */
   --subline-weight:  300;
 
 
   /* Title — section heads and recurring labels within a page (h2). */
-  --title-size:     clamp(var(--font-2xl), 0.8rem + 2vw, var(--font-6xl));
+  --title-size:     var(--font-6xl);     /* 40px · 36px ≤1439 · 24px ≤959 */
   --title-weight:   400;
   --title-leading:  var(--line-height-m);
   --title-tracking: -0.04em;
@@ -143,18 +148,21 @@
   --label-leading:  var(--line-height-s);
   --label-tracking: var(--letter-spacing-m);
 
-  /* Body — running text */
-  --body-size:     clamp(var(--font-s), 0.7rem + 0.35vw, var(--font-m));
+  /* Body — running text. One size at every width: the old fluid ceiling
+     (18px) only engaged beyond ~1900px viewports, so 16px is the honest
+     static value. */
+  --body-size:     var(--font-s);
   --body-weight:   var(--font-weight-regular);
   --body-leading:  var(--line-height-xl);
   --body-tracking: 0;
 
-  /* Text size utility scale — fluid tokens consumed by .text-size-* utilities.
+  /* Text size utility scale — stepped tokens consumed by .text-size-* utilities.
      Use these on any selector when you want a utility-style size without the class. */
-  --text-size-xl: clamp(var(--font-3xl), 1rem + 0.8vw, var(--font-5xl));
-  --text-size-l:  clamp(var(--font-l),   1rem + 0.4vw, var(--font-2xl));
+  --text-size-xl: var(--font-3xl);       /* 28px · 24px ≤959 */
+  --text-size-l:  var(--font-l);         /* 20px */
   --text-size-m:  var(--body-size);
-  --text-size-s:  clamp(var(--font-xs), 0.8rem + 0.15vw, var(--font-s));
+  --text-size-s:  var(--font-xs);        /* 14px — the old fluid ceiling (16px)
+                                            only engaged beyond ~1400px */
   --text-size-xs: var(--font-xs);
 
   /* Icon Size */
@@ -162,11 +170,19 @@
 
 }
 
-/* Mobile typography overrides — at ≤959 the semantic tokens drop their
-   clamp() interpolation in favour of static rem values. Tablet uses
-   mobile typography because the layout is also single-column at that
-   width (see [data-grid] collapse at the same breakpoint). One block
-   here replaces ~14 scattered @media font-size overrides in studio.css.
+/* Laptop typography tier — the top-of-scale sizes are reserved for wide
+   screens; below 1440 the three heading roles step down one rung. */
+@media (max-width: 1439px) {
+  :root {
+    --headline-size:  var(--font-7xl);   /* 48px */
+    --title-size:     var(--font-5xl);   /* 36px */
+    --subline-size:   var(--font-l);     /* 20px */
+  }
+}
+
+/* Mobile typography tier — static rem values for the single-column range.
+   Tablet uses mobile typography because the layout is also single-column
+   at that width (see [data-grid] collapse at the same breakpoint).
 
    --label-size is bumped from --font-2xs (12px) to --font-xs (14px) on
    mobile — 12px is below the practitioner floor for body-adjacent text
@@ -176,14 +192,12 @@
     --headline-size:  var(--font-3xl);   /* 28px */
     --title-size:     var(--font-2xl);   /* 24px */
     --subline-size:   var(--font-l);     /* 20px */
-    --body-size:      var(--font-s);     /* 16px */
     --label-size:     var(--font-xs);    /* 14px (a11y floor) */
 
     --text-size-xl:   var(--font-2xl);   /* 24px */
     --text-size-l:    var(--font-l);     /* 20px */
-    --text-size-s:    var(--font-xs);    /* 14px */
-    --text-size-xs:   var(--font-xs);    /* 14px */
-    /* --text-size-m inherits from --body-size, no override needed */
+    /* --body-size/--text-size-m (16px) and --text-size-s/-xs (14px)
+       hold their size at every width */
   }
 }
 
@@ -265,7 +279,9 @@
   --text-primary: var(--off-black);
   --text-secondary: var(--neutral-700);
   --text-plain: var(--black);
-  --text-faded: var(--black-alpha-50);
+  /* a11y: alpha-60 → 5.7:1 on white; alpha-50 computed to 3.9:1, below the
+     4.5:1 WCAG AA minimum for the body copy this token is used on */
+  --text-faded: var(--black-alpha-60);
   --text-accent: var(--blue);
   --text-link: var(--text-accent);
   --text-inverted: var(--off-white);
@@ -380,7 +396,8 @@
   --text-primary: #e8e6e3;
   --text-secondary: #a8a5a2;
   --text-plain: #f0eeeb;
-  --text-faded: rgba(255, 255, 255, 0.45);
+  /* a11y: 0.5 → ~5.0:1 on --neutral-900; 0.45 was 4.4:1, marginal for AA */
+  --text-faded: rgba(255, 255, 255, 0.5);
   --text-accent: var(--yellow);
   --text-link: var(--text-accent);
   --text-inverted: #1a1a1a;
@@ -441,7 +458,7 @@
     --text-primary: #e8e6e3;
     --text-secondary: #a8a5a2;
     --text-plain: #f0eeeb;
-    --text-faded: rgba(255, 255, 255, 0.45);
+    --text-faded: rgba(255, 255, 255, 0.5); /* AA — see [data-theme="dark"] above */
     --text-accent: var(--yellow);
     --text-link: var(--text-accent);
     --text-inverted: #1a1a1a;
@@ -649,6 +666,10 @@
   /* slow start, slow end with long tail. for entrances. */
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   /* symmetric. for swaps and continuous motion. */
+  --ease-emphasized: cubic-bezier(0.86, 0, 0.07, 1);
+  /* steeper symmetric curve — near-still start and end, fast middle.
+     for large layout shifts that should feel decisive (panel collapse,
+     sidebar toggle, stage transforms). */
 
   /* -- Duration primitives -- */
   --duration-2xs: 100ms;
@@ -665,22 +686,26 @@
   --duration-7xl: 4000ms;
   --duration-8xl: 6000ms;
 
+  /* -- Stagger offset — per-item delay step for sequenced groups (list
+     items, grid cards). A delay increment, not an animation duration. -- */
+  --duration-stagger: 30ms;
+
 
   /* -- Page-level semantic motion -- */
   --motion-page-open-duration: var(--duration-xl);
-  /* 800ms */
+  /* 1200ms */
   --motion-page-open-easing: var(--ease-in-out);
 
   --motion-page-close-duration: var(--duration-xl);
-  /* 600ms */
+  /* 1200ms */
   --motion-page-close-easing: var(--ease-in-out);
 
   --motion-page-swap-duration: var(--duration-xl);
-  /* 600ms */
+  /* 1200ms */
   --motion-page-swap-easing: var(--ease-in-out);
 
   --motion-page-fade-duration: var(--duration-m);
-  /* 400ms */
+  /* 600ms */
   --motion-page-fade-easing: var(--ease-in-out);
 }
 
@@ -1515,15 +1540,8 @@ body {
 }
 
 /* -- Headings --
-   Element defaults pull semantic display tokens. h1 and h2 share the
-   headline scale (hero size); h3 takes title (section heads); h4 takes
-   subline (subheads). Display classes like .page-headline / .page-title
-   still override per-page, but plain markdown <h2>/<h3>/<h4> in article
-   and case-study bodies now read at the same scale as their class'd
-   counterparts.
-
-   h5 and h6 keep the older editorial scale — used only deep inside body
-   copy and unlikely to need hero treatment. */
+   Shared base style for h1–h6: weight, tracking, margins, title family.
+   Sizes follow in the editorial scale below. */
 h1,
 h2,
 h3,
@@ -1539,35 +1557,45 @@ h6 {
 
 }
 
-/* Progressive editorial scale. Each level's floor + ceiling is a foundation
-   --font-* primitive, one step up from the next level. Mobile = the clamp
-   floor (vw slack too small to push above min at ≤959px viewports). Display
-   contexts use .text-headline / .page-headline / .article-headline (still
-   driven by --headline-size + --title-size) for hero-scale type. */
+/* Progressive editorial scale. Each level is a foundation --font-*
+   primitive, one step up from the next level, stepped at the 959px
+   breakpoint rather than clamp() so type tracks browser zoom and user
+   font-size (WCAG 1.4.4). For hero-scale display type, set font-size to
+   --headline-size / --title-size on your own display class instead of
+   restyling the elements. */
 h1 {
-  font-size: clamp(var(--font-5xl), 1rem + 2.5vw, var(--font-7xl));
+  font-size: var(--font-7xl);  /* 48px · 36px ≤959 */
   line-height: var(--line-height-m);
 }
 
 h2 {
-  font-size: clamp(var(--font-4xl), 1rem + 2vw, var(--font-6xl));
+  font-size: var(--font-6xl);  /* 40px · 32px ≤959 */
 }
 
 h3 {
-  font-size: clamp(var(--font-3xl), 1rem + 1.5vw, var(--font-5xl));
+  font-size: var(--font-5xl);  /* 36px · 28px ≤959 */
 }
 
 h4 {
-  font-size: clamp(var(--font-2xl), 1rem + 1.25vw, var(--font-4xl));
+  font-size: var(--font-4xl);  /* 32px · 24px ≤959 */
 }
 
 h5 {
-  font-size: clamp(var(--font-xl), 1rem + 1vw, var(--font-3xl));
+  font-size: var(--font-3xl);  /* 28px · 22px ≤959 */
 }
 
 h6 {
-  font-size: clamp(var(--font-l), 1rem + 0.75vw, var(--font-2xl));
+  font-size: var(--font-2xl);  /* 24px · 20px ≤959 */
   line-height: var(--line-height-l);
+}
+
+@media (max-width: 959px) {
+  h1 { font-size: var(--font-5xl); }
+  h2 { font-size: var(--font-4xl); }
+  h3 { font-size: var(--font-3xl); }
+  h4 { font-size: var(--font-2xl); }
+  h5 { font-size: var(--font-xl); }
+  h6 { font-size: var(--font-l); }
 }
 
 /* -- Paragraphs -- */
@@ -1647,6 +1675,21 @@ ul ol ol,
 ol ul ol,
 ol ol ol {
   list-style-type: lower-alpha;
+}
+
+/* GFM task lists (- [ ]) render a checkbox inside the list item. Drop the
+   disc bullet so the checkbox is the only marker, and pull the list flush
+   since there's no bullet to indent against. */
+li:has(> input[type="checkbox"]) {
+  list-style: none;
+}
+
+ul:has(> li > input[type="checkbox"]) {
+  padding-left: 0;
+}
+
+li > input[type="checkbox"] {
+  margin-right: var(--space-xs);
 }
 
 /* List items with paragraphs */
@@ -2387,19 +2430,29 @@ details .disclosure-content {
 /* ------ 16. BADGE ------ */
 
 .badge {
+  --badge-case: uppercase;
+  --badge-tracking: var(--letter-spacing-l);
+
   display: inline-flex;
   align-items: center;
   font-family: var(--font-tertiary);
   font-size: var(--font-2xs);
   font-weight: var(--font-weight-bold);
-  text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-l);
+  text-transform: var(--badge-case);
+  letter-spacing: var(--badge-tracking);
   padding: var(--space-2xs) var(--space-s);
   border-radius: 0;
   background-color: var(--background-darker);
   color: var(--text-primary);
   white-space: nowrap;
   line-height: var(--line-height-m);
+}
+
+/* Sentence-case variant — customize case via the tokens above or this
+   attribute, never by overriding the class (Layer Rule 3) */
+.badge[data-case="none"] {
+  --badge-case: none;
+  --badge-tracking: normal;
 }
 
 .badge[data-color="success"],
