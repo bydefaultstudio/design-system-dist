@@ -1,0 +1,7 @@
+{
+  "name": "@bydefaultstudio/design-system",
+  "version": "1.0.2",
+  "description": "By Default design system framework CSS. Neutral engine defaults, brand applied per project via theme.css overrides.",
+  "style": "dist/design-system.css",
+  "license": "UNLICENSED"
+}

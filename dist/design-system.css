@@ -1,0 +1,3760 @@
+/* ─────────────────────────────
+   DESIGN SYSTEM FRAMEWORK
+   ───────────────────────────── */
+
+
+/* ------ 1. BRAND TOKENS ------ */
+
+/*
+ * Neutral engine defaults. A brand expresses itself by overriding these
+ * primitives in its theme.css (cms/brands/<brand>/assets/theme.css);
+ * the §2 semantic layer resolves through them, so a theme never restates
+ * semantics it can reach through a primitive. Instance 0 (By Default)
+ * loads cms/brands/bydefault/assets/theme.css like any other brand.
+ * Neutralize values here, never delete token names: core components and
+ * docs-site.css consume them by name.
+ */
+
+:root {
+  /* -- Typography (neutral system stacks) -- */
+  --font-primary: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-secondary: Georgia, "Times New Roman", serif;
+  --font-tertiary: system-ui, sans-serif;
+  --font-quaternary: ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Accent + semantic aliases. Editorial + code alias the existing slots
+     so call sites can stay role-named even if the underlying face is
+     swapped later. */
+  --font-display:   system-ui, sans-serif;
+  --font-playful:   system-ui, sans-serif;
+  --font-script:    cursive;
+  --font-editorial: var(--font-secondary);
+  --font-code:      var(--font-quaternary);
+
+  /* -- Palette -- */
+  --off-white: var(--neutral-50);
+  --warm-white: var(--neutral-100);
+  --warm-black: var(--neutral-950);
+  --off-black: var(--neutral-900);
+
+  /* -- Accent colours (generic, semantically hued) -- */
+  --red-lighter: #FEE2E2;
+  --red-light: #FECACA;
+  --red: #DC2626;
+  --red-dark: #7F1D1D;
+  --blue-lighter: #DBEAFE;
+  --blue-light: #BFDBFE;
+  --blue: #2563EB;
+  --blue-dark: #1E3A8A;
+  --yellow-lighter: #FEF3C7;
+  --yellow-light: #FDE68A;
+  --yellow: #D97706;
+  --yellow-dark: #78350F;
+  --green-lighter: #DCFCE7;
+  --green-light: #BBF7D0;
+  --green: #16A34A;
+  --green-dark: #14532D;
+  --purple-lighter: #F3E8FF;
+  --purple-light: #E9D5FF;
+  --purple: #9333EA;
+  --purple-dark: #581C87;
+  /* -- Base font sizes (rem-based, progressive step scale: +2px body, +4px heading, +8px display) -- */
+  --font-3xs: 0.625rem;  /* 10px */
+  --font-2xs: 0.75rem;   /* 12px */
+  --font-xs: 0.875rem;   /* 14px */
+  --font-s: 1rem;        /* 16px */
+  --font-m: 1.125rem;    /* 18px */
+  --font-l: 1.25rem;     /* 20px */
+  --font-xl: 1.375rem;   /* 22px */
+  --font-2xl: 1.5rem;    /* 24px */
+  --font-3xl: 1.75rem;   /* 28px */
+  --font-4xl: 2rem;      /* 32px */
+  --font-5xl: 2.25rem;   /* 36px */
+  --font-6xl: 2.5rem;    /* 40px */
+  --font-7xl: 3rem;      /* 48px */
+  --font-8xl: 3.5rem;    /* 56px */
+  --font-9xl: 4rem;      /* 64px */
+  --font-10xl: 4.5rem;   /* 72px */
+
+
+  /* -- UI font sizes -- */
+
+  /* -- Line height tokens -- */
+  --line-height-xs: 0.7;
+  --line-height-s: 1;
+  --line-height-m: 1.2;
+  --line-height-l: 1.4;
+  --line-height-xl: 1.6;
+  --line-height-2xl: 1.8;
+
+  /* -- Font weight tokens -- */
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-book: 450;
+  --font-weight-medium: 500;
+  --font-weight-semi-bold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extra-bold: 800;
+  --font-weight-black: 900;
+
+  /* -- Font width tokens (wdth axis, applied via font-stretch) -- */
+  --font-condensed: 75%;
+  --font-narrow:    87.5%;
+  --font-normal:    100%;
+  --font-wide:      112.5%;
+  --font-expanded:  125%;
+
+  /* -- Letter spacing tokens (em-based for proportional scaling) -- */
+  --letter-spacing-xs: -0.03em;
+  --letter-spacing-s: 0.03em;
+  --letter-spacing-m: 0.06em;
+  --letter-spacing-l: 0.12em;
+  --letter-spacing-xl: 0.24em;
+
+  /* -- Type roles — semantic tokens composing the primitives into four
+     role-based building blocks (headline, title, label, body). Each role
+     covers four dimensions: size, weight, leading (line-height), and
+     tracking (letter-spacing). -- */
+
+  /* Headline — the biggest thing on a page; one per page (h1). */
+  --headline-size:     clamp(var(--font-3xl), 0.8rem + 3vw, var(--font-8xl));
+  --headline-weight:   400;
+  --headline-leading:  var(--line-height-s);
+  --headline-tracking: -0.04em;
+  --headline-width: var(--font-condensed);
+
+  /* Subline — sub-heading scale, sits between title and body. Independent
+     of --text-size-l so it can be tuned without dragging modifier text. */
+  --subline-size:    clamp(var(--font-l), 0.9rem + 0.6vw, var(--font-2xl));
+  --subline-weight:  300;
+
+
+  /* Title — section heads and recurring labels within a page (h2). */
+  --title-size:     clamp(var(--font-2xl), 0.8rem + 2vw, var(--font-6xl));
+  --title-weight:   400;
+  --title-leading:  var(--line-height-m);
+  --title-tracking: -0.04em;
+  --title-family: var(--font-primary);
+
+
+  /* Label — meta rows, eyebrows, captions */
+  --label-size:     var(--font-2xs);
+  --label-weight:   500;
+  --label-leading:  var(--line-height-s);
+  --label-tracking: var(--letter-spacing-m);
+
+  /* Body — running text */
+  --body-size:     clamp(var(--font-s), 0.7rem + 0.35vw, var(--font-m));
+  --body-weight:   var(--font-weight-regular);
+  --body-leading:  var(--line-height-xl);
+  --body-tracking: 0;
+
+  /* Text size utility scale — fluid tokens consumed by .text-size-* utilities.
+     Use these on any selector when you want a utility-style size without the class. */
+  --text-size-xl: clamp(var(--font-3xl), 1rem + 0.8vw, var(--font-5xl));
+  --text-size-l:  clamp(var(--font-l),   1rem + 0.4vw, var(--font-2xl));
+  --text-size-m:  var(--body-size);
+  --text-size-s:  clamp(var(--font-xs), 0.8rem + 0.15vw, var(--font-s));
+  --text-size-xs: var(--font-xs);
+
+  /* Icon Size */
+  --icon-size: 1.3rem;
+
+}
+
+/* Mobile typography overrides — at ≤959 the semantic tokens drop their
+   clamp() interpolation in favour of static rem values. Tablet uses
+   mobile typography because the layout is also single-column at that
+   width (see [data-grid] collapse at the same breakpoint). One block
+   here replaces ~14 scattered @media font-size overrides in studio.css.
+
+   --label-size is bumped from --font-2xs (12px) to --font-xs (14px) on
+   mobile — 12px is below the practitioner floor for body-adjacent text
+   and tap-target-adjacent labels. */
+@media (max-width: 959px) {
+  :root {
+    --headline-size:  var(--font-3xl);   /* 28px */
+    --title-size:     var(--font-2xl);   /* 24px */
+    --subline-size:   var(--font-l);     /* 20px */
+    --body-size:      var(--font-s);     /* 16px */
+    --label-size:     var(--font-xs);    /* 14px (a11y floor) */
+
+    --text-size-xl:   var(--font-2xl);   /* 24px */
+    --text-size-l:    var(--font-l);     /* 20px */
+    --text-size-s:    var(--font-xs);    /* 14px */
+    --text-size-xs:   var(--font-xs);    /* 14px */
+    /* --text-size-m inherits from --body-size, no override needed */
+  }
+}
+
+/* ------ 2. SYSTEM TOKENS - COLORS ------ */
+
+:root {
+  /* -- Neutrals -- */
+  --neutral-50:  #fafafa;
+  --neutral-100: #e5e5e5;
+  --neutral-150: #d4d4d4;
+  --neutral-200: #c4c4c4;
+  --neutral-300: #a3a3a3;
+  --neutral-400: #8a8a8a;
+  --neutral-500: #737373;
+  --neutral-600: #5c5c5c;
+  --neutral-700: #474747;
+  --neutral-800: #333333;
+  --neutral-900: #1f1f1f;
+  --neutral-950: #141414;
+  --neutral-990: #0a0a0a;
+
+  /* -- Black & White Alpha Tokens -- */
+  --black: #000000;
+  --black-alpha-3: #00000008;
+  --black-alpha-5: #0000000d;
+  --black-alpha-7: #00000012;
+  --black-alpha-10: #0000001a;
+  --black-alpha-15: #00000026;
+  --black-alpha-20: #00000033;
+  --black-alpha-30: #0000004d;
+  --black-alpha-40: #00000066;
+  --black-alpha-50: #00000080;
+  --black-alpha-60: #00000099;
+  --black-alpha-70: #000000b3;
+  --black-alpha-80: #000000cc;
+  --black-alpha-90: #000000e6;
+  --black-alpha-95: #000000f2;
+
+  --white: #ffffff;
+  --white-alpha-3: #ffffff08;
+  --white-alpha-5: #ffffff0d;
+  --white-alpha-7: #ffffff12;
+  --white-alpha-10: #ffffff1a;
+  --white-alpha-15: #ffffff26;
+  --white-alpha-20: #ffffff33;
+  --white-alpha-30: #ffffff4d;
+  --white-alpha-40: #ffffff66;
+  --white-alpha-50: #ffffff80;
+  --white-alpha-60: #ffffff99;
+  --white-alpha-70: #ffffffb3;
+  --white-alpha-80: #ffffffcc;
+  --white-alpha-90: #ffffffe6;
+  --white-alpha-95: #fffffff2;
+
+  --transparent: transparent;
+
+  /* -- Color-Mix Alpha Scale -- */
+  --alpha-5: transparent 95%;
+  --alpha-10: transparent 90%;
+  --alpha-15: transparent 85%;
+  --alpha-20: transparent 80%;
+  --alpha-25: transparent 75%;
+  --alpha-30: transparent 70%;
+  --alpha-35: transparent 65%;
+  --alpha-40: transparent 60%;
+  --alpha-45: transparent 55%;
+  --alpha-50: transparent 50%;
+  --alpha-55: transparent 45%;
+  --alpha-60: transparent 40%;
+  --alpha-65: transparent 35%;
+  --alpha-70: transparent 30%;
+  --alpha-75: transparent 25%;
+  --alpha-80: transparent 20%;
+  --alpha-85: transparent 15%;
+  --alpha-90: transparent 10%;
+  --alpha-95: transparent 5%;
+
+  /* -- Semantic colours -- */
+  --text-primary: var(--off-black);
+  --text-secondary: var(--neutral-700);
+  --text-plain: var(--black);
+  --text-faded: var(--black-alpha-50);
+  --text-accent: var(--blue);
+  --text-link: var(--text-accent);
+  --text-inverted: var(--off-white);
+  --text-sidebar: var(--text-primary);
+  --text-top-nav: var(--text-primary);
+
+    /* -- Text with Opacity -- */
+  --text-alpha-5: color-mix(in srgb, var(--text-primary), var(--alpha-5));
+  --text-alpha-10: color-mix(in srgb, var(--text-primary), var(--alpha-10));
+  --text-alpha-15: color-mix(in srgb, var(--text-primary), var(--alpha-15));
+  --text-alpha-20: color-mix(in srgb, var(--text-primary), var(--alpha-20));
+  --text-alpha-30: color-mix(in srgb, var(--text-primary), var(--alpha-30));
+  --text-alpha-40: color-mix(in srgb, var(--text-primary), var(--alpha-40));
+  --text-alpha-50: color-mix(in srgb, var(--text-primary), var(--alpha-50));
+
+
+
+  --background-primary: var(--white);
+  --background-secondary: var(--neutral-100);
+  --background-plain: var(--white);
+  --background-faded: var(--black-alpha-5);
+  --background-darker: var(--black-alpha-10);
+  --background-lighter: var(--white-alpha-10);
+  --bg-faded-3: var(--black-alpha-3);
+  --bg-faded-5: var(--black-alpha-5);
+  --bg-faded-7: var(--black-alpha-7);
+  --bg-faded-10: var(--black-alpha-10);
+  --bg-faded-15: var(--black-alpha-15);
+  --background-modal: rgba(0, 0, 0, 0.75);
+  --background-sidebar: var(--background-primary);
+  --background-top-nav: var(--background-primary);
+
+  /* -- Solid colour backgrounds — for hero blocks, callouts, ad units, etc. -- */
+  --background-accent: var(--text-accent);
+  --background-black: var(--black);
+  --background-white: var(--white);
+  --background-blue: var(--blue);
+  --background-red: var(--red);
+  --background-green: var(--green);
+
+  --border-primary: var(--text-primary);
+  --border-secondary: var(--neutral-300);
+  --border-faded: var(--black-alpha-15);
+
+
+  /* -- Status colours (from brand book or defaults) -- */
+  --status-info: var(--blue);
+  --status-info-bg: var(--blue-lighter);
+  --status-success: var(--green);
+  --status-success-bg: var(--green-lighter);
+  --status-warning: var(--yellow-dark);
+  --status-warning-bg: var(--yellow-lighter);
+  --status-danger: var(--red);
+  --status-danger-bg: var(--red-lighter);
+  /* -- Form semantic tokens -- */
+  --input-border: var(--border-secondary);
+  --input-background: var(--black-alpha-5);
+  --input-text: var(--text-plain);
+  --input-placeholder: var(--text-faded);
+  --input-focus: var(--text-accent);
+  --input-disabled-bg: var(--background-faded);
+  --input-disabled-text: var(--text-faded);
+  --checkbox-background: var(--neutral-100);
+  --checkbox-selected: var(--text-primary);
+  --checkbox-border: var(--border-faded);
+  --checkbox-checkmark: var(--off-white);
+  /* -- Toggle color tokens removed — uses values directly on component -- */
+
+  /* -- Selection -- */
+  --selection-text: var(--background-primary);
+  --selection-background: var(--text-primary);
+
+  /* -- Card tokens removed — uses semantic tokens directly -- */
+
+  /* -- Tooltip tokens removed — uses values directly on component -- */
+
+  /* -- Toast tokens removed — uses values directly on component -- */
+
+  /* -- Tab tokens removed — uses semantic tokens directly -- */
+
+  /* -- Progress tokens removed — uses semantic tokens directly -- */
+
+  /* -- Divider tokens -- */
+  --divider-color: var(--border-faded);
+
+  /* -- Dropdown tokens -- */
+  --dropdown-background: var(--background-primary);
+  --dropdown-border: var(--border-faded);
+  --dropdown-item-hover: var(--background-faded);
+
+  /* -- Tag tokens removed — uses semantic tokens directly -- */
+
+  /* -- Dialog tokens -- */
+  --dialog-max-width: 560px;
+  /* -- Dialog color tokens removed — uses values directly on component -- */
+
+  /* -- Slider tokens removed — uses semantic tokens directly -- */
+
+  /* -- Rating tokens -- */
+  --rating-size: 1.5rem;
+  /* -- Rating color tokens removed — uses values directly on component -- */
+
+  /* -- Mark tokens removed — uses values directly on component -- */
+
+}
+
+/* ------ 2b. THEME TOKENS - DARK MODE ------ */
+/* Set data-theme="dark" on <html> for page-level, or on any element for scoped theming */
+
+[data-theme="dark"] {
+  /* -- Text -- */
+  --text-primary: #e8e6e3;
+  --text-secondary: #a8a5a2;
+  --text-plain: #f0eeeb;
+  --text-faded: rgba(255, 255, 255, 0.45);
+  --text-accent: var(--yellow);
+  --text-link: var(--text-accent);
+  --text-inverted: #1a1a1a;
+  --text-sidebar: var(--text-primary);
+  --text-top-nav: var(--text-primary);
+
+  /* -- Background -- */
+  --background-primary: var(--neutral-900);
+  --background-secondary: #222222;
+  --background-plain: #2a2a2a;
+  --background-faded: rgba(255, 255, 255, 0.06);
+  --background-darker: rgba(255, 255, 255, 0.12);
+  --background-modal: var(--black-alpha-50);
+  --background-sidebar: var(--background-primary);
+  --background-top-nav: var(--background-primary);
+  --bg-faded-3: var(--white-alpha-3);
+  --bg-faded-5: var(--white-alpha-5);
+  --bg-faded-7: var(--white-alpha-7);
+  --bg-faded-10: var(--white-alpha-10);
+  --bg-faded-15: var(--white-alpha-15);
+
+  /* -- Border -- */
+  --border-primary: #e8e6e3;
+  --border-secondary: #3a3a3a;
+  --border-faded: var(--white-alpha-20);
+
+  /* -- Status -- */
+  --status-info: var(--blue-light);
+  --status-success: var(--green-light);
+  --status-warning: var(--yellow-light);
+  --status-danger: var(--red-light);
+
+  /* -- Form -- */
+  --input-border: #3a3a3a;
+  --input-background: rgba(255, 255, 255, 0.08);
+  --input-text: #f0eeeb;
+  --input-placeholder: rgba(255, 255, 255, 0.45);
+  --input-focus: var(--text-accent);
+  --input-disabled-bg: rgba(255, 255, 255, 0.06);
+  --input-disabled-text: rgba(255, 255, 255, 0.3);
+  --checkbox-background: #3a3a3a;
+  --checkbox-selected: #e8e6e3;
+  --checkbox-border: #555;
+  --checkbox-checkmark: #1a1a1a;
+  /* -- Toggle/Card/Tooltip/Toast/Dialog/Mark color tokens removed — dark mode handled on components -- */
+
+  /* -- Dropdown -- */
+  --dropdown-background: var(--background-plain);
+
+  color-scheme: dark;
+}
+
+/* ------ 2c. SYSTEM PREFERENCE FALLBACK (no-JS) ------ */
+/* Applies dark tokens when the user's OS prefers dark and no data-theme is set */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --text-primary: #e8e6e3;
+    --text-secondary: #a8a5a2;
+    --text-plain: #f0eeeb;
+    --text-faded: rgba(255, 255, 255, 0.45);
+    --text-accent: var(--yellow);
+    --text-link: var(--text-accent);
+    --text-inverted: #1a1a1a;
+    --text-sidebar: var(--text-primary);
+    --text-top-nav: var(--text-primary);
+
+    --background-primary: var(--neutral-900);
+    --background-secondary: #222222;
+    --background-plain: #2a2a2a;
+    --background-faded: rgba(255, 255, 255, 0.06);
+    --background-darker: rgba(255, 255, 255, 0.12);
+    --background-modal: var(--black-alpha-50);
+    --background-sidebar: var(--background-primary);
+    --background-top-nav: var(--background-primary);
+    --bg-faded-3: var(--white-alpha-3);
+    --bg-faded-5: var(--white-alpha-5);
+    --bg-faded-7: var(--white-alpha-7);
+    --bg-faded-10: var(--white-alpha-10);
+    --bg-faded-15: var(--white-alpha-15);
+
+    --border-primary: #e8e6e3;
+    --border-secondary: #3a3a3a;
+    --border-faded: var(--white-alpha-20);
+
+    --status-info: var(--blue-light);
+    --status-success: var(--green-light);
+    --status-warning: var(--yellow-light);
+    --status-danger: var(--red-light);
+
+    --input-border: #3a3a3a;
+    --input-background: rgba(255, 255, 255, 0.08);
+    --input-text: #f0eeeb;
+    --input-placeholder: rgba(255, 255, 255, 0.45);
+    --input-focus: var(--text-accent);
+    --input-disabled-bg: rgba(255, 255, 255, 0.06);
+    --input-disabled-text: rgba(255, 255, 255, 0.3);
+    --checkbox-background: #3a3a3a;
+    --checkbox-selected: #e8e6e3;
+    --checkbox-border: #555;
+    --checkbox-checkmark: #1a1a1a;
+    /* -- Toggle/Card/Tooltip/Toast/Dialog/Mark color tokens removed — dark mode handled on components -- */
+
+    /* -- Dropdown -- */
+    --dropdown-background: var(--background-plain);
+
+    color-scheme: dark;
+  }
+}
+
+/* -- Selection highlight -- */
+::selection {
+  color: var(--selection-text);
+  background-color: var(--selection-background);
+}
+
+/* ------ 3. SYSTEM TOKENS - SPACING & TYPOGRAPHY ------ */
+
+:root {
+  /* -- Unit tokens -- */
+  --none: 0;
+  --2xs: 0.125rem;
+  /* 2px */
+  --xs: 0.25rem;
+  /* 4px */
+  --s: 0.5rem;
+  /* 8px */
+  --m: 0.75rem;
+  /* 12px */
+  --l: 1rem;
+  /* 16px */
+  --xl: 1.5rem;
+  /* 24px */
+  --2xl: 2rem;
+  /* 32px */
+  --3xl: 2.5rem;
+  /* 40px */
+  --4xl: 3rem;
+  /* 48px */
+  --5xl: 3.5rem;
+  /* 56px */
+  --6xl: 4rem;
+  /* 64px */
+  --7xl: 4.5rem;
+  /* 72px */
+  --8xl: 5rem;
+  /* 80px */
+  --9xl: 5.5rem;
+  /* 88px */
+  --10xl: 6rem;
+  /* 96px */
+  --11xl: 6.5rem;
+  /* 104px */
+  --12xl: 7rem;
+  /* 112px */
+  --13xl: 7.5rem;
+  /* 120px */
+  --14xl: 10rem;
+  /* 160px */
+
+  /* -- Spacing scale -- */
+  --space-none: var(--none); /* 0 */
+  --space-2xs: var(--2xs); /* 2px */
+  --space-xs: var(--xs); /* 4px */
+  --space-s: var(--s); /* 8px */
+  --space-m: var(--m); /* 12px */
+  --space-l: var(--l); /* 16px */
+  --space-xl: var(--xl); /* 24px */
+  --space-2xl: var(--2xl); /* 32px */
+  --space-3xl: var(--3xl); /* 40px */
+  --space-4xl: var(--4xl); /* 48px */
+  --space-5xl: var(--5xl); /* 56px */
+  --space-6xl: var(--6xl); /* 64px */
+  --space-7xl: var(--7xl); /* 72px */
+  --space-8xl: var(--8xl); /* 80px */
+  --space-9xl: var(--9xl); /* 88px */
+  --space-10xl: var(--10xl); /* 96px */
+  --space-11xl: var(--11xl); /* 104px */
+  --space-12xl: var(--12xl); /* 112px */
+  --space-13xl: var(--13xl); /* 120px */
+  --space-14xl: var(--14xl); /* 160px */
+
+  /* -- Container widths -- */
+  --container-xs: 480px;
+  --container-s: 640px;
+  --container-m: 960px;
+  --container-l: 1200px;
+  --container-xl: 1440px;
+
+  /* -- Max-widths -- */
+  --max-width-xs: 480px;
+  --max-width-s: 640px;
+  --max-width-m: 960px;
+  --max-width-l: 1200px;
+  --max-width-xl: 1440px;
+
+  /* -- Line length (typographic readability, 45–75ch range) -- */
+  --line-length-headline: 22ch;
+  --line-length-body: 55ch;
+
+  --line-length-xsmall: 35ch;
+  --line-length-small: 45ch;
+  --line-length-medium: 65ch;
+  --line-length-wide: 75ch;
+
+  /* -- Section spacing variables -- */
+  --section-xs: var(--space-xl);
+  --section-s: var(--space-2xl);
+  --section-m: var(--space-6xl);
+  --section-l: var(--space-10xl);
+  --section-xl: var(--space-14xl);
+
+
+  /* -- Accordion spacing variables -- */
+  --accordion-padding-x: var(--space-l);
+  --accordion-padding-y: var(--space-l);
+
+  /* -- Border width tokens -- */
+  --border-s: 0.0625rem;  /* 1px */
+  --border-m: 0.125rem;   /* 2px */
+  --border-l: 0.25rem;    /* 4px */
+
+  /* -- Border composition variables -- */
+  --border-width: var(--border-s);
+  --border-style: solid;
+  --border-color: var(--border-primary);
+
+  /* -- Border radius tokens -- */
+  --radius-2xs: 2px;
+  --radius-xs: 4px;
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+}
+
+/* ------ 4. SYSTEM TOKENS - MOTION ------ */
+/*
+ * Motion design tokens. Two layers, same model as color and spacing:
+ *
+ *   1. Primitives (--ease-*, --duration-*) — raw building blocks. Same
+ *      t-shirt scale as the rest of the design system. Easing names match
+ *      the standard CSS keywords (in / out / in-out) so anyone with web
+ *      experience already knows what shape they have; the cubic-bezier
+ *      values are our refined replacements for the defaults.
+ *
+ *   2. Semantic tokens (--motion-*) — named by intent ("page-open",
+ *      "page-close"). These compose primitives. Consumers (CSS components,
+ *      JS code) only ever read the semantic layer.
+ *
+ * Naming convention for new semantic tokens:
+ *   --motion-{scope}-{event}-{property}
+ *   scope    = page | surface | element | feedback
+ *   event    = open | close | swap | enter | exit | fade | hover | press
+ *   property = duration | easing
+ *
+ * See cms/motion.md for the full reference and demos.
+ */
+
+:root {
+  /* -- Easing primitives -- */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  /* fast start, slow end. for exits. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* slow start, slow end with long tail. for entrances. */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* symmetric. for swaps and continuous motion. */
+
+  /* -- Duration primitives -- */
+  --duration-2xs: 100ms;
+  --duration-xs: 200ms;
+  --duration-s: 400ms;
+  --duration-m: 600ms;
+  --duration-l: 800ms;
+  --duration-xl: 1200ms;
+  --duration-2xl: 1500ms;
+  --duration-3xl: 1800ms;
+  --duration-4xl: 2000ms;
+  --duration-5xl: 2500ms;
+  --duration-6xl: 3000ms;
+  --duration-7xl: 4000ms;
+  --duration-8xl: 6000ms;
+
+
+  /* -- Page-level semantic motion -- */
+  --motion-page-open-duration: var(--duration-xl);
+  /* 800ms */
+  --motion-page-open-easing: var(--ease-in-out);
+
+  --motion-page-close-duration: var(--duration-xl);
+  /* 600ms */
+  --motion-page-close-easing: var(--ease-in-out);
+
+  --motion-page-swap-duration: var(--duration-xl);
+  /* 600ms */
+  --motion-page-swap-easing: var(--ease-in-out);
+
+  --motion-page-fade-duration: var(--duration-m);
+  /* 400ms */
+  --motion-page-fade-easing: var(--ease-in-out);
+}
+
+/* ------ 5. LAYOUT PRIMITIVES ------ */
+
+/* -- Global horizontal padding -- */
+.padding-global {
+  padding-left: var(--space-xl);
+  padding-right: var(--space-xl);
+}
+
+/* -- Padding utilities -- */
+.padding-s {
+  padding: var(--space-s);
+}
+
+.padding-m {
+  padding: var(--space-m);
+}
+
+.padding-l {
+  padding: var(--space-l);
+}
+
+.padding-xl {
+  padding: var(--space-xl);
+}
+
+.padding-2xl {
+  padding: var(--space-2xl);
+}
+
+.padding-3xl {
+  padding: var(--space-3xl);
+}
+
+/* -- Containers -- */
+.container-xs {
+  display: block;
+  max-width: var(--container-xs);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.container-s {
+  display: block;
+  max-width: var(--container-s);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.container-m {
+  display: block;
+  max-width: var(--container-m);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.container-l {
+  display: block;
+  max-width: var(--container-l);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.container-xl {
+  display: block;
+  max-width: var(--container-xl);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* -- Max-width utilities -- */
+.max-width-xs {
+  max-width: var(--max-width-xs);
+}
+
+.max-width-s {
+  max-width: var(--max-width-s);
+}
+
+.max-width-m {
+  max-width: var(--max-width-m);
+}
+
+.max-width-l {
+  max-width: var(--max-width-l);
+}
+
+.max-width-xl {
+  max-width: var(--max-width-xl);
+}
+
+.max-width-full {
+  max-width: 100%;
+}
+
+/* -- Section spacing -- */
+
+section {
+  display: block;
+}
+
+.padding-section {
+  display: block;
+}
+
+/* -- Top spacing combo classes -- */
+.top-small {
+  padding-top: var(--section-s);
+}
+
+.top-medium {
+  padding-top: var(--section-m);
+}
+
+.top-large {
+  padding-top: var(--section-l);
+}
+
+.top-xl {
+  padding-top: var(--section-xl);
+}
+
+/* -- Bottom spacing combo classes -- */
+.bottom-small {
+  padding-bottom: var(--section-s);
+}
+
+.bottom-medium {
+  padding-bottom: var(--section-m);
+}
+
+.bottom-large {
+  padding-bottom: var(--section-l);
+}
+
+.bottom-xl {
+  padding-bottom: var(--section-xl);
+}
+
+/* ------ 6. BLOCKS ------ */
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+}
+
+/* -- Gap modifiers -- */
+.gap-none {
+  gap: var(--space-none);
+}
+
+.gap-xs {
+  gap: var(--space-xs) !important;
+}
+
+.gap-s {
+  gap: var(--space-s) !important;
+}
+
+.gap-m {
+  gap: var(--space-m) !important;
+}
+
+.gap-l {
+  gap: var(--space-l) !important;
+}
+
+.gap-xl {
+  gap: var(--space-xl) !important;
+}
+
+.gap-2xl {
+  gap: var(--space-2xl) !important;
+}
+
+.gap-3xl {
+  gap: var(--space-3xl) !important;
+}
+
+
+/* -- Layout modifiers -- */
+.row {
+  flex-direction: row;
+}
+
+.row-reverse {
+  flex-direction: row-reverse;
+}
+
+.align-start {
+  align-items: flex-start;
+}
+
+.align-center {
+  align-items: center;
+}
+
+.align-end {
+  align-items: flex-end;
+}
+
+.align-stretch {
+  align-items: stretch;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-end {
+  justify-content: flex-end;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+
+/* -- Self alignment -- */
+[data-align="center"] {
+  margin-inline: auto;
+  justify-self: center;
+}
+
+
+/* ------ 7. GRID ------ */
+
+/* -- Grid -- */
+.grid {
+  display: grid;
+  gap: var(--space-m);
+  grid-template-columns: 1fr 1fr;
+  grid-auto-columns: 1fr;
+}
+
+/* -- Grid column modifiers -- */
+.cols-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.cols-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.cols-4 {
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+
+/* -- Responsive collapse -- */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.token-col {
+  grid-template-columns: 1fr auto;
+  padding: var(--space-m);
+}
+
+/* -- Grid item width modifiers -- */
+.fit-content {
+  width: fit-content;
+}
+
+/* ------ 8. BORDER UTILITIES ------ */
+
+/* -- Structural classes -- */
+.border {
+  border: var(--border-width) var(--border-style) var(--border-color);
+}
+
+.border-top {
+  border-top: var(--border-width) var(--border-style) var(--border-color);
+}
+
+.border-bottom {
+  border-bottom: var(--border-width) var(--border-style) var(--border-color);
+}
+
+.border-left {
+  border-left: var(--border-width) var(--border-style) var(--border-color);
+}
+
+.border-right {
+  border-right: var(--border-width) var(--border-style) var(--border-color);
+}
+
+/* -- Width combo classes -- */
+.border-s {
+  --border-width: var(--border-s);
+}
+
+.border-m {
+  --border-width: var(--border-m);
+}
+
+.border-l {
+  --border-width: var(--border-l);
+}
+
+/* -- Style combo classes -- */
+.border-solid {
+  --border-style: solid;
+}
+
+.border-dashed {
+  --border-style: dashed;
+}
+
+.border-dotted {
+  --border-style: dotted;
+}
+
+/* -- Color combo classes -- */
+.border-primary {
+  --border-color: var(--border-primary);
+}
+
+.border-secondary {
+  --border-color: var(--border-secondary);
+}
+
+.border-faded {
+  --border-color: var(--border-faded);
+}
+
+/* ------ 9. TYPOGRAPHY UTILITIES ------ */
+
+/* -- Font size utilities -- */
+
+.font-primary {
+font-family: var(--font-primary);
+}
+
+.font-secondary {
+font-family: var(--font-secondary);
+}
+
+/* -- Accent font treatments --
+   Apply on spans inside prose, or to retreat a heading into a different
+   voice. Each sets family + sensible companion properties (weight,
+   tracking, leading where the face needs it). Size stays whatever the
+   host element controls. */
+
+.accent-display {
+  font-family: var(--font-display);
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.accent-playful {
+  font-family: var(--font-playful);
+  font-weight: 700;
+  font-style: normal;
+}
+
+.accent-script {
+  font-family: var(--font-script);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.accent-editorial {
+  font-family: var(--font-editorial);
+  font-weight: 400;
+  font-style: italic;
+}
+
+.accent-code {
+  font-family: var(--font-code);
+  font-weight: 400;
+}
+
+.font-2xs {
+  font-size: var(--font-2xs);
+}
+
+.font-xs {
+  font-size: var(--font-xs);
+}
+
+.font-s {
+  font-size: var(--font-s);
+}
+
+.font-m {
+  font-size: var(--font-m);
+}
+
+.font-l {
+  font-size: var(--font-l);
+}
+
+.font-xl {
+  font-size: var(--font-xl);
+}
+
+.font-2xl {
+  font-size: var(--font-2xl);
+}
+
+.font-3xl {
+  font-size: var(--font-3xl);
+}
+
+.font-4xl {
+  font-size: var(--font-4xl);
+}
+
+.font-5xl {
+  font-size: var(--font-5xl);
+}
+
+.font-6xl {
+  font-size: var(--font-6xl);
+}
+
+.font-7xl {
+  font-size: var(--font-7xl);
+}
+
+.font-8xl {
+  font-size: var(--font-8xl);
+}
+
+.font-9xl {
+  font-size: var(--font-9xl);
+}
+
+.font-10xl {
+  font-size: var(--font-10xl);
+}
+
+/* -- Text size utilities -- */
+/* Each class consumes its matching --text-size-* token (defined in :root). */
+/* xs stays fixed at the a11y floor; m reuses --body-size for clean reset.  */
+
+.text-size-xl {
+  font-size: var(--text-size-xl);
+  line-height: var(--line-height-m);
+}
+
+.text-size-l {
+  font-size: var(--text-size-l);
+  line-height: var(--line-height-l);
+}
+
+.text-size-m {
+  font-size: var(--text-size-m);
+  line-height: var(--line-height-l);
+}
+
+.text-size-s {
+  font-size: var(--text-size-s);
+  line-height: var(--line-height-xl);
+}
+
+.text-size-xs {
+  font-size: var(--text-size-xs);
+  line-height: var(--line-height-xl);
+}
+
+/* -- Text wrap utilities -- */
+[data-text-wrap="balance"] {
+  text-wrap: balance;
+}
+
+[data-text-wrap="pretty"] {
+  text-wrap: pretty;
+}
+
+/* -- Font width utilities -- */
+[data-font-width="condensed"] { font-stretch: var(--font-condensed); }
+[data-font-width="narrow"]    { font-stretch: var(--font-narrow); }
+[data-font-width="normal"]    { font-stretch: var(--font-normal); }
+[data-font-width="wide"]      { font-stretch: var(--font-wide); }
+[data-font-width="expanded"]  { font-stretch: var(--font-expanded); }
+
+/* -- Text alignment utilities -- */
+.text-left   { text-align: left; }
+.text-center { text-align: center; }
+.text-right  { text-align: right; }
+
+/* -- Eyebrow text -- */
+.eyebrow {
+  font-size: var(--font-xs);
+  line-height: var(--line-height-m);
+  font-weight: var(--font-weight-regular);
+  letter-spacing: var(--letter-spacing-l);
+  text-transform: uppercase;
+}
+
+/* -- Button reset (bare element) -- */
+button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-s);
+  transition: transform var(--duration-2xs) var(--ease-out);
+}
+
+/* -- Button component (CUBE pattern) -- */
+/* All tokens live at component level. data-* exceptions override them. */
+
+.button,
+button.button {
+  /* -- Component tokens (overridable by exceptions + role classes) -- */
+  --button-color: var(--text-primary);
+  --button-faded: color-mix(in srgb, var(--button-color), var(--alpha-10));
+  --button-bg: var(--button-color);
+  --button-border: var(--button-color);
+  --button-text-color: var(--text-inverted);
+  --button-font: var(--font-primary);
+  --button-text-size: var(--font-m);
+  --button-padding-y: var(--space-l);
+  --button-padding-x: var(--space-xl);
+  --button-gap: var(--space-m);
+
+  /* -- Layout -- */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--button-gap);
+
+  /* -- Box model -- */
+  padding: var(--button-padding-y) var(--button-padding-x);
+
+  /* -- Visual -- */
+  background-color: var(--button-bg);
+  border: var(--border-s) solid var(--button-border);
+  border-radius: var(--radius-s);
+  
+
+  /* -- Typography -- */
+  font-family: var(--button-font);
+  font-size: var(--button-text-size);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-xs);
+  /* letter-spacing: var(--letter-spacing-s); */
+  text-transform: none;
+  text-decoration: none;
+  color: var(--button-text-color);
+
+  /* -- Icon -- */
+  --icon-size: 0.9em;
+
+
+  /* -- Other -- */
+  cursor: pointer;
+  transition: background-color var(--duration-m) var(--ease-out), color var(--duration-2xs) var(--ease-out), border-color var(--duration-2xs) var(--ease-out), opacity var(--duration-2xs) var(--ease-out), transform var(--duration-2xs) var(--ease-out);
+}
+
+/* -- Hover -- */
+.button:hover {
+  --button-color: color-mix(in srgb, var(--text-primary), var(--background-primary) 10%)
+}
+
+/* -- Active (press) -- */
+.button:active {
+  transform: scale(0.98);
+}
+
+/* -- Variant exceptions -- */
+
+.button[data-variant="outline"] {
+  --button-bg: transparent;
+  --button-text-color: var(--button-color);
+}
+
+.button[data-variant="faded"] {
+  --button-bg: var(--button-faded);
+  --button-border: transparent;
+  --button-text-color: var(--button-color);
+}
+
+.button[data-variant="outline-faded"] {
+  --button-bg: transparent;
+  --button-border: var(--button-faded);
+  --button-text-color: var(--button-color);
+}
+
+.button[data-variant="transparent"] {
+  --button-bg: transparent;
+  --button-border: transparent;
+  --button-text-color: var(--button-color);
+}
+
+.button[data-variant="text"] {
+  --button-bg: transparent;
+  --button-border: transparent;
+  --button-text-color: var(--button-color);
+  --button-padding-x: 0;
+  --button-padding-y: 0;
+}
+.button[data-variant="text"]:hover {
+  text-decoration: underline;
+  text-underline-offset: 2.5px;
+}
+.button[data-variant="text"]:active {
+  transform: none;
+}
+
+/* Unfilled variants: subtle fill on hover instead of darkening transparent */
+.button[data-variant="outline"]:hover,
+.button[data-variant="faded"]:hover,
+.button[data-variant="outline-faded"]:hover,
+.button[data-variant="transparent"]:hover {
+  background-color: color-mix(in srgb, var(--button-color), var(--alpha-5));
+}
+
+/* -- Size exceptions -- */
+
+.button[data-size="small"] {
+  --button-padding-y: var(--space-s);
+  --button-padding-x: var(--space-m);
+  --button-text-size: var(--font-xs);
+}
+
+.button[data-size="xsmall"] {
+  --button-padding-y: var(--space-xs);
+  --button-padding-x: var(--space-s);
+  --button-text-size: var(--font-2xs);
+}
+
+/* -- Boolean modifiers -- */
+
+.button[data-icon-only] {
+  --button-padding-x: var(--button-padding-y);
+  --icon-size: 1.3rem;
+}
+
+.button[data-full-width] {
+  width: 100%;
+}
+
+/* -- Colour exceptions -- */
+/* Semantic names and brand aliases produce identical output.
+   --button-color drives bg, border, and faded automatically. */
+
+.button[data-color="danger"],
+.button[data-color="red"] {
+  --button-color: var(--status-danger);
+  --button-text-color: var(--text-inverted);
+}
+
+.button[data-color="danger"]:hover,
+.button[data-color="red"]:hover {
+  --button-color: color-mix(in srgb, var(--status-danger), var(--text-primary) 15%);
+}
+
+.button[data-color="success"],
+.button[data-color="green"] {
+  --button-color: var(--status-success);
+  --button-text-color: var(--text-inverted);
+}
+
+.button[data-color="success"]:hover,
+.button[data-color="green"]:hover {
+  --button-color: color-mix(in srgb, var(--status-success), var(--text-primary) 15%);
+}
+
+/* -- Dark mode: faded alpha adjusts for dark backgrounds -- */
+
+:root[data-theme="dark"] .button {
+  --button-faded: color-mix(in srgb, var(--button-color), var(--alpha-10));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .button {
+    --button-faded: color-mix(in srgb, var(--button-color), var(--alpha-80));
+  }
+}
+
+/* -- States -- */
+
+.button:disabled,
+.button.is-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.button.is-loading {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* -- Reduced motion -- */
+@media (prefers-reduced-motion: reduce) {
+  .button:active {
+    transform: none;
+  }
+}
+
+
+.svg-icn {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  display: flex;
+  aspect-ratio: 1 / 1;
+  transition: color var(--duration-m) var(--ease-out);
+  margin: -0.175em
+}
+
+.svg-icn svg,
+.svg-icn path {
+  transition: fill var(--duration-m) var(--ease-out);
+}
+
+.svg-icn.is-preview {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.svg-logo {
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 210 / 101;
+}
+
+.svg-logo {
+  transition: color var(--duration-m) var(--ease-out);
+}
+
+.svg-logo svg,
+.svg-logo path {
+  transition: fill var(--duration-m) var(--ease-out);
+}
+
+.button-group {
+  grid-column-gap: var(--space-m);
+  grid-row-gap: var(--space-m);
+  flex-wrap: wrap;
+  align-items: center;
+  display: flex;
+}
+
+/* ------ 10. BACKGROUND UTILITIES ------ */
+
+/* -- Background utilities -- */
+.bg-primary {
+  background-color: var(--background-primary);
+}
+
+.bg-secondary {
+  background-color: var(--background-secondary);
+}
+
+.bg-plain {
+  background-color: var(--background-plain);
+}
+
+.bg-faded {
+  background-color: var(--background-faded);
+}
+
+/* -- Text color utilities -- */
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-plain {
+  color: var(--text-plain);
+}
+
+.text-faded {
+  color: var(--text-faded);
+}
+
+.text-accent {
+  color: var(--text-accent);
+}
+
+.text-link {
+  color: var(--text-link);
+}
+
+
+/* -- Global state utilities -- */
+.is-hidden {
+  display: none !important;
+}
+
+/* ------ BASE ELEMENTS ------ */
+
+/* -- Reset -- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-primary);
+  color: var(--text-primary);
+  font-size: var(--body-size);
+  font-weight: var(--body-weight);
+  line-height: var(--body-leading);
+  letter-spacing: var(--body-tracking);
+  background-color: var(--background-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* -- Headings --
+   Element defaults pull semantic display tokens. h1 and h2 share the
+   headline scale (hero size); h3 takes title (section heads); h4 takes
+   subline (subheads). Display classes like .page-headline / .page-title
+   still override per-page, but plain markdown <h2>/<h3>/<h4> in article
+   and case-study bodies now read at the same scale as their class'd
+   counterparts.
+
+   h5 and h6 keep the older editorial scale — used only deep inside body
+   copy and unlikely to need hero treatment. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  margin-top: var(--space-xl);
+  margin-bottom: var(--space-l);
+  font-family: var(--title-family);
+  line-height: var(--line-height-m);
+
+}
+
+/* Progressive editorial scale. Each level's floor + ceiling is a foundation
+   --font-* primitive, one step up from the next level. Mobile = the clamp
+   floor (vw slack too small to push above min at ≤959px viewports). Display
+   contexts use .text-headline / .page-headline / .article-headline (still
+   driven by --headline-size + --title-size) for hero-scale type. */
+h1 {
+  font-size: clamp(var(--font-5xl), 1rem + 2.5vw, var(--font-7xl));
+  line-height: var(--line-height-m);
+}
+
+h2 {
+  font-size: clamp(var(--font-4xl), 1rem + 2vw, var(--font-6xl));
+}
+
+h3 {
+  font-size: clamp(var(--font-3xl), 1rem + 1.5vw, var(--font-5xl));
+}
+
+h4 {
+  font-size: clamp(var(--font-2xl), 1rem + 1.25vw, var(--font-4xl));
+}
+
+h5 {
+  font-size: clamp(var(--font-xl), 1rem + 1vw, var(--font-3xl));
+}
+
+h6 {
+  font-size: clamp(var(--font-l), 1rem + 0.75vw, var(--font-2xl));
+  line-height: var(--line-height-l);
+}
+
+/* -- Paragraphs -- */
+p {
+  margin-top: 0;
+  margin-bottom: var(--space-m);
+}
+
+/* -- Links -- */
+a {
+  color: var(--text-plain);
+  /* text-underline-offset: 0.2em; */
+  text-decoration: underline;
+  -webkit-text-decoration-color: var(--text-link);
+  text-decoration-color: var(--text-link);
+  text-decoration-thickness: 0.01em;
+  transition: color var(--duration-m) var(--ease-out),
+              text-decoration-color var(--duration-m) var(--ease-out),
+              text-underline-offset var(--duration-m) var(--ease-out);
+}
+
+a:not(.button):hover {
+  color: var(--text-link);
+  
+
+}
+
+a[target="_blank"]::after {
+  content: "";
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  margin-left: 0.2em;
+  vertical-align: baseline;
+  background-color: currentColor;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 21V3H9V5H7C5.89543 5 5 5.89543 5 7V17C5 18.1046 5.89543 19 7 19H17C18.1046 19 19 18.1046 19 17V15H21V21H3ZM9.7 15.7L8.3 14.3L15.8929 6.70711C16.5229 6.07714 16.0767 5 15.1858 5H12V3H21V12H19V8.81421C19 7.92331 17.9229 7.47714 17.2929 8.10711L9.7 15.7Z' fill='black'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 21V3H9V5H7C5.89543 5 5 5.89543 5 7V17C5 18.1046 5.89543 19 7 19H17C18.1046 19 19 18.1046 19 17V15H21V21H3ZM9.7 15.7L8.3 14.3L15.8929 6.70711C16.5229 6.07714 16.0767 5 15.1858 5H12V3H21V12H19V8.81421C19 7.92331 17.9229 7.47714 17.2929 8.10711L9.7 15.7Z' fill='black'/%3E%3C/svg%3E");
+  mask-size: contain;
+  mask-repeat: no-repeat;
+}
+
+/* -- Lists -- */
+ul,
+ol {
+  margin-top: 0;
+  margin-bottom: var(--space-m);
+  padding-left: var(--space-2xl);
+}
+
+li {
+  margin-top: var(--space-s);
+  margin-bottom: 0;
+}
+
+li:first-child {
+  margin-top: 0;
+}
+
+/* Nested lists */
+ul ul,
+ul ol,
+ol ul,
+ol ol {
+  margin-top: var(--space-s);
+  margin-bottom: 0;
+}
+
+ol ol,
+ul ol {
+  list-style-type: lower-roman;
+}
+
+ul ul ol,
+ul ol ol,
+ol ul ol,
+ol ol ol {
+  list-style-type: lower-alpha;
+}
+
+/* List items with paragraphs */
+li > p {
+  margin-top: var(--space-l);
+  margin-bottom: 0;
+}
+
+li > p:first-child {
+  margin-top: 0;
+}
+
+/* -- Blockquotes -- */
+blockquote {
+  position: relative;
+  margin: var(--space-xl) 0;
+  padding-left: var(--space-xl);
+  /* border-left: var(--border-m) solid var(--border-secondary); */
+  font-family: var(--font-secondary);
+  color: var(--text-primary);
+  font-size: calc(var(--body-size) + 0.5rem);
+  font-style: italic;
+  hanging-punctuation: first;
+  text-wrap: balance;
+}
+
+blockquote::before {
+  content: "\201C";          /* “ — left double quotation mark */
+  position: absolute;
+  left: var(--space-l);      /* line up with the text edge... */
+  top: 0;
+  transform: translateX(-100%);
+  font-size: 2em;            
+  line-height: 1;
+  font-family: var(--font-secondary);
+}
+
+blockquote p {
+  margin-top: 0;
+  margin-bottom: var(--space-m);
+}
+
+blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* -- Bold -- */
+b,
+strong {
+  font-weight: var(--font-weight-semi-bold);
+}
+
+/* -- Images -- */
+img {
+  border-style: none;
+  max-width: 100%;
+  box-sizing: content-box;
+}
+
+/* -- Definition lists -- */
+dl {
+  padding: 0;
+}
+
+dl dt {
+  padding: 0;
+  font-size: var(--font-s);
+  font-style: italic;
+  font-weight: var(--font-weight-semi-bold);
+}
+
+dl dd {
+  padding: 0 var(--space-l);
+}
+
+dd {
+  margin-left: 0;
+}
+
+/* -- Focus styles -- */
+a:focus,
+[role=button]:focus,
+input[type=radio]:focus,
+input[type=checkbox]:focus {
+  outline: 2px solid var(--status-info);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+a:focus:not(:focus-visible),
+[role=button]:focus:not(:focus-visible),
+input[type=radio]:focus:not(:focus-visible),
+input[type=checkbox]:focus:not(:focus-visible) {
+  outline: solid 1px transparent;
+}
+
+a:focus-visible,
+[role=button]:focus-visible,
+input[type=radio]:focus-visible,
+input[type=checkbox]:focus-visible {
+  outline: 2px solid var(--status-info);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+a:not([href]) {
+  color: inherit;
+  text-decoration: none;
+}
+
+
+
+
+
+/* ------ 11. CALLOUTS & ALERTS ------ */
+
+/* -- Base callout -- */
+.callout {
+  padding: var(--space-m) var(--space-l);
+  margin-top: var(--space-l);
+  margin-bottom: var(--space-l);
+  background-color: var(--background-faded);
+  border: var(--border-s) solid var(--border-faded);
+}
+
+.callout > *:first-child {
+  margin-top: 0;
+}
+
+.callout > *:last-child {
+  margin-bottom: 0;
+}
+
+/* -- Callout title -- */
+.callout-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  font-weight: var(--font-weight-semi-bold);
+  font-size: var(--font-s);
+  line-height: var(--line-height-s);
+}
+
+/* -- Callout icon layout -- */
+.callout[data-icon] {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--space-m);
+}
+
+.callout[data-icon] > .svg-icn {
+  grid-column: 1;
+  grid-row: 1;
+  width: 1.25rem;
+  height: 1.25rem;
+  align-self: center;
+}
+
+.callout[data-icon] > :not(.svg-icn) {
+  grid-column: 2;
+}
+
+/* -- Callout description -- */
+.callout-description {
+  margin-top: var(--space-xs);
+  font-size: var(--font-s);
+}
+
+/* -- Callout type variants -- */
+.callout[data-type="info"] {
+  background-color: var(--status-info-bg);
+}
+
+.callout[data-type="info"] .callout-title,
+.callout[data-type="info"] > .svg-icn {
+  color: var(--status-info);
+}
+
+.callout[data-type="success"] {
+  background-color: var(--status-success-bg);
+}
+
+.callout[data-type="success"] .callout-title,
+.callout[data-type="success"] > .svg-icn {
+  color: var(--status-success);
+}
+
+.callout[data-type="warning"] {
+  background-color: var(--status-warning-bg);
+}
+
+.callout[data-type="warning"] .callout-title,
+.callout[data-type="warning"] > .svg-icn {
+  color: var(--status-warning);
+}
+
+.callout[data-type="danger"] {
+  background-color: var(--status-danger-bg);
+}
+
+.callout[data-type="danger"] .callout-title,
+.callout[data-type="danger"] > .svg-icn {
+  color: var(--status-danger);
+}
+
+/* ------ 12. FORM ELEMENTS ------ */
+
+/* -- Labels -- */
+label {
+  display: block;
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+/* -- Text inputs & textarea -- */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="url"],
+input[type="tel"],
+textarea,
+select {
+  font-family: var(--font-primary);
+  font-size: var(--body-size);
+  line-height: var(--line-height-l);
+  color: var(--input-text);
+  background-color: var(--input-background);
+  border: var(--border-s) solid var(--input-border);
+  padding: var(--space-m) var(--space-l);
+  min-height: 44px;
+  width: 100%;
+  display: block;
+  transition: border-color 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+input[type="url"]:focus,
+input[type="tel"]:focus,
+textarea:focus,
+select:focus {
+  outline: 1px solid var(--input-focus);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* -- Input error state -- */
+input.is-error,
+textarea.is-error,
+select.is-error {
+  border-color: var(--status-danger);
+}
+
+input.is-error:focus,
+textarea.is-error:focus,
+select.is-error:focus {
+  outline-color: var(--status-danger);
+}
+
+/* -- Disabled inputs -- */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background-color: var(--input-disabled-bg);
+  color: var(--input-disabled-text);
+  cursor: not-allowed;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--input-placeholder);
+}
+
+/* -- Textarea -- */
+textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* -- Colour input -- */
+input[type="color"] {
+  appearance: none;
+  -webkit-appearance: none;
+  border: var(--border-s) solid var(--input-border);
+  background-color: var(--input-background);
+  padding: 0;
+  width: auto;
+  aspect-ratio: 1 / 1;
+  align-self: stretch;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: none;
+}
+
+input[type="color"]::-moz-color-swatch {
+  border: none;
+}
+
+input[type="color"]:focus {
+  outline: none;
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+/* -- Select -- */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23666' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-m) center;
+  padding-right: var(--space-2xl);
+  cursor: pointer;
+}
+
+/* -- Disabled states -- */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background-color: var(--input-disabled-bg);
+  color: var(--input-disabled-text);
+  cursor: not-allowed;
+  border: none;
+}
+
+/* -- Fieldset & legend -- */
+fieldset {
+  border: var(--border-s) solid var(--border-secondary);
+  padding: var(--space-l);
+  margin: 0 0 var(--space-l) 0;
+}
+
+legend {
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-semi-bold);
+  padding: 0 var(--space-s);
+  color: var(--text-primary);
+}
+
+/* -- Checkbox & radio -- */
+input[type="checkbox"],
+input[type="radio"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--space-xl);
+  height: var(--space-xl);
+  margin: 0;
+  cursor: pointer;
+  background-color: var(--checkbox-background);
+  border: var(--border-s) solid var(--checkbox-border);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+
+input[type="radio"] {
+  border-radius: 50%;
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--checkbox-selected);
+  border-color: var(--checkbox-selected);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
+  background-size: 14px 14px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+input[type="radio"]:checked {
+  background-color: var(--checkbox-selected);
+  border-color: var(--checkbox-selected);
+}
+
+input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background-color: var(--checkbox-checkmark);
+}
+
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+input[type="checkbox"]:disabled,
+input[type="radio"]:disabled {
+  background-color: var(--input-disabled-bg);
+  border-color: var(--input-disabled-bg);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+input[type="checkbox"]:disabled:checked {
+  background-color: var(--input-disabled-text);
+  border-color: var(--input-disabled-text);
+}
+
+input[type="radio"]:disabled:checked {
+  background-color: var(--input-disabled-text);
+  border-color: var(--input-disabled-text);
+}
+
+/* Dark mode checkmark */
+[data-theme="dark"] input[type="checkbox"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) input[type="checkbox"]:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
+  }
+}
+
+/* -- Inline label + checkbox/radio pattern -- */
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+}
+
+.form-check label {
+  display: inline;
+  margin-bottom: 0;
+  font-weight: var(--font-weight-regular);
+  cursor: pointer;
+}
+
+/* -- Segmented control (single-select button group) -- */
+.segmented-control {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+}
+
+.segmented-control-btn {
+  padding: var(--space-s) var(--space-l);
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-regular);
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-faded);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.segmented-control-btn:hover {
+  color: var(--text-primary);
+  background-color: color-mix(in srgb, var(--background-primary), var(--alpha-50));
+}
+
+.segmented-control-btn.is-active {
+  color: var(--text-primary);
+}
+
+.segmented-control-btn:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
+.segmented-control-btn.is-icon {
+  padding: var(--space-s);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* -- Toggle / switch -- */
+.form-toggle {
+  --toggle-width: 44px;
+  --toggle-height: var(--space-xl);
+  --toggle-knob-size: 18px;
+  --toggle-knob-offset: 3px;
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+}
+
+.form-toggle label {
+  display: inline;
+  margin-bottom: 0;
+  font-weight: var(--font-weight-regular);
+  cursor: pointer;
+  order: -1;
+  white-space: nowrap;
+}
+
+.form-toggle.is-label-right label {
+  order: 1;
+}
+
+.form-toggle input[type="checkbox"] {
+  width: var(--toggle-width);
+  height: var(--toggle-height);
+  background-color: var(--black-alpha-3);
+  border: var(--border-s) solid var(--border-faded);
+  border-radius: var(--radius-pill);
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.form-toggle input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: var(--toggle-knob-offset);
+  transform: translateY(-50%);
+  width: var(--toggle-knob-size);
+  height: var(--toggle-knob-size);
+  border-radius: 50%;
+  background-color: var(--neutral-500);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.form-toggle input[type="checkbox"]:checked {
+  background-color: var(--text-accent);
+  background-image: none;
+}
+
+.form-toggle input[type="checkbox"]:checked::after {
+  transform: translateY(-50%) translateX(calc(var(--toggle-width) - var(--toggle-knob-size) - var(--toggle-knob-offset) * 2 - var(--border-s) * 2));
+  background-color: var(--off-white);
+}
+
+.form-toggle input[type="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+.form-toggle input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.form-toggle input[type="checkbox"]:disabled + label {
+  cursor: not-allowed;
+}
+
+/* -- Toggle dark mode -- */
+[data-theme="dark"] .form-toggle input[type="checkbox"] {
+  background-color: #444;
+}
+
+[data-theme="dark"] .form-toggle input[type="checkbox"]::after {
+  background-color: #888;
+}
+
+[data-theme="dark"] .form-toggle input[type="checkbox"]:checked {
+  background-color: #e8e6e3;
+}
+
+[data-theme="dark"] .form-toggle input[type="checkbox"]:checked::after {
+  background-color: #1a1a1a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .form-toggle input[type="checkbox"] {
+    background-color: #444;
+  }
+
+  :root:not([data-theme]) .form-toggle input[type="checkbox"]::after {
+    background-color: #888;
+  }
+
+  :root:not([data-theme]) .form-toggle input[type="checkbox"]:checked {
+    background-color: #e8e6e3;
+  }
+
+  :root:not([data-theme]) .form-toggle input[type="checkbox"]:checked::after {
+    background-color: #1a1a1a;
+  }
+}
+
+/* -- Form group (label + input pair) -- */
+.form-group {
+  margin-bottom: var(--space-l);
+}
+
+/* -- Form hint text -- */
+.form-hint {
+  font-size: var(--font-s);
+  color: var(--text-secondary);
+  margin-top: var(--space-xs);
+}
+
+/* -- Form error message -- */
+.form-error {
+  font-size: var(--font-s);
+  color: var(--status-danger);
+  margin-top: var(--space-xs);
+}
+
+/* -- Skeleton loading -- */
+.skeleton-line {
+  background-color: var(--background-faded);
+  border-radius: 4px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-label {
+  height: 14px;
+  width: 30%;
+  margin-bottom: var(--space-xs);
+}
+
+.skeleton-input {
+  height: 44px;
+  width: 100%;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* -- Access support form states -- */
+.access-support-success {
+  text-align: center;
+  padding: var(--space-3xl) 0;
+}
+
+.access-support-success p {
+  font-size: var(--body-size);
+  color: var(--text-secondary);
+}
+
+.access-support-error {
+  font-size: var(--font-s);
+  color: var(--status-danger);
+  margin-top: var(--space-s);
+}
+
+/* ------ 13. DISCLOSURE (details / summary) ------ */
+
+/* -- Base disclosure -- */
+
+
+summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-m);
+  font-family: var(--font-primary);
+  font-size: var(--body-size);
+  color: var(--text-primary);
+  padding: var(--space-s) var(--space-m);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+summary::before {
+  content: "";
+  width: 0.5em;
+  height: 0.5em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+details[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+summary:hover {
+  color: var(--text-secondary);
+}
+
+summary:focus-visible {
+  outline: 2px solid var(--input-focus);
+  outline-offset: -2px;
+}
+
+/* -- Disclosure content -- */
+details .disclosure-content {
+  padding: var(--space-s) var(--space-m) var(--space-m) calc(0.5em + var(--space-s) + var(--space-m));
+  font-family: var(--font-primary);
+  font-size: var(--body-size);
+  line-height: var(--line-height-xl);
+  color: var(--text-secondary);
+}
+
+/* -- Disclosure table (key-value pairs) -- */
+.disclosure-table {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2xs) var(--space-l);
+  align-items: baseline;
+  margin: 0;
+}
+
+.disclosure-table dt {
+  color: var(--text-faded);
+  white-space: nowrap;
+}
+
+.disclosure-table dd {
+  color: var(--text-primary);
+  margin: 0;
+}
+
+
+/* ------ 16. BADGE ------ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-tertiary);
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-l);
+  padding: var(--space-2xs) var(--space-s);
+  border-radius: 0;
+  background-color: var(--background-darker);
+  color: var(--text-primary);
+  white-space: nowrap;
+  line-height: var(--line-height-m);
+}
+
+.badge[data-color="success"],
+.badge[data-color="green"] {
+  background-color: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.badge[data-color="warning"],
+.badge[data-color="yellow"] {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+
+.badge[data-color="danger"],
+.badge[data-color="red"] {
+  background-color: var(--status-danger-bg);
+  color: var(--status-danger);
+}
+
+.badge[data-color="info"],
+.badge[data-color="blue"] {
+  background-color: var(--status-info-bg);
+  color: var(--status-info);
+}
+
+
+/* ------ 17. CARD ------ */
+
+.card {
+  background-color: var(--background-primary);
+  border: var(--border-s) solid var(--border-faded);
+  padding: var(--space-xl);
+  transition: border 0.3s, background-color 0.3s, box-shadow 0.15s;
+}
+
+.card--flush {
+  padding: 0;
+}
+
+.card--interactive {
+  display: block;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: border 0.3s, background-color 0.3s, box-shadow 0.15s;
+}
+
+.card--interactive:hover {
+  background-color: var(--background-faded);
+  box-shadow: 0 4px 12px var(--black-alpha-10);
+  /* border-color: var(--border-primary); */
+}
+
+.card--interactive:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+/* -- Card inner elements -- */
+.card-title {
+  margin-top: 0;
+  margin-bottom: var(--space-s);
+  font-size: var(--font-3xl);
+  line-height: var(--line-height-m);
+}
+
+.card-description {
+  color: var(--text-secondary);
+  font-size: var(--body-size);
+  margin-bottom: 0;
+
+}
+
+.card-image {
+  border-radius: var(--radius-m) var(--radius-m) 0 0;
+}
+
+/* -- Card dark mode -- */
+[data-theme="dark"] .card {
+  background-color: var(--background-secondary);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .card {
+    background-color: var(--background-secondary);
+  }
+}
+
+/* NOTE: .book-cover moved to docs-site.css — see CLAUDE.md §17 (Layer Discipline) */
+
+
+/* ------ 18. BREADCRUMB ------ */
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  font-size: var(--font-xs);
+  color: var(--text-faded);
+}
+
+.breadcrumb a {
+  color: var(--text-faded);
+  text-decoration: none;
+  transition: color 0.15s ease-in-out;
+}
+
+.breadcrumb a:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.breadcrumb [aria-current="page"] {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.breadcrumb-separator {
+  color: var(--text-faded);
+  user-select: none;
+}
+
+
+/* ------ 14. ACCORDION ------ */
+
+.accordion {
+  border-top: var(--border-s) solid var(--border-faded);
+}
+
+.accordion-item {
+  border-bottom: var(--border-s) solid var(--border-faded);
+}
+
+
+
+.accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  gap: var(--space-m);
+  padding: var(--accordion-padding-y) var(--accordion-padding-x);
+  color: var(--text-primary);
+  z-index: 10;
+  position: relative;
+}
+
+.accordion-header .svg-icn {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  transition: transform var(--duration-m) var(--ease-out);
+}
+
+.accordion-item.is-open > .accordion-header .svg-icn {
+  transform: rotate(180deg);
+}
+
+.accordion-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration-m) var(--ease-out);
+  z-index: 5;
+  position: relative;
+}
+
+.accordion-item.is-open > .accordion-content {
+  grid-template-rows: 1fr;
+}
+
+.accordion-header:focus:not(:focus-visible) {
+  outline: solid 1px transparent;
+}
+
+.accordion-header:focus-visible {
+  outline: 2px solid var(--status-info);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+.accordion-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.accordion-body {
+  padding:  0 var(--accordion-padding-x) var(--accordion-padding-y) var(--accordion-padding-x);
+}
+
+
+/* ------ 19. TABS ------ */
+
+.tabs {
+  display: flex;
+  border-bottom: var(--border-s) solid var(--border-faded);
+  gap: var(--space-none);
+}
+
+.tab {
+  position: relative;
+  background: none;
+  border: none;
+  padding: var(--space-m) var(--space-l);
+  color: var(--text-faded);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-s);
+  cursor: pointer;
+  transition: color 0.15s ease-in-out;
+}
+
+.tab:hover {
+  color: var(--text-secondary);
+}
+
+.tab.is-active {
+  color: var(--text-primary);
+}
+
+.tab.is-active::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--text-primary);
+}
+
+.tab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+.tab-panel {
+  padding-top: var(--space-m);
+}
+
+a.tab {
+    text-decoration: none;
+}
+
+a.tab:hover {
+  background-color: var(--background-faded);
+}
+
+
+/* ------ 20. PROGRESS ------ */
+
+progress.progress-bar {
+  width: 100%;
+  height: var(--space-s);
+  border-radius: 0;
+  border: none;
+  overflow: hidden;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+progress.progress-bar::-webkit-progress-bar {
+  background-color: var(--background-darker);
+  border-radius: 0;
+}
+
+progress.progress-bar::-webkit-progress-value {
+  background-color: var(--text-primary);
+  border-radius: 0;
+  transition: width 0.3s ease-in-out;
+}
+
+progress.progress-bar::-moz-progress-bar {
+  background-color: var(--text-primary);
+  border-radius: 0;
+}
+
+/* -- Progress status variants -- */
+progress.progress-bar--success::-webkit-progress-value { background: var(--status-success); }
+progress.progress-bar--success::-moz-progress-bar { background: var(--status-success); }
+
+progress.progress-bar--warning::-webkit-progress-value { background: var(--status-warning); }
+progress.progress-bar--warning::-moz-progress-bar { background: var(--status-warning); }
+
+progress.progress-bar--danger::-webkit-progress-value { background: var(--status-danger); }
+progress.progress-bar--danger::-moz-progress-bar { background: var(--status-danger); }
+
+/* -- Progress wrapper with tooltip -- */
+.progress-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.progress-tooltip {
+  position: absolute;
+  bottom: calc(100% + var(--space-xs));
+  background-color: var(--warm-black);
+  color: var(--off-white);
+  font-size: var(--font-xs);
+  border-radius: var(--radius-s);
+  padding: var(--space-xs) var(--space-s);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity 0.15s ease-in-out;
+  z-index: 800;
+}
+
+.progress-wrapper:hover .progress-tooltip {
+  opacity: 1;
+}
+
+
+/* ------ 21. TOOLTIP ------ */
+
+[data-tooltip] {
+  position: relative;
+  cursor: help;
+}
+
+[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + var(--space-xs));
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--warm-black);
+  color: var(--off-white);
+  font-size: var(--font-xs);
+  border-radius: var(--radius-s);
+  padding: var(--space-xs) var(--space-s);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+  z-index: 800;
+}
+
+[data-tooltip]:hover::before,
+[data-tooltip]:focus-visible::before {
+  opacity: 1;
+}
+
+/* -- Tooltip positions -- */
+[data-tooltip-position="bottom"]::before {
+  bottom: auto;
+  top: calc(100% + var(--space-xs));
+}
+
+[data-tooltip-position="left"]::before {
+  bottom: auto;
+  top: 50%;
+  left: auto;
+  right: calc(100% + var(--space-xs));
+  transform: translateY(-50%);
+}
+
+[data-tooltip-position="right"]::before {
+  bottom: auto;
+  top: 50%;
+  left: calc(100% + var(--space-xs));
+  transform: translateY(-50%);
+}
+
+/* -- Interactive elements override cursor -- */
+button[data-tooltip],
+a[data-tooltip],
+.button[data-tooltip] {
+  cursor: pointer;
+}
+
+/* -- Tooltip dark mode -- */
+[data-theme="dark"] [data-tooltip]::before,
+[data-theme="dark"] .progress-tooltip {
+  background-color: var(--neutral-100);
+  color: var(--warm-black);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) [data-tooltip]::before,
+  :root:not([data-theme]) .progress-tooltip {
+    background-color: var(--neutral-100);
+    color: var(--warm-black);
+  }
+}
+
+
+/* ------ 22. TOAST ------ */
+
+.toast-container {
+  position: fixed;
+  bottom: var(--space-xl);
+  right: var(--space-xl);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: all;
+  background-color: var(--warm-black);
+  color: var(--off-white);
+  padding: var(--space-m) var(--space-l);
+  border: var(--border-s) solid var(--border-faded);
+  display: flex;
+  align-items: center;
+  gap: var(--space-m);
+  max-width: 360px;
+  font-size: var(--font-s);
+  transition: opacity 0.3s ease-in-out;
+}
+
+.toast[data-type="success"],
+.toast[data-type="green"] { background: var(--status-success-bg); color: var(--status-success); }
+
+.toast[data-type="warning"],
+.toast[data-type="yellow"] { background: var(--status-warning-bg); color: var(--status-warning); }
+
+.toast[data-type="danger"],
+.toast[data-type="red"] { background: var(--status-danger-bg); color: var(--status-danger); }
+
+.toast[data-type="info"],
+.toast[data-type="blue"] { background: var(--status-info-bg); color: var(--status-info); }
+
+.toast-message {
+  flex: 1;
+}
+
+.toast-close {
+  color: inherit;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.15s ease-in-out;
+}
+
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+/* -- Toast dark mode -- */
+[data-theme="dark"] .toast {
+  background-color: var(--neutral-100);
+  color: var(--warm-black);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .toast {
+    background-color: var(--neutral-100);
+    color: var(--warm-black);
+  }
+}
+
+
+/* ------ 23. CODE ------ */
+
+/* -- Inline code -- */
+code {
+  font-family: var(--font-quaternary);
+  font-size: calc(var(--body-size) - .2em);
+  background-color: color-mix(in srgb, var(--text-primary), var(--alpha-5));
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* -- Code block -- */
+pre {
+  background-color: var(--background-secondary);
+  border: var(--border-s) solid var(--border-faded);
+  padding: var(--space-l);
+  overflow-x: auto;
+  font-family: var(--font-quaternary);
+  font-size: calc(var(--body-size) - 2px);
+  line-height: var(--line-height-xl);
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  word-break: normal;
+}
+
+/* -- Keyboard shortcut -- */
+kbd {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-s);
+  font-family: var(--font-quaternary);
+  font-size: var(--font-2xs);
+  line-height: var(--line-height-m);
+  color: var(--text-secondary);
+  vertical-align: middle;
+  background-color: var(--background-faded);
+  border: var(--border-s) solid var(--border-secondary);
+  border-radius: var(--radius-xs);
+  box-shadow: 0 1px 0 var(--border-secondary);
+  white-space: nowrap;
+}
+
+/* -- Highlighted text -- */
+mark {
+  background-color: var(--yellow-light);
+  color: var(--warm-black);
+  padding: 0 var(--space-2xs);
+}
+
+/* -- Mark dark mode -- */
+[data-theme="dark"] mark {
+  background-color: color-mix(in srgb, var(--yellow), var(--alpha-60));
+  color: var(--off-white);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) mark {
+    background-color: color-mix(in srgb, var(--yellow), var(--alpha-60));
+    color: var(--off-white);
+  }
+}
+
+/* -- Figure / Figcaption -- */
+figure {
+  margin: var(--space-xl) 0;
+  padding: 0;
+}
+
+figcaption {
+  font-size: var(--font-xs);
+  color: var(--text-faded);
+  margin-top: var(--space-s);
+  line-height: var(--line-height-xl);
+  font-style: italic;
+}
+
+/* -- Abbreviation -- */
+abbr[title] {
+  text-decoration: underline dotted var(--text-faded);
+  text-underline-offset: 2px;
+  cursor: help;
+}
+
+
+
+
+/* ------ 24. IMAGE ------ */
+
+/* -- Base image -- */
+.img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+/* -- Aspect ratio combos -- */
+.img-1x1  { aspect-ratio: 1 / 1; }
+.img-3x2  { aspect-ratio: 3 / 2; }
+.img-4x3  { aspect-ratio: 4 / 3; }
+.img-16x9 { aspect-ratio: 16 / 9; }
+.img-21x9 { aspect-ratio: 21 / 9; }
+
+
+/* NOTE: .sticky-bar moved to docs-site.css — see CLAUDE.md §17 (Layer Discipline) */
+
+
+/* ------ 25. TABLE ------ */
+
+/* -- Table scroll wrapper -- */
+.table-scroll {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* -- Scroll hint: fade on right edge when overflowing -- */
+.table-scroll.is-overflowing {
+  display: flex;
+}
+
+.table-scroll.is-overflowing::after {
+  content: "";
+  position: sticky;
+  right: 0;
+  flex-shrink: 0;
+  width: var(--space-2xl);
+  margin-left: calc(-1 * var(--space-2xl));
+  background: linear-gradient(to right, transparent, var(--background-primary));
+  pointer-events: none;
+}
+
+.table-scroll.is-scrolled-end::after {
+  display: none;
+}
+
+/* -- Base table -- */
+.table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  width: fit-content;
+  max-width: 100%;
+  /* font-variant: tabular-nums; */
+  font-size: var(--body-size);
+  margin-bottom: var(--space-2xl);
+}
+
+.table th {
+  font-weight: var(--font-weight-bold);
+  text-align: left;
+  min-width: 130px;
+}
+
+.table th,
+.table td {
+  padding: var(--space-m) var(--space-l);
+  border: none;
+}
+
+.table thead {
+  background-color: transparent;
+}
+
+.table thead tr {
+  border-bottom: var(--border-s) solid var(--border-secondary);
+}
+
+.table tbody tr {
+  border-bottom: var(--border-s) solid var(--border-faded);
+}
+
+/* -- Table modifier: full width -- */
+.table-full {
+  width: 100%;
+}
+
+/* -- Table modifier: hoverable rows -- */
+.table-hover tbody tr:hover {
+  background-color: var(--background-faded);
+}
+
+/* -- Table modifier: header background -- */
+.table-header-filled th {
+  background-color: var(--background-faded);
+  font-weight: var(--font-weight-semi-bold);
+  color: var(--text-primary);
+}
+
+/* -- Table footer -- */
+.table tfoot tr {
+  border-top: var(--border-m) solid var(--border-primary);
+}
+
+.table tfoot th {
+  font-weight: var(--font-weight-bold);
+}
+
+.table tfoot td {
+  font-weight: var(--font-weight-semi-bold);
+}
+
+td .svg-icn {
+  display: inline-flex;
+}
+
+/* -- Condensed table on mobile -- */
+@media (max-width: 768px) {
+  .table th,
+  .table td {
+    padding: var(--space-s) var(--space-m);
+  }
+}
+
+
+/* ------ 26. DIVIDER ------ */
+
+.divider {
+  border: none;
+  border-top: var(--border-s) solid var(--divider-color);
+  margin: var(--space-xl) 0;
+}
+
+.divider--vertical {
+  border-top: none;
+  border-left: var(--border-s) solid var(--divider-color);
+  height: auto;
+  align-self: stretch;
+  margin: 0 var(--space-xl);
+  display: inline-block;
+}
+
+.divider--subtle {
+  --divider-color: var(--black-alpha-10);
+}
+
+.divider--strong {
+  --divider-color: var(--border-primary);
+  border-top-width: var(--border-m);
+}
+
+hr {
+  border: none;
+  border-top: var(--border-s) solid var(--divider-color, var(--border-faded));
+  margin: var(--space-xl) 0;
+}
+
+hr.xl {
+  border: none;
+  margin: var(--space-2xl) 0;
+}
+
+
+/* ------ 27. DROPDOWN ------ */
+
+.dropdown {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+/* -- Trigger -- */
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: var(--space-s);
+  padding: var(--space-l) var(--space-m);
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--font-primary);
+  font-size: var(--font-s);
+  line-height: var(--line-height-m);
+  text-decoration: none;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.dropdown-trigger:hover {
+  background-color: var(--dropdown-item-hover);
+  color: var(--text-plain);
+}
+
+.dropdown-trigger .svg-icn {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.dropdown.is-open > .dropdown-trigger {
+  background-color: var(--background-faded);
+}
+
+/* -- Chevron (rotates on open) -- */
+.dropdown-chevron {
+  width: 1rem;
+  height: 1rem;
+  color: var(--text-faded);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.dropdown.is-open .dropdown-chevron {
+  transform: rotate(180deg);
+}
+
+/* -- Menu -- */
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 250px;
+  background-color: var(--dropdown-background);
+  border: var(--border-s) solid var(--dropdown-border);
+  border-top: none;
+  z-index: 1000;
+  flex-direction: column;
+}
+
+.dropdown-menu.is-right {
+  left: auto;
+  right: 0;
+}
+
+.dropdown.is-open .dropdown-menu {
+  display: flex;
+}
+
+/* -- Items -- */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  padding: var(--space-l) var(--space-m);
+  font-size: var(--font-s);
+  color: var(--text-primary);
+  text-decoration: none;
+  background: none;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+  font-family: var(--font-primary);
+  line-height: var(--line-height-m);
+  text-align: left;
+}
+
+.dropdown-item:hover {
+  background-color: var(--dropdown-item-hover);
+  color: var(--text-plain);
+}
+
+.dropdown-item:focus-visible {
+  outline: none;
+  background-color: var(--dropdown-item-hover);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+.dropdown-item .svg-icn {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.dropdown-item.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.dropdown-item--danger {
+  color: var(--status-danger);
+}
+
+.dropdown-item--danger:hover {
+  background-color: color-mix(in srgb, var(--status-danger), var(--alpha-90));
+}
+
+/* -- Divider -- */
+.dropdown-divider {
+  border: none;
+  border-top: var(--border-s) solid var(--dropdown-border);
+  margin: 0;
+}
+
+/* -- Label (section header) -- */
+.dropdown-label {
+  padding: var(--space-s) var(--space-m);
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-semi-bold);
+  color: var(--text-faded);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* -- Description (under item text) -- */
+.dropdown-desc {
+  font-size: var(--font-2xs);
+  color: var(--text-faded);
+  white-space: normal;
+}
+
+/* -- Trailing content (pushes to right edge) -- */
+.dropdown-item-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--text-faded);
+  flex-shrink: 0;
+  font-size: var(--font-2xs);
+}
+
+
+/* ------ 28. TAG ------ */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-family: var(--font-primary);
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-regular);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: var(--space-s) var(--space-s);
+  background-color: var(--bg-faded-5);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  line-height: var(--line-height-xs);
+  border-radius: 3px;
+}
+
+.tag[data-color="success"],
+.tag[data-color="green"] {
+  background-color: var(--status-success-bg);
+  border-color: var(--green-light);
+  color: var(--status-success);
+}
+
+.tag[data-color="warning"],
+.tag[data-color="yellow"] {
+  background-color: var(--status-warning-bg);
+  border-color: var(--yellow-light);
+  color: var(--status-warning);
+}
+
+.tag[data-color="danger"],
+.tag[data-color="red"] {
+  background-color: var(--status-danger-bg);
+  border-color: var(--red-light);
+  color: var(--status-danger);
+}
+
+.tag[data-color="info"],
+.tag[data-color="blue"] {
+  background-color: var(--status-info-bg);
+  border-color: var(--blue-light);
+  color: var(--status-info);
+}
+
+.tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  padding: var(--space-2xs);
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+}
+
+.tag-remove .svg-icn {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+.tag-remove:hover {
+  opacity: 1;
+  background-color: var(--black-alpha-10);
+}
+
+.tag-remove:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+.tag-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+/* ------ 29. DIALOG ------ */
+
+.dialog {
+  background-color: var(--background-primary);
+  border: none;
+  border-radius: 0;
+  box-shadow: 0 8px 32px var(--black-alpha-20);
+  padding: var(--space-xl);
+  max-width: var(--dialog-max-width);
+  width: min(var(--dialog-max-width), calc(100vw - var(--space-2xl) * 2));
+  max-height: 85vh;
+  margin: auto;
+}
+
+.dialog::backdrop {
+  background-color: var(--background-modal);
+  backdrop-filter: blur(2px);
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-l);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-l);
+}
+
+.dialog-title {
+  font-size: var(--font-3xl);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-m);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.dialog-close {
+  flex-shrink: 0;
+  color: var(--text-faded);
+  transition: color 0.15s ease;
+}
+
+.dialog-close:hover {
+  color: var(--text-primary);
+}
+
+.dialog-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+.dialog-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.dialog-body > *:first-child {
+  margin-top: 0;
+}
+
+.dialog-body > *:last-child {
+  margin-bottom: 0;
+}
+
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-m);
+  flex-wrap: wrap;
+}
+
+/* -- Dialog dark mode -- */
+[data-theme="dark"] .dialog {
+  background-color: var(--background-secondary);
+  box-shadow: 0 8px 40px var(--black-alpha-60);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .dialog {
+    background-color: var(--background-secondary);
+    box-shadow: 0 8px 40px var(--black-alpha-60);
+  }
+}
+
+
+/* ------ 30. SLIDER ------ */
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background-color: var(--background-darker);
+  border-radius: var(--radius-pill);
+  outline: none;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  display: block;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--text-primary);
+  border: 2px solid var(--background-primary);
+  cursor: pointer;
+  box-shadow: 0 1px 4px var(--black-alpha-20);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--text-primary);
+  border: 2px solid var(--background-primary);
+  cursor: pointer;
+  box-shadow: 0 1px 4px var(--black-alpha-20);
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px var(--black-alpha-20);
+}
+
+input[type="range"]:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+  border-radius: var(--radius-pill);
+}
+
+input[type="range"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+input[type="range"]:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+}
+
+.slider-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--font-s);
+  color: var(--text-primary);
+}
+
+.slider-value {
+  font-family: var(--font-quaternary);
+  font-size: var(--font-xs);
+  color: var(--text-faded);
+}
+
+
+/* ------ 31. RATING ------ */
+
+.rating {
+  display: inline-flex;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.rating-star {
+  width: var(--rating-size);
+  height: var(--rating-size);
+  cursor: pointer;
+  color: var(--background-faded);
+  transition: color 0.1s ease, transform 0.1s ease;
+  flex-shrink: 0;
+}
+
+.rating-star svg path {
+  stroke: var(--text-faded);
+  stroke-width: var(--border-m);
+}
+
+.rating-star.is-filled,
+.rating-star.is-hovered {
+  color: var(--yellow);
+}
+
+
+.rating-star.is-filled svg path,
+.rating-star.is-hovered svg path {
+  stroke: var(--text-primary);
+}
+
+
+.rating-star:hover {
+  transform: scale(1.1);
+}
+
+.rating-star:focus-visible {
+  outline: none;
+  border-radius: var(--radius-xs);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+.rating.is-readonly .rating-star {
+  cursor: default;
+  pointer-events: none;
+}
+
+.rating.is-readonly .rating-star:hover {
+  transform: none;
+}
+
+.rating--sm { --rating-size: 1rem; }
+.rating--lg { --rating-size: 2rem; }
+
+
+/* NOTE: .copy-btn moved to docs-site.css — see CLAUDE.md §17 (Layer Discipline) */
+
+
+/* ------ 33. NUMBER INPUT ------ */
+
+.number-input {
+  display: inline-flex;
+  align-items: stretch;
+  width: fit-content;
+  border: var(--border-s) solid var(--input-border);
+  overflow: hidden;
+  background-color: var(--input-background);
+}
+
+.number-input:focus-within {
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+.number-input input[type="number"] {
+  border: none;
+  background: transparent;
+  text-align: center;
+  width: 4rem;
+  padding: var(--space-m) var(--space-xs);
+  box-shadow: none;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.number-input input[type="number"]:focus {
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+
+.number-input input[type="number"]::-webkit-outer-spin-button,
+.number-input input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.number-input-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  background-color: var(--background-faded);
+  border: none;
+  border-radius: 0;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: var(--font-xl);
+  line-height: 1;
+  transition: background-color 0.1s ease;
+  flex-shrink: 0;
+}
+
+.number-input-btn:hover {
+  background-color: var(--background-darker);
+}
+
+.number-input-btn:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+.number-input-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+
+/* ------ 34. RADIO GROUP ------ */
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+.radio-group.is-horizontal {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-m) var(--space-xl);
+}
+
+.radio-group-label {
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+  display: block;
+}
+
+.radio-group-hint {
+  font-size: var(--font-xs);
+  color: var(--text-faded);
+  margin-top: var(--space-2xs);
+  display: block;
+}
+
+
+/* ------ 35. DROP CAP ------ */
+
+/*
+ * Apply .drop-cap or data-drop-cap to a <p> element to style its first
+ * letter as a large decorative initial. Use on long paragraphs only —
+ * the text must wrap alongside the letter for at least 3 lines.
+ */
+
+.drop-cap::first-letter,
+[data-drop-cap]::first-letter {
+  float: left;
+  font-family: var(--font-secondary);
+  font-size: 3.2rem;
+  font-weight: var(--font-weight-regular);
+  line-height: 0.94;
+  color: var(--text-primary);
+  padding-right: var(--space-s);
+  margin-top: 0.06em;
+  text-transform: uppercase;
+}
+
+.drop-cap::after,
+[data-drop-cap]::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+
+/* NOTE: .token-copy, .token-swatch, .asset-card, .dont-card moved to docs-site.css
+ * — see CLAUDE.md §17 (Layer Discipline) */
+
+
+/* ------ 15. COMPONENTS IN PROGRESS ------ */
+/*
+ * The following components are actively being built.
+ * Remove each item from this list as it is implemented above.
+ * See cms/components.md for the full component spec and build rules.
+ *
+ * REMAINING:
+ * (all components implemented)
+ *
+ * IMPLEMENTED IN THIS FILE:
+ * - [x] Button (.button)
+ * - [x] Form elements (inputs, select, textarea, checkbox, radio, toggle, segmented control)
+ * - [x] Callout (.callout)
+ * - [x] Disclosure (details/summary)
+ * - [x] Badge (.badge)
+ * - [x] Card (.card)
+ * - [x] Tabs (.tabs)
+ * - [x] Progress (.progress-bar)
+ * - [x] Tooltip (data-tooltip)
+ * - [x] Toast (.toast)
+ * - [x] Breadcrumb (.breadcrumb)
+ * - [x] code / pre / kbd / mark / abbr / figure
+ * - [x] Scrollbar
+ * - [x] Divider (.divider)
+ * - [x] Dropdown (.dropdown)
+ * - [x] Tag (.tag)
+ * - [x] Dialog (.dialog)
+ * - [x] Slider (input[type="range"])
+ * - [x] Rating (.rating)
+ * - [x] Number Input (.number-input)
+ * - [x] Radio Group (.radio-group)
+ * - [x] Drop Cap (.drop-cap)
+ */
+
