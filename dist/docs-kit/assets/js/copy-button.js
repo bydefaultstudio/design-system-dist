@@ -234,7 +234,7 @@
     initColorCopyButtons();
   }
 
-  // Expose for Barba re-init after page transitions
+  // Expose for re-init after client-side page swaps
   window.bdInitCopyButtons = initAll;
 
   if (document.readyState === 'loading') {

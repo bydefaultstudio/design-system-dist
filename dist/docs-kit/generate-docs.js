@@ -848,8 +848,7 @@ function generateIndexPage(template, filesBySection) {
     .replace('{{FONT_HEAD}}', fontHeadHtml(ROOT_MANIFEST, './'))
     .replace('{{PAGE_NAV}}', '')
     .replace('{{FOOTER_TEXT}}', SITE.footerText)
-    .replace('{{FAVICON_SVG}}', brandChromeSlots(null, '').faviconSvg)
-    .replace('{{FAVICON_ICO}}', brandChromeSlots(null, '').faviconIco)
+    .replace('{{FAVICON_LINKS}}', brandChromeSlots(null, '').faviconLinks)
     .replace('{{OG_IMAGE}}', brandChromeSlots(null, '').ogImage)
     .replace('{{PAGE_ACCESS}}', access)
     .replace('{{SECTION_SLUG}}', 'home')
@@ -989,8 +988,7 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
     .replace('{{FONT_HEAD}}', fontHeadHtml(ROOT_MANIFEST, navBase))
     .replace('{{PAGE_NAV}}', '')
     .replace('{{FOOTER_TEXT}}', SITE.footerText)
-    .replace('{{FAVICON_SVG}}', brandChromeSlots(null, navBase).faviconSvg)
-    .replace('{{FAVICON_ICO}}', brandChromeSlots(null, navBase).faviconIco)
+    .replace('{{FAVICON_LINKS}}', brandChromeSlots(null, navBase).faviconLinks)
     .replace('{{OG_IMAGE}}', brandChromeSlots(null, navBase).ogImage)
     .replace('{{PAGE_ACCESS}}', deriveDataAccess(loadDefaults(DOCS_DIR)))
     .replace('{{SECTION_SLUG}}', `${slugifySection(section)}-overview`)
@@ -1344,8 +1342,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
     .replace('{{FONT_HEAD}}', fontHeadHtml(ROOT_MANIFEST, navBase))
     .replace('{{PAGE_NAV}}', paginationEnabled ? generatePageNav(file, pageOrder) : '')
     .replace('{{FOOTER_TEXT}}', SITE.footerText)
-    .replace('{{FAVICON_SVG}}', brandChromeSlots(null, navBase).faviconSvg)
-    .replace('{{FAVICON_ICO}}', brandChromeSlots(null, navBase).faviconIco)
+    .replace('{{FAVICON_LINKS}}', brandChromeSlots(null, navBase).faviconLinks)
     .replace('{{OG_IMAGE}}', brandChromeSlots(null, navBase).ogImage)
     .replace('{{PAGE_ACCESS}}', access)
     .replace('{{PAGE_SCRIPTS}}', pageScripts)
@@ -1867,12 +1864,22 @@ function loadBrandThemes() {
  * Resolve the favicon/OG chrome slots for a page. Brand manifests provide
  * absolute site paths; pages without a brand (or manifests without the keys)
  * fall back to the site defaults, resolved against the page's nav base.
+ * Fallback favicon links are emitted only when the files actually exist in
+ * the output — a project without favicons gets no dead links.
  */
 function brandChromeSlots(manifest, base) {
   const m = manifest || {};
+  const svg = m.faviconSvg
+    || (fs.existsSync(path.join(OUTPUT_DIR, 'assets', 'icons', 'favicon.svg')) ? `${base}assets/icons/favicon.svg` : null);
+  const ico = m.faviconIco
+    || (fs.existsSync(path.join(OUTPUT_DIR, 'assets', 'icons', 'favicon.ico')) ? `${base}assets/icons/favicon.ico` : null);
+  const links = [];
+  if (svg) links.push(`<link rel="icon" type="image/svg+xml" href="${svg}">`);
+  if (ico) links.push(`<link rel="icon" type="image/x-icon" href="${ico}">`);
   return {
-    faviconSvg: m.faviconSvg || `${base}assets/icons/favicon.svg`,
-    faviconIco: m.faviconIco || `${base}assets/icons/favicon.ico`,
+    faviconLinks: links.length
+      ? `<!-- Favicon (per-brand via brand.json, site default otherwise) -->\n    ${links.join('\n    ')}`
+      : '',
     ogImage: m.ogImage || `${base}assets/images/og/og-default.jpg`,
   };
 }
@@ -2087,8 +2094,7 @@ function generateBrandDocs(template, themes) {
         .replace('{{FONT_HEAD}}', fontHeadHtml(theme.manifest, navBase))
         .replace('{{PAGE_SCRIPTS}}', buildPageScripts(frontmatter.section || '', frontmatter, navBase))
         .replace('{{FOOTER_TEXT}}', buildFooterHtml(theme.manifest.footerText))
-        .replace('{{FAVICON_SVG}}', brandChromeSlots(theme.manifest, navBase).faviconSvg)
-        .replace('{{FAVICON_ICO}}', brandChromeSlots(theme.manifest, navBase).faviconIco)
+        .replace('{{FAVICON_LINKS}}', brandChromeSlots(theme.manifest, navBase).faviconLinks)
         .replace('{{OG_IMAGE}}', brandChromeSlots(theme.manifest, navBase).ogImage)
         .replace('{{PAGE_ACCESS}}', deriveDataAccess(frontmatter))
         .replace('{{SECTION_SLUG}}', `${brandKey}-${slugifySection(frontmatter.section)}`)
@@ -2242,8 +2248,7 @@ function generateBrandSectionOverviews(template, themes) {
         .replace('{{TOC_SECTION}}', '')
         .replace('{{PAGE_NAV}}', '')
         .replace('{{FOOTER_TEXT}}', buildFooterHtml(theme.manifest.footerText))
-        .replace('{{FAVICON_SVG}}', brandChromeSlots(theme.manifest, base).faviconSvg)
-        .replace('{{FAVICON_ICO}}', brandChromeSlots(theme.manifest, base).faviconIco)
+        .replace('{{FAVICON_LINKS}}', brandChromeSlots(theme.manifest, base).faviconLinks)
         .replace('{{OG_IMAGE}}', brandChromeSlots(theme.manifest, base).ogImage)
         .replace('{{DESIGN_SYSTEM_PATH}}', base + PROJECT_CONFIG.designSystemPath)
         .replace('{{BRAND_CSS}}', PROJECT_CONFIG.brandCssPath ? `<link rel="stylesheet" href="${base}${PROJECT_CONFIG.brandCssPath}">` : '')
@@ -2746,8 +2751,7 @@ function generateBrandBook(template, themes) {
       .replace('{{TOC_SECTION}}', '')
       .replace('{{PAGE_NAV}}', '')
       .replace('{{FOOTER_TEXT}}', buildFooterHtml(theme.manifest.footerText))
-      .replace('{{FAVICON_SVG}}', brandChromeSlots(theme.manifest, navBase).faviconSvg)
-      .replace('{{FAVICON_ICO}}', brandChromeSlots(theme.manifest, navBase).faviconIco)
+      .replace('{{FAVICON_LINKS}}', brandChromeSlots(theme.manifest, navBase).faviconLinks)
       .replace('{{OG_IMAGE}}', brandChromeSlots(theme.manifest, navBase).ogImage)
       .replace('{{DESIGN_SYSTEM_PATH}}', navBase + PROJECT_CONFIG.designSystemPath)
       .replace('{{BRAND_CSS}}', brandCss)
@@ -2866,8 +2870,7 @@ function generateBrandIndexPages(template, themes) {
       .replace('{{TOC_SECTION}}', '')
       .replace('{{PAGE_NAV}}', '')
       .replace('{{FOOTER_TEXT}}', buildFooterHtml(theme.manifest.footerText))
-      .replace('{{FAVICON_SVG}}', brandChromeSlots(theme.manifest, navBase).faviconSvg)
-      .replace('{{FAVICON_ICO}}', brandChromeSlots(theme.manifest, navBase).faviconIco)
+      .replace('{{FAVICON_LINKS}}', brandChromeSlots(theme.manifest, navBase).faviconLinks)
       .replace('{{OG_IMAGE}}', brandChromeSlots(theme.manifest, navBase).ogImage)
       .replace(`<link rel="stylesheet" href="${dsPath}" id="design-system-css"`, `<link rel="stylesheet" href="${navBase}${PROJECT_CONFIG.designSystemPath}" id="design-system-css"`)
       .replace('{{BRAND_CSS}}', brandCss)

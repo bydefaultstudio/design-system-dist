@@ -27,7 +27,7 @@
  *   4. Book Cover         — landing-page section "spine" cards
  *   5. Asset Card         — brand-asset showcase pattern
  *   6. Don't Card         — "do/don't" rule cards used in brand docs
- *   7. Barba transitions  — cross-page slide animation
+ *      (cross-page transition styles ship separately with the site)
  *
  * Part B — Docs-site shell (singletons + page chrome)
  *   8.  Docs code overrides  — markdown code rendering tweaks
@@ -707,78 +707,6 @@ a.book-page:hover .book-page-action .svg-icn {
   font-size: var(--font-s);
 }
 
-/* ==========================================================================
-   Barba.js page transitions — absolute-positioning + WAAPI
-   ========================================================================== */
-
-/*
- * Positioning model (mirrors studio/assets/css/studio.css):
- *
- * During normal display, both wrapper and container are position: relative
- * and participate in the regular document flow.
- *
- * During a transition (body.is-animating), both Barba containers switch to
- * position: absolute so they overlay each other at the same origin. The JS
- * snaps window.scrollTo(0,0) in leave() and applies a negative translateY
- * offset on the leaving container so it visually stays put. Enter animations
- * use natural positions (translateY(0) at rest).
- *
- * Z-index layering is controlled by data-bd-role (leave|enter) and
- * data-bd-scenario (open|close|swap|swap-back|fade) attributes set by barba-init.js
- * on both containers before the animation starts.
- */
-
-/* Barba wrapper: relative anchor for absolute children during animation.
-   min-height prevents the grid row from collapsing when both containers
-   switch to position:absolute during a transition — without it the sidebar
-   jumps and the slide animation has no containing block height. */
-[data-barba="wrapper"] {
-  position: relative;
-  min-height: calc(100vh - var(--top-nav-height));
-}
-
-/* Containers need min-height so translateY(100%) produces a full-viewport
-   slide even on short pages (100% is the element's own height). */
-[data-barba="container"] {
-  position: relative;
-  min-height: calc(100vh - var(--top-nav-height));
-  background: var(--background-primary);
-}
-
-/* Lock interaction + clip overflow during animation */
-body.is-animating [data-barba="wrapper"] {
-  pointer-events: none;
-  overflow: hidden;
-}
-
-/* Pull both containers out of flow so they overlay at the same origin */
-body.is-animating [data-barba="container"] {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  background: var(--background-primary);
-}
-
-/* -- Z-index per scenario -- */
-
-/* open: entering page covers leaving */
-body.is-animating [data-bd-role="leave"][data-bd-scenario="open"]  { z-index: 1; }
-body.is-animating [data-bd-role="enter"][data-bd-scenario="open"]  { z-index: 2; }
-
-/* close: leaving page falls away in front */
-body.is-animating [data-bd-role="leave"][data-bd-scenario="close"] { z-index: 2; }
-body.is-animating [data-bd-role="enter"][data-bd-scenario="close"] { z-index: 1; }
-
-/* swap / swap-back: both elevated (mirrored conveyor, same layering) */
-body.is-animating [data-bd-scenario="swap"],
-body.is-animating [data-bd-scenario="swap-back"] { z-index: 2; }
-
-/* fade: equal layer */
-body.is-animating [data-bd-scenario="fade"] { z-index: 1; }
-
-
 /* =====================================================================
  * PART B — DOCS-SITE SHELL
  * =====================================================================
@@ -1019,7 +947,7 @@ html {
 
 /* -- Layout grid (mirrors studio/assets/css/studio.css) --
  * Sidebar, top-nav, and main content are siblings in a CSS Grid.
- * The Barba wrapper lives inside the main grid cell, so absolute-
+ * The page wrapper lives inside the main grid cell, so absolute-
  * positioned containers during animation are constrained to that
  * cell — the sidebar is a separate grid track, completely unaffected.
  */

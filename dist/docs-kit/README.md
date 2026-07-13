@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^1.4.0"
+npm install "github:bydefaultstudio/design-system-dist#semver:^1.4.1"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -76,6 +76,11 @@ becomes the project root and all config paths resolve from it.
 With no `designSystemPath` configured, the packaged `design-system.css` is
 copied into the output automatically, so the site is fully styled with zero
 config. Point `designSystemPath` at your own stylesheet to override.
+
+Favicons are optional: drop `favicon.svg` and/or `favicon.ico` into
+`<outputDir>/assets/icons/` and regenerate — the pages link them only once
+the files exist (a `brandManifest` can also supply `faviconSvg`/`faviconIco`
+paths directly).
 
 ## Watch mode
 
