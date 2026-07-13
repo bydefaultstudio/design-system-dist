@@ -47,6 +47,7 @@ const userConfig = require(PROJECT.configPath);
 const CONFIG = {
   // Core
   outputDir: userConfig.outputDir || path.join(path.basename(DOCS_DIR), 'site'),
+  basePath: userConfig.basePath || '',
   designSystemPath: userConfig.designSystemPath || 'assets/css/design-system.css',
   brandCssPath: userConfig.brandCssPath || null,
   googleFontsUrl: userConfig.googleFontsUrl !== undefined ? userConfig.googleFontsUrl : null,
@@ -81,6 +82,14 @@ const CONFIG = {
 // Legacy alias — the body of this file predates the unified contract.
 const PROJECT_CONFIG = CONFIG;
 
+// basePath contract: '' (site root, the default) or '/sub/path' — leading
+// slash, no trailing slash. Fail loudly; a silently malformed prefix would
+// break every nav link in the output.
+if (CONFIG.basePath && (!CONFIG.basePath.startsWith('/') || CONFIG.basePath.endsWith('/'))) {
+  console.error(`❌ Invalid basePath: "${CONFIG.basePath}" — it must start with "/" and must not end with "/", e.g. "/docs/site". Leave it unset to serve from the site root.`);
+  process.exit(1);
+}
+
 // When running from the shipped package with no explicit designSystemPath,
 // serve the packaged framework CSS (a dist/ sibling of the docs-kit) so a
 // zero-config project still gets a fully styled site.
@@ -114,15 +123,29 @@ const SITE = {
   footerText: (ROOT_MANIFEST && ROOT_MANIFEST.footerText) || CONFIG.footerText,
 };
 
-// Prefix a page-relative base onto a path unless it is already absolute
-function prefixHref(base, p) {
-  return /^(https?:)?\/\//.test(p) || p.startsWith('/') ? p : base + p;
+// Root a site-absolute href under basePath. The default '' keeps output
+// byte-identical to a build without the option; external (http, //) and
+// relative hrefs pass through untouched. Applied exactly once, at each
+// output boundary — never on the internal page model.
+function siteHref(href) {
+  return href && href.startsWith('/') && !href.startsWith('//') ? CONFIG.basePath + href : href;
 }
 
-// Build Brand CSS HTML snippet
-const BRAND_CSS_HTML = PROJECT_CONFIG.brandCssPath
-  ? `<link rel="stylesheet" href="${PROJECT_CONFIG.brandCssPath}">`
-  : '';
+// Prefix a page-relative base onto a path unless it is already absolute
+// (site-absolute paths resolve under basePath instead)
+function prefixHref(base, p) {
+  if (/^(https?:)?\/\//.test(p)) return p;
+  return p.startsWith('/') ? siteHref(p) : base + p;
+}
+
+// Brand CSS <link> for a page at the given base ('' for root pages).
+// prefixHref keeps relative paths depth-correct and roots site-absolute
+// ones under basePath, so every page depth emits the same working href.
+function brandCssLink(base) {
+  return PROJECT_CONFIG.brandCssPath
+    ? `<link rel="stylesheet" href="${prefixHref(base, PROJECT_CONFIG.brandCssPath)}">`
+    : '';
+}
 
 // Per-brand font sources, emitted into the {{FONT_HEAD}} slot: Typekit kit,
 // self-hosted preloads, Google Fonts. All come from the brand manifest
@@ -299,7 +322,7 @@ function renderBookCover(opts) {
     : '';
   const flipId = flipIdFromHref(opts.href);
   const flipAttr = flipId ? ` data-flip-id="${flipId}"` : '';
-  return `<a href="${opts.href}" class="book-cover"${accessAttr}>
+  return `<a href="${siteHref(opts.href)}" class="book-cover"${accessAttr}>
         <header class="book-cover-header">${getIcon('open-full')}</header>
         <div class="book-cover-content">
           <h3 class="book-cover-title"${flipAttr}>${opts.title}</h3>
@@ -325,7 +348,7 @@ function renderBookPage(opts) {
     : '';
   const flipId = flipIdFromHref(opts.href);
   const flipAttr = flipId ? ` data-flip-id="${flipId}"` : '';
-  return `<a href="${opts.href}" class="book-page"${accessAttr}>
+  return `<a href="${siteHref(opts.href)}" class="book-page"${accessAttr}>
         <div class="book-page-content">
           <h3 class="book-page-title"${flipAttr}>${opts.title}</h3>
           ${description}
@@ -841,8 +864,8 @@ function generateIndexPage(template, filesBySection) {
     .replace('{{PAGE_STICKY_BAR}}', '')
     .replace('{{PAGE_CONTENT}}', indexContent)
     .replace('{{TOC_SECTION}}', '')
-    .replace('{{DESIGN_SYSTEM_PATH}}', PROJECT_CONFIG.designSystemPath)
-    .replace('{{BRAND_CSS}}', BRAND_CSS_HTML)
+    .replace('{{DESIGN_SYSTEM_PATH}}', prefixHref('', PROJECT_CONFIG.designSystemPath))
+    .replace('{{BRAND_CSS}}', brandCssLink(''))
     .replace('{{BRAND_THEME_CSS}}', rootThemeCss(''))
     .replace('{{BRAND_THEME_ATTR}}', '')
     .replace('{{FONT_HEAD}}', fontHeadHtml(ROOT_MANIFEST, './'))
@@ -981,8 +1004,8 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
     .replace('{{PAGE_STICKY_BAR}}', '')
     .replace('{{PAGE_CONTENT}}', pageContent)
     .replace('{{TOC_SECTION}}', '')
-    .replace('{{DESIGN_SYSTEM_PATH}}', navBase + PROJECT_CONFIG.designSystemPath)
-    .replace('{{BRAND_CSS}}', BRAND_CSS_HTML ? BRAND_CSS_HTML.replace(/href="(?!http)/g, `href="${navBase}`) : '')
+    .replace('{{DESIGN_SYSTEM_PATH}}', prefixHref(navBase, PROJECT_CONFIG.designSystemPath))
+    .replace('{{BRAND_CSS}}', brandCssLink(navBase))
     .replace('{{BRAND_THEME_CSS}}', rootThemeCss(navBase))
     .replace('{{BRAND_THEME_ATTR}}', '')
     .replace('{{FONT_HEAD}}', fontHeadHtml(ROOT_MANIFEST, navBase))
@@ -1253,7 +1276,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
   const actionLabel = frontmatter.actionLabel || frontmatter.toolLabel || 'Open';
   const actionLinkHtml = actionUrl
     ? `<div class="button-group justify-center">
-        <a href="${actionUrl}" class="button page-action-link" data-size="small">${actionLabel}</a>
+        <a href="${siteHref(actionUrl)}" class="button page-action-link" data-size="small">${actionLabel}</a>
       </div>`
     : '';
   if (frontmatter.title) {
@@ -1294,7 +1317,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
       <div class="sticky-bar-container">
         <div class="sticky-bar-content">
           <nav class="sticky-bar-breadcrumbs" aria-label="Breadcrumb">
-            <a href="/${file.htmlFolder}/index.html">${sectionLabel}</a>
+            <a href="${siteHref(`/${file.htmlFolder}/index.html`)}">${sectionLabel}</a>
             <span class="breadcrumb-separator">/</span>
             <span>${frontmatter.title}</span>
           </nav>
@@ -1312,7 +1335,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
               ${mdSourceItems}
             </div>
           </div>
-          <a href="/${file.htmlFolder}/index.html" class="sticky-bar-close" aria-label="Close ${frontmatter.title}">
+          <a href="${siteHref(`/${file.htmlFolder}/index.html`)}" class="sticky-bar-close" aria-label="Close ${frontmatter.title}">
             ${getIcon('close-large')}
           </a>
         </div>
@@ -1336,7 +1359,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
     </aside>`
       : '')
     .replace('{{DESIGN_SYSTEM_PATH}}', prefixHref(navBase, PROJECT_CONFIG.designSystemPath))
-    .replace('{{BRAND_CSS}}', BRAND_CSS_HTML ? `<link rel="stylesheet" href="${prefixHref(navBase, PROJECT_CONFIG.brandCssPath)}">` : '')
+    .replace('{{BRAND_CSS}}', brandCssLink(navBase))
     .replace('{{BRAND_THEME_CSS}}', rootThemeCss(navBase))
     .replace('{{BRAND_THEME_ATTR}}', '')
     .replace('{{FONT_HEAD}}', fontHeadHtml(ROOT_MANIFEST, navBase))
@@ -1376,7 +1399,7 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
 
   // Contact link (config: contactHref / contactLabel) — omitted when unset
   const contactNavJs = CONFIG.contactHref ? `
-    + '<a href="${CONFIG.contactHref}" class="top-nav-link top-nav-contact-link" aria-label="${CONFIG.contactLabel}">'
+    + '<a href="${siteHref(CONFIG.contactHref)}" class="top-nav-link top-nav-contact-link" aria-label="${CONFIG.contactLabel}">'
     + '<div class="svg-icn">' + ICON_MAIL + '</div>'
     + '<span class="top-nav-link-label">${CONFIG.contactLabel}</span>'
     + '</a>'` : '';
@@ -1416,7 +1439,7 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
       + '</div>';
   }
 
-  headerLeft += '<a href="/index.html" class="top-nav-logo-link">'
+  headerLeft += '<a href="${siteHref('/index.html')}" class="top-nav-logo-link">'
     + '${esc(logoHtml)}'
     + '</a></div>';
 
@@ -1443,7 +1466,7 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
       + '</button>'
       + '</div>'
       + '<div class="site-sidebar-content">'
-      + '<a href="/index.html" class="nav-link nav-home" data-access="team">'
+      + '<a href="${siteHref('/index.html')}" class="nav-link nav-home" data-access="team">'
       + '<div class="svg-icn">' + ICON_HOME + '</div>'
       + '<span>Home</span>'
       + '</a>'
@@ -1664,7 +1687,7 @@ function buildNavSectionsHtml(filesBySection, sidebarOrderMap = {}) {
     const sectionFolder = SECTION_FOLDERS[section];
     // Absolute URLs (leading `/`) so links resolve from any page depth and survive
     // Barba transitions that don't update the surrounding chrome's data-base.
-    const sectionIndexHref = sectionFolder ? '/' + sectionFolder + '/index.html' : '';
+    const sectionIndexHref = sectionFolder ? siteHref('/' + sectionFolder + '/index.html') : '';
     // Slug used by Phase 3 directional transitions to detect same/different section
     const sectionSlug = slugifySection(section);
     const iconHtml = sectionIcon
@@ -1705,7 +1728,7 @@ function buildNavSectionsHtml(filesBySection, sidebarOrderMap = {}) {
     for (const file of ungrouped) {
       // For Tools section: link to actual tool app, use actionAccess for visibility.
       // All hrefs are emitted as absolute paths (`/section/file.html`).
-      let linkHref = '/' + file.htmlPath;
+      let linkHref = siteHref('/' + file.htmlPath);
       let linkAccess = deriveDataAccess(file.frontmatter);
       const navActionUrl = file.frontmatter.actionUrl || file.frontmatter.toolUrl;
       if (section === 'Tools' && !navActionUrl) {
@@ -1717,7 +1740,7 @@ function buildNavSectionsHtml(filesBySection, sidebarOrderMap = {}) {
         // Resolve to an absolute site path.
         const fileName = navActionUrl.replace(/^(\.\.?\/)+/, '');
         const sectionFolder = SECTION_FOLDERS[section] || 'tools';
-        linkHref = '/' + sectionFolder + '/' + fileName;
+        linkHref = siteHref('/' + sectionFolder + '/' + fileName);
         linkAccess = file.frontmatter.actionAccess || file.frontmatter.toolAccess || 'brand';
       }
       html += `<li><a href="${linkHref}" class="nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span></a></li>`;
@@ -1735,7 +1758,7 @@ function buildNavSectionsHtml(filesBySection, sidebarOrderMap = {}) {
       for (const file of files) {
         const guideAccess = deriveDataAccess(file.frontmatter);
         const guidePos = sidebarOrderMap[file.htmlPath] || 999;
-        html += `<li><a href="/${file.htmlPath}" class="nav-link" data-section="${sectionSlug}" data-order="${guidePos}" data-access="${guideAccess}"><span>${file.title}</span></a></li>`;
+        html += `<li><a href="${siteHref('/' + file.htmlPath)}" class="nav-link" data-section="${sectionSlug}" data-order="${guidePos}" data-access="${guideAccess}"><span>${file.title}</span></a></li>`;
       }
       html += `</ul></details></li>`;
     }
@@ -1758,7 +1781,7 @@ function buildNavSectionsHtml(filesBySection, sidebarOrderMap = {}) {
         <ul class="nav-sublist">`;
       for (const file of grouped[sub]) {
         const linkAccess = deriveDataAccess(file.frontmatter);
-        html += `<li><a href="/${file.htmlPath}" class="nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span></a></li>`;
+        html += `<li><a href="${siteHref('/' + file.htmlPath)}" class="nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span></a></li>`;
         navPos++;
       }
       html += `</ul></details></li>`;
@@ -1869,9 +1892,9 @@ function loadBrandThemes() {
  */
 function brandChromeSlots(manifest, base) {
   const m = manifest || {};
-  const svg = m.faviconSvg
+  const svg = siteHref(m.faviconSvg)
     || (fs.existsSync(path.join(OUTPUT_DIR, 'assets', 'icons', 'favicon.svg')) ? `${base}assets/icons/favicon.svg` : null);
-  const ico = m.faviconIco
+  const ico = siteHref(m.faviconIco)
     || (fs.existsSync(path.join(OUTPUT_DIR, 'assets', 'icons', 'favicon.ico')) ? `${base}assets/icons/favicon.ico` : null);
   const links = [];
   if (svg) links.push(`<link rel="icon" type="image/svg+xml" href="${svg}">`);
@@ -1880,7 +1903,7 @@ function brandChromeSlots(manifest, base) {
     faviconLinks: links.length
       ? `<!-- Favicon (per-brand via brand.json, site default otherwise) -->\n    ${links.join('\n    ')}`
       : '',
-    ogImage: m.ogImage || `${base}assets/images/og/og-default.jpg`,
+    ogImage: siteHref(m.ogImage) || `${base}assets/images/og/og-default.jpg`,
   };
 }
 
@@ -1897,7 +1920,9 @@ function writeThemeConfig(themes) {
       description: t.description,
       css: t.css,
       fonts: t.fonts,
-      pages: t.pages,
+      // Page hrefs are site-absolute in the in-memory registry; root them
+      // under basePath at the emit boundary, like every other output href.
+      pages: t.pages.map(pg => ({ ...pg, href: siteHref(pg.href) })),
     };
   }
   const payload = { themes: emitted };
@@ -2006,7 +2031,7 @@ function generateBrandDocs(template, themes) {
       const brandActionLabel = frontmatter.actionLabel || frontmatter.toolLabel || 'Open';
       const brandActionHtml = brandActionUrl
         ? `<div class="button-group justify-center">
-            <a href="${brandActionUrl}" class="button page-action-link" data-size="small">${brandActionLabel}</a>
+            <a href="${siteHref(brandActionUrl)}" class="button page-action-link" data-size="small">${brandActionLabel}</a>
           </div>`
         : '';
       if (title) {
@@ -2027,9 +2052,9 @@ function generateBrandDocs(template, themes) {
         const sectionLabel = frontmatter.section;
         // Absolute href so the link resolves correctly from any page depth
         // (e.g. surviving Barba transitions where chrome data-base goes stale).
-        const overviewHref = sectionSlug
+        const overviewHref = siteHref(sectionSlug
           ? `/${brandKey}/${sectionSlug}/index.html`
-          : `/${brandKey}/index.html`;
+          : `/${brandKey}/index.html`);
         const mdPath = `${navBase}${BRANDS_REL}/${brandKey}/${filename}`;
         pageSubbar = `<div class="sticky-bar sticky-bar-page">
           <div class="sticky-bar-container">
@@ -2073,9 +2098,7 @@ function generateBrandDocs(template, themes) {
       }
 
       // Build brand-specific template
-      const brandCss = PROJECT_CONFIG.brandCssPath
-        ? `<link rel="stylesheet" href="${navBase}${PROJECT_CONFIG.brandCssPath}">`
-        : '';
+      const brandCss = brandCssLink(navBase);
       const brandThemeCss = `<!-- Brand Theme Override (must load last to override base styles) -->\n    <link rel="stylesheet" href="${sectionSlug ? '../' : ''}assets/theme.css">`;
 
       let html = template
@@ -2087,7 +2110,7 @@ function generateBrandDocs(template, themes) {
         .replace('{{TOC_SECTION}}', tableOfContents
           ? `<aside class="docs-toc"><span class="toc-header">On this page</span><div class="toc-wrapper">${tableOfContents}</div></aside>`
           : '')
-        .replace('{{DESIGN_SYSTEM_PATH}}', navBase + PROJECT_CONFIG.designSystemPath)
+        .replace('{{DESIGN_SYSTEM_PATH}}', prefixHref(navBase, PROJECT_CONFIG.designSystemPath))
         .replace('{{BRAND_CSS}}', brandCss)
         .replace('{{BRAND_THEME_CSS}}', brandThemeCss)
         .replace('{{BRAND_THEME_ATTR}}', `data-brand-theme="${brandKey}"`)
@@ -2219,9 +2242,7 @@ function generateBrandSectionOverviews(template, themes) {
   for (const [brandKey, theme] of Object.entries(themes)) {
     const brandLabel = theme.label || brandKey;
     const navBase = '../';
-    const brandCss = PROJECT_CONFIG.brandCssPath
-      ? `<link rel="stylesheet" href="${navBase}${PROJECT_CONFIG.brandCssPath}">`
-      : '';
+    const brandCss = brandCssLink(navBase);
     const brandThemeCss = `<!-- Brand Theme Override (must load last to override base styles) -->\n    <link rel="stylesheet" href="assets/theme.css">`;
 
     const dir = path.join(OUTPUT_DIR, brandKey);
@@ -2250,8 +2271,8 @@ function generateBrandSectionOverviews(template, themes) {
         .replace('{{FOOTER_TEXT}}', buildFooterHtml(theme.manifest.footerText))
         .replace('{{FAVICON_LINKS}}', brandChromeSlots(theme.manifest, base).faviconLinks)
         .replace('{{OG_IMAGE}}', brandChromeSlots(theme.manifest, base).ogImage)
-        .replace('{{DESIGN_SYSTEM_PATH}}', base + PROJECT_CONFIG.designSystemPath)
-        .replace('{{BRAND_CSS}}', PROJECT_CONFIG.brandCssPath ? `<link rel="stylesheet" href="${base}${PROJECT_CONFIG.brandCssPath}">` : '')
+        .replace('{{DESIGN_SYSTEM_PATH}}', prefixHref(base, PROJECT_CONFIG.designSystemPath))
+        .replace('{{BRAND_CSS}}', brandCssLink(base))
         .replace('{{BRAND_THEME_CSS}}', `<!-- Brand Theme Override (must load last to override base styles) -->\n    <link rel="stylesheet" href="${base === '../../' ? '../' : ''}assets/theme.css">`)
         .replace('{{BRAND_THEME_ATTR}}', `data-brand-theme="${brandKey}"`)
         .replace('{{FONT_HEAD}}', fontHeadHtml(theme.manifest, base))
@@ -2732,9 +2753,7 @@ function generateBrandBook(template, themes) {
 
     // Build page from template (same pattern as generateBrandIndexPages)
     const navBase = '../';
-    const brandCss = PROJECT_CONFIG.brandCssPath
-      ? `<link rel="stylesheet" href="${navBase}${PROJECT_CONFIG.brandCssPath}">`
-      : '';
+    const brandCss = brandCssLink(navBase);
     const brandThemeCss = `<!-- Brand Theme Override (must load last to override base styles) -->\n    <link rel="stylesheet" href="assets/theme.css">`;
 
     // Brand book uses the standard .copy-btn pattern (handled by copy-button.js)
@@ -2753,7 +2772,7 @@ function generateBrandBook(template, themes) {
       .replace('{{FOOTER_TEXT}}', buildFooterHtml(theme.manifest.footerText))
       .replace('{{FAVICON_LINKS}}', brandChromeSlots(theme.manifest, navBase).faviconLinks)
       .replace('{{OG_IMAGE}}', brandChromeSlots(theme.manifest, navBase).ogImage)
-      .replace('{{DESIGN_SYSTEM_PATH}}', navBase + PROJECT_CONFIG.designSystemPath)
+      .replace('{{DESIGN_SYSTEM_PATH}}', prefixHref(navBase, PROJECT_CONFIG.designSystemPath))
       .replace('{{BRAND_CSS}}', brandCss)
       .replace('{{BRAND_THEME_CSS}}', brandThemeCss)
       .replace('{{BRAND_THEME_ATTR}}', `data-brand-theme="${brandKey}"`)
@@ -2853,10 +2872,7 @@ function generateBrandIndexPages(template, themes) {
 
     // Build page from template
     const navBase = '../';
-    const dsPath = navBase + PROJECT_CONFIG.designSystemPath;
-    const brandCss = PROJECT_CONFIG.brandCssPath
-      ? `<link rel="stylesheet" href="${navBase}${PROJECT_CONFIG.brandCssPath}">`
-      : '';
+    const brandCss = brandCssLink(navBase);
     const brandThemeCss = `<!-- Brand Theme Override (must load last to override base styles) -->\n    <link rel="stylesheet" href="assets/theme.css">`;
 
     let html = template
@@ -2872,7 +2888,6 @@ function generateBrandIndexPages(template, themes) {
       .replace('{{FOOTER_TEXT}}', buildFooterHtml(theme.manifest.footerText))
       .replace('{{FAVICON_LINKS}}', brandChromeSlots(theme.manifest, navBase).faviconLinks)
       .replace('{{OG_IMAGE}}', brandChromeSlots(theme.manifest, navBase).ogImage)
-      .replace(`<link rel="stylesheet" href="${dsPath}" id="design-system-css"`, `<link rel="stylesheet" href="${navBase}${PROJECT_CONFIG.designSystemPath}" id="design-system-css"`)
       .replace('{{BRAND_CSS}}', brandCss)
       .replace('{{BRAND_THEME_CSS}}', brandThemeCss)
       .replace('{{BRAND_THEME_ATTR}}', `data-brand-theme="${brandKey}"`)
@@ -2884,7 +2899,7 @@ function generateBrandIndexPages(template, themes) {
       .replace('{{PAGE_SCRIPTS}}', '');
 
     // Replace design system path placeholder
-    html = html.replace('{{DESIGN_SYSTEM_PATH}}', navBase + PROJECT_CONFIG.designSystemPath);
+    html = html.replace('{{DESIGN_SYSTEM_PATH}}', prefixHref(navBase, PROJECT_CONFIG.designSystemPath));
 
     // Write to brand folder
     const dir = path.join(OUTPUT_DIR, brandKey);
@@ -2924,6 +2939,24 @@ function applyTemplateChrome(rawTemplate) {
     const dest = path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'design-system.css');
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.copyFileSync(PACKAGED_DS_CSS, dest);
+  }
+
+  // Brand CSS: copy the configured stylesheet into the output at the same
+  // relative path the pages link, so a standalone-served site keeps its
+  // brand. Pages reference it after the framework CSS, preserving the
+  // cascade. Skipped silently when unset; external URLs and site-absolute
+  // hrefs have no project-root source file to copy. Projects that generate
+  // in place (outputDir '.') already serve the source file — the guard
+  // stops the copy landing on itself.
+  if (CONFIG.brandCssPath && !/^(https?:)?\/\//.test(CONFIG.brandCssPath) && !CONFIG.brandCssPath.startsWith('/')) {
+    const src = path.resolve(ROOT, CONFIG.brandCssPath);
+    const dest = path.join(OUTPUT_DIR, CONFIG.brandCssPath);
+    if (!fs.existsSync(src)) {
+      console.warn(`⚠️  brandCssPath not found: ${src} — pages will link it, but the file is missing from the output`);
+    } else if (src !== dest) {
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.copyFileSync(src, dest);
+    }
   }
 
   // Docs chrome CSS: project-provided path, or the kit-bundled stylesheet

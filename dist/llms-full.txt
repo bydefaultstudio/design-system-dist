@@ -2,7 +2,7 @@
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 1.4.1 (package)**
+**Version: 1.5.0 (package)**
 
 ## Getting the System
 

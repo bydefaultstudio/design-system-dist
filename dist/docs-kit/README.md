@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^1.4.1"
+npm install "github:bydefaultstudio/design-system-dist#semver:^1.5.0"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -67,7 +67,9 @@ Do not copy it into your project.
    ```
 
    The site lands in `docs/site/`. Serve that folder with any static server
-   (e.g. `npx serve docs/site`) — it must be served as the site root.
+   (e.g. `npx serve docs/site`). It is served as the site root by default;
+   to serve it under a subpath instead, set `basePath` in `docs.config.js`
+   (e.g. `basePath: '/docs/site'`) and every internal link resolves under it.
 
 The generator finds your project by walking up from the working directory
 until it sees `docs/docs.config.js` (or `cms/docs.config.js`); that directory
@@ -95,19 +97,20 @@ Regenerates on every markdown or template change.
 All keys are optional. Paths are project-root-relative; URL-ish keys
 (`docsCss`, `highlightJs`, `extraStylesheets`, `uiScripts`, `extraScripts`)
 are site-root-relative and get the correct `../` prefix per page depth
-automatically — absolute URLs pass through untouched.
+automatically — external URLs pass through untouched.
 
 ### Core
 
 | Key | Default | What it does |
 |---|---|---|
 | `outputDir` | `<contentDir>/site` | where the generated site lands |
+| `basePath` | `''` (site root) | URL prefix when the site is served under a subpath, e.g. `'/docs/site'`. Leading slash, no trailing slash — anything else fails the build. All internal links, nav, and asset manifest paths resolve under it |
 | `siteName` | `Documentation` | title suffix + nav logo text |
 | `indexDescription` | generic line | home page description |
 | `footerText` | empty | footer line on every page |
 | `designSystemPath` | packaged CSS | href of the design system stylesheet |
 | `docsCss` | kit-bundled `docs.css` | href of the docs chrome stylesheet |
-| `brandCssPath` | none | optional extra brand stylesheet |
+| `brandCssPath` | none | optional brand stylesheet (e.g. your `theme.css`); copied into the output and linked after the framework CSS so brand overrides win the cascade |
 | `googleFontsUrl` | none | Google Fonts stylesheet URL |
 | `iconsDir` | kit-bundled icons | folder of SVG icons for `{{icon:...}}` and chrome |
 | `highlightJs` | cdnjs highlight.js | syntax-highlighting script source |
