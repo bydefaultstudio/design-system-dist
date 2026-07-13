@@ -1,0 +1,2655 @@
+/* =====================================================================
+ * DOCS-SITE STYLES
+ * =====================================================================
+ *
+ * Everything that only exists to power the BrandOS docs site itself —
+ * the layout shell (top nav, sidebar, TOC, footer), the docs page
+ * chrome (page header, prev/next, feedback widget), the auth UI, and
+ * the reusable docs-only components (sticky bar, copy button, asset
+ * card, book cover, don't card, token copy).
+ *
+ * None of this ships with the design system to other products — it
+ * lives here so design-system.css stays portable.
+ *
+ * If you find yourself adding something to this file, ask: "would this
+ * be useful in a fresh React app or marketing site?" If yes, it
+ * probably belongs in design-system.css instead.
+ *
+ * Loaded after design-system.css. See CLAUDE.md §17 (Layer Discipline)
+ * for the rules that govern this split.
+ *
+ * SECTIONS:
+ *
+ * Part A — Docs-site components (reusable patterns)
+ *   1. Sticky Bar         — fixed sub-header used by docs nav
+ *   2. Copy Button        — affordance for copying tokens / snippets
+ *   3. Token Copy         — inline copy chips inside generated token tables
+ *   4. Book Cover         — landing-page section "spine" cards
+ *   5. Asset Card         — brand-asset showcase pattern
+ *   6. Don't Card         — "do/don't" rule cards used in brand docs
+ *   7. Barba transitions  — cross-page slide animation
+ *
+ * Part B — Docs-site shell (singletons + page chrome)
+ *   8.  Docs code overrides  — markdown code rendering tweaks
+ *   9.  Color palette        — brand colour styleguide rows
+ *   10. Back to docs / top   — fixed nav buttons
+ *   11. Docs layout          — content grid, sidebar offsets
+ *   12. Top nav              — fixed header bar
+ *   13. Site sidebar         — fixed left rail (collapsible)
+ *   14. Nav sections         — sidebar disclosure tree
+ *   15. Docs footer
+ *   16. Page navigation      — prev / next links
+ *   17. Page feedback        — bottom-of-page feedback widget
+ *   18. Feedback modal
+ *   19. Docs main content    — page header, scroll offsets
+ *   20. Docs TOC             — sticky right rail
+ *   21. Demo preview         — live demos in docs
+ *   22. Docs utilities       — token tags, demo helpers
+ *   23. Code blocks          — markdown pre/code wrapper
+ *   24. Docs cards           — index/landing layout
+ *   25. Responsive           — media queries for the docs shell
+ *   26. Auth                 — login overlay, role-gated visibility, account
+ * ===================================================================== */
+
+
+/* ------ 1. STICKY BAR ------ */
+
+.sticky-bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--background-primary);
+}
+
+/* -- Page sub-header variant: sticks below the top nav -- */
+.sticky-bar-page {
+  top: var(--top-nav-height);
+}
+
+.sticky-bar-page .sticky-bar-container {
+  max-width: 1080px;
+  margin: 0 auto;
+  height: var(--sticky-bar-height);
+  padding-left: var(--space-l);
+}
+
+.sticky-bar-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-l);
+  border-bottom: var(--border-s) solid var(--border-faded);
+}
+
+/* -- Scrollable content area -- */
+.sticky-bar-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-l);
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  height: 100%;
+}
+
+.sticky-bar-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* -- Sticky bar breadcrumbs -- */
+.sticky-bar-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  font-size: var(--font-s);
+  color: var(--text-secondary);
+  min-width: 0;
+}
+
+.sticky-bar-breadcrumbs a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.sticky-bar-breadcrumbs a:hover {
+  color: var(--text-primary);
+}
+
+.sticky-bar-breadcrumbs > span:last-child {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* -- Sticky bar actions -- */
+.sticky-bar-actions {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+/* -- Dropdown inside sticky bar -- */
+.sticky-bar .dropdown {
+  align-self: stretch;
+}
+
+.sticky-bar .dropdown-trigger {
+  padding: 0 var(--space-s);
+}
+
+/* -- Close button inside sticky bar (links back to section overview) -- */
+.sticky-bar-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  padding: 0 var(--space-l);
+  color: var(--text-primary);
+  text-decoration: none;
+  border-left: 1px solid var(--border-faded);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sticky-bar-close:hover {
+  background: var(--background-faded);
+  color: var(--text-plain);
+}
+
+.sticky-bar-close .svg-icn {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+/* -- Sticky bar child elements -- */
+/* Children are scoped so they stretch to fill bar height automatically */
+
+/* Tabs inside sticky bar */
+.sticky-bar .tabs {
+  border-bottom: none;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.sticky-bar .tab {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-l);
+  font-size: var(--font-s);
+}
+
+.sticky-bar .tab.is-active::after {
+  bottom: 0;
+}
+
+/* Breadcrumbs inside sticky bar */
+.sticky-bar .breadcrumb {
+  align-self: center;
+  font-size: var(--font-s);
+}
+
+/* Toggles inside sticky bar */
+.sticky-bar .form-toggle {
+  align-self: center;
+}
+
+/* Segmented control inside sticky bar */
+.sticky-bar .segmented-control {
+  align-self: center;
+}
+
+
+/* ------ 2. COPY BUTTON ------ */
+
+.copy-btn {
+  position: relative;
+}
+
+/* -- State: default -- */
+.copy-btn .copy-btn-default,
+.color-copy-btn .copy-btn-default { display: inline-flex; align-items: center; gap: var(--space-s); }
+.copy-btn .copy-btn-copied,
+.color-copy-btn .copy-btn-copied  { display: none; }
+
+/* -- State: copied -- */
+.copy-btn.is-copied .copy-btn-default,
+.color-copy-btn.is-copied .copy-btn-default { display: none; }
+.copy-btn.is-copied .copy-btn-copied,
+.color-copy-btn.is-copied .copy-btn-copied  { display: inline-flex; align-items: center; gap: var(--space-s); }
+
+.copy-btn.is-copied {
+  color: var(--status-success);
+  border-color: var(--status-success);
+  background-color: color-mix(in srgb, var(--status-success), var(--alpha-10));
+}
+
+/* -- Variant: icon only -- */
+.copy-btn.is-icon-only {
+  padding: var(--space-s);
+}
+
+/* -- Variant: ghost (no background, no border) -- */
+.copy-btn.is-ghost {
+  background: none;
+  border: none;
+  padding: var(--space-xs);
+  color: var(--text-primary);
+
+}
+
+.copy-btn.is-ghost:hover {
+  color: var(--text-faded);
+}
+
+.copy-btn.is-ghost.is-copied {
+  background: none;
+  border: none;
+  color: var(--status-success);
+}
+
+/* -- Tooltip: force visible on copied state -- */
+.copy-btn.is-copied[data-tooltip]::before {
+  opacity: 1;
+}
+
+/* -- Icon table: auto-generated Copy + Download columns -- */
+.icon-table td:first-child {
+  text-align: center;
+}
+
+.icon-table td:first-child .svg-icn {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+
+/* ------ 3. TOKEN COPY ------
+ * Inline copy button used in token tables (generated by cms/generator/generate-docs.js).
+ * Wraps a <code> chip so the cell stays readable but every value, variable, and hex
+ * becomes one click away from the clipboard. Adds an inline swatch for hex values.
+ */
+
+.token-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+}
+
+.token-copy code {
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.token-copy:hover code {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--text-primary), var(--alpha-15));
+}
+
+/* Swatch dot for hex values */
+.token-swatch {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: var(--border-s) solid var(--border-faded);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.token-copy.is-copied code {
+  color: var(--status-success);
+}
+
+/* Copy affordance icon — inline visual cue that the chip is clickable.
+   Swaps to a check icon while .is-copied, then reverts. */
+.token-copy::after {
+  content: "";
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  flex-shrink: 0;
+  background-color: currentColor;
+  mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z'/%3E%3C/svg%3E");
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  opacity: 0.4;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.token-copy:hover::after {
+  opacity: 0.8;
+}
+
+.token-copy.is-copied::after {
+  opacity: 1;
+  color: var(--status-success);
+  mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z'/%3E%3C/svg%3E");
+}
+
+
+/* ------ 4. BOOK COVER ------
+ * .book-cover is the card variant used on overview /
+ * landing index pages — each card is the "cover" of a
+ * section the user can open. It pairs with .grid.cols-2
+ * for a generous, scannable index layout.
+ *
+ *   <a href="brand/" class="book-cover">
+ *     <header class="book-cover-header">
+ *       <div class="svg-icn" data-icon="open-full">…</div>
+ *     </header>
+ *     <div class="book-cover-content">
+ *       <h3 class="card-title">Brand Book</h3>
+ *       <p class="card-description">Brand identity, values…</p>
+ *     </div>
+ *     <footer class="book-cover-footer">
+ *       <span class="book-cover-author"><em>by</em> Studio</span>
+ *     </footer>
+ *   </a>
+ *
+ * Self-contained: no .card needed alongside it. Inherits
+ * background, border, and hover states from the card token
+ * scale so it stays visually consistent. Header and footer
+ * are full-width strips with their own borders; the centred
+ * content sits between them and absorbs the remaining space.
+ */
+
+.book-cover {
+  display: flex;
+  flex-direction: column;
+  min-height: 250px;
+  background: var(--background-primary);
+  border: var(--border-s) solid var(--border-faded);
+  color: inherit;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border 0.3s, background-color 0.3s, box-shadow 0.2s ease, transform 0.2s ease;
+  text-wrap: pretty;
+
+}
+
+.book-cover-header,
+.book-cover-footer {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: var(--space-m) var(--space-l);
+}
+
+.book-cover-header {
+  justify-content: flex-end;
+}
+
+.book-cover-header .svg-icn {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+a.book-cover:hover .book-cover-header .svg-icn {
+  opacity: 1;
+}
+
+.book-cover-footer {
+  justify-content: space-between;
+}
+
+.book-cover-author {
+  font-size: var(--font-s);
+  color: var(--text-secondary);
+}
+
+.book-cover-author em {
+  font-style: italic;
+}
+
+.book-cover-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-2xl);
+}
+
+.book-cover-title {
+  margin-top: 0;
+  margin-bottom: var(--space-s);
+  font-size: var(--font-5xl);
+  line-height: var(--title-leading);
+  font-weight: var(--font-weight-regular);
+}
+
+.book-cover-description {
+  color: var(--text-secondary);
+  font-size: var(--body-size);
+  margin-bottom: 0;
+}
+
+a.book-cover:hover {
+  color: var(--text-primary);
+  background: var(--background-faded);
+  transform: translateY(-2px);
+  box-shadow: 0 7px 1px -3px var(--black-alpha-10);
+}
+
+a.book-cover:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+/* -- Book cover dark mode -- */
+[data-theme="dark"] .book-cover {
+  background: var(--background-secondary);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .book-cover {
+    background: var(--background-secondary);
+  }
+}
+
+
+/* ------ 4b. BOOK PAGE ------
+ * L1 section index variant. Instead of the tall, centred book-cover
+ * used on L0, pages stack vertically as wide horizontal rows —
+ * evoking pages inside an opened book.
+ *
+ *   <a class="book-page">
+ *     <div class="book-page-content">
+ *       <h3 class="book-page-title">Colour</h3>
+ *       <p class="book-page-description">Palette, tokens…</p>
+ *     </div>
+ *     <div class="book-page-action"><div class="svg-icn">…</div></div>
+ *   </a>
+ */
+
+.book-page-list {
+  display: flex;
+  flex-direction: column;
+  border: var(--border-s) solid var(--border-faded);
+}
+
+.book-page {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-l);
+  padding: var(--space-xl) var(--space-xl);
+  border-bottom: var(--border-s) solid var(--border-faded);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--duration-xs) var(--ease-out);
+}
+
+.book-page:hover {
+  background: var(--background-faded);
+}
+
+.book-page:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+.book-page-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.book-page-title {
+  margin: 0;
+  font-size: var(--font-4xl);
+  line-height: var(--title-leading);
+  font-weight: var(--title-weight);
+}
+
+.book-page-description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--body-size);
+}
+
+/* Icon: hidden by default, revealed on hover */
+.book-page-action .svg-icn {
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity var(--duration-xs) var(--ease-out);
+}
+
+a.book-page:hover .book-page-action .svg-icn {
+  opacity: 1;
+}
+
+
+/* ------ 5. ASSET CARD ------
+ * Generic showcase card for presenting a single brand asset with context.
+ * The wrapper, preview frame, and footer stay consistent — only the
+ * content inside the preview slot changes:
+ *
+ *   logo SVG • font specimen • brand icon • brand image • token
+ *
+ * Three composable parts:
+ *
+ *   .asset-card
+ *     .asset-card-preview       — centred visual area (auto min-height)
+ *     .asset-card-footer        — title + actions row at the bottom
+ *
+ * Light/dark variants set the preview background — useful for any visual
+ * asset that needs to be tested against both surfaces:
+ *   .asset-card-preview--light  — uses --background-faded
+ *   .asset-card-preview--dark   — uses --neutral-950 + light text
+ *
+ * Edges stay square — no border-radius (project rule).
+ *
+ * See cms/asset-card.md for usage.
+ */
+
+.asset-card {
+  display: flex;
+  flex-direction: column;
+  border: var(--border-s) solid var(--border-faded);
+  background: var(--background-plain);
+}
+
+.asset-card-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 220px;
+  padding: var(--space-3xl);
+}
+
+.asset-card-preview--light {
+  background-color: var(--background-faded);
+  color: var(--text-primary);
+}
+
+.asset-card-preview--dark {
+  background-color: var(--neutral-950);
+  color: var(--white);
+}
+
+.asset-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-m);
+  padding: var(--space-m) var(--space-l);
+  border-top: var(--border-s) solid var(--border-faded);
+  background: var(--background-plain);
+}
+
+.asset-card-title {
+  margin: 0;
+  font-family: var(--font-primary);
+  font-size: var(--font-l);
+  font-weight: var(--font-weight-regular);
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.asset-card-actions {
+  display: flex;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+/* Compact icon-only buttons inside the actions slot */
+.asset-card-actions .button {
+  padding: var(--space-s);
+}
+
+/* Logo preview — constrains the rendered logo width inside an asset card.
+ * Apply alongside .asset-card-preview when the slot contains a logo image.
+ * Change the max-width here to resize every logo card at once. */
+.asset-card-preview.logo-preview img {
+  max-width: 200px;
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+}
+
+/* Image fill — edge-to-edge <img> previews (OG images, photographic assets).
+ * Removes the slot padding; the image spans the full width at its own ratio.
+ * No inline styles needed on the <img>. */
+.asset-card-preview--fill {
+  padding: 0;
+}
+
+.asset-card-preview--fill img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Contain — template previews of any ratio (feed 4:5, story 9:16, banner 6:1).
+ * The image keeps its aspect ratio and is capped to the stage, so tall and
+ * wide templates sit at a consistent, legible size instead of one spanning
+ * full width while another shrinks. Cards in a grid stay equal height; the
+ * image just centres in whatever vertical space its row gets. */
+.asset-card-preview--contain {
+  padding: var(--space-xl);
+}
+
+.asset-card-preview--contain img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 600px;
+  object-fit: contain;
+}
+
+
+/* ------ 6. DON'T CARD ------
+ * .dont-card extends .card to communicate a "don't" rule —
+ * used in brand and design-system docs to flag prohibited
+ * patterns.
+ *
+ *   <div class="card dont-card">
+ *     <img class="dont-card-media" src="..." width="800" height="450" loading="lazy" alt="">
+ *     <div class="svg-icn dont-card-icon">{{icon:close-circled}}</div>
+ *     <h4 class="card-title">Rule title</h4>
+ *     <p class="card-description">Why it's a don't.</p>
+ *   </div>
+ *
+ * Pair with .grid.cols-2.gap-m for a rules grid. The media slot shows
+ * the failure it warns against; a placeholder holds it until the real
+ * example lands.
+ */
+
+.dont-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+.dont-card-media {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.dont-card-icon {
+  color: var(--status-danger);
+}
+
+.dont-card-icon .svg-icn {
+  width: 2rem;
+  height: 2rem;
+}
+
+.dont-card .card-title {
+  font-size: var(--font-l);
+  margin-bottom: 0;
+}
+
+.dont-card .card-description {
+  font-size: var(--font-s);
+}
+
+/* ==========================================================================
+   Barba.js page transitions — absolute-positioning + WAAPI
+   ========================================================================== */
+
+/*
+ * Positioning model (mirrors studio/assets/css/studio.css):
+ *
+ * During normal display, both wrapper and container are position: relative
+ * and participate in the regular document flow.
+ *
+ * During a transition (body.is-animating), both Barba containers switch to
+ * position: absolute so they overlay each other at the same origin. The JS
+ * snaps window.scrollTo(0,0) in leave() and applies a negative translateY
+ * offset on the leaving container so it visually stays put. Enter animations
+ * use natural positions (translateY(0) at rest).
+ *
+ * Z-index layering is controlled by data-bd-role (leave|enter) and
+ * data-bd-scenario (open|close|swap|swap-back|fade) attributes set by barba-init.js
+ * on both containers before the animation starts.
+ */
+
+/* Barba wrapper: relative anchor for absolute children during animation.
+   min-height prevents the grid row from collapsing when both containers
+   switch to position:absolute during a transition — without it the sidebar
+   jumps and the slide animation has no containing block height. */
+[data-barba="wrapper"] {
+  position: relative;
+  min-height: calc(100vh - var(--top-nav-height));
+}
+
+/* Containers need min-height so translateY(100%) produces a full-viewport
+   slide even on short pages (100% is the element's own height). */
+[data-barba="container"] {
+  position: relative;
+  min-height: calc(100vh - var(--top-nav-height));
+  background: var(--background-primary);
+}
+
+/* Lock interaction + clip overflow during animation */
+body.is-animating [data-barba="wrapper"] {
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Pull both containers out of flow so they overlay at the same origin */
+body.is-animating [data-barba="container"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  background: var(--background-primary);
+}
+
+/* -- Z-index per scenario -- */
+
+/* open: entering page covers leaving */
+body.is-animating [data-bd-role="leave"][data-bd-scenario="open"]  { z-index: 1; }
+body.is-animating [data-bd-role="enter"][data-bd-scenario="open"]  { z-index: 2; }
+
+/* close: leaving page falls away in front */
+body.is-animating [data-bd-role="leave"][data-bd-scenario="close"] { z-index: 2; }
+body.is-animating [data-bd-role="enter"][data-bd-scenario="close"] { z-index: 1; }
+
+/* swap / swap-back: both elevated (mirrored conveyor, same layering) */
+body.is-animating [data-bd-scenario="swap"],
+body.is-animating [data-bd-scenario="swap-back"] { z-index: 2; }
+
+/* fade: equal layer */
+body.is-animating [data-bd-scenario="fade"] { z-index: 1; }
+
+
+/* =====================================================================
+ * PART B — DOCS-SITE SHELL
+ * =====================================================================
+ *
+ * Layout, navigation, page chrome, and auth UI for the BrandOS docs
+ * site. Singletons (one top nav, one sidebar, one footer) plus the
+ * media queries that adapt the shell to small screens.
+ * ===================================================================== */
+
+
+/* ------ DOCS CODE OVERRIDES ------ */
+
+/* Docs-specific code rendering for markdown content */
+code br {
+  display: none;
+}
+
+del code {
+  text-decoration: inherit;
+}
+
+samp {
+  font-family: var(--font-quaternary);
+  font-size: var(--body-size);
+}
+
+/* -- Code blocks (docs overrides) -- */
+pre {
+  margin-top: 0;
+  margin-bottom: 0;
+  word-wrap: normal;
+  line-height: var(--line-height-2xl);
+  background-color: var(--background-darker);
+  transition: border-color 0.3s ease;
+  min-height: 67px;
+}
+
+pre > code {
+  white-space: pre;
+}
+
+pre code {
+  display: inline;
+  overflow: visible;
+  line-height: var(--line-height-2xl);
+  word-wrap: normal;
+}
+
+/* -- Code inside headings -- */
+h1 code,
+h2 code,
+h3 code,
+h4 code,
+h5 code,
+h6 code {
+  padding: 0 var(--space-2xs);
+  font-size: inherit;
+}
+
+/* -- Horizontal rules (docs spacing override) -- */
+hr {
+  margin: var(--space-2xl) 0;
+}
+
+/* -- Page layout structure -- */
+.page-wrapper {
+  width: 100%;
+}
+
+.page-content {
+  width: 100%;
+}
+
+
+/* ------ COLOR PALETTE (STYLEGUIDE) ------ */
+
+.color-list {
+  overflow: hidden;
+}
+
+.color-row {
+  display: flex;
+  align-items: center;
+  padding: var(--space-xl) var(--space-xl);
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-medium);
+  cursor: default;
+  position: relative;
+  height: 80px;
+}
+
+.color-row-name {
+  pointer-events: none;
+}
+
+.color-row.is-text-dark .color-row-name,
+.color-row.is-text-dark .color-copy-btn {
+  color: var(--black);
+}
+
+.color-row.is-text-light .color-row-name,
+.color-row.is-text-light .color-copy-btn {
+  color: var(--white);
+}
+
+.color-row-actions {
+  display: none;
+  gap: var(--space-s);
+  margin-left: auto;
+}
+
+.color-row:hover .color-row-actions,
+.color-row:focus-within .color-row-actions {
+  display: flex;
+}
+
+.color-copy-btn {
+  color: inherit;
+  background: none;
+  border: none;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi-bold);
+  cursor: pointer;
+  padding: var(--space-2xs) var(--space-s);
+
+}
+
+.color-copy-btn:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2.5px;
+}
+
+/* -- Button-flavoured color row (used in the brand book) --
+ * The whole row is the copy target. Hover reveals an ::after copy icon
+ * (CSS mask of the copy SVG); on .is-copied the icon swaps to a check.
+ * Inline background-color always wins over the .copy-btn.is-copied reset. */
+button.color-row {
+  width: 100%;
+  border: none;
+  text-align: left;
+  font-family: var(--font-quaternary);
+  font-size: var(--font-s);
+  cursor: pointer;
+  justify-content: space-between;
+  transition: filter 0.15s;
+}
+
+button.color-row:hover {
+  filter: brightness(0.96);
+}
+
+button.color-row::after {
+  content: "";
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  background-color: currentColor;
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z' fill='black'/></svg>");
+          mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z' fill='black'/></svg>");
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+          mask-position: center;
+  -webkit-mask-size: contain;
+          mask-size: contain;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+button.color-row:hover::after,
+button.color-row:focus-visible::after {
+  opacity: 1;
+}
+
+button.color-row.is-copied::after {
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z' fill='black'/></svg>");
+          mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z' fill='black'/></svg>");
+  opacity: 1;
+}
+
+/* Don't let .copy-btn.is-copied global reset bleed into our coloured row */
+button.color-row.is-copied {
+  color: inherit;
+  border-color: inherit;
+}
+
+
+/* NOTE: .table moved to design-system.css §25 — see CLAUDE.md §17 (Layer Discipline) */
+
+
+/* ------ BACK TO DOCS / BACK TO TOP ------ */
+
+.docs-back-btn-wrapper {
+  position: fixed;
+  top: var(--space-m);
+  right: var(--space-m);
+  z-index: 100;
+}
+
+.back-to-top-wrapper {
+  position: fixed;
+  right: var(--space-m);
+  bottom: var(--space-m);
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+
+.back-to-top-wrapper.is-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+
+/* ------ 1. DOCS LAYOUT ------ */
+
+
+:root {
+  --top-nav-height: 80px;
+  --sticky-bar-height: 70px;
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 64px;
+  --toc-width: 220px;
+  --toc-top-offset: calc(var(--top-nav-height) + var(--sticky-bar-height) + var(--space-xl));
+  --toc-border: color-mix(in srgb, var(--text-primary) 10%, transparent);
+  --toc-border-active: color-mix(in srgb, var(--text-primary) 30%, transparent);
+  --sidebar-transition: 0.3s ease;
+}
+
+
+/* Smooth scroll for same-page anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
+/* -- Layout grid (mirrors studio/assets/css/studio.css) --
+ * Sidebar, top-nav, and main content are siblings in a CSS Grid.
+ * The Barba wrapper lives inside the main grid cell, so absolute-
+ * positioned containers during animation are constrained to that
+ * cell — the sidebar is a separate grid track, completely unaffected.
+ */
+.docs-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: var(--top-nav-height) 1fr;
+  grid-template-areas:
+    "sidebar topbar"
+    "sidebar main";
+  min-height: 100vh;
+  background: var(--background-primary);
+  transition: grid-template-columns var(--sidebar-transition);
+}
+
+body.sidebar-collapsed .docs-layout {
+  grid-template-columns: var(--sidebar-collapsed-width) 1fr;
+}
+
+body.no-sidebar .docs-layout {
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "topbar"
+    "main";
+}
+
+/* Main content area — now a grid cell, no margin offsets needed */
+.docs-main-area {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--top-nav-height));
+  position: relative;
+  background-color: var(--background-primary);
+}
+
+.docs-content-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* Default: single column */
+  gap: var(--space-2xl);
+  max-width: 1080px;
+  margin: 0 auto;
+  width: 100%;
+  padding: var(--space-xl) var(--space-xl) 0;
+  flex: 1;
+}
+
+/* When TOC exists, use 2-column layout */
+.docs-content-grid:has(.docs-toc) {
+  grid-template-columns: 1fr var(--toc-width);
+}
+
+
+/* ------ 1B. TOP NAV (Sticky in grid) ------ */
+
+.top-nav {
+  grid-area: topbar;
+  position: sticky;
+  top: 0;
+  height: var(--top-nav-height);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-l);
+  background: var(--background-top-nav);
+  color: var(--text-top-nav);
+  border-bottom: var(--border-s) solid var(--border-faded);
+}
+
+.top-nav-left {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  gap: var(--space-m);
+  min-width: 0;
+}
+
+.top-nav-right {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+}
+
+.top-nav-logo-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.svg-logo.nav-logo {
+  display: block;
+  height: 50px;
+  width: auto;
+  color: var(--text-plain);
+}
+
+.svg-logo.nav-logo svg {
+  height: 100%;
+  width: auto;
+  object-fit: contain;
+}
+
+
+/* Top-nav links — standalone interactive items in top-nav-right (login, theme toggle) */
+.top-nav-link {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: var(--space-s);
+  padding: 0 var(--space-m);
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--font-primary);
+  font-size: var(--font-s);
+  line-height: 1;
+  text-decoration: none;
+  transition: color 0.2s, background 0.2s;
+}
+
+.top-nav-link:hover {
+  color: var(--text-plain);
+  background: var(--background-faded);
+}
+
+.top-nav-link .svg-icn {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* -- Top nav dropdown overrides -- */
+/* Dropdown triggers in the top nav have no vertical padding (bar height provides it) */
+.top-nav-right .dropdown-trigger {
+  padding: 0 var(--space-m);
+}
+
+/* Swap icons based on dark mode state */
+[data-theme="dark"] .dark-mode-icon-light { display: none; }
+:root:not([data-theme="dark"]) .dark-mode-icon-dark { display: none; }
+
+/* Hamburger — visible on mobile only, uses top-nav-link pattern */
+.top-nav-hamburger {
+  display: none;
+}
+
+/* Swap hamburger/close icons */
+.hamburger-icon-close { display: none; }
+body.mobile-nav-open .hamburger-icon-open { display: none; }
+body.mobile-nav-open .hamburger-icon-close { display: block; }
+
+/* Auth slot in top nav (compact login/user) */
+.top-nav-auth-container {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+}
+
+.top-nav-auth-container .auth-login-btn {
+  width: auto;
+}
+
+
+/* ------ 1C. SITE SIDEBAR (Sticky in grid) ------ */
+
+.site-sidebar {
+  grid-area: sidebar;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 50;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--background-sidebar);
+  color: var(--text-sidebar);
+  border-right: var(--border-s) solid var(--border-faded);
+  padding-bottom: var(--space-l);
+  display: flex;
+  flex-direction: column;
+  transition: width var(--sidebar-transition), padding var(--sidebar-transition);
+}
+
+/* Sidebar header: just the toggle button now (logo moved to header) */
+.site-sidebar-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 var(--space-m);
+  height: var(--top-nav-height);
+}
+
+/* Desktop sidebar toggle button */
+.site-sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+  padding: 0;
+  transition: color 0.2s, background 0.2s;
+}
+
+.site-sidebar-toggle:hover {
+  color: var(--text-plain);
+  background: var(--background-faded);
+}
+
+/* Sidebar toggle: swap between open/close icons */
+.sidebar-icon-close { display: none; }
+body.sidebar-collapsed .sidebar-icon-open { display: none; }
+body.sidebar-collapsed .sidebar-icon-close { display: block; }
+
+/* Sidebar nav content wrapper */
+.site-sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  transition: opacity 0.2s ease;
+}
+
+/* Mobile sidebar backdrop */
+.site-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  top: var(--top-nav-height);
+  z-index: 49;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+body.mobile-nav-open .site-sidebar-backdrop {
+  display: block;
+}
+
+/* --- Collapsed sidebar state (desktop) --- */
+
+body.sidebar-collapsed .site-sidebar {
+  width: var(--sidebar-collapsed-width);
+  padding-bottom: var(--space-m);
+  overflow: visible;
+}
+
+body.sidebar-collapsed .site-sidebar-header {
+  justify-content: center;
+}
+
+body.sidebar-collapsed .site-sidebar-content {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+  overflow: visible;
+}
+
+/* Collapsed: hide text, lists, toggle chevrons, labels */
+body.sidebar-collapsed .nav-section-toggle span:not(.nav-toggle-icon),
+body.sidebar-collapsed .nav-section-toggle .nav-toggle-icon,
+body.sidebar-collapsed .nav-list,
+body.sidebar-collapsed .nav-label,
+body.sidebar-collapsed .nav-link > span,
+body.sidebar-collapsed .nav-home > span {
+  display: none;
+}
+
+/* Collapsed: center icons in the narrow strip */
+body.sidebar-collapsed .nav-section-toggle,
+body.sidebar-collapsed .nav-link,
+body.sidebar-collapsed .nav-home {
+  justify-content: center;
+  padding: var(--space-l) 0;
+  gap: 0;
+}
+
+/* Collapsed: remove open section background */
+body.sidebar-collapsed .nav-section[open] {
+  background: none;
+}
+
+/* Sidebar tooltips: only visible when collapsed */
+.site-sidebar [data-tooltip]::before {
+  display: none;
+}
+body.sidebar-collapsed .site-sidebar [data-tooltip]:hover::before,
+body.sidebar-collapsed .site-sidebar [data-tooltip]:focus-visible::before {
+  display: block;
+}
+
+
+/* ------ 1D. NAV SECTIONS & LINKS ------ */
+
+.nav-section {
+  /* margin-bottom: var(--space-s); */
+}
+
+/* Desktop: Toggle styling */
+.nav-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-l);
+  padding: var(--space-l);
+  margin-bottom: 0;
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--font-m);
+  line-height: 1;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: color 0.2s, background 0.2s;
+}
+
+.nav-section-toggle:hover {
+  color: var(--text-secondary);
+  background: var(--background-faded);
+}
+
+/* Remove default WebKit arrow */
+.nav-section-toggle::-webkit-details-marker {
+  display: none;
+}
+
+/* Override global disclosure chevron — nav uses its own SVG icon */
+.nav-section-toggle::before {
+  display: none;
+}
+
+/* Section icon link (wraps .svg-icn inside summary) */
+.nav-section-icon {
+  display: flex;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Toggle + link shared icon sizing */
+.nav-section-toggle .svg-icn {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+
+/* Toggle icon styling */
+.nav-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  transition: transform 0.3s ease;
+  margin-left: auto;
+}
+
+.nav-toggle-icon svg {
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+
+/* Rotate icon when open (90deg to point down) — scoped to the section's
+   own toggle so subsection chevrons inside an open section stay governed
+   by their own [open] rule */
+.nav-section[open] > .nav-section-toggle .nav-toggle-icon {
+  transform: rotate(90deg);
+}
+
+/* Desktop: Show/hide nav-list based on details open state */
+.nav-section:not([open]) .nav-list {
+  display: none;
+}
+
+.nav-section[open] {
+  background: var(--bg-faded-3);
+}
+
+body:not(.sidebar-collapsed) .nav-section[open] .nav-list {
+  display: block;
+}
+
+.nav-list {
+  list-style: none;
+  /* breathing room lives on the container, not li:last-child — with nested
+     subsection sublists, last-child would over-match and stagger the rhythm */
+  padding: 0 0 var(--space-m);
+  margin: 0;
+}
+
+.nav-list li {
+  margin: 0;
+}
+
+.nav-home {
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-l);
+  padding: var(--space-l);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-family: var(--font-primary);
+  font-size: var(--font-m);
+    line-height: var(--line-height-l);
+  transition: color 0.2s, background 0.2s;
+}
+
+.nav-link:hover {
+  color: var(--text-plain);
+  background: var(--background-faded);
+}
+
+.nav-link:focus-visible {
+  outline: 2px solid var(--text-link);
+  outline-offset: -2px;
+}
+
+.nav-link .svg-icn {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+
+.nav-link-active {
+  color: var(--text-link);
+  font-weight: var(--font-weight-semi-bold);
+  background: var(--background-faded);
+}
+
+.nav-list .nav-link {
+  padding: var(--space-l) var(--space-l) var(--space-l) var(--space-4xl);
+}
+
+.nav-label {
+  padding: var(--space-s) var(--space-m) var(--space-s) var(--space-xl);
+  margin-top: var(--space-s);
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-semi-bold);
+  color: var(--text-faded);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  list-style: none;
+}
+
+/* Subsection dropdowns — nested <details> inside a section's nav-list.
+   Collapsed by default; setActiveLink opens the active page's subsection. */
+/* Reads exactly like a nav link — same font, size, and colour. Level is
+   carried by indentation (deeper than the section, shallower than its
+   links) and the disclosure chevron, not by a smaller label treatment. */
+.nav-subsection-toggle {
+  display: flex;
+  align-items: center;
+  padding: var(--space-l) var(--space-l) var(--space-l) var(--space-xl);
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--font-m);
+  line-height: var(--line-height-l);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: color 0.2s, background 0.2s;
+}
+
+.nav-subsection-toggle:hover {
+  color: var(--text-plain);
+  background: var(--background-faded);
+}
+
+.nav-subsection-toggle:focus-visible {
+  outline: 2px solid var(--text-link);
+  outline-offset: -2px;
+}
+
+/* Remove default WebKit arrow */
+.nav-subsection-toggle::-webkit-details-marker {
+  display: none;
+}
+
+/* Override global disclosure chevron — nav uses its own SVG icon */
+.nav-subsection-toggle::before {
+  display: none;
+}
+
+.nav-subsection[open] > .nav-subsection-toggle .nav-toggle-icon {
+  transform: rotate(90deg);
+}
+
+.nav-sublist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-divider {
+  height: 0;
+  border-top: var(--border-s) solid var(--border-faded);
+  margin: var(--space-m) 0;
+}
+
+.nav-client-label {
+  padding: var(--space-s) var(--space-m);
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-semi-bold);
+  color: var(--text-faded);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+
+/* ------ 2. DOCS FOOTER ------ */
+
+.docs-footer {
+  background: var(--background-primary);
+  border-top: var(--border-s) solid var(--border-faded);
+  padding: var(--space-2xl) 0;
+  margin-top: auto;
+  width: 100%;
+}
+
+.docs-footer-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.docs-footer-text {
+  color: var(--text-secondary);
+  font-size: var(--font-s);
+  margin: 0;
+}
+
+.back-to-top-btn {
+  --button-primary: var(--background-secondary);
+  --button-text: var(--text-primary);
+}
+
+
+/* ------ 2B. PAGE NAVIGATION (PREV / NEXT) ------ */
+
+.page-nav {
+  border-top: var(--border-s) solid var(--border-faded);
+}
+
+.page-nav-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.page-nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-m);
+  padding: var(--space-xl) var(--space-2xl);
+  border: none;
+  background: var(--background-primary);
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: background-color 0.15s ease;
+}
+
+.page-nav-link:hover {
+  background-color: var(--background-faded);
+  color: var(--text-primary);
+}
+
+.page-nav-placeholder {
+  visibility: hidden;
+}
+
+.page-nav-next {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.page-nav-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.page-nav-label {
+  font-size: var(--font-xs);
+  font-family: var(--font-primary);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-l);
+
+}
+
+.page-nav-section {
+  font-size: var(--font-2xs);
+  color: var(--text-faded);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: var(--font-weight-medium);
+}
+
+.page-nav-title {
+  font-family: var(--font-primary);
+  line-height: 1.3;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.page-nav-arrow {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: color 0.15s ease;
+}
+
+.page-nav-link:hover .page-nav-arrow {
+  color: var(--text-link);
+}
+
+
+/* ------ 2C. PAGE FEEDBACK ------ */
+
+.page-feedback {
+  border-top: var(--border-s) solid var(--border-faded);
+  padding: var(--section-m) 0;
+  text-align: center;
+}
+
+.page-feedback-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-l);
+}
+
+.page-feedback-prompt {
+  margin: 0;
+}
+
+.page-feedback-description {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Success state — hidden by default, shown when .is-submitted is set */
+.page-feedback-success {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-s);
+}
+
+.page-feedback-success-icon {
+  color: var(--status-success);
+}
+
+.page-feedback-success-icon .svg-icn {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.page-feedback-success-title {
+  margin: 0;
+}
+
+.page-feedback.is-submitted .page-feedback-prompt,
+.page-feedback.is-submitted .page-feedback-description,
+.page-feedback.is-submitted .button-group {
+  display: none;
+}
+
+.page-feedback.is-submitted .page-feedback-success {
+  display: flex;
+}
+
+
+/* ------ 2D. FEEDBACK MODAL ------ */
+
+.feedback-modal {
+  background: var(--background-primary);
+  color: var(--text-primary);
+  padding: var(--space-2xl);
+  width: min(480px, calc(100vw - var(--space-2xl) * 2));
+  max-height: 85vh;
+  border: none;
+}
+
+.feedback-modal::backdrop {
+  background: var(--background-modal);
+  backdrop-filter: blur(2px);
+}
+
+.feedback-modal-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.feedback-modal-title {
+  font-size: var(--font-3xl);
+  margin: 0 0 var(--space-xs) 0;
+}
+
+.feedback-modal-subtitle {
+  font-size: var(--font-s);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-l) 0;
+}
+
+.feedback-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.feedback-modal-actions {
+  margin-top: var(--space-l);
+  justify-content: flex-end;
+}
+
+.feedback-error {
+  font-size: var(--font-s);
+  color: var(--status-danger);
+  margin-top: var(--space-s);
+}
+
+
+/* ------ 3. DOCS MAIN CONTENT ------ */
+
+.docs-main {
+  width: 100%;
+  padding: var(--space-m) 0 var(--space-5xl) 0;
+  overflow: hidden;
+}
+
+/* Offset anchor targets — accounts for sticky top nav + sticky bar */
+h1[id],
+h2[id],
+h3[id],
+section[id] {
+  scroll-margin-top: calc(var(--top-nav-height) + var(--sticky-bar-height) + var(--space-xl));
+}
+
+/* -- Page header (full width, sits between sticky bar and content grid) -- */
+.page-header {
+  width: 100%;
+  padding-top: var(--section-l);
+  padding-bottom: var(--section-l);
+  background: var(--background-faded);
+  border-bottom: var(--border-s) solid var(--border-faded);
+  text-wrap: balance;
+}
+
+.page-header .container-s {
+  text-align: center;
+}
+
+.page-header h1 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: var(--space-m);
+}
+
+.page-header .eyebrow {
+  text-align: center;
+  margin: 0 0 var(--space-s);
+}
+
+.page-subtitle {
+  color: var(--text-secondary);
+  font-size: var(--font-m);
+  margin-top: 0;
+  margin-bottom: var(--space-m);
+  text-align: center;
+}
+
+.page-source-link,
+.page-action-link {
+  display: inline-block;
+}
+
+/* -- Brand book section spacing -- */
+.brand-book-section {
+  padding-top: var(--space-3xl);
+  padding-bottom: var(--space-3xl);
+  border-top: var(--border-s) solid var(--border-faded);
+}
+
+.brand-book-section:first-of-type {
+  border-top: none;
+  padding-top: var(--space-l);
+}
+
+.brand-book-section > h2 {
+  margin-top: 0;
+}
+
+.page-source-link,
+.page-action-link {
+  display: inline-block;
+}
+
+
+/* ------ 4. DOCS TABLE OF CONTENTS ------ */
+
+.docs-toc {
+  position: sticky;
+  top: var(--toc-top-offset);
+  height: fit-content;
+  max-height: calc(100vh - var(--toc-top-offset));
+  overflow-y: auto;
+  padding: var(--space-l);
+}
+
+.toc-header {
+  display: block;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi-bold);
+  color: var(--text-faded);
+  margin-bottom: var(--space-m);
+}
+
+
+.toc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.toc-item {
+  margin: 0;
+}
+
+.toc-link {
+  color: var(--text-plain);
+  text-decoration: none;
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-medium);
+  display: block;
+  padding: var(--space-s) 0 var(--space-s) var(--space-l);
+  border-left: var(--border-m) solid var(--toc-border);
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.toc-link:hover {
+  color: var(--text-link);
+}
+
+.toc-link-active {
+  color: var(--text-link);
+  font-weight: var(--font-weight-semi-bold);
+  border-left-color: var(--toc-border-active);
+}
+
+.toc-empty {
+  color: var(--text-faded);
+  font-size: var(--font-s);
+}
+
+
+/* ------ 5. DEMO PREVIEW ------ */
+
+.demo-preview {
+  padding: var(--space-xl);
+  border: var(--border-s) solid var(--border-faded);
+  margin-bottom: 1rem;
+}
+
+.demo-preview.is-joined {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.demo-preview.is-centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-xl);
+}
+
+.demo-preview .sticky-bar {
+  top: 0;
+}
+
+/* Format preview — placeholder or template image shown at its intrinsic
+   ratio, capped so tall (9:16) formats stay scannable on the page */
+.demo-preview .format-preview {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 420px;
+}
+
+/* Caption — joins under .demo-preview.is-joined the way a code block
+   does, but carries text (format name, dimensions) instead of code */
+.demo-caption {
+  margin-bottom: 1rem;
+  padding: var(--space-l);
+  background-color: var(--background-darker);
+  font-family: var(--font-quaternary);
+  font-size: var(--font-s);
+  color: var(--text-secondary);
+}
+
+.demo-caption p {
+  margin: 0;
+}
+
+.demo-eyebrow {
+  margin: 0;
+  font-size: var(--font-s);
+  /* --text-secondary, not --text-faded: body-size text needs 4.5:1 (AA) */
+  color: var(--text-secondary);
+}
+
+
+/* ------ DOCS UTILITIES ------ */
+/* Docs-specific display classes — not part of the design system */
+
+/* -- Token labels -- */
+.token-tag {
+  display: inline-block;
+  font-size: var(--font-2xs);
+  font-family: var(--font-quaternary);
+  color: var(--text-plain);
+  background-color: var(--background-faded);
+  padding: var(--2xs) var(--s);
+  align-self: flex-start;
+  margin-bottom: var(--space-m);
+}
+
+.token-block {
+  padding: var(--space-s) 0;
+}
+
+/* -- Demo specific styles -- */
+.type-demo > h1,
+.type-demo > h2,
+.type-demo > h3,
+.type-demo > h4,
+.type-demo > h5,
+.type-demo > h6 {
+  margin-top: var(--space-none);
+  margin-bottom: var(--space-xl);
+}
+
+.type-demo > details {
+  margin-bottom: var(--space-2xl);
+}
+
+.type-demo > details .token-tag {
+  margin-bottom: var(--space-none);
+  padding: var(--space-none) var(--space-2xs);
+}
+
+.button-demo > .button {
+  margin-top: var(--space-none);
+  margin-bottom: var(--space-l);
+}
+
+.button-demo > .token-tag {
+  margin-top: var(--space-none);
+  margin-bottom: var(--space-none);
+}
+
+/* -- Demo state classes -- */
+.demo-hover.button {
+  transform: scale(1.05);
+}
+
+.demo-active.button {
+  transform: scale3d(1.0, 1.0, 1.0);
+}
+
+/* ------ 6. CODE BLOCKS ------ */
+
+.code-block-wrapper {
+  position: relative;
+  margin-bottom: 1rem;
+  display: grid;
+}
+
+.code-block-wrapper pre code {
+  display: block;
+  padding-right: 0;
+  background-color: transparent;
+  font-family: inherit;
+}
+
+.code-block-wrapper .copy-btn {
+  position: absolute;
+  top: var(--space-m);
+  right: var(--space-m);
+  z-index: 10;
+  /* xsmall text would shrink the icon to ~.8em of 12px; restore a legible,
+     tappable icon size (matches the design system's icon-only convention). */
+  --icon-size: 1.5em;
+  padding: var(--space-s);
+}
+
+
+/* ------ 7. DOCS CARDS (Index Page) ------ */
+
+.docs-hero {
+  text-align: center;
+  margin-bottom: var(--space-6xl);
+}
+
+.docs-hero-title {
+  font-size: var(--font-8xl);
+  margin-bottom: var(--space-l);
+}
+
+.docs-hero-description {
+  font-size: var(--font-xl);
+  color: var(--text-secondary);
+}
+
+.docs-section {
+  margin-bottom: var(--space-3xl);
+}
+
+.docs-section-title {
+  font-size: var(--font-4xl);
+  margin-bottom: var(--space-xl);
+  color: var(--text-plain);
+}
+
+/* ------ 8. RESPONSIVE ------ */
+
+/* ---- Tablet: TOC below content ---- */
+@media (max-width: 1024px) {
+
+  .docs-content-grid {
+    grid-template-columns: 1fr; /* TOC below content on tablet */
+  }
+
+  .docs-toc {
+    position: static;
+    max-height: none;
+  }
+}
+
+/* ---- Mobile: Overlay sidebar ---- */
+@media (max-width: 768px) {
+
+  /* -- Grid: single column on mobile -- */
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cols-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .cols-4 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Top nav: remove side padding, show hamburger */
+  .top-nav {
+    padding: 0;
+  }
+
+  .svg-logo.nav-logo {
+    height: 45px;
+  }
+
+  /* Mobile top-nav right side: icons only — hide text labels, tighten padding */
+  .top-nav-right .top-nav-link-label {
+    display: none;
+  }
+
+  .top-nav-right .top-nav-link,
+  .top-nav-right .dropdown-trigger {
+    padding: 0 var(--space-l);
+    gap: var(--space-xs);
+  }
+
+  .top-nav-hamburger {
+    display: flex;
+    padding: 0 var(--space-l);
+  }
+
+  /* No-sidebar pages: logo is first child, supply the left padding the hamburger would have */
+  .top-nav-left > .top-nav-logo-link:first-child {
+    padding-left: var(--space-l);
+  }
+
+  /* Hide desktop sidebar toggle on mobile */
+  .site-sidebar-toggle {
+    display: none;
+  }
+
+  /* Grid: single column on mobile (sidebar becomes overlay) */
+  .docs-layout,
+  body.sidebar-collapsed .docs-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--top-nav-height) 1fr;
+    grid-template-areas:
+      "topbar"
+      "main";
+  }
+
+  /* Sidebar: override sticky grid cell to fixed overlay */
+  .site-sidebar {
+    position: fixed;
+    top: var(--top-nav-height);
+    left: 0;
+    bottom: 0;
+    height: auto;
+    width: 75vw;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 101;
+  }
+
+  body.mobile-nav-open .site-sidebar {
+    transform: translateX(0);
+    padding: 0 0 var(--space-l) 0;
+  }
+
+  /* Sidebar header: not needed on mobile (toggle is in header) */
+  .site-sidebar-header {
+    display: none;
+  }
+
+  body.sidebar-collapsed .site-sidebar {
+    position: fixed;
+    width: 75vw;
+    padding: 0;
+  }
+
+  body.sidebar-collapsed .site-sidebar-content {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+  }
+
+  body.sidebar-collapsed .nav-section-toggle span:not(.nav-toggle-icon),
+  body.sidebar-collapsed .nav-section-toggle .nav-toggle-icon,
+  body.sidebar-collapsed .nav-list,
+  body.sidebar-collapsed .nav-label,
+  body.sidebar-collapsed .nav-link > span,
+  body.sidebar-collapsed .nav-home > span {
+    display: revert;
+  }
+
+  body.sidebar-collapsed .nav-section-toggle,
+  body.sidebar-collapsed .nav-link,
+  body.sidebar-collapsed .nav-home {
+    justify-content: flex-start;
+    padding: var(--space-l) var(--space-m);
+    gap: var(--space-s);
+  }
+
+  body.sidebar-collapsed .nav-section[open] {
+    background: var(--background-faded);
+  }
+
+  body:not(.sidebar-collapsed) .nav-section[open] .nav-list,
+  body.sidebar-collapsed .nav-section[open] .nav-list {
+    display: block;
+  }
+
+  .docs-content-grid {
+    display: block;
+    padding-left: var(--space-l);
+    padding-right: var(--space-l);
+    padding-top: 0;
+  }
+
+  .docs-toc {
+    position: static;
+    max-height: none;
+    display: none;
+  }
+
+  /* Mobile: Home link separator */
+  .nav-home {
+    margin-bottom: 0;
+    padding-bottom: var(--space-s);
+    border-bottom: var(--border-s) solid var(--border-faded);
+  }
+
+  /* Mobile: Collapsible nav sections */
+  .nav-section {
+    margin-bottom: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    border-bottom: var(--border-s) solid var(--border-faded);
+    transition: none;
+  }
+
+  .nav-section:last-of-type {
+    border-bottom: none;
+  }
+
+  .nav-section:hover {
+    background: none;
+  }
+
+  /* Toggle takes full width */
+  .nav-section-toggle {
+    width: 100%;
+    padding: var(--space-xl) var(--space-l);
+    font-size: var(--font-xl);
+  }
+
+  /* Show/hide nav-list based on details open state */
+  .nav-section:not([open]) .nav-list {
+    display: none;
+  }
+
+  .nav-section[open] .nav-list {
+    display: block;
+    margin-top: 0;
+    padding-bottom: var(--space-s);
+  }
+
+  /* Child links: full-width, no borders */
+  .nav-link {
+    padding: var(--space-xl) var(--space-l);
+    white-space: normal;
+    font-size: var(--font-xl);
+  }
+
+  .nav-list li {
+    margin: 0;
+  }
+
+  /* Page nav: single column */
+  .page-nav-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .page-nav-placeholder {
+    display: none;
+  }
+
+  .page-nav-prev {
+    border-bottom: var(--border-s) solid var(--border-faded);
+  }
+
+  .page-nav-next {
+    flex-direction: row;
+    text-align: left;
+    margin-left: 0;
+  }
+
+  /* Feedback modal: full-width on mobile */
+  .feedback-modal {
+    width: calc(100vw - var(--space-xl) * 2);
+    padding: var(--space-xl);
+  }
+
+  /* Page header: taller hero on mobile */
+  .page-header {
+    min-height: 30vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Auth: stack user info vertically on mobile */
+  .auth-user-info {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .auth-user-details {
+    margin-bottom: var(--space-xs);
+  }
+}
+
+
+/* ------ AUTH ------ */
+
+/* --- Auth Loading State --- */
+
+body.auth-loading .docs-main-area,
+body.auth-loading .page-wrapper.has-sidebar {
+  visibility: hidden;
+}
+
+body.auth-loading .svg-logo.nav-logo {
+  visibility: hidden;
+}
+
+body.auth-ready .docs-main-area,
+body.auth-ready .page-wrapper.has-sidebar {
+  visibility: visible;
+}
+
+body.auth-ready .svg-logo.nav-logo {
+  visibility: visible;
+}
+
+
+.auth-login-btn {
+  width: 100%;
+}
+
+/* --- Logged-in User Info --- */
+
+.auth-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.auth-user-details {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.auth-user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--background-faded);
+  color: var(--text-inverted);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi-bold);
+  flex-shrink: 0;
+}
+
+.auth-user-role {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+.auth-logout-btn {
+  width: 100%;
+}
+
+/* --- Element-Level Role Gating --- */
+
+[data-auth-role] {
+  display: none;
+}
+
+[data-auth-role="public"] {
+  display: revert;
+}
+
+body.auth-role-brand [data-auth-role="brand"],
+body.auth-role-team [data-auth-role="team"],
+body.auth-role-team [data-auth-role="brand"],
+body.auth-role-admin [data-auth-role="admin"],
+body.auth-role-admin [data-auth-role="team"],
+body.auth-role-admin [data-auth-role="brand"] {
+  display: revert;
+}
+
+/* Public-only visitors: hide sidebar, keep header */
+body.auth-role-public:not(.auth-role-brand) .site-sidebar {
+  display: none;
+}
+body.auth-role-public:not(.auth-role-brand) .page-wrapper.has-sidebar {
+  margin-left: 0;
+}
+
+/* --- Login Overlay --- */
+
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--background-primary);
+  padding: var(--space-l);
+}
+
+.login-overlay.is-visible {
+  display: flex;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.login-logo {
+  height: 88px;
+  margin-bottom: var(--space-l);
+  color: var(--text-primary);
+}
+
+.login-logo svg {
+  height: 100%;
+  width: auto;
+}
+
+.login-title {
+  font-size: var(--font-xl);
+  font-weight: var(--font-weight-semi-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-l);
+  text-align: center;
+}
+
+.login-subtitle {
+  font-size: var(--font-m);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-l);
+  text-align: center;
+}
+
+/* Collapsed on the main login screen (empty by default); shown only when the
+   invite / reset flows populate it with instructions. */
+.login-subtitle:empty {
+  display: none;
+}
+
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+.login-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.login-form label {
+  color: var(--text-secondary);
+}
+
+.login-submit-btn {
+  width: 100%;
+  margin-top: var(--space-2xs);
+}
+
+.login-error {
+  display: none;
+  font-size: var(--font-s);
+  color: var(--status-danger);
+  text-align: center;
+}
+
+.login-success {
+  display: none;
+  font-size: var(--font-s);
+  color: var(--status-success);
+  text-align: center;
+}
+
+/* --- Social sign-in (divider + Google) --- */
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  color: var(--text-secondary);
+}
+
+.login-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--divider-color);
+}
+
+.login-divider-text {
+  font-size: var(--font-s);
+  color: var(--text-secondary);
+}
+
+.login-google-btn {
+  width: 100%;
+}
+
+.login-forgot-btn {
+  background: none;
+  border: none;
+  padding: var(--space-s) 0;
+  margin-top: var(--space-2xs);
+  /* font-size: var(--font-xs); */
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 44px;
+  transition: color 0.2s;
+}
+
+.login-forgot-btn:hover {
+  color: var(--text-link);
+}
+
+/* --- Password Field (input + show/hide toggle) --- */
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: var(--space-4xl);
+}
+
+.password-toggle {
+  position: absolute;
+  right: var(--space-m);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-faded);
+  padding: var(--space-xs);
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: var(--text-primary);
+}
+
+.password-toggle .svg-icn {
+  width: 20px;
+  height: 20px;
+}
+
+.login-reset-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+.login-reset-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.login-reset-form label {
+  color: var(--text-secondary);
+}
+
+/* --- Login Page (standalone /auth/login.html) --- */
+
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The top-nav is sticky (in normal flow) on auth pages — it already
+     reserves its own height, so min-height fills the remaining viewport.
+     No margin-top: that would double-count the nav height and push the
+     card off-centre with an overflow scroll. */
+  min-height: calc(100vh - var(--top-nav-height));
+  padding: var(--space-l);
+  background: var(--background-primary);
+}
+
+/* --- Set Password Form --- */
+
+.login-set-password-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+.login-set-password-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.login-set-password-form label {
+  color: var(--text-secondary);
+}
+
+/* --- Account Page --- */
+
+.account-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+  padding-top: var(--space-m);
+  border-top: var(--border-s) solid var(--border-faded);
+}
+
+.account-section .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.account-section label {
+  color: var(--text-secondary);
+}
+
+/* --- Access Denied Page --- */
+
+.access-denied-wrapper {
+  min-height: 60vh;
+  justify-content: center;
+  text-align: center;
+}
+
+.access-denied-wrapper p {
+  color: var(--text-secondary);
+}
+
+.access-denied-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+}

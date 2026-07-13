@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" {{BRAND_THEME_ATTR}}>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{PAGE_TITLE}} - {{SITE_NAME}}</title>
+    <meta name="description" content="{{META_DESCRIPTION}}">
+
+    <!-- Favicon (per-brand via brand.json, site default otherwise) -->
+    <link rel="icon" type="image/svg+xml" href="{{FAVICON_SVG}}">
+    <link rel="icon" type="image/x-icon" href="{{FAVICON_ICO}}">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="{{PAGE_TITLE}} - {{SITE_NAME}}">
+    <meta property="og:description" content="{{META_DESCRIPTION}}">
+    <meta property="og:image" content="{{OG_IMAGE}}">
+    <meta property="og:type" content="website">
+
+    <!-- Design System Framework (path set in docs.config.js) -->
+    <link rel="stylesheet" href="{{DESIGN_SYSTEM_PATH}}" id="design-system-css"
+          onerror="document.getElementById('ds-missing-banner').style.display='flex'">
+    {{BRAND_CSS}}
+
+    {{FONT_HEAD}}
+
+    <!-- Docs chrome styles (layout, nav, page chrome; path set in docs.config.js) -->
+    {{DOCS_CSS}}
+
+    {{EXTRA_STYLESHEETS}}
+
+    {{BRAND_THEME_CSS}}
+
+    {{EXTRA_HEAD}}
+</head>
+<body{{BODY_ATTRS}}>
+
+    <!-- Design system missing banner (shown by JS if CSS variables fail to load) -->
+    <div id="ds-missing-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#fffbea;border-bottom:1px solid #f0c040;padding:12px 20px;font-family:sans-serif;font-size:14px;color:#7a5c00;align-items:center;gap:12px;">
+        <span>⚠️</span>
+        <span>Design system CSS not found. Check the path in <code style="background:#fef3c7;padding:2px 6px;border-radius:4px;">{{CONFIG_PATH}}</code> → <code style="background:#fef3c7;padding:2px 6px;border-radius:4px;">designSystemPath</code>, then re-run <code style="background:#fef3c7;padding:2px 6px;border-radius:4px;">npm run docgen</code>.</span>
+        <button onclick="document.getElementById('ds-missing-banner').style.display='none'" style="margin-left:auto;background:none;border:1px solid #f0c040;border-radius:4px;padding:4px 10px;cursor:pointer;color:#7a5c00;font-size:13px;">Dismiss</button>
+    </div>
+
+    <!-- Layout grid: nav.js injects header + sidebar before <main> via insertAdjacentHTML -->
+    <div class="docs-layout" id="site-nav" data-base="{{NAV_BASE}}">
+    <main class="docs-main-area">
+    <div{{WRAPPER_ATTRS}}>
+    <div{{CONTAINER_ATTRS}}>
+        <!-- Page Header (full width, outside grid) -->
+        {{PAGE_HEADER}}
+
+        <!-- Page sub-header bar (full width, sticky: breadcrumb + filename + actions) -->
+        {{PAGE_STICKY_BAR}}
+
+        <!-- Main Content + TOC grid -->
+        <div class="docs-content-grid padding-global">
+            <!-- Main Content -->
+            <main class="docs-main">
+                <article>
+                    {{PAGE_CONTENT}}
+                </article>
+            </main>
+
+            <!-- Table of Contents -->
+            {{TOC_SECTION}}
+        </div>
+
+        <!-- Page Navigation (Previous / Next) -->
+        {{PAGE_NAV}}
+
+        {{EXTRA_CONTENT}}
+
+        <!-- Footer -->
+        <footer class="docs-footer">
+            <div class="docs-footer-inner padding-global">
+                <p class="docs-footer-text">{{FOOTER_TEXT}}</p>
+            </div>
+        </footer>
+
+        <!-- Per-page scripts (inside the page container so they re-execute on transition) -->
+        {{PAGE_SCRIPTS}}
+    </div>
+    </div>
+    </main>
+    </div><!-- /.docs-layout #site-nav -->
+
+    <!-- Syntax highlighting (source set in docs.config.js) -->
+    {{HIGHLIGHT_JS}}
+
+    <!-- Initialize Highlight.js and TOC (re-callable after client-side navigation) -->
+    <script>
+        (function() {
+            'use strict';
+
+            // Track TOC observer + scroll listener so we can clean up before re-init
+            var tocObserver = null;
+            var tocScrollHandler = null;
+
+            window.bdInitHighlight = function initHighlight() {
+                if (!window.hljs) return;
+                document.querySelectorAll('pre code').forEach(function(block) {
+                    hljs.highlightElement(block);
+                });
+            };
+
+            window.bdInitTOCActiveState = function initTOCActiveState() {
+                // Tear down any prior observer + scroll listener (re-init safe)
+                if (tocObserver) { tocObserver.disconnect(); tocObserver = null; }
+                if (tocScrollHandler) {
+                    window.removeEventListener('scroll', tocScrollHandler);
+                    tocScrollHandler = null;
+                }
+
+                var tocLinks = document.querySelectorAll('.toc-link');
+                var headings = document.querySelectorAll('h1[id], h2[id]');
+                if (tocLinks.length === 0 || headings.length === 0) return;
+
+                var linkMap = new Map();
+                tocLinks.forEach(function(link) {
+                    var href = link.getAttribute('href');
+                    if (href && href.startsWith('#')) {
+                        linkMap.set(href.substring(1), link);
+                    }
+                });
+
+                var observerOptions = { rootMargin: '-20% 0px -70% 0px', threshold: 0 };
+
+                tocObserver = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(entry) {
+                        var id = entry.target.id;
+                        var link = linkMap.get(id);
+                        if (entry.isIntersecting) {
+                            tocLinks.forEach(function(l) { l.classList.remove('toc-link-active'); });
+                            if (link) link.classList.add('toc-link-active');
+                        }
+                    });
+                }, observerOptions);
+
+                headings.forEach(function(heading) {
+                    if (heading.id) tocObserver.observe(heading);
+                });
+
+                function setInitialActive() {
+                    var activeHeading = null;
+                    var maxTop = -Infinity;
+                    headings.forEach(function(heading) {
+                        var rect = heading.getBoundingClientRect();
+                        if (rect.top <= 100 && rect.top > maxTop) {
+                            maxTop = rect.top;
+                            activeHeading = heading;
+                        }
+                    });
+                    if (activeHeading && activeHeading.id) {
+                        var link = linkMap.get(activeHeading.id);
+                        if (link) {
+                            tocLinks.forEach(function(l) { l.classList.remove('toc-link-active'); });
+                            link.classList.add('toc-link-active');
+                        }
+                    }
+                }
+
+                setInitialActive();
+
+                var scrollTimeout;
+                tocScrollHandler = function() {
+                    clearTimeout(scrollTimeout);
+                    scrollTimeout = setTimeout(setInitialActive, 100);
+                };
+                window.addEventListener('scroll', tocScrollHandler);
+            };
+
+            function init() {
+                window.bdInitHighlight();
+                window.bdInitTOCActiveState();
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+    </script>
+
+    <!-- Back to Top -->
+    <div class="back-to-top-wrapper">
+      <button class="button back-to-top-btn" data-icon-only aria-label="Back to top" type="button">
+        {{icon:arrow-top}}
+      </button>
+    </div>
+    <script>
+      (function() {
+        var btn = document.querySelector('.back-to-top-wrapper');
+        if (!btn) return;
+        window.addEventListener('scroll', function() {
+          btn.classList.toggle('is-visible', window.scrollY > 300);
+        });
+        btn.querySelector('button').addEventListener('click', function() {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      })();
+    </script>
+
+    <!-- Site nav + docs UI behaviours -->
+    <script src="{{NAV_BASE}}assets/js/nav.js" defer></script>
+    {{UI_SCRIPTS}}
+
+    {{EXTRA_SCRIPTS}}
+
+    <script>
+      /* Tag dismiss — delegated to document, attached once */
+      document.addEventListener('click', function (e) {
+        var removeBtn = e.target.closest('.tag-remove');
+        if (removeBtn) {
+          var tag = removeBtn.closest('.tag');
+          if (tag) tag.remove();
+        }
+      });
+
+      /* Table scroll overflow hint — re-callable after client-side navigation */
+      (function() {
+        function checkOverflow(wrapper) {
+          var isOverflowing = wrapper.scrollWidth > wrapper.clientWidth;
+          var isAtEnd = wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 1;
+          wrapper.classList.toggle('is-overflowing', isOverflowing);
+          wrapper.classList.toggle('is-scrolled-end', isAtEnd);
+        }
+
+        window.bdInitTableScroll = function initTableScroll() {
+          var wrappers = document.querySelectorAll('.table-scroll');
+          wrappers.forEach(function(wrapper) {
+            if (wrapper.__bdTableScrollBound) return;
+            wrapper.__bdTableScrollBound = true;
+            checkOverflow(wrapper);
+            wrapper.addEventListener('scroll', function() { checkOverflow(wrapper); });
+          });
+        };
+
+        // Window resize handler attached once — re-checks all wrappers
+        window.addEventListener('resize', function() {
+          document.querySelectorAll('.table-scroll').forEach(checkOverflow);
+        });
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', window.bdInitTableScroll);
+        } else {
+          window.bdInitTableScroll();
+        }
+      })();
+    </script>
+    {{EXTRA_BODY_END}}
+</body>
+</html>
