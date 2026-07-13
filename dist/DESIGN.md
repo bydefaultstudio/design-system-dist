@@ -143,6 +143,17 @@ The canonical skeleton:
 
 All spacing comes from the token scale in the front matter ({spacing.s}, {spacing.l}, {spacing.xl} and so on), consumed through the `.gap-*`, `.padding-*`, `.top-*` and `.bottom-*` utilities. No margins inside blocks, no spacer divs, no ad-hoc pixel gaps.
 
+The complete utility vocabulary, generated from the CSS. These are the only legal names. The families deliberately use different suffix conventions (`.top-large` but `.gap-l`), so never guess a name that is not in these lists:
+
+- **Block gaps**: `.gap-none`, `.gap-xs`, `.gap-s`, `.gap-m`, `.gap-l`, `.gap-xl`, `.gap-2xl`, `.gap-3xl`
+- **Section spacing (top)**: `.top-small`, `.top-medium`, `.top-large`, `.top-xl`
+- **Section spacing (bottom)**: `.bottom-small`, `.bottom-medium`, `.bottom-large`, `.bottom-xl`
+- **Padding**: `.padding-global`, `.padding-s`, `.padding-m`, `.padding-l`, `.padding-xl`, `.padding-2xl`, `.padding-3xl`, `.padding-section`
+- **Containers**: `.container-xs`, `.container-s`, `.container-m`, `.container-l`, `.container-xl`
+- **Max-widths**: `.max-width-xs`, `.max-width-s`, `.max-width-m`, `.max-width-l`, `.max-width-xl`, `.max-width-full`
+- **Text sizes**: `.text-size-xl`, `.text-size-l`, `.text-size-m`, `.text-size-s`, `.text-size-xs`
+- **Borders**: `.border`, `.border-top`, `.border-bottom`, `.border-left`, `.border-right`, `.border-s`, `.border-m`, `.border-l`, `.border-solid`, `.border-dashed`, `.border-dotted`, `.border-primary`, `.border-secondary`, `.border-faded`
+
 ## Shapes
 
 Corner radius comes from a seven-step token scale, `--radius-2xs` ({rounded.2xs}) through `--radius-xl` ({rounded.xl}), plus `--radius-pill` ({rounded.pill}) for fully rounded chips and pills. Interactive surfaces (buttons, inputs) sit in the middle of the scale; cards and dialogs sit higher. Never hardcode a radius.
@@ -156,7 +167,7 @@ Conventions shared by every component:
 - Base class is `.component-name`. Variation rides on `data-*` attributes (`data-variant`, `data-size`, `data-color`), state on shared `.is-*` classes (`.is-active`, `.is-open`, `.is-selected`, `.is-disabled`, `.is-loading`, `.is-error`). Never invent a new naming pattern.
 - The bare `<button>` element is a minimal reset only. Styled buttons always take `class="button"`.
 - `<button>` for actions, `<a href>` for navigation. Never the reverse, never `<div onclick>`. Icon-only buttons need an `aria-label`.
-- Icons come from the shipped sprite only, always inside the wrapper. Never a bare `<svg>`, never an external icon library:
+- Icons come from the shipped sprite only, always inside the wrapper. Never a bare `<svg>`, never an external icon library. Valid `data-icon` names are the `<symbol>` ids in the shipped `icons.svg`; list them from that file rather than guessing:
 
 ```html
 <div class="svg-icn" data-icon="arrow-right">
@@ -166,7 +177,20 @@ Conventions shared by every component:
 </div>
 ```
 
-- Motion reads the semantic motion tokens (`--motion-page-open-duration`, `--ease-out`, `--duration-s`). Never hardcode a duration or easing in a transition or animation.
+- Motion reads the semantic motion tokens (`--motion-*`), which compose the easing and duration primitives (`--ease-out`, `--duration-s`). Never hardcode a duration or easing in a transition or animation.
+
+Button variation accepts only these values, generated from the CSS; omitting an attribute gives the default solid button:
+
+- `data-variant`: `outline` | `faded` | `outline-faded` | `transparent` | `text`
+- `data-size`: `small` | `xsmall`
+- `data-icon-only` (boolean flag)
+- `data-full-width` (boolean flag)
+- `data-color`: `danger` | `red` | `success` | `green`
+- `data-tooltip`: free text (the value is displayed)
+
+The semantic motion token set:
+
+`--motion-page-open-duration`, `--motion-page-open-easing`, `--motion-page-close-duration`, `--motion-page-close-easing`, `--motion-page-swap-duration`, `--motion-page-swap-easing`, `--motion-page-fade-duration`, `--motion-page-fade-easing`
 
 ## Do's and Don'ts
 
@@ -189,4 +213,4 @@ Don't:
 
 ---
 
-The values above are the engine's neutral defaults; the loaded `theme.css` defines the real brand. The full component-by-component reference, including every token table and utility class, lives at https://bydefault.design/llms-full.txt. Fetch it on demand; this file is the persistent contract.
+The values above are the engine's neutral defaults; the loaded `theme.css` defines the real brand. The full component-by-component reference, including every token table, component doc and utility class, ships with this package as `llms-full.txt` in the same `dist/` folder as this file, and it matches the installed version exactly. Read it whenever you need detail beyond these rules; this file is the persistent contract. The reference for the latest release also lives at https://bydefault.design/llms-full.txt.
