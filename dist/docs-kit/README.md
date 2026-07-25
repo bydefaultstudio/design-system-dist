@@ -174,6 +174,37 @@ useful keys: `section-order`, `subsection-order`, `author`.
 - `{{icon:name}}` inlines an SVG icon from `iconsDir`.
 - `{{icon-registry}}` on its own line expands to a table of every icon.
 
+## Tables
+
+Markdown tables work out of the box. After conversion, every bare `<table>`
+is wrapped in a scroll container and given the design system's base class:
+
+```html
+<div class="table-scroll"><table class="table">…</table></div>
+```
+
+That buys, with zero markup from the author:
+
+- horizontal swipe-scrolling when a table is wider than the page
+- a right-edge fade hint while more columns are off-screen, gone once the
+  reader scrolls to the end (the kit's page template ships the small script
+  that drives it — nothing to wire)
+- condensed cell padding on small screens
+
+Hand-written HTML tables inside markdown are skipped by the wrapper pass
+(any `<table>` already carrying attributes passes through untouched) — give
+those the same wrapper + base class yourself and compose the modifiers:
+
+| Class | Effect |
+|---|---|
+| `.table-full` | width 100% |
+| `.table-hover` | hover highlight on body rows |
+| `.table-header-filled` | filled header cells |
+
+Table styling lives in the design system stylesheet, not the docs chrome CSS
+— if you point `designSystemPath` at your own stylesheet, bring the `.table`
+and `.table-scroll` rules with you or tables render unstyled.
+
 ## Versioning
 
 The docs kit has no version of its own — it is versioned by this package.

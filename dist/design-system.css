@@ -366,6 +366,8 @@
 
   /* -- Divider tokens -- */
   --divider-color: var(--border-faded);
+  --divider-thickness: var(--border-s);
+  --divider-spacing: var(--space-xl);
 
   /* -- Dropdown tokens -- */
   --dropdown-background: var(--background-primary);
@@ -858,6 +860,17 @@ section {
   display: flex;
   flex-direction: column;
   gap: var(--space-m);
+}
+
+/* -- Child margin reset --
+   gap-* is the sole source of vertical spacing inside a block: element
+   defaults (headings, p, lists, figure…) are zeroed so gap and margin never
+   compound — flex gap does not collapse with margins, it adds to them.
+   margin-block only: margin-inline auto must survive for data-align="center".
+   Component classes that set their own root margins (e.g. .callout) are
+   declared later in the cascade and keep them inside blocks. */
+.block > * {
+  margin-block: 0;
 }
 
 /* -- Gap modifiers -- */
@@ -3135,16 +3148,16 @@ td .svg-icn {
 
 .divider {
   border: none;
-  border-top: var(--border-s) solid var(--divider-color);
-  margin: var(--space-xl) 0;
+  border-top: var(--divider-thickness) solid var(--divider-color);
+  margin: var(--divider-spacing) 0;
 }
 
 .divider--vertical {
   border-top: none;
-  border-left: var(--border-s) solid var(--divider-color);
+  border-left: var(--divider-thickness) solid var(--divider-color);
   height: auto;
   align-self: stretch;
-  margin: 0 var(--space-xl);
+  margin: 0 var(--divider-spacing);
   display: inline-block;
 }
 
@@ -3159,8 +3172,8 @@ td .svg-icn {
 
 hr {
   border: none;
-  border-top: var(--border-s) solid var(--divider-color, var(--border-faded));
-  margin: var(--space-xl) 0;
+  border-top: var(--divider-thickness) solid var(--divider-color, var(--border-faded));
+  margin: var(--divider-spacing) 0;
 }
 
 hr.xl {

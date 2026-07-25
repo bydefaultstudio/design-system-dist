@@ -160,12 +160,13 @@ Corner radius comes from a seven-step token scale, `--radius-2xs` ({rounded.2xs}
 
 ## Components
 
-Use existing components and utilities first: `.button`, `.card`, `.callout`, `.badge`, the disclosure/accordion, tabs, dialog, dropdown, form controls. New CSS is the last resort, only when the system cannot express the requirement.
+Use existing components and utilities first: `.button`, `.card`, `.callout`, `.badge`, `.table`, the disclosure/accordion, tabs, dialog, dropdown, form controls. New CSS is the last resort, only when the system cannot express the requirement.
 
 Conventions shared by every component:
 
 - Base class is `.component-name`. Variation rides on `data-*` attributes (`data-variant`, `data-size`, `data-color`), state on shared `.is-*` classes (`.is-active`, `.is-open`, `.is-selected`, `.is-disabled`, `.is-loading`, `.is-error`). Never invent a new naming pattern.
 - The bare `<button>` element is a minimal reset only. Styled buttons always take `class="button"`.
+- Tables take `class="table"` inside a `<div class="table-scroll">` wrapper (horizontal overflow on small screens). Modifiers compose on the table element: `.table-full`, `.table-hover`, `.table-header-filled`.
 - `<button>` for actions, `<a href>` for navigation. Never the reverse, never `<div onclick>`. Icon-only buttons need an `aria-label`.
 - Icons come from the shipped sprite only, always inside the wrapper. Never a bare `<svg>`, never an external icon library. Valid `data-icon` names are the `<symbol>` ids in the shipped `icons.svg`; list them from that file rather than guessing:
 

@@ -2,7 +2,7 @@
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 1.6.0 (package)**
+**Version: 2.0.0 (package)**
 
 ## Getting the System
 
@@ -269,7 +269,7 @@ Blocks group **related content** and manage internal spacing.
 
 * Vertical flex layout
 * Uses `gap` for spacing
-* No margins on children
+* No margins on children — enforced in CSS: `.block > *` zeroes `margin-block`, so `gap-*` is the only source of vertical spacing inside a block. Flex gap does not collapse with margins, it adds to them; without the reset, element defaults would compound with the gap. Horizontal margins survive — `data-align="center"` relies on `margin-inline: auto`.
 
 ```html
 <div class="block">
@@ -963,6 +963,8 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--selection-background` | `var(--text-primary)` |  |
 | **Divider tokens** | | |
 | `--divider-color` | `var(--border-faded)` |  |
+| `--divider-thickness` | `var(--border-s)` |  |
+| `--divider-spacing` | `var(--space-xl)` |  |
 | **Dropdown tokens** | | |
 | `--dropdown-background` | `var(--background-primary)` |  |
 | `--dropdown-border` | `var(--border-faded)` |  |
@@ -4426,7 +4428,7 @@ Dividers create visual separation between content sections. They use semantic to
 <hr class="divider">
 ```
 
-The bare `<hr>` element is also styled to match `.divider` by default.
+The bare `<hr>` element is also styled to match `.divider` by default. One exception: inside a `.block`, the child margin reset zeroes the bare `<hr>`'s vertical margins — spacing comes from the block's gap. `.divider` keeps its own `--divider-spacing` there; use it when a rule needs breathing room beyond the gap.
 
 ---
 
@@ -6804,7 +6806,7 @@ Use `:has()` to target the wrapper based on a specific logo:
 ### SVG Cleaner workflow
 
 ```bash
-node assets/js/svg-clean.js --logo --logo-name brand-name --current-color --strip-comments
+npx svg-cleaner --logo --logo-name brand-name --current-color --strip-comments
 ```
 
 This outputs a `<div class="svg-logo">` wrapper with `data-logo="brand-name"` on the `<svg>` element.
@@ -6970,7 +6972,7 @@ Use the [SVG Cleaner](/tools/svg-cleaner.html) to prepare icons before adding th
 For CLI usage:
 
 ```bash
-echo '<svg>...</svg>' | node assets/js/svg-clean.js --current-color --icon --icon-name arrow-right --strip-comments
+echo '<svg>...</svg>' | npx svg-cleaner --current-color --icon --icon-name arrow-right --strip-comments
 ```
 
 ---
@@ -7008,7 +7010,7 @@ echo '<svg>...</svg>' | node assets/js/svg-clean.js --current-color --icon --ico
 
 The full brand icon set. This table is generated at build time from `assets/images/svg-icons/`, so it always matches the source directory. The `data-icon` value is the name to use with the wrapper, the shorthand, and the sprite. For a categorised view with copy and download, see the [Brand Book iconography page](/brand/iconography.html).
 
-`3d`, `accessibility`, `ad-left`, `ad-right`, `ad-top`, `add`, `ai`, `ai-chat`, `ai-large`, `ar`, `arrow-down`, `arrow-left`, `arrow-right`, `arrow-top`, `arrow-top-right`, `arrow-up`, `back-arrow`, `bolt`, `book`, `book-1`, `book-2`, `book-open`, `bookmark`, `brand-book`, `browser`, `calendar`, `catalog`, `chart`, `chat`, `check`, `check-circled`, `check-squared`, `checklist`, `chevron-down`, `chevron-down-large`, `chevron-left`, `chevron-left-large`, `chevron-right`, `chevron-right-large`, `chevron-up`, `chevron-up-large`, `circled`, `click-2`, `clock`, `close`, `close-circled`, `close-large`, `code`, `cog`, `copy`, `credit-card`, `cursor`, `cursor-pointer-1`, `cursor-pointer-2`, `cursor-pointer-3`, `cursor-pointer-4`, `dark-mode`, `design`, `design-system`, `desktop`, `docs`, `download`, `drag`, `exclamation`, `filter`, `flame`, `flame-spark`, `folder`, `font-size`, `frame`, `full-screen`, `game`, `gamepad`, `globe`, `headphones`, `heart`, `home`, `icon`, `info`, `instagram`, `light-mode`, `link`, `linkedin`, `list`, `lock`, `login`, `logout`, `mail`, `mail-1`, `map`, `menu`, `minus`, `mobile`, `moon`, `more-horizontal`, `more-vertical`, `news`, `open-full`, `page`, `paintbrush`, `partner`, `pause`, `pencil-draw`, `percentage`, `phone`, `photo`, `photos`, `pin`, `play`, `play-2`, `play-outline`, `present`, `question`, `reddit`, `refresh`, `reset`, `return`, `return-arrow`, `scroll-down`, `search`, `search-large`, `send`, `send-2`, `settings`, `share`, `share-1`, `shop`, `sidebar-close-2`, `sidebar-left-close`, `sidebar-left-open`, `sidebar-right-close`, `sidebar-right-open`, `smiling`, `sound`, `sound-off`, `sound-on`, `spotify`, `squared`, `stack`, `status-0`, `status-10`, `status-100`, `status-20`, `status-50`, `status-75`, `status-check`, `sticky-bottom`, `sticky-top`, `sun`, `sun-1`, `sun-2`, `switch`, `t-shirt`, `tablet`, `tap-3`, `thumbs-down`, `thumbs-up`, `tools`, `trending`, `unlock`, `user`, `users`, `video`, `warning`, `weapon`, `widgets`, `youtube`
+`3d`, `accessibility`, `ad-left`, `ad-right`, `ad-top`, `add`, `ai`, `ai-chat`, `ai-large`, `ar`, `arrow-down`, `arrow-left`, `arrow-right`, `arrow-top`, `arrow-top-right`, `arrow-up`, `back-arrow`, `bolt`, `book`, `book-1`, `book-2`, `book-open`, `bookmark`, `brand-book`, `browser`, `calendar`, `catalog`, `chart`, `chat`, `check`, `check-circled`, `check-squared`, `checklist`, `chevron-down`, `chevron-down-large`, `chevron-left`, `chevron-left-large`, `chevron-right`, `chevron-right-large`, `chevron-up`, `chevron-up-large`, `circled`, `click-2`, `clock`, `close`, `close-circled`, `close-large`, `code`, `cog`, `copy`, `credit-card`, `cursor`, `cursor-pointer-1`, `cursor-pointer-2`, `cursor-pointer-3`, `cursor-pointer-4`, `dark-mode`, `design`, `design-system`, `desktop`, `docs`, `download`, `drag`, `exclamation`, `fast-forward`, `filter`, `flame`, `flame-spark`, `folder`, `font-size`, `frame`, `full-screen`, `game`, `gamepad`, `globe`, `headphones`, `heart`, `home`, `icon`, `info`, `instagram`, `light-mode`, `link`, `linkedin`, `list`, `lock`, `login`, `logout`, `mail`, `mail-1`, `map`, `menu`, `minus`, `mobile`, `moon`, `more-horizontal`, `more-vertical`, `news`, `open-full`, `page`, `paintbrush`, `partner`, `pause`, `pencil-draw`, `percentage`, `phone`, `photo`, `photos`, `pin`, `play`, `play-2`, `play-outline`, `present`, `question`, `reddit`, `refresh`, `reset`, `return`, `return-arrow`, `rewind`, `scroll-down`, `search`, `search-large`, `send`, `send-2`, `settings`, `share`, `share-1`, `shop`, `sidebar-close-2`, `sidebar-left-close`, `sidebar-left-open`, `sidebar-right-close`, `sidebar-right-open`, `smiling`, `sound`, `sound-off`, `sound-on`, `spotify`, `squared`, `stack`, `status-0`, `status-10`, `status-100`, `status-20`, `status-50`, `status-75`, `status-check`, `sticky-bottom`, `sticky-top`, `sun`, `sun-1`, `sun-2`, `switch`, `t-shirt`, `tablet`, `tap-3`, `thumbs-down`, `thumbs-up`, `tools`, `trending`, `unlock`, `user`, `users`, `video`, `warning`, `weapon`, `widgets`, `youtube`
 
 ---
 

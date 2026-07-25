@@ -2470,7 +2470,7 @@ function generateBrandBook(template, themes) {
         const title = logoTypeTitles[typeKey] || (typeKey.charAt(0).toUpperCase() + typeKey.slice(1) + ' Logo');
 
         contentHtml += `<div class="block gap-m">
-          <h3 style="margin: 0;">${title}</h3>
+          <h3>${title}</h3>
           <div class="grid cols-2 gap-l">`;
 
         // Render light then dark variants if they exist
@@ -2665,14 +2665,16 @@ function generateBrandBook(template, themes) {
     // Demonstrates: H1, H2, H3, eyebrow, lead paragraph, body, inline styling,
     // internal + external links, unordered + ordered lists, blockquote, small print.
     // Sits on the page, not in a bordered box.
+    // Header is a block composition (gap-driven); the article itself is NOT a
+    // block — prose flows on element margins, matching how markdown-generated
+    // pages render, so the specimen stays representative.
     contentHtml += `<section class="brand-book-section block gap-l">
-      <article class="block gap-l">
-        <header class="block gap-m">
-          <p class="eyebrow" style="margin: 0;">Field notes</p>
-          <h1 style="margin: 0;">Your Primary Headline, Big, Bold, and Unmissable</h1>
-          <p class="text-size-xlarge" style="margin: 0;">This lead paragraph demonstrates how introductory body text will look across your layout, used to set the tone for the body that follows and draw the reader in.</p>
-        </header>
-
+      <header class="block gap-m">
+        <p class="eyebrow">Field notes</p>
+        <h1>Your Primary Headline, Big, Bold, and Unmissable</h1>
+        <p class="text-size-xlarge">This lead paragraph demonstrates how introductory body text will look across your layout, used to set the tone for the body that follows and draw the reader in.</p>
+      </header>
+      <article>
         <p>This paragraph demonstrates how body text will look across your layout. <strong>Bold text</strong> adds emphasis, while <em>italics</em> offer a subtle highlight. You can also use <s>strikethrough</s> to show edits, or <code>inline code</code> for technical terms. For further information, check out <a href="#">this internal link</a>, or visit our <a href="https://example.com" target="_blank" rel="noopener noreferrer">external site</a>.</p>
 
         <h2>Type with Purpose, Design with Intent</h2>
