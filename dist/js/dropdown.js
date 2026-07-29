@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v2.0.1 */
+/* @bydefaultstudio/design-system v2.1.0 */
 // Dropdown component — auto-initialises all .dropdown elements
 (function () {
   function closeAll(except) {

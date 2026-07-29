@@ -1,0 +1,224 @@
+/* @bydefaultstudio/design-system v2.1.0 */
+/**
+ * bd-cursor — custom cursor system (native / label / badge / graphic / halo)
+ * Version: 6.0.0
+ * Model: ONE overlay element (.cursor-overlay) becomes the LABEL box, the BADGE
+ *        circle, or the bare GRAPHIC by composing a shape class (.is-circle /
+ *        .is-graphic / none = label box) with the root .bd-cursor-replacing flag
+ *        (native hidden + halo off + larger "riding" size). Authored via
+ *        data-cursor-label / -icon / -icon-end / -badge / -graphic, the
+ *        data-cursor-replace boolean (hide native, the atom rides the pointer),
+ *        and data-cursor-native (carve-out: restore the OS pointer inside a
+ *        replace region). All glyphs are SVG <use> refs into sprites — no PNG.
+ *
+ * Portability: every design-system token is consumed through a --bd-cursor-*
+ * component token with a literal fallback, so the file works on a page without
+ * design-system.css. Re-theme by overriding the component tokens, never the
+ * rules (same contract as bd-video.css).
+ *
+ * History: v5 renamed the surface to .cursor-overlay and split shape from riding
+ *          state. v6 promotes the module into the design system: config-driven
+ *          sprite paths in the JS, namespaced component tokens here.
+ */
+
+/* Hidden by default on touch/tablet/narrow viewports — sites inject these
+   elements on every page, so without this they fall back to block-level
+   defaults below the footer and break layout. Desktop pointer query below
+   opts them back in. */
+.cursor-overlay,
+.cursor-halo {
+  display: none;
+}
+
+/* Desktop pointer-only — additive overlay on top of the native cursor */
+@media (min-width: 991px) and (hover: hover) and (pointer: fine) {
+  :root {
+    --bd-cursor-color: var(--text-accent, #3485cd);
+    --bd-cursor-text: var(--text-inverted, #fffdfa);
+    --bd-cursor-graphic-color: var(--text-primary, #1f1f1f);
+    --bd-cursor-duration-fade: var(--duration-2xs, 100ms);
+    --bd-cursor-duration-halo: var(--duration-xs, 200ms);
+    --bd-cursor-ease: var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+    /* Halo tints — mixed from the accent so one override re-themes the set. */
+    --bd-cursor-tint-5: color-mix(in srgb, var(--bd-cursor-color), var(--alpha-5, transparent 95%));
+    --bd-cursor-tint-10: color-mix(in srgb, var(--bd-cursor-color), var(--alpha-10, transparent 90%));
+    --bd-cursor-tint-20: color-mix(in srgb, var(--bd-cursor-color), var(--alpha-20, transparent 80%));
+  }
+
+  /* Overlay — invisible at rest; .is-visible toggles fade-in. Position is set by
+     JS via translate3d every frame (below the pointer in float modes; centred on
+     it under .bd-cursor-replacing). Default look = the LABEL box: accent fill,
+     inverted text, square corners. Shape classes below switch it to a badge circle
+     or a bare graphic. */
+  .cursor-overlay {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 10001;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 0;
+    background: var(--bd-cursor-color);
+    /* Mode-aware text on the accent fill — the icon follows via currentColor. */
+    color: var(--bd-cursor-text);
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+    will-change: transform, opacity;
+    transition: opacity var(--bd-cursor-duration-fade) var(--bd-cursor-ease);
+  }
+
+  /* REPLACE — an element flagged data-cursor-replace hides the native cursor over
+     itself (and its children) and lets the atom (badge / graphic / label) ride
+     the pointer. Gated behind .bd-cursor-ready, which JS adds only once the cursor
+     is confirmed live (desktop, not reduced-motion, DOM present), so no-JS /
+     reduced-motion / init-failure never hide the cursor with nothing to replace
+     it. The descendant rule is required because children set their own cursor
+     (e.g. cursor:pointer on links). When a router removes the element on
+     navigation, the rule stops matching and the native cursor self-heals — no JS
+     needed for the hide half. */
+  .bd-cursor-ready [data-cursor-replace],
+  .bd-cursor-ready [data-cursor-replace] *,
+  /* GRAPHIC always replaces the OS pointer (it IS a cursor graphic), so hide the
+     native cursor over [data-cursor-graphic] too — matching the engine, which
+     forces replace for graphics even without the explicit attribute. */
+  .bd-cursor-ready [data-cursor-graphic],
+  .bd-cursor-ready [data-cursor-graphic] * {
+    cursor: none;
+  }
+
+  /* NATIVE carve-out — restores the real OS pointer inside a replace region (the
+     keystone a11y atom: a precise control, e.g. the video scrubber, opts back to
+     the native pointer). Self-sufficient: it emits its OWN cursor:auto, placed
+     AFTER the replace rule so it wins at equal specificity — the carve-out works
+     even if the consumer writes no CSS. A consumer may still set a more specific
+     cursor (e.g. .bd-video-scrubber{cursor:pointer}) which wins by source order. */
+  .bd-cursor-ready [data-cursor-native],
+  .bd-cursor-ready [data-cursor-native] * {
+    cursor: auto;
+  }
+
+  /* While a badge/graphic rides the pointer the click halo would bloom underneath
+     it and read as noise. Hide it while replacing. */
+  .bd-cursor-replacing .cursor-halo {
+    display: none;
+  }
+
+  .cursor-overlay.is-visible {
+    opacity: 1;
+  }
+
+  /* The [hidden] attribute (reduced-motion "hide" mode) is a user-agent
+     rule, and the author `display` declarations above beat it in the
+     cascade — restate it at higher specificity so hidden really hides. */
+  .cursor-overlay[hidden],
+  .cursor-halo[hidden] {
+    display: none;
+  }
+
+  /* BADGE (.is-circle) — icon in an accent circle. Inherits the accent fill +
+     inverted glyph from the base. 40px floating beside the native pointer; 56px
+     when it rides the pointer (.bd-cursor-replacing). */
+  .cursor-overlay.is-circle {
+    padding: 6px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+  }
+
+  .cursor-overlay.is-circle .cursor-overlay-icon {
+    width: 1em;
+    height: 1em;
+  }
+
+  .bd-cursor-replacing .cursor-overlay.is-circle {
+    width: 56px;
+    height: 56px;
+    font-size: 22px;
+  }
+
+  /* GRAPHIC (.is-graphic) — a cursor graphic from the cursor sprite (an exaggerated
+     OS cursor), NO box / background. Two-tone cursors carry their OWN #fff/#000 fills
+     (presentation attrs beat inherited fill), so `color` never reaches them. A graphic
+     authored with fill="currentColor" DOES follow this `color` — themed so it stays
+     visible in both light and dark. Graphic always replaces the pointer, so the
+     "replacing" size is the one that shows; the smaller rule is a dead fallback. */
+  .cursor-overlay.is-graphic {
+    padding: 0;
+    border-radius: 0;
+    width: auto;
+    height: auto;
+    background: transparent;
+    color: var(--bd-cursor-graphic-color);
+    justify-content: center;
+  }
+
+  .cursor-overlay.is-graphic .cursor-overlay-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .bd-cursor-replacing .cursor-overlay.is-graphic .cursor-overlay-icon {
+    width: 100px;
+    height: 100px;
+  }
+
+  /* Icon slots — both leading and trailing default to hidden. JS toggles
+     .has-glyph on the slots that are populated for the current target. */
+  .cursor-overlay-icon {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cursor-overlay-icon.has-glyph {
+    display: inline-flex;
+  }
+
+  .cursor-overlay-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+  }
+
+  /* Text — collapses when empty so icon-only / icon+icon layouts stay tight. */
+  .cursor-overlay-text:empty {
+    display: none;
+  }
+
+  /* Halo — invisible at rest; click feedback only via .cursor-pressed (90px). */
+  .cursor-halo {
+    display: block;
+    width: 0;
+    height: 0;
+    border-radius: 100%;
+    background-color: var(--bd-cursor-tint-5);
+    border: 2px solid var(--bd-cursor-tint-5);
+    position: fixed;
+    left: 0;
+    top: 0;
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: center center;
+    pointer-events: none;
+    z-index: 10000;
+    will-change: transform;
+    transition: width var(--bd-cursor-duration-halo) var(--bd-cursor-ease), height var(--bd-cursor-duration-halo) var(--bd-cursor-ease), background-color var(--bd-cursor-duration-halo);
+  }
+
+  .cursor-pressed {
+    width: 90px;
+    height: 90px;
+    background-color: var(--bd-cursor-tint-20);
+    border-color: var(--bd-cursor-tint-10);
+  }
+}

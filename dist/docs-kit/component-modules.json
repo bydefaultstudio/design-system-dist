@@ -1,7 +1,10 @@
 {
-  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^2.0.0",
+  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^2.1.0",
   "modules": [
     "accordion.js",
+    "bd-audio.js",
+    "bd-cursor.js",
+    "bd-video.js",
     "copy-button.js",
     "dialog.js",
     "dropdown.js",
@@ -10,5 +13,12 @@
     "rating.js",
     "tabs.js",
     "toast.js"
+  ],
+  "componentCss": [
+    "bd-cursor.css",
+    "bd-video.css"
+  ],
+  "headless": [
+    "bd-audio.js"
   ]
 }

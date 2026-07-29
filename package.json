@@ -1,9 +1,16 @@
 {
   "name": "@bydefaultstudio/design-system",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "By Default design system framework CSS. Neutral engine defaults, brand applied per project via theme.css overrides.",
   "style": "dist/design-system.css",
   "license": "UNLICENSED",
+  "bin": {
+    "bd-sprite": "dist/tools/sprite-builder.js",
+    "bd-sync": "dist/tools/sync-consumer.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "marked": "^16.4.1"
   }

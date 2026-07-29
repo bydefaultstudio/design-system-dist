@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v2.0.1 -->
+<!-- @bydefaultstudio/design-system v2.1.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 2.0.1 (package)**
+**Version: 2.1.0 (package)**
 
 ## Getting the System
 
@@ -3187,6 +3187,433 @@ This section documents how the component is built. For usage, see the sections a
 | `.badge[data-color="danger"]`, `.badge[data-color="red"]` | Danger colour variant |
 | `.badge[data-color="info"]`, `.badge[data-color="blue"]` | Info colour variant |
 
+### BD Audio
+
+BD Audio plays short micro-sounds (click, hover, success, error, bump) as interaction feedback. It is headless — no UI of its own, no CSS — and site-agnostic: the mute switch arrives as an injected predicate through `window.bdAudioConfig`, never a global the module looks up by name. The component requires JavaScript (`assets/js/bd-audio.js`).
+
+---
+
+## Configuration
+
+Define `window.bdAudioConfig` before the script loads. Every key is optional; defaults reproduce the full five-sound build.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `basePath` | `"/assets/audio/"` | Prefix for sound files. A file starting with `/` bypasses it |
+| `sounds` | five-sound registry | Replaces the default registry **wholesale** — list only the sounds the site ships, as `{ file, volume }` |
+| `masterVolume` | `1` | One knob over all per-sound volumes (0–1) |
+| `isMuted` | `null` | Injected predicate returning `true` to silence. `null` = never muted |
+| `gateProgrammatic` | `false` | The mute gate covers delegated attribute triggers only; `true` gates `playSound()` calls too |
+| `attributeApi` | `true` | Attach the delegated `data-bd-audio` listeners |
+| `hoverDebounceDelay` | `120` | Hover throttle in ms |
+
+Sounds are created lazily on first play, so a registered-but-never-played sound costs no network request.
+
+## Basic usage
+
+```html
+<script>
+  window.bdAudioConfig = {
+    sounds: {
+      success: { file: "success.mp3", volume: 0.08 },
+      error:   { file: "error.mp3",   volume: 0.14 }
+    },
+    isMuted: function () { return window.mySiteIsSoundOff(); },
+    gateProgrammatic: true,
+    attributeApi: false
+  };
+</script>
+<script src="/assets/js/bd-audio.js" defer></script>
+```
+
+Attribute API — `data-bd-audio` is a space-separated list:
+
+```html
+<button class="button" data-bd-audio="click">Save</button>
+<a class="button" data-bd-audio="hover" href="/work">Work</a>
+<button class="button" data-bd-audio="click hover">Both</button>
+```
+
+## JavaScript
+
+The script exposes a singleton at `window.bdAudio` (created on `DOMContentLoaded`, idempotent across re-runs) plus `window.initBdAudio` for dispatcher parity.
+
+| Call | Purpose |
+|---|---|
+| `bdAudio.playSound(name)` | Programmatic playback — form success/error feedback |
+| `bdAudio.setMasterVolume(v)` | Tuning: overall level, 0–1 |
+| `bdAudio.setSoundVolume(name, v)` | Tuning: one sound's base volume |
+| `bdAudio.getAllSoundVolumes()` | Tuning: current per-sound volumes |
+
+The `isMuted` predicate is read at play time, never captured at init — load order between this module and the site's sound switch does not matter.
+
+## Accessibility
+
+- Sound is enhancement only — nothing may communicate through sound alone; every audio cue must accompany a visible state change.
+- The site owning the mute switch must expose it as a real control: a `<button>` with a state the user can perceive (WCAG 1.4.2 background audio control).
+- Respect the visitor's choice by default: gate delegated triggers through `isMuted`, and keep sounds silent-by-default on sites where audio was never opted into.
+- Keep volumes low; the defaults are tuned to sit under content.
+
+## Usage rules
+
+**Do**
+- Declare the exact sound set the site ships — the registry replaces the defaults wholesale
+- Inject the site's mute switch as the `isMuted` predicate
+- Use the attribute API for interaction sounds and `playSound()` for outcome feedback
+
+**Don't**
+- Reference a site global from inside the module — configuration is the only coupling allowed
+- Set `gateProgrammatic: false` and also skip call-site gating — pick one gate location deliberately
+- Add sounds to interactions that fire rapidly (scroll, mousemove) — the engine throttles hover for a reason
+
+## CSS reference
+
+BD Audio ships no CSS — it is a behaviour-only module. The sound toggle UI (button, state, storage) belongs to the consuming site.
+
+### BD Cursor
+
+BD Cursor renders one overlay element as every author-driven cursor: a text LABEL beside the native pointer, an icon BADGE, a two-colour GRAPHIC that replaces the OS pointer, and a click-feedback HALO. Authoring is pure `data-cursor-*` attributes; the engine is `assets/js/bd-cursor.js` with companion styles in `bd-cursor.css`. Desktop pointer devices only — the CSS gates everything behind a hover/fine-pointer media query, and reduced-motion visitors keep the OS cursor.
+
+---
+
+## Anatomy
+
+| Axis | Mechanism | Example |
+|---|---|---|
+| Atom | `data-cursor-label` / `data-cursor-badge` / `data-cursor-graphic` | `data-cursor-badge="play"` |
+| Glyph slots | `data-cursor-icon`, `data-cursor-icon-end` | `data-cursor-icon="arrow-right"` |
+| Replace pointer | `data-cursor-replace` (boolean; graphic always replaces) | `data-cursor-replace` |
+| Native carve-out | `data-cursor-native` (boolean, wins over everything) | `data-cursor-native` |
+
+The component consumes design-system tokens only through namespaced `--bd-cursor-*` tokens with literal fallbacks, so it works on pages without `design-system.css`.
+
+## Configuration
+
+Define `window.bdCursorConfig` before the script loads. Every key is optional.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `spritePath` | `"/assets/images/svg-icons/_sprite.svg"` | Icon sprite for badge/label glyphs (`currentColor`, recolourable) |
+| `cursorSpritePath` | `"/assets/images/svg-cursors/_sprite.svg"` | Two-colour cursor sprite for GRAPHIC glyphs — ships in the package as `dist/cursors.svg` |
+| `autoInjectMarkup` | `false` | Create the overlay + halo elements when the page doesn't carry them |
+| `suppressScrollBodyClass` | `"is-animating"` | Skip scroll re-resolution while `<body>` carries this class (router transitions); `null` disables |
+| `reducedMotion` | `"hide"` | `"hide"` keeps the overlay DOM recoverable; `"remove"` strips it |
+
+Both sprites must be served **same-origin** — `<use href>` does not load cross-origin.
+
+## Basic usage
+
+```html
+<script>
+  window.bdCursorConfig = { autoInjectMarkup: true };
+</script>
+<script src="/assets/js/bd-cursor.js" defer></script>
+
+<a href="/work" data-cursor-label="View work" data-cursor-icon-end="arrow-right">…</a>
+<section data-cursor-badge="play" data-cursor-replace>…</section>
+<div data-cursor-graphic="cursor-hand-pointing">…</div>
+```
+
+Without `autoInjectMarkup`, place the overlay markup in the page chrome before the scripts:
+
+```html
+<div class="cursor-overlay" aria-hidden="true">
+  <div class="cursor-overlay-icon cursor-overlay-icon-lead"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="100%" height="100%"><use href=""/></svg></div>
+  <span class="cursor-overlay-text"></span>
+  <div class="cursor-overlay-icon cursor-overlay-icon-end"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="100%" height="100%"><use href=""/></svg></div>
+</div>
+<div class="cursor-halo" aria-hidden="true"></div>
+```
+
+## JavaScript
+
+`initBdCursor()` runs automatically and is idempotent; `destroyBdCursor()` detaches all listeners and root flags so a client-side app can re-initialise.
+
+| Signal | Direction | Purpose |
+|---|---|---|
+| `bd:before-nav` (legacy alias `studio:before-nav`) | listened | Clear a riding badge/graphic before a router swaps page content |
+| `bd-cursor:refresh` | listened | Re-read the hovered element's `data-cursor-*` after runtime mutation (bd-video swaps play↔pause this way) |
+
+**Glyph contract:** a badge/graphic value must resolve to a symbol in its sprite. A missing symbol renders nothing while the CSS still hides the native cursor — a cursorless region with no error. When pairing with BD Video, the icon sprite must contain `play`, `pause`, `sound-off`, `sound-on`, `full-screen` and `arrow-top-right`.
+
+## Accessibility
+
+- The overlay is presentation only: `aria-hidden="true"` on both elements, `pointer-events: none`, and no keyboard or screen-reader surface — all interaction semantics stay on the underlying elements.
+- Reduced-motion visitors keep the OS cursor; the engine never hides the native pointer for them.
+- Must keep `data-cursor-native` on precise controls inside replace regions (scrubbers, inputs) — the carve-out restores the OS pointer and works without consumer CSS.
+- The native-cursor hide is gated behind `.bd-cursor-ready`, which the engine adds only after confirming the overlay is live — no-JS visitors never lose their pointer.
+
+## Usage rules
+
+**Do**
+- Author through the data attributes; treat the engine as a black box
+- Keep GRAPHIC glyphs in the cursor sprite and badge/label glyphs in the icon sprite — they have different colour models
+- Dispatch `bd-cursor:refresh` after mutating a hovered element's cursor attributes
+
+**Don't**
+- Point a badge or graphic at a symbol that isn't in the sprite — verify against the sprite before shipping
+- Use `data-cursor-replace` on an element with no glyph or label — the engine warns and keeps the overlay hidden
+- Re-theme by overriding `.cursor-overlay` rules — override the `--bd-cursor-*` tokens instead
+
+## CSS reference
+
+Ships as its own file (`dist/css/bd-cursor.css`), linked after `design-system.css`. Component tokens, all overridable:
+
+| Token | Default | Used for |
+|---|---|---|
+| `--bd-cursor-color` | `var(--text-accent, #3485cd)` | Label box + badge fill |
+| `--bd-cursor-text` | `var(--text-inverted, #fffdfa)` | Label text + badge glyph |
+| `--bd-cursor-graphic-color` | `var(--text-primary, #1f1f1f)` | `currentColor` graphics |
+| `--bd-cursor-duration-fade` | `var(--duration-2xs, 100ms)` | Overlay fade (JS reads the same token) |
+| `--bd-cursor-duration-halo` | `var(--duration-xs, 200ms)` | Halo press feedback |
+| `--bd-cursor-ease` | `var(--ease-out, …)` | All transitions |
+| `--bd-cursor-tint-5/10/20` | `color-mix` of the accent | Halo fills and borders |
+
+Structure classes the JS writes: `.bd-cursor-ready` and `.bd-cursor-replacing` on the root, `.is-visible` / `.is-circle` / `.is-graphic` on the overlay, `.has-glyph` on icon slots, `.cursor-pressed` on the halo.
+
+### BD Video
+
+BD Video is the full player: a large centre play/pause button, a seek scrubber with time display, mute and fullscreen buttons, keyboard shortcuts, and timed link cards that surface over the frame. Author two elements — a `.bd-video` container and a `.bd-video-player` `<video>` inside it — then switch features on with `data-bd-*` attributes on the container. Everything else (buttons, scrubber, cue slot, icon sprite) is built by `assets/js/bd-video.js` at init, so the markup stays two elements no matter how many features run. Companion styles live in `bd-video.css`.
+
+For a decorative loop with no controls, use a plain `<video autoplay muted loop playsinline>` instead — this component is for video the visitor is meant to operate.
+
+---
+
+## Anatomy
+
+Every feature is off until its attribute is present. All attributes are booleans on the `.bd-video` container.
+
+| Axis | Mechanism | Example |
+|---|---|---|
+| Seek bar + time display | `data-bd-scrubber` | `data-bd-scrubber` |
+| Mute / unmute button | `data-bd-mute` | `data-bd-mute` |
+| Fullscreen button | `data-bd-fullscreen` | `data-bd-fullscreen` |
+| Large unmute prompt | `data-bd-unmute-prompt` | `data-bd-unmute-prompt` |
+| Timed cue cards | `data-bd-cues` | `data-bd-cues` |
+| Pause when scrolled out of view | `data-bd-pause-offscreen` | `data-bd-pause-offscreen` |
+
+Always on, no attribute needed: the centre play/pause button, click-the-video-to-toggle, controls that auto-hide after 3s idle, keyboard shortcuts, state-aware `aria-label`s, and the reduced-motion carve-out.
+
+The component consumes design-system tokens only through namespaced `--bd-video-*` tokens with literal fallbacks, so it works on pages without `design-system.css`.
+
+## Configuration
+
+Define `window.bdVideoConfig` before the script loads. Every key is optional.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `cueLabel` | `"View case study"` | Float-cursor label shown over a timed cue card. Applies only when the player rides the custom cursor (`data-cursor-badge` on the container) |
+
+Name the destination in `cueLabel` — the default suits a studio showreel linking to case studies; a product tour linking to docs would set `cueLabel: "Read the guide"`.
+
+## Basic usage
+
+```html
+<div class="bd-video" role="region" aria-label="Video player"
+     data-bd-scrubber data-bd-mute data-bd-fullscreen>
+  <video class="bd-video-player"
+         src="/assets/video/showreel.mp4"
+         poster="/assets/images/showreel-poster.jpg"
+         aria-label="Studio showreel"
+         playsinline
+         preload="metadata"></video>
+</div>
+```
+
+A muted autoplay preview adds the unmute prompt. In preview state the player runs silent and the centre button invites a start; the first play/unmute restarts from zero with sound.
+
+```html
+<div class="bd-video" role="region" aria-label="Video player"
+     data-bd-scrubber data-bd-mute data-bd-fullscreen data-bd-unmute-prompt data-bd-pause-offscreen>
+  <video class="bd-video-player"
+         src="/assets/video/showreel.mp4"
+         poster="/assets/images/showreel-poster.jpg"
+         aria-label="Studio showreel"
+         autoplay muted loop playsinline preload="auto"></video>
+</div>
+```
+
+## Timed cue cards
+
+`data-bd-cues` reads an inline JSON block inside the container and shows one link card at a time over the frame. `start`, `end`, `title`, `href` and `image` are required; `excerpt` is optional. Entries are validated (invalid ones are dropped with a console warning), sorted by `start`, and their thumbnails preloaded.
+
+```html
+<div class="bd-video" role="region" aria-label="Video player" data-bd-scrubber data-bd-cues>
+  <video class="bd-video-player"
+         src="/assets/video/showreel.mp4"
+         poster="/assets/images/showreel-poster.jpg"
+         aria-label="Studio showreel"
+         playsinline></video>
+  <script type="application/json" data-bd-cues-data>
+  [
+    {
+      "start": 0.3,
+      "end": 10,
+      "title": "Verizon HBCU",
+      "excerpt": "Sold out Gen-Z show in 3 cities.",
+      "href": "/work/verizon-hbcu.html",
+      "image": "/assets/images/work/verizon/sidebar_verizon.jpg"
+    }
+  ]
+  </script>
+</div>
+```
+
+Clicking a card pauses the video and navigates — exiting fullscreen first when the player is fullscreen. Cues are suppressed during preview, during scrubbing, and for 800ms after a preview exit. Hovering a card holds it open past its end time (released on mouse leave, with a 3s fallback for touch).
+
+## JavaScript
+
+Include `assets/js/bd-video.js` once per page. It self-initialises on `DOMContentLoaded` and exits early when the page has no `.bd-video-player`.
+
+| Function | Purpose |
+|---|---|
+| `window.initBdVideo(scope)` | Initialise every player inside `scope` (default `document`). Idempotent per player — an already-initialised container carries `data-bd-init` and is skipped |
+| `window.cleanupBdVideo()` | Disconnect the viewport observers and remove the document-level listeners before a router swaps page content. Idempotent |
+
+A client-side router must call both: `cleanupBdVideo()` before the swap, `initBdVideo(container)` on the entering container.
+
+### Events
+
+| Signal | Direction | Purpose |
+|---|---|---|
+| `bd:after-nav` (legacy alias `studio:after-nav`) | listened | Start a deferred autoplay once the page transition has finished. Both names are bound and the first to arrive wins, so a router can dispatch either |
+| `bd:intro-complete` | listened | Start autoplay in sync with an intro curtain reveal, while `<body>` carries `is-intro-loading` |
+| `bd-video:statechange` | dispatched | Playback state changed. `detail.state` is `preview`, `playing` or `paused` |
+| `bd-video:cue-enter` / `bd-video:cue-exit` | dispatched | A cue card appeared or left. `detail.cue` carries `start`, `end`, `title`, `href`, `index`; exit adds `detail.reason` (`time` or `ended`) |
+
+Both deferred-autoplay paths have a 4s watchdog, so a router that never dispatches its event still plays.
+
+The same state is mirrored on the container as `data-bd-state="preview | playing | paused"` — the attribute is the CSS and adapter hook; the event is the notification.
+
+### Pairing with BD Cursor
+
+When the container carries `data-cursor-badge`, the player drives the custom cursor: the riding glyph tracks play/pause and mute state, the scrubber is carved out with `data-cursor-native` so seeking keeps the OS pointer, and a cue card swaps to the `cueLabel` float label. Each swap dispatches `bd-cursor:refresh` so the change lands under a stationary pointer.
+
+The icon sprite bd-cursor loads must contain `play`, `pause`, `sound-off`, `sound-on`, `full-screen` and `arrow-top-right`. A missing symbol renders a cursorless region with no error.
+
+Without bd-cursor the pairing is inert: no `data-cursor-*` attributes means no cursor work, and `bd-video.css`'s single `.bd-cursor-ready` rule (isolated in its own section at the end of the file) never matches. The player's own icons come from a scoped `#bd-video-*` sprite it injects itself — it never depends on a host page's sprite.
+
+## Accessibility
+
+<div class="callout" data-type="warning" data-icon>
+  {{icon:warning}}
+  <div class="callout-title">Captions are missing — top roadmap item</div>
+  <p class="callout-description">The player has no caption or subtitle support: no <code>&lt;track&gt;</code> handling, no CC toggle. Any video carrying speech fails <strong>WCAG 1.2.2 Captions (Prerecorded), Level A</strong>. This is the component's highest-priority roadmap item. Audio description and a text media alternative (1.2.3, Level A; 1.2.5, Level AA) are outstanding with it. Until captions ship, either publish a caption-bearing alternative alongside the player, or use bd-video only for video with no spoken content — and note that silent video carrying information still needs a text alternative under 1.2.1.</p>
+</div>
+
+What is accessible today:
+
+- **Keyboard shortcuts**, active while focus is inside the player: <kbd>Space</kbd> or <kbd>K</kbd> toggles play, <kbd>M</kbd> toggles mute, <kbd>F</kbd> toggles fullscreen, <kbd>←</kbd> / <kbd>→</kbd> seek 5 seconds. Letter keys match lowercase only, and <kbd>M</kbd> / <kbd>F</kbd> need their feature attribute present.
+- **The scrubber is a real slider**: `role="slider"`, `tabindex="0"`, `aria-label="Seek"`, and live `aria-valuemin` / `aria-valuemax` / `aria-valuenow` / `aria-valuetext` (spoken as "1 minute 4 seconds of 3 minutes 20 seconds"). Focused, it takes <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> for 5-second steps, <kbd>PageUp</kbd> / <kbd>PageDown</kbd> for 10% of duration, and <kbd>Home</kbd> / <kbd>End</kbd> for start and end.
+- **Every generated control has a focus ring**: a 2px `:focus-visible` outline with offset on the centre button, unmute prompt, mute button, fullscreen button, scrubber and cue card.
+- **Icon and accessible name never diverge**: every code path that swaps the centre, mute or fullscreen icon rewrites that button's `aria-label` in the same step. Hover tooltips duplicate those labels and carry no unique information; the visible `1:23 / 5:30` readout is `aria-hidden`, because the scrubber's `aria-valuetext` already carries it.
+- **Auto-hide respects focus**: when the 3s idle timer fires with focus inside the player, the controls stay up.
+- **Cue cards have a live region**: the cue region is `aria-live="polite"`, and its `aria-label` is written once per cue rather than on every loop.
+- **Reduced motion is honoured**: `autoplay` is stripped, the deferred-autoplay marker is dropped, the video is paused, and control transitions are switched off.
+
+Known gaps beyond captions — treat these as constraints when placing a player, and as the roadmap after captions:
+
+- Controls hidden by the idle timer stay in the tab order at `opacity: 0`, and focus arriving afterwards does not bring them back (**2.4.7**). The mute button suppressed by the unmute prompt (`.is-mute-hidden`) is invisible and focusable the same way.
+- There are no `play` / `pause` / `ended` listeners, so state changed outside the component's own handlers leaves the centre button's label stale (**4.1.2**): a video that ends, the offscreen soft-pause, a rejected `play()`, and the browser's own context-menu or picture-in-picture controls.
+- <kbd>Space</kbd> is handled at the player root, so it toggles playback rather than activating the focused button (**2.1.1**), and the arrow shortcuts have no modifier guard, so <kbd>Alt</kbd> + <kbd>←</kbd> seeks instead of going back (**2.1.4**).
+- Below 768px a preview player hides the centre button; with no `data-bd-mute` or `data-bd-fullscreen` that configuration leaves no keyboard-operable play control at all (**2.1.1**). Ship at least one control button on mobile preview players.
+- Fullscreen uses the unprefixed API only, so the button and <kbd>F</kbd> are a silent no-op on iOS Safari, and fullscreen neither traps focus nor makes the rest of the page `inert` (**2.4.3**).
+- The focus ring is white on whatever video frame sits behind it, so 3:1 against adjacent colour is not guaranteed (**1.4.11**), and `data-tooltip` tooltips are hover-only (**1.4.13** — mitigated by their labels duplicating the accessible name).
+
+Author requirements:
+
+- Must label the player: `role="region"` and an `aria-label` on the container. The script never reads them — nothing generated depends on it, so the obligation is entirely the author's.
+- Must give the `<video>` an `aria-label` naming the content, and a `poster` so the frame is never blank before playback.
+- Must keep `data-bd-mute` on any player that carries audio: without it there is no in-player way to silence sound, which fails **1.4.2 Audio Control, Level A** for anything that autoplays past 3 seconds.
+- Must not rely on the centre button being present on small screens in preview state — the CSS hides it there. Tapping the video or the unmute prompt starts playback, and the button returns once the video is paused; see the keyboard gap above for the configuration to avoid.
+
+## Usage rules
+
+**Do**
+
+- Author the two elements and let the script build the rest — the controls are generated, not authored
+- Turn on only the features the placement needs; every attribute adds a control the visitor must parse
+- Pair `data-bd-unmute-prompt` with `autoplay muted` — it is the affordance that makes a silent autoplay honest
+- Add `data-bd-pause-offscreen` to any autoplaying player on a long page, so scrolled-past video stops costing battery
+- Call `cleanupBdVideo()` before a router swap and `initBdVideo(container)` after it
+
+**Don't**
+
+- Don't use bd-video for decorative background loops — a plain `<video>` with no controls is lighter and needs no JS
+- Don't ship a player for video with speech until captions land (see above)
+- Don't hand-author the centre button, controls bar or scrubber — the script owns that DOM and removes stale copies
+- Don't re-theme by overriding `.bd-video-*` rules; override the `--bd-video-*` tokens instead
+- Don't put a `data-bd-pause-offscreen` player in persistent chrome outside the router's swapped container — its observer is torn down on nav and only re-created on the entering container
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+Styles ship as their own file, `dist/css/bd-video.css`, linked after `design-system.css`.
+
+### Tokens
+
+Every token is scoped under `.bd-video` and resolves through a design-system variable with a literal fallback, so the component themes inside the system and still renders outside it.
+
+| Token | Default | What it controls |
+|---|---|---|
+| `--bd-video-color-accent` | `var(--text-accent, #3485cd)` | Scrubber fill |
+| `--bd-video-color-cue-bg` | `var(--yellow-lighter, #fff8e0)` | Cue card background |
+| `--bd-video-color-cue-bg-hover` | `var(--yellow-light, #ffe89c)` | Cue card background on hover |
+| `--bd-video-color-cue-text` | `var(--neutral-900, #1f1f1f)` | Cue card title |
+| `--bd-video-color-cue-meta` | `var(--neutral-700, #565656)` | Cue excerpt and mobile arrow |
+| `--bd-video-duration-fast` | `var(--duration-2xs, 100ms)` | Hover / background changes, scrubber height |
+| `--bd-video-duration-transition` | `var(--duration-s, 400ms)` | Button and cue card fades |
+| `--bd-video-duration-fade` | `var(--duration-2xl, 1200ms)` | Controls-bar auto-hide fade |
+| `--bd-video-ease` | `var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1))` | Every transition |
+| `--bd-video-space-xs` … `--bd-video-space-3xl` | `var(--space-*, …)` | Control padding, gaps, offsets, scrubber height |
+| `--bd-video-inset` | `var(--space-s, 0.75rem)` | Outer inset for the scrubber and cue region |
+| `--bd-video-font-family` | `var(--font-primary, system-ui, …)` | All player text |
+| `--bd-video-font-2xs` / `-xs` / `-m` | `var(--font-*, …)` | Cue excerpt / time + tooltips / unmute prompt |
+| `--bd-video-radius-s` | `var(--radius-s, 6px)` | Tooltips and cue card |
+
+Cue colours deliberately never inherit semantic tokens like `--text-primary`: those flip in dark mode, the video behind them does not.
+
+Three tokens are declared for completeness but currently unreferenced: `--bd-video-duration-mobile-scrubber`, `--bd-video-space-2xl`, `--bd-video-radius-m`.
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.bd-video` | Container, token scope, positioning context |
+| `.bd-video-player` | The `<video>` element |
+| `.bd-video-center-play` | Large centred play/pause button |
+| `.bd-video-unmute-prompt` | Large unmute button (muted autoplay only) |
+| `.bd-video-scrubber` / `-fill` | Seek bar and its filled portion |
+| `.bd-video-seek-tooltip` | Time readout following the pointer along the scrubber |
+| `.bd-video-controls` / `-right` | Control bar and its right-hand button group |
+| `.bd-video-time` | Visible `1:23 / 5:30` readout (`aria-hidden`) |
+| `.bd-video-btn` | Pill control button (mute, fullscreen) |
+| `.bd-video-cue-region` | Persistent `aria-live` wrapper for cue cards |
+| `.bd-video-cue-slot` | The cue card — one reused link element |
+| `.bd-video-cue-thumb` / `-text` / `-title` / `-excerpt` | Cue card parts |
+| `.bd-video .svg-icn` | Local icon box, scoped so the component needs no global rule |
+
+### State classes
+
+| Class | Meaning |
+|---|---|
+| `.is-preview` | Silent preview (muted autoplay); play button and unmute prompt stay visible |
+| `.is-paused` | Paused — keeps the centre button visible through auto-hide |
+| `.is-controls-hidden` | Controls faded out after 3s idle |
+| `.is-unmuted` | Visitor has unmuted; hides the unmute prompt permanently |
+| `.is-cue-visible` | A cue card is showing |
+| `.is-scrubbing` | On the scrubber while dragging |
+| `.is-mute-hidden` | On the mute button while the unmute prompt owns that job |
+
+### Key rules
+
+Buttons cancel the global `:active` press transform: the centred controls use `transform` for positioning, so replacing it would move the hit zone out from under the pointer mid-click.
+
+The scrubber gets a 30px `::before` hit area extending above the 8px track, so seeking is reachable on touch.
+
+Under 768px the centre button is hidden in preview state only (tapping the video or the unmute prompt starts playback), the unmute prompt moves to the top-right, buttons grow to 48px, and cue cards drop the thumbnail and excerpt for a text-plus-arrow row.
+
 ### Breadcrumb
 
 Breadcrumbs show the user's location within a site hierarchy. The component uses native `<nav>` with `aria-label` for accessibility.
@@ -4218,8 +4645,10 @@ Copy</span>
 | --- | --- |
 | `data-copy` | Static text value to copy |
 | `data-clipboard-target` | CSS selector for an element whose text content should be copied |
+| `data-download` | Same-origin file URL to download instead of copying |
+| `data-download-name` | Optional filename for the downloaded file |
 
-Use `data-copy` for static values (tokens, URLs). Use `data-clipboard-target` for dynamic content (code blocks).
+Use `data-copy` for static values (tokens, URLs). Use `data-clipboard-target` for dynamic content (code blocks). A `data-download` button composes with the same styling but downloads a file — it carries no copy attributes, so the two behaviours never collide on one button.
 
 ---
 
@@ -4227,9 +4656,16 @@ Use `data-copy` for static values (tokens, URLs). Use `data-clipboard-target` fo
 
 Include `assets/js/copy-button.js` on any page using copy buttons. The script handles all `.copy-btn` elements via event delegation. No per-button initialisation needed.
 
+Optional config: sites that serve an icon sprite can render the feedback icons as `<use>` refs instead of the default inline path data. The config is read at render time, so ordering is forgiving — but declare it before the module for clarity:
+
 ```html
-<script src="/assets/js/copy-button.js"></script>
+<script>
+  window.bdCopyButtonConfig = { spritePath: "/assets/images/svg-icons/_sprite.svg" };
+</script>
+<script src="/assets/js/copy-button.js" defer></script>
 ```
+
+The sprite must be same-origin and contain a `#check` symbol. Without config the module stays dependency-free.
 
 ---
 
@@ -7178,6 +7614,53 @@ Symbol ids are the lowercase kebab-case icon names from the registry below — `
 Two rules carry over unchanged: the `.svg-icn` wrapper still controls sizing, and icons still inherit colour through `currentColor`. One new constraint: `<use href>` does not load cross-origin, so serve the sprite from your own domain — copy it into your project rather than hotlinking it.
 
 Inside this repo, icons stay inline (the docs pages inline each SVG directly); the sprite is the delivery format for package consumers.
+
+---
+
+## Icon Manifest & Consumer Sync
+
+Package consumers control which icons they ship via `icons.manifest.json` at the project root. The `bd-sprite` CLI — run automatically by `bd-sync` on install — reads it and builds a project-sized sprite instead of shipping the full master set.
+
+```json
+{
+  "output": "assets/icons/icons.svg",
+  "icons": ["arrow-right", "chevron-down", "close", "check", "search", "menu"],
+  "local": ["assets/icons/local"]
+}
+```
+
+- `output` — where the built sprite lands, relative to the manifest
+- `icons` — design system icon names to include, matched against the registry below (drop the .svg extension)
+- `local` — optional list of directories holding the project's own SVGs, merged into the same sprite
+
+### When to Subset
+
+Most sites reference 15–45 of the 169 icons in the registry. The master sprite — every icon, unfiltered — is roughly 104KB; a subset sprite trims that to just what the site uses.
+
+| Situation | What to do |
+|---|---|
+| Site uses a small, known set of icons | Add `icons.manifest.json` and list them — smallest possible sprite |
+| Site is early, icon usage still shifting | Skip the manifest — `bd-sync` copies the full master sprite by default, no build step required |
+| Site already has a manifest and adds an icon | Add the name to `icons`, re-run `bd-sync` |
+
+Subsetting is opt-in: no manifest, no build. A project that never creates `icons.manifest.json` gets the full master sprite exactly as it always has.
+
+### Site-Local Icons
+
+The `local` key points at directories of icons the project owns but the design system doesn't — one-off marks with no reason to live in the shared registry. Two rules are enforced at build time, not left to convention:
+
+- **Kebab-case only.** A symbol id becomes both an XML attribute and a `<use href="#name">` fragment — a name like `Frame 1 & 2` produces a sprite no browser can parse, with no error surfaced. Local names must match the same `a-z0-9-` pattern as design system icons.
+- **No collisions with design system names.** A local icon named `close` would shadow the shared `close` symbol depending on load order — invisible until the wrong icon renders somewhere. The build hard-fails on any collision rather than silently picking a winner.
+
+Both checks are fail-fast by design: a build that quietly resolved the conflict would ship the wrong icon with nothing to chase.
+
+### Cursor Sprite (Separate Artifact)
+
+`dist/cursors.svg` ships alongside the icon sprite but is never merged into it. Icon symbols are single-colour (`fill="currentColor"`, inherited from the parent); the cursor glyphs used by `bd-cursor`'s GRAPHIC mode are two-colour — an outline plus a fill — which `currentColor` can't express. `bd-sync` copies `cursors.svg` in full whenever it exists in the release; it isn't affected by `icons.manifest.json` subsetting, since cursor glyphs were never part of the icon registry to begin with.
+
+### Icon Font
+
+SVG sprites are the delivery format for icons in this system. No icon font exists, and none is planned. Every icon source already lives as an individual SVG in `assets/images/svg-icons/`, so a font is technically possible — it would be generated from that same source folder rather than maintained as a separate asset. That only happens if a real context demands it, such as an email template that can't reference an external sprite via `<use>`. Until a context like that shows up, sprites stay the only delivery format.
 
 ---
 

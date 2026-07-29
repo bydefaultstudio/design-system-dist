@@ -1,16 +1,36 @@
-/* @bydefaultstudio/design-system v2.0.1 */
+/* @bydefaultstudio/design-system v2.1.0 */
 // Copy button — unified handler for all .copy-btn variants
-// Supports data-copy (static value) and data-clipboard-target (element text content)
+// Supports data-copy (static value), data-clipboard-target (element text
+// content) and data-download (fetch-free file download via a temporary link).
 // Docs-site copy chrome (token chips, icon tables, palette buttons) lives
 // in assets/js/docs-copy-chrome.js — this module is the portable component.
+//
+// Optional config, defined before this script loads:
+//   window.bdCopyButtonConfig = {
+//     // When set, feedback icons render as <use> refs into this sprite
+//     // (which must contain a #check symbol, same-origin). Default: inline
+//     // path data, keeping the module dependency-free.
+//     spritePath: "/assets/images/svg-icons/_sprite.svg"
+//   };
 (function () {
   'use strict';
 
   var FEEDBACK_DURATION = 2000;
 
-  var ICON_CHECK = '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+  var ICON_CHECK_INLINE = '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
     + '<path d="M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z" fill="currentColor"/>'
     + '</svg>';
+
+  // Config is read at render time, not at script load, so it works however
+  // the config block and this script are ordered.
+  function iconCheck() {
+    var config = window.bdCopyButtonConfig;
+    if (config && config.spritePath) {
+      return '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+        + '<use href="' + config.spritePath + '#check"/></svg>';
+    }
+    return ICON_CHECK_INLINE;
+  }
 
   function copyToClipboard(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -43,6 +63,9 @@
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('.copy-btn');
     if (!btn) return;
+    // Download buttons are handled by their own listener below — never let
+    // one button copy and download on the same click.
+    if (btn.hasAttribute('data-download')) return;
 
     var text;
 
@@ -86,6 +109,25 @@
     });
   });
 
+  // Download variant — .copy-btn[data-download] downloads a same-origin file
+  // through a temporary anchor. Composes with the same styling; a download
+  // button carries no data-copy / data-clipboard-target, so the copy handler
+  // above ignores it.
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.copy-btn[data-download]');
+    if (!btn) return;
+
+    var url = btn.getAttribute('data-download');
+    if (!url) return;
+
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = btn.getAttribute('data-download-name') || '';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+
   // Auto-enhance any .copy-btn that lacks the two-span structure.
   // Wraps existing content into .copy-btn-default / .copy-btn-copied
   // so the CSS state swap (is-copied) shows a check icon + "Copied".
@@ -96,7 +138,7 @@
       if (btn.classList.contains('color-row')) return;
       var content = btn.innerHTML;
       btn.innerHTML = '<span class="copy-btn-default">' + content + '</span>'
-        + '<span class="copy-btn-copied"><div class="svg-icn">' + ICON_CHECK + '</div> Copied</span>';
+        + '<span class="copy-btn-copied"><div class="svg-icn">' + iconCheck() + '</div> Copied</span>';
     });
   }
 

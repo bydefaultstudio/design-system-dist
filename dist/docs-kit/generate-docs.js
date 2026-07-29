@@ -1265,16 +1265,28 @@ function buildComponentUsage(file) {
   if (file.section !== 'Design System') return '';
   if (file.frontmatter.layer !== 'core') return '';
 
-  const moduleName = file.markdownPath.replace(/\.md$/, '') + '.js';
+  const slug = file.markdownPath.replace(/\.md$/, '');
+  const moduleName = slug + '.js';
+  const cssName = slug + '.css';
   const hasJs = COMPONENT_MODULES.modules.includes(moduleName);
+  const hasOwnCss = (COMPONENT_MODULES.componentCss || []).includes(cssName);
+  const isHeadless = (COMPONENT_MODULES.headless || []).includes(moduleName);
+
+  // Three style stories: companion file (ships as dist/css/<name>.css),
+  // headless (no CSS at all), or the default (rules live in design-system.css).
+  const stylesPart = hasOwnCss
+    ? `This component's styles ship as \`dist/css/${cssName}\` — copy it into the product's served assets and link it after \`design-system.css\`.`
+    : isHeadless
+      ? `This component ships no CSS — it is behaviour only.`
+      : `This component's styles ship in \`design-system.css\`.`;
 
   const jsPart = hasJs
-    ? `This component's styles ship in \`design-system.css\`. Its behaviour ships as \`dist/js/${moduleName}\` — copy it into the product's served assets and include it once per page:
+    ? `${stylesPart} Its behaviour ships as \`dist/js/${moduleName}\` — copy it into the product's served assets and include it once per page:
 
 \`\`\`html
 <script src="assets/js/${moduleName}" defer></script>
 \`\`\``
-    : `This component's styles ship in \`design-system.css\` — no JavaScript, nothing else to include.`;
+    : `${stylesPart} No JavaScript, nothing else to include.`;
 
   return `
 
