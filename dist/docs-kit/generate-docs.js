@@ -1252,9 +1252,49 @@ function buildPageScripts(section, frontmatter, navBase = '../') {
 /**
  * Generate page HTML
  */
+// ── "Use in another product" appendix ──
+// Core Design System components are consumable from the artefact package
+// (see cms/setup.md). Each core component page gets a generated consumption
+// block so the install command and the component's own artefacts are on the
+// page where they're needed. The module list is shared with
+// scripts/build-package.js via component-modules.json — a component whose
+// JS ships in dist/js/ automatically gets its script include documented.
+const COMPONENT_MODULES = require('./component-modules.json');
+
+function buildComponentUsage(file) {
+  if (file.section !== 'Design System') return '';
+  if (file.frontmatter.layer !== 'core') return '';
+
+  const moduleName = file.markdownPath.replace(/\.md$/, '') + '.js';
+  const hasJs = COMPONENT_MODULES.modules.includes(moduleName);
+
+  const jsPart = hasJs
+    ? `This component's styles ship in \`design-system.css\`. Its behaviour ships as \`dist/js/${moduleName}\` — copy it into the product's served assets and include it once per page:
+
+\`\`\`html
+<script src="assets/js/${moduleName}" defer></script>
+\`\`\``
+    : `This component's styles ship in \`design-system.css\` — no JavaScript, nothing else to include.`;
+
+  return `
+
+---
+
+## Use in another product
+
+The design system installs once per product:
+
+\`\`\`bash
+${COMPONENT_MODULES.install}
+\`\`\`
+
+${jsPart}
+`;
+}
+
 function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
   const { frontmatter, content } = file;
-  let htmlContent = markdownToHtml(content);
+  let htmlContent = markdownToHtml(content + buildComponentUsage(file));
 
   // Apply drop cap to first paragraph if enabled in frontmatter
   if (frontmatter.dropcap === 'true') {
@@ -2975,8 +3015,9 @@ function applyTemplateChrome(rawTemplate) {
   // kit-bundled pair copied into the output
   let uiScripts = CONFIG.uiScripts;
   if (uiScripts === null) {
-    uiScripts = ['assets/docs-kit/copy-button.js', 'assets/docs-kit/dropdown.js'];
+    uiScripts = ['assets/docs-kit/copy-button.js', 'assets/docs-kit/docs-copy-chrome.js', 'assets/docs-kit/dropdown.js'];
     copyKitAsset('js/copy-button.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'copy-button.js'));
+    copyKitAsset('js/docs-copy-chrome.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'docs-copy-chrome.js'));
     copyKitAsset('js/dropdown.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'dropdown.js'));
   }
 

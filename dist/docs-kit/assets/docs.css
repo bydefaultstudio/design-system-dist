@@ -204,58 +204,18 @@
 }
 
 
-/* ------ 2. COPY BUTTON ------ */
+/* ------ 2. COPY CHROME ------
+ * .copy-btn itself is a core component (design-system.css §32).
+ * Only the docs-site copy chrome lives here: the colour-palette copy
+ * button and the auto-generated icon table columns.
+ */
 
-.copy-btn {
-  position: relative;
-}
-
-/* -- State: default -- */
-.copy-btn .copy-btn-default,
+/* -- Colour palette copy button -- */
 .color-copy-btn .copy-btn-default { display: inline-flex; align-items: center; gap: var(--space-s); }
-.copy-btn .copy-btn-copied,
 .color-copy-btn .copy-btn-copied  { display: none; }
 
-/* -- State: copied -- */
-.copy-btn.is-copied .copy-btn-default,
 .color-copy-btn.is-copied .copy-btn-default { display: none; }
-.copy-btn.is-copied .copy-btn-copied,
 .color-copy-btn.is-copied .copy-btn-copied  { display: inline-flex; align-items: center; gap: var(--space-s); }
-
-.copy-btn.is-copied {
-  color: var(--status-success);
-  border-color: var(--status-success);
-  background-color: color-mix(in srgb, var(--status-success), var(--alpha-10));
-}
-
-/* -- Variant: icon only -- */
-.copy-btn.is-icon-only {
-  padding: var(--space-s);
-}
-
-/* -- Variant: ghost (no background, no border) -- */
-.copy-btn.is-ghost {
-  background: none;
-  border: none;
-  padding: var(--space-xs);
-  color: var(--text-primary);
-
-}
-
-.copy-btn.is-ghost:hover {
-  color: var(--text-faded);
-}
-
-.copy-btn.is-ghost.is-copied {
-  background: none;
-  border: none;
-  color: var(--status-success);
-}
-
-/* -- Tooltip: force visible on copied state -- */
-.copy-btn.is-copied[data-tooltip]::before {
-  opacity: 1;
-}
 
 /* -- Icon table: auto-generated Copy + Download columns -- */
 .icon-table td:first-child {
@@ -273,6 +233,13 @@
  * Wraps a <code> chip so the cell stays readable but every value, variable, and hex
  * becomes one click away from the clipboard. Adds an inline swatch for hex values.
  */
+
+/* Both of these have little or no padding, so the design system's inset
+   focus ring would be drawn through their own text. Push it outside. */
+.token-copy:focus-visible,
+.color-copy-btn:focus-visible {
+  outline-offset: 2px;
+}
 
 .token-copy {
   display: inline-flex;
@@ -2457,41 +2424,6 @@ body.auth-role-public:not(.auth-role-brand) .page-wrapper.has-sidebar {
 }
 
 /* --- Password Field (input + show/hide toggle) --- */
-
-.password-field {
-  position: relative;
-}
-
-.password-field input {
-  padding-right: var(--space-4xl);
-}
-
-.password-toggle {
-  position: absolute;
-  right: var(--space-m);
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-faded);
-  padding: var(--space-xs);
-  min-width: 44px;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-}
-
-.password-toggle:hover {
-  color: var(--text-primary);
-}
-
-.password-toggle .svg-icn {
-  width: 20px;
-  height: 20px;
-}
 
 .login-reset-form {
   width: 100%;

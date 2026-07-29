@@ -1,3 +1,4 @@
+/* @bydefaultstudio/design-system v2.0.1 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -378,7 +379,6 @@
 
   /* -- Dialog tokens -- */
   --dialog-max-width: 560px;
-  /* -- Dialog color tokens removed — uses values directly on component -- */
 
   /* -- Slider tokens removed — uses semantic tokens directly -- */
 
@@ -1396,6 +1396,39 @@ button.button {
   --button-color: color-mix(in srgb, var(--status-success), var(--text-primary) 15%);
 }
 
+/* -- Role classes -- */
+/* Role classes override component tokens only. They never redeclare the base
+   structure, so padding, focus ring, sizes and states are inherited intact.
+   Must come after the base :hover rule to win on equal specificity.
+   Qualified with .button because the base also matches as `button.button`
+   (0,1,1) — a bare `.close-btn` (0,1,0) would lose to it on <button>. */
+
+.button.close-btn {
+  --button-bg: transparent;
+  --button-border: transparent;
+  --button-color: var(--text-faded);
+  --button-text-color: var(--button-color);
+  flex-shrink: 0;
+}
+
+.button.close-btn:hover {
+  --button-color: var(--text-primary);
+  background-color: color-mix(in srgb, var(--button-color), var(--alpha-5));
+}
+
+/* data-color has to be re-stated here: .button[data-color] and .button.close-btn
+   tie at (0,2,0), and the role class is declared later, so it would win. */
+.button.close-btn[data-color="danger"],
+.button.close-btn[data-color="red"] {
+  --button-color: var(--status-danger);
+}
+
+.button.close-btn[data-color="danger"]:hover,
+.button.close-btn[data-color="red"]:hover {
+  --button-color: var(--status-danger);
+  background-color: color-mix(in srgb, var(--status-danger), var(--alpha-10));
+}
+
 /* -- Dark mode: faded alpha adjusts for dark backgrounds -- */
 
 :root[data-theme="dark"] .button {
@@ -1783,7 +1816,10 @@ dd {
 }
 
 /* -- Focus styles -- */
+/* `button` is included so .button and every bare button share one ring
+   instead of falling back to the browser default. */
 a:focus,
+button:focus,
 [role=button]:focus,
 input[type=radio]:focus,
 input[type=checkbox]:focus {
@@ -1793,6 +1829,7 @@ input[type=checkbox]:focus {
 }
 
 a:focus:not(:focus-visible),
+button:focus:not(:focus-visible),
 [role=button]:focus:not(:focus-visible),
 input[type=radio]:focus:not(:focus-visible),
 input[type=checkbox]:focus:not(:focus-visible) {
@@ -1800,12 +1837,21 @@ input[type=checkbox]:focus:not(:focus-visible) {
 }
 
 a:focus-visible,
+button:focus-visible,
 [role=button]:focus-visible,
 input[type=radio]:focus-visible,
 input[type=checkbox]:focus-visible {
   outline: 2px solid var(--status-info);
   outline-offset: -2px;
   box-shadow: none;
+}
+
+/* The inset offset above assumes the control has padding to draw into.
+   Zero-padding buttons need the ring outside, or it strikes through the label. */
+.button[data-variant="text"]:focus-visible,
+.dialog-close:focus-visible,
+.toast-close:focus-visible {
+  outline-offset: 2px;
 }
 
 a:not([href]) {
@@ -2365,6 +2411,44 @@ input[type="radio"]:disabled:checked {
   margin-top: var(--space-s);
 }
 
+/* -- Password field -- */
+/* Behaviour ships as password-toggle.js; these styles ship with it so a
+   package consumer gets a working control, not a bare button. */
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: var(--space-4xl);
+}
+
+.password-toggle {
+  position: absolute;
+  right: var(--space-m);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-faded);
+  padding: var(--space-xs);
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--duration-xs) var(--ease-out);
+}
+
+.password-toggle:hover {
+  color: var(--text-primary);
+}
+
+.password-toggle .svg-icn {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
 /* ------ 13. DISCLOSURE (details / summary) ------ */
 
 /* -- Base disclosure -- */
@@ -2868,6 +2952,7 @@ a[data-tooltip],
 }
 
 .toast {
+  --toast-exit-duration: var(--duration-xs);
   pointer-events: all;
   background-color: var(--warm-black);
   color: var(--off-white);
@@ -2878,7 +2963,9 @@ a[data-tooltip],
   gap: var(--space-m);
   max-width: 360px;
   font-size: var(--font-s);
-  transition: opacity 0.3s ease-in-out;
+  /* toast.js reads the computed duration before removing the node, so the
+     fade length lives here only. */
+  transition: opacity var(--toast-exit-duration) var(--ease-in-out);
 }
 
 .toast[data-type="success"],
@@ -2897,16 +2984,37 @@ a[data-tooltip],
   flex: 1;
 }
 
+/* The toast paints its own surface colour, so the close button follows
+   currentColor instead of the page-level text tokens. No opacity dimming:
+   at 0.7 the icon fails 1.4.11 non-text contrast on the success, danger
+   and info surfaces. */
+.toast .button.close-btn {
+  --button-text-color: currentColor;
+}
+
+.toast .button.close-btn:hover {
+  background-color: color-mix(in srgb, currentColor, var(--alpha-5));
+}
+
+/* Deprecated — use <button class="button close-btn" data-icon-only data-size="small">.
+   Kept so existing markup keeps its styling; remove at the next major. */
 .toast-close {
   color: inherit;
   line-height: 1;
   opacity: 0.7;
-  transition: opacity 0.15s ease-in-out;
+  transition: opacity var(--duration-2xs) var(--ease-out);
 }
-
 
 .toast-close:hover {
   opacity: 1;
+}
+
+/* -- Reduced motion -- */
+/* Re-points the exit token so dismissal is effectively immediate. */
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    --toast-exit-duration: var(--duration-2xs);
+  }
 }
 
 /* -- Toast dark mode -- */
@@ -3432,26 +3540,113 @@ hr.xl {
 /* ------ 29. DIALOG ------ */
 
 .dialog {
-  background-color: var(--background-primary);
+  /* -- Component tokens (re-point these to re-skin; never override the rules) -- */
+  --dialog-background: var(--background-primary);
+  --dialog-shadow: 0 8px 32px var(--black-alpha-20);
+  --dialog-radius: 0;
+  --dialog-padding: var(--space-xl);
+  --dialog-backdrop: var(--background-modal);
+
+  /* -- Motion -- */
+  /* Enters from below and settles upward; exits back down. Entrance is the
+     slower half, which is why the two directions have their own tokens. */
+  --dialog-offset: var(--space-l);
+  --dialog-enter-duration: var(--duration-m);
+  --dialog-enter-easing: var(--ease-out);
+  --dialog-exit-duration: var(--duration-s);
+  --dialog-exit-easing: var(--ease-in);
+
+  background-color: var(--dialog-background);
   border: none;
-  border-radius: 0;
-  box-shadow: 0 8px 32px var(--black-alpha-20);
-  padding: var(--space-xl);
+  border-radius: var(--dialog-radius);
+  box-shadow: var(--dialog-shadow);
+  padding: var(--dialog-padding);
   max-width: var(--dialog-max-width);
   width: min(var(--dialog-max-width), calc(100vw - var(--space-2xl) * 2));
   max-height: 85vh;
+  max-height: 85dvh; /* dvh accounts for mobile browser chrome; vh is the fallback */
   margin: auto;
+
+  /* Layout lives here, not on [open]. Only `display` is discretely transitioned
+     on exit, so any layout property left on [open] would snap back the instant
+     the attribute is removed — reflowing the dialog mid-animation. */
+  flex-direction: column;
+  gap: var(--space-l);
+
+  /* Closed / exit state. See the entrance-exit note below. */
+  opacity: 0;
+  translate: 0 var(--dialog-offset);
+  transition:
+    opacity var(--dialog-exit-duration) var(--dialog-exit-easing),
+    translate var(--dialog-exit-duration) var(--dialog-exit-easing),
+    display var(--dialog-exit-duration) allow-discrete,
+    overlay var(--dialog-exit-duration) allow-discrete;
 }
 
 .dialog::backdrop {
-  background-color: var(--background-modal);
-  backdrop-filter: blur(2px);
+  /* ::backdrop inherits from the dialog in current engines, which is what makes
+     a scoped [data-theme] region theme its own backdrop. Engines predating that
+     inherit from nothing, so --dialog-backdrop is unset there and the fallback
+     picks up the root-level token instead. */
+  background-color: var(--dialog-backdrop, var(--background-modal));
+
+  opacity: 0;
+  transition:
+    opacity var(--dialog-exit-duration) var(--dialog-exit-easing),
+    display var(--dialog-exit-duration) allow-discrete,
+    overlay var(--dialog-exit-duration) allow-discrete;
 }
+
+/* -- Entrance / exit --
+   A top-layer element can only transition out of display:none with
+   allow-discrete, and can only transition *in* with @starting-style. The
+   `overlay` property is what keeps the dialog painted in the top layer for
+   the duration of the exit — without it the close is instant.
+   Engines missing either feature show and hide the dialog with no animation,
+   which is a clean degradation rather than a broken state. */
 
 .dialog[open] {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-l);
+
+  opacity: 1;
+  translate: 0 0;
+  transition:
+    opacity var(--dialog-enter-duration) var(--dialog-enter-easing),
+    translate var(--dialog-enter-duration) var(--dialog-enter-easing),
+    display var(--dialog-enter-duration) allow-discrete,
+    overlay var(--dialog-enter-duration) allow-discrete;
+}
+
+.dialog[open]::backdrop {
+  opacity: 1;
+  transition:
+    opacity var(--dialog-enter-duration) var(--dialog-enter-easing),
+    display var(--dialog-enter-duration) allow-discrete,
+    overlay var(--dialog-enter-duration) allow-discrete;
+}
+
+/* Must follow the [open] rules — this supplies the "before open" state only. */
+@starting-style {
+  .dialog[open] {
+    opacity: 0;
+    translate: 0 var(--dialog-offset);
+  }
+
+  .dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/* -- Reduced motion -- */
+/* Drops the travel and shortens to a plain fade. Re-points tokens rather than
+   disabling the transition, so the discrete display/overlay steps still run
+   and the dialog can't get stuck mid-exit. */
+@media (prefers-reduced-motion: reduce) {
+  .dialog {
+    --dialog-offset: 0px;
+    --dialog-enter-duration: var(--duration-2xs);
+    --dialog-exit-duration: var(--duration-2xs);
+  }
 }
 
 .dialog-header {
@@ -3469,24 +3664,25 @@ hr.xl {
   margin: 0;
 }
 
+/* Deprecated — use <button class="button close-btn" data-icon-only data-size="small">.
+   Kept so existing markup keeps its styling; remove at the next major. */
 .dialog-close {
   flex-shrink: 0;
   color: var(--text-faded);
-  transition: color 0.15s ease;
+  transition: color var(--duration-2xs) var(--ease-out);
 }
 
 .dialog-close:hover {
   color: var(--text-primary);
 }
 
-.dialog-close:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
-}
-
 .dialog-body {
   overflow-y: auto;
   flex: 1;
+  /* Column flex items default to min-height: auto, which stops the body
+     shrinking and pushes the footer actions out of the dialog. */
+  min-height: 0;
+  overscroll-behavior: contain;
 }
 
 .dialog-body > *:first-child {
@@ -3506,15 +3702,17 @@ hr.xl {
 }
 
 /* -- Dialog dark mode -- */
+/* Re-points tokens rather than redeclaring rules, so a brand override of
+   --dialog-background survives the theme switch. */
 [data-theme="dark"] .dialog {
-  background-color: var(--background-secondary);
-  box-shadow: 0 8px 40px var(--black-alpha-60);
+  --dialog-background: var(--background-secondary);
+  --dialog-shadow: 0 8px 40px var(--black-alpha-60);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) .dialog {
-    background-color: var(--background-secondary);
-    box-shadow: 0 8px 40px var(--black-alpha-60);
+    --dialog-background: var(--background-secondary);
+    --dialog-shadow: 0 8px 40px var(--black-alpha-60);
   }
 }
 
@@ -3655,7 +3853,53 @@ input[type="range"]:disabled::-webkit-slider-thumb {
 .rating--lg { --rating-size: 2rem; }
 
 
-/* NOTE: .copy-btn moved to docs-site.css — see CLAUDE.md §17 (Layer Discipline) */
+/* ------ 32. COPY BUTTON ------ */
+
+.copy-btn {
+  position: relative;
+}
+
+/* -- State: default -- */
+.copy-btn .copy-btn-default { display: inline-flex; align-items: center; gap: var(--space-s); }
+.copy-btn .copy-btn-copied  { display: none; }
+
+/* -- State: copied -- */
+.copy-btn.is-copied .copy-btn-default { display: none; }
+.copy-btn.is-copied .copy-btn-copied  { display: inline-flex; align-items: center; gap: var(--space-s); }
+
+.copy-btn.is-copied {
+  color: var(--status-success);
+  border-color: var(--status-success);
+  background-color: color-mix(in srgb, var(--status-success), var(--alpha-10));
+}
+
+/* -- Variant: icon only -- */
+.copy-btn.is-icon-only {
+  padding: var(--space-s);
+}
+
+/* -- Variant: ghost (no background, no border) -- */
+.copy-btn.is-ghost {
+  background: none;
+  border: none;
+  padding: var(--space-xs);
+  color: var(--text-primary);
+}
+
+.copy-btn.is-ghost:hover {
+  color: var(--text-faded);
+}
+
+.copy-btn.is-ghost.is-copied {
+  background: none;
+  border: none;
+  color: var(--status-success);
+}
+
+/* -- Tooltip: force visible on copied state -- */
+.copy-btn.is-copied[data-tooltip]::before {
+  opacity: 1;
+}
 
 
 /* ------ 33. NUMBER INPUT ------ */

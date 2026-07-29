@@ -1,9 +1,10 @@
+<!-- @bydefaultstudio/design-system v2.0.1 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Styleguide — By Default Design System v2.0.0</title>
+  <title>Styleguide — By Default Design System v2.0.1</title>
   <meta name="robots" content="noindex, nofollow" />
 
   <!-- Framework CSS (same folder). Brand arrives through theme.css below. -->
@@ -428,7 +429,7 @@
         <div class="block gap-l">
           <div class="sg-header">
             <div class="block gap-s">
-              <p class="eyebrow">By Default Design System v2.0.0</p>
+              <p class="eyebrow">By Default Design System v2.0.1</p>
               <h1>Styleguide</h1>
             </div>
             <button type="button" class="button" data-variant="outline-faded" data-size="small" id="sg-theme-toggle" aria-pressed="false">Dark mode</button>
@@ -805,11 +806,11 @@
           <h2>Toast</h2>
           <p class="text-size-s">Shown in place. At runtime <code>toast.js</code> stacks these in a fixed corner container.</p>
           <div class="sg-stack">
-            <div class="toast"><span class="toast-message">Neutral notification.</span><button type="button" class="toast-close" aria-label="Dismiss neutral notification">×</button></div>
-            <div class="toast" data-type="success"><span class="toast-message">Changes saved successfully.</span><button type="button" class="toast-close" aria-label="Dismiss success notification">×</button></div>
-            <div class="toast" data-type="warning"><span class="toast-message">Please review before continuing.</span><button type="button" class="toast-close" aria-label="Dismiss warning notification">×</button></div>
-            <div class="toast" data-type="danger"><span class="toast-message">Something went wrong.</span><button type="button" class="toast-close" aria-label="Dismiss danger notification">×</button></div>
-            <div class="toast" data-type="info"><span class="toast-message">New version available.</span><button type="button" class="toast-close" aria-label="Dismiss info notification">×</button></div>
+            <div class="toast"><span class="toast-message">Neutral notification.</span><button type="button" class="button close-btn" data-icon-only data-size="small" aria-label="Dismiss neutral notification"><div class="svg-icn" data-icon="close"><svg fill="none" width="100%" height="100%" aria-hidden="true"><use href="#close"></use></svg></div></button></div>
+            <div class="toast" data-type="success"><span class="toast-message">Changes saved successfully.</span><button type="button" class="button close-btn" data-icon-only data-size="small" aria-label="Dismiss success notification"><div class="svg-icn" data-icon="close"><svg fill="none" width="100%" height="100%" aria-hidden="true"><use href="#close"></use></svg></div></button></div>
+            <div class="toast" data-type="warning"><span class="toast-message">Please review before continuing.</span><button type="button" class="button close-btn" data-icon-only data-size="small" aria-label="Dismiss warning notification"><div class="svg-icn" data-icon="close"><svg fill="none" width="100%" height="100%" aria-hidden="true"><use href="#close"></use></svg></div></button></div>
+            <div class="toast" data-type="danger"><span class="toast-message">Something went wrong.</span><button type="button" class="button close-btn" data-icon-only data-size="small" aria-label="Dismiss danger notification"><div class="svg-icn" data-icon="close"><svg fill="none" width="100%" height="100%" aria-hidden="true"><use href="#close"></use></svg></div></button></div>
+            <div class="toast" data-type="info"><span class="toast-message">New version available.</span><button type="button" class="button close-btn" data-icon-only data-size="small" aria-label="Dismiss info notification"><div class="svg-icn" data-icon="close"><svg fill="none" width="100%" height="100%" aria-hidden="true"><use href="#close"></use></svg></div></button></div>
           </div>
         </div>
       </div>
@@ -906,7 +907,7 @@
           <dialog class="dialog" open aria-labelledby="sg-dialog-title">
             <div class="dialog-header">
               <h3 class="dialog-title" id="sg-dialog-title">Dialog title</h3>
-              <button class="dialog-close" type="button" aria-label="Close"><div class="svg-icn" data-icon="close"><svg fill="none" width="100%" height="100%" aria-hidden="true"><use href="#close"></use></svg></div></button>
+              <button class="button close-btn" type="button" data-icon-only data-size="small" data-dialog-close aria-label="Close"><div class="svg-icn" data-icon="close"><svg fill="none" width="100%" height="100%" aria-hidden="true"><use href="#close"></use></svg></div></button>
             </div>
             <div class="dialog-body"><p>Body copy scrolls when it outgrows the dialog. The footer holds the actions.</p></div>
             <div class="dialog-footer">

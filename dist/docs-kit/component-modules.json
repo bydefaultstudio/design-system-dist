@@ -1,0 +1,14 @@
+{
+  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^2.0.0",
+  "modules": [
+    "accordion.js",
+    "copy-button.js",
+    "dialog.js",
+    "dropdown.js",
+    "number-input.js",
+    "password-toggle.js",
+    "rating.js",
+    "tabs.js",
+    "toast.js"
+  ]
+}

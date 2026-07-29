@@ -1,8 +1,9 @@
+<!-- @bydefaultstudio/design-system v2.0.1 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 2.0.0 (package)**
+**Version: 2.0.1 (package)**
 
 ## Getting the System
 
@@ -2530,7 +2531,7 @@ element.animate(
 );
 ```
 
-This is the pattern used by `studio/assets/js/studio-barba.js` for page transitions.
+This is the pattern the docs site's own page transitions use — see `assets/js/barba-init.js`, which reads the motion tokens from CSS custom properties at runtime.
 
 ---
 
@@ -2558,7 +2559,7 @@ Components are split across **four layers** so the design system can be lifted i
 
 - **`foundation`**: tokens, layout primitives, utilities. Lives in `assets/css/design-system.css`. Ships with every product.
 - **`core`**: reusable components (button, card, dropdown, …) plus brand identity docs (`brand-*.md`). Lives in `design-system.css`. Ships with every product.
-- **`docs-site`**: components that only power *this* BrandOS docs site (asset-card, book-cover, dont-card, sticky-bar, copy-button). Lives in `assets/css/docs-site.css`. Does **not** ship.
+- **`docs-site`**: components that only power *this* BrandOS docs site (asset-card, book-cover, dont-card, sticky-bar). Lives in `assets/css/docs-site.css`. Does **not** ship.
 - **`app`**: BrandOS-specific tools, integrations, and project content (calculators, world clock, ad preview, project case studies). Does **not** ship.
 
 Every `cms/*.md` doc declares its layer in frontmatter:
@@ -2659,6 +2660,7 @@ Every interactive component must include:
 | Disclosure | `details`/`summary` | No | `disclosure.md` |
 | Badge | `.badge` | No | `badge.md` |
 | Card | `.card` | No | `card.md` |
+| Copy Button | `.copy-btn` | Yes (`copy-button.js`) | `copy-button.md` |
 | Breadcrumb | `.breadcrumb` | No | `breadcrumb.md` |
 | Tabs | `.tabs`, `.tab` | Yes (`tabs.js`) | `tabs.md` |
 | Progress | `.progress-bar` | No | `progress.md` |
@@ -2667,7 +2669,7 @@ Every interactive component must include:
 | Code / Pre / Kbd | `code`, `pre`, `kbd` | No | `code.md` |
 | Mark / Abbr / Figure | `mark`, `abbr`, `figure` | No | `mark.md` |
 
-> Asset Card, Book Cover, Don't Card, Sticky Bar and Copy Button are documented separately as **docs-site components**. They only exist to power this BrandOS docs site and are not part of the portable design system. See [Layer Discipline](/docs/setup.html) and CLAUDE.md §17.
+> Asset Card, Book Cover, Don't Card and Sticky Bar are documented separately as **docs-site components**. They only exist to power this BrandOS docs site and are not part of the portable design system. See [Layer Discipline](/docs/setup.html) and CLAUDE.md §17.
 
 ---
 
@@ -3542,20 +3544,28 @@ Role classes override tokens, never duplicate the base. The base's structure is 
 
 ```css
 /* ------ CLOSE BUTTON ------ */
-.close-btn {
+.button.close-btn {
+  --button-bg: transparent;
+  --button-border: transparent;
   --button-color: var(--text-faded);
-  --button-text-color: var(--background-primary);
+  --button-text-color: var(--button-color);
+  flex-shrink: 0;
 }
-.close-btn:hover {
-  --button-color: var(--status-danger);
+.button.close-btn:hover {
+  --button-color: var(--text-primary);
+  background-color: color-mix(in srgb, var(--button-color), var(--alpha-5));
 }
 ```
 
+A handful of token overrides, and it inherits the base's padding, focus ring, `:active` press, disabled state and full size API. `.close-btn` is the canonical dismiss control — Dialog and Toast both compose it rather than shipping their own.
+
 ```html
-<button class="button close-btn" data-icon-only aria-label="Close">
+<button class="button close-btn" type="button" data-icon-only data-size="small" aria-label="Close">
   <div class="svg-icn" data-icon="close"><!-- SVG --></div>
 </button>
 ```
+
+Pair it with `data-color="danger"` when the dismiss genuinely destroys work. Neutral is the default because a plain close isn't a destructive action.
 
 ---
 
@@ -4104,6 +4114,140 @@ This section documents how the component is built. For usage, see the sections a
 | `pre code` | Resets inline code styles inside blocks |
 | `kbd` | Keyboard shortcut key appearance |
 
+### Copy Button
+
+Copy buttons copy a value to the clipboard on click and show a "Copied!" confirmation with a check icon. They extend the `.button` component and come in three variants.
+
+All variants use the same inner markup: a `.copy-btn-default` span (shown by default) and a `.copy-btn-copied` span (shown on success). Each span contains an icon.
+
+---
+
+## Icon + Text
+
+The default copy button with a copy icon and "Copy" label. Best for standalone copy actions where the purpose needs to be clear.
+
+Copy</span>
+          <span class="copy-btn-copied"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z" fill="currentColor"/></svg></div> Copied!</span>
+        </button>
+      </div>
+    </div>
+    <div class="block gap-m">
+      <p class="demo-eyebrow">Copied state</p>
+      <div>
+        <button class="button is-small is-outline copy-btn is-copied" type="button">
+          <span class="copy-btn-default"><div class="svg-icn" data-icon="copy"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z" fill="currentColor"/></svg></div> Copy</span>
+          <span class="copy-btn-copied"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z" fill="currentColor"/></svg></div> Copied!</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+```html
+<button class="button is-small is-outline copy-btn" data-copy="value" type="button">
+  <span class="copy-btn-default">{{icon:copy}} Copy</span>
+  <span class="copy-btn-copied">{{icon:check}} Copied!</span>
+</button>
+```
+
+---
+
+## Icon Only
+
+`.is-icon-only` hides the text labels and shows only the icon. Best for compact UI: code blocks, table cells, and dense layouts. Always include `aria-label`.
+
+</span>
+          <span class="copy-btn-copied"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z" fill="currentColor"/></svg></div></span>
+        </button>
+      </div>
+    </div>
+    <div class="block gap-m">
+      <p class="demo-eyebrow">Copied state</p>
+      <div>
+        <button class="button is-small is-outline copy-btn is-icon-only is-copied" data-tooltip="Copied!" type="button" aria-label="Copy">
+          <span class="copy-btn-default"><div class="svg-icn" data-icon="copy"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z" fill="currentColor"/></svg></div></span>
+          <span class="copy-btn-copied"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z" fill="currentColor"/></svg></div></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+```html
+<button class="button is-small is-outline copy-btn is-icon-only" data-copy="value" data-tooltip="Copy" type="button" aria-label="Copy">
+  <span class="copy-btn-default">{{icon:copy}}</span>
+  <span class="copy-btn-copied">{{icon:check}}</span>
+</button>
+```
+
+---
+
+## Ghost
+
+`.is-ghost` removes the background and border for a minimal, inline copy action. Best for use alongside content where a button would be too heavy.
+
+</span>
+          <span class="copy-btn-copied"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z" fill="currentColor"/></svg></div></span>
+        </button>
+      </div>
+    </div>
+    <div class="block gap-m">
+      <p class="demo-eyebrow">Copied state</p>
+      <div>
+        <button class="button copy-btn is-ghost is-copied" data-tooltip="Copied!" type="button" aria-label="Copy">
+          <span class="copy-btn-default"><div class="svg-icn" data-icon="copy"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z" fill="currentColor"/></svg></div></span>
+          <span class="copy-btn-copied"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z" fill="currentColor"/></svg></div></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+```html
+<button class="button copy-btn is-ghost" data-copy="value" data-tooltip="Copy" type="button" aria-label="Copy">
+  <span class="copy-btn-default">{{icon:copy}}</span>
+  <span class="copy-btn-copied">{{icon:check}}</span>
+</button>
+```
+
+---
+
+## Data Attributes
+
+| Attribute | Description |
+| --- | --- |
+| `data-copy` | Static text value to copy |
+| `data-clipboard-target` | CSS selector for an element whose text content should be copied |
+
+Use `data-copy` for static values (tokens, URLs). Use `data-clipboard-target` for dynamic content (code blocks).
+
+---
+
+## JavaScript
+
+Include `assets/js/copy-button.js` on any page using copy buttons. The script handles all `.copy-btn` elements via event delegation. No per-button initialisation needed.
+
+```html
+<script src="/assets/js/copy-button.js"></script>
+```
+
+---
+
+## Accessibility
+
+- Always include `aria-label="Copy"` on icon-only and ghost variants
+- The copied state provides visual feedback via the check icon and green colour
+
+---
+
+## Variant Summary
+
+| Variant | Classes | Use For |
+| --- | --- | --- |
+| Icon + Text | `.copy-btn` | Standalone copy actions |
+| Icon Only | `.copy-btn.is-icon-only` | Code blocks, compact UI |
+| Ghost | `.copy-btn.is-ghost` | Inline, minimal contexts |
+
 ### Dialog
 
 Dialogs are modal windows built on the native `<dialog>` element. They trap focus, darken the backdrop, and support header, body, and footer sections. Opening and closing is handled via `data-dialog-open` and `data-dialog-close` attributes.
@@ -4119,7 +4263,7 @@ Dialogs are modal windows built on the native `<dialog>` element. They trap focu
     </div>
     <div class="dialog-footer">
       <button class="button" data-variant="faded" type="button" data-dialog-close>Cancel</button>
-      <button class="button" type="button" data-dialog-close>Confirm</button>
+      <button class="button" type="button" data-dialog-close autofocus>Confirm</button>
     </div>
   </dialog>
 </div>
@@ -4127,10 +4271,11 @@ Dialogs are modal windows built on the native `<dialog>` element. They trap focu
 ```html
 <button class="button" type="button" data-dialog-open="my-dialog">Open dialog</button>
 
-<dialog id="my-dialog" class="dialog">
+<dialog id="my-dialog" class="dialog" aria-labelledby="my-dialog-title">
   <div class="dialog-header">
-    <h3 class="dialog-title">Dialog title</h3>
-    <button class="dialog-close" type="button" aria-label="Close"><!-- close icon --></button>
+    <h2 class="dialog-title" id="my-dialog-title">Dialog title</h2>
+    <button class="button close-btn" type="button" data-icon-only data-size="small"
+            data-dialog-close aria-label="Close"><!-- close icon --></button>
   </div>
   <div class="dialog-body">
     <p>Dialog content here.</p>
@@ -4154,7 +4299,7 @@ A destructive action pattern with a danger-styled confirm button.
       <p>This action cannot be undone. All files, settings, and history for this project will be permanently deleted.</p>
     </div>
     <div class="dialog-footer">
-      <button class="button" data-variant="faded" type="button" data-dialog-close>Cancel</button>
+      <button class="button" data-variant="faded" type="button" data-dialog-close autofocus>Cancel</button>
       <button class="button" type="button" data-dialog-close data-color="danger">Delete</button>
     </div>
   </dialog>
@@ -4171,8 +4316,43 @@ Include `assets/js/dialog.js` on any page using dialogs.
 ```
 
 - `data-dialog-open="dialog-id"` on a trigger opens the dialog via `showModal()`
-- `data-dialog-close` or `.dialog-close` inside a dialog closes it
+- `data-dialog-close` inside a dialog closes it
 - Clicking the backdrop also closes the dialog
+
+Every listener is delegated from `document`, so dialogs added after page load — a CMS render, a client app, a Barba container swap — work with no re-init. `window.initDialog()` exists for parity with the other modules, but calling it again is a no-op.
+
+---
+
+## Placement
+
+Where the `<dialog>` sits in the document matters more than it looks.
+
+- Put it as a **direct child of `<body>`**, or at least outside `[data-barba="container"]`. A dialog destroyed mid-transition while open leaves the browser's top layer and focus in an inconsistent state
+- **Never nest it inside an existing `<form>`.** The HTML parser drops nested forms, which silently breaks any `<form method="dialog">` inside the dialog
+- Give every non-submitting control `type="button"`. Inside a `<form>`, buttons default to `type="submit"`
+
+---
+
+## Motion
+
+The dialog rises into place and drops away: it enters from `--dialog-offset` below, settling upward as it fades in, and exits back down. The entrance is the slower half — `--duration-m` on `--ease-out`, which has a long graceful tail — while the exit clears at `--duration-s` on `--ease-in`. Opening should feel considered; closing should get out of the way.
+
+The backdrop fades on the same timing.
+
+Retiming it is a token change, not a rule override:
+
+```css
+.dialog {
+  --dialog-offset: var(--space-2xl);
+  --dialog-enter-duration: var(--duration-s);
+}
+```
+
+Under `prefers-reduced-motion: reduce` the travel drops to zero and both directions shorten to `--duration-2xs`, leaving a plain fade. The transition is retimed rather than removed, so the discrete `display` and `overlay` steps still run and the dialog can never be stranded mid-exit.
+
+Layout properties (`flex-direction`, `gap`) sit on `.dialog`, not on `.dialog[open]`. Only `display` is discretely transitioned, so anything else left on `[open]` snaps back the moment the attribute is removed and the dialog visibly reflows while it is still fading out. If you add a layout property to a dialog, put it on the base.
+
+This relies on `@starting-style` and `transition-behavior: allow-discrete` — the only way a top-layer element can animate out of `display: none`. Engines without them show and hide the dialog instantly, with no broken intermediate state.
 
 ---
 
@@ -4188,10 +4368,13 @@ Include `assets/js/dialog.js` on any page using dialogs.
 
 ## Accessibility
 
-- Uses the native `<dialog>` element. Focus trapping is handled by the browser
-- The dialog title should use `aria-labelledby` pointing to the `.dialog-title` ID
+- Uses the native `<dialog>` element. Focus trapping, the backdrop, and returning focus to the trigger on close are all handled by the browser
+- **`aria-labelledby` is required**, pointing at the `.dialog-title` ID. Without it the dialog has no accessible name and screen readers announce a bare "dialog"
 - Close buttons must have `aria-label="Close"`
-- The backdrop is created by the browser's `::backdrop` pseudo-element
+- Match the `.dialog-title` heading level to the surrounding page outline. The class carries the styling, so the level is free
+- Set `autofocus` on the control the user should land on. Without it the entry point varies by browser engine. On a destructive dialog put it on **Cancel**, never on the destructive action
+- Don't add `role="dialog"`, `aria-modal`, or `aria-haspopup`. `showModal()` supplies the role and the modality, and the rest of the document is made inert automatically — a JS focus trap is not needed and will fight the browser
+- For a text-only dialog whose body scrolls, add `tabindex="0"` to `.dialog-body` so keyboard users can reach the scroll container
 
 ---
 
@@ -4200,12 +4383,13 @@ Include `assets/js/dialog.js` on any page using dialogs.
 **Do:**
 - Use dialogs for actions that require confirmation or focused input
 - Keep dialog content concise, one task per dialog
-- Always provide a way to dismiss (close button + Escape + backdrop click)
+- Always provide a close button, and keep Escape working
 
 **Don't:**
 - Don't use dialogs for content that should be inline on the page
 - Don't stack dialogs on top of each other
 - Don't use dialogs for simple alerts. Use callouts or toasts instead
+- Don't rely on backdrop dismissal alone for a dialog holding unsaved input — a stray click discards it. Listen for the `cancel` event and call `preventDefault()` if you need a "discard changes?" guard
 
 ---
 
@@ -4215,28 +4399,40 @@ This section documents how the component is built. For usage, see the sections a
 
 ### Tokens
 
+Re-point these to re-skin the dialog for a brand. Never override the `.dialog` rules themselves.
+
 | Token | Default (Light) | Default (Dark) | What it controls |
 |---|---|---|---|
 | `--dialog-background` | `var(--background-primary)` | `var(--background-secondary)` | Dialog surface |
-| `--dialog-max-width` | `560px` | – | Maximum width |
 | `--dialog-shadow` | `0 8px 32px var(--black-alpha-20)` | `0 8px 40px var(--black-alpha-60)` | Drop shadow |
-| `--dialog-backdrop` | `rgba(0, 0, 0, 0.6)` | – | Backdrop overlay |
+| `--dialog-radius` | `0` | – | Corner radius |
+| `--dialog-padding` | `var(--space-xl)` | – | Inner padding |
+| `--dialog-max-width` | `560px` | – | Maximum width |
+| `--dialog-backdrop` | `var(--background-modal)` | – | Backdrop overlay |
+| `--dialog-offset` | `var(--space-l)` | – | Distance travelled on enter and exit |
+| `--dialog-enter-duration` | `var(--duration-m)` | – | Entrance duration |
+| `--dialog-enter-easing` | `var(--ease-out)` | – | Entrance easing |
+| `--dialog-exit-duration` | `var(--duration-s)` | – | Exit duration |
+| `--dialog-exit-easing` | `var(--ease-in)` | – | Exit easing |
+
+`--dialog-max-width` is declared in `:root`; the rest sit on `.dialog`, so a scoped `[data-theme]` region themes its own dialogs. `--dialog-backdrop` falls back to `--background-modal` for engines that predate `::backdrop` inheriting from its originating element.
 
 ### Selectors
 
 | Selector | Purpose |
 |---|---|
-| `.dialog` | Base component: background, max-width, shadow, border, padding |
+| `.dialog` | Base component: surface, max-width, shadow, padding, `85dvh` max height, column layout, and the closed / exit state |
 | `.dialog::backdrop` | Backdrop overlay colour |
-| `.dialog[open]` | Open state: opacity transition for entrance animation |
+| `.dialog[open]` | Open state: `display` plus the settled opacity / translate. Layout deliberately lives on `.dialog` — see Motion |
+| `@starting-style .dialog[open]` | Pre-open state that makes the entrance animatable |
 | `.dialog-header` | Flex row for title + close button |
 | `.dialog-title` | Dialog heading |
-| `.dialog-close` | Close button (icon button reset) |
-| `.dialog-close:hover` | Close button hover: text colour change |
-| `.dialog-close:focus-visible` | Close button focus ring |
-| `.dialog-body` | Content area with vertical padding |
+| `.dialog-body` | Scrolling content area (`min-height: 0` so the footer can't be pushed out) |
 | `.dialog-footer` | Footer with flex-end alignment for action buttons |
-| `[data-theme="dark"] .dialog` | Dark mode overrides for background and shadow |
+| `.dialog-close` | Deprecated bespoke close button, kept for existing markup. Use `.button.close-btn` |
+| `[data-theme="dark"] .dialog` | Dark mode: re-points `--dialog-background` and `--dialog-shadow` |
+
+The close button is the shared `.close-btn` role class, documented in [Button](/design-system/button.html). It is not a dialog-specific component.
 
 ### Disclosure
 
@@ -5641,6 +5837,109 @@ Include `assets/js/number-input.js` on any page. The script handles all `[data-n
 - Don't use for large numeric ranges. Use a slider instead
 - Don't use for values that aren't truly numeric (e.g. phone numbers)
 
+### Password Toggle
+
+The password toggle adds a show/hide button to a password input, letting a user reveal what they typed without a second confirmation field. It requires the `.password-field` wrapper around the input and toggle button, and the toggle button itself uses the `.password-toggle` class. The component requires JavaScript (`assets/js/password-toggle.js`).
+
+---
+
+## Basic usage
+
+Include the script on any page that uses password toggles:
+
+```html
+<script src="/assets/js/password-toggle.js"></script>
+```
+
+The script binds a click listener to every `.password-toggle` button on `DOMContentLoaded` (or immediately if the DOM has already loaded). No manual setup is needed for markup present at load.
+
+</button>
+  </div>
+</div>
+
+```html
+<div class="password-field">
+  <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Enter your password">
+  <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+    <div class="svg-icn" data-icon="eye">
+      <!-- SVG -->
+    </div>
+  </button>
+</div>
+```
+
+---
+
+## JavaScript
+
+### What the script does
+
+On click, the toggle:
+
+- Finds its `.password-field` ancestor via `closest()`, then the first `input` inside it via `querySelector()`
+- Flips that input's `type` between `password` and `text`
+- Sets `aria-pressed` to `"true"` when the password is now visible, `"false"` when it's hidden again
+- Sets `aria-label` to `"Hide password"` when visible, `"Show password"` when hidden
+
+The script does not change the icon itself — the same icon is shown in both states. State is communicated only through `aria-pressed`, `aria-label`, and the revealed text.
+
+### No re-initialisation hook
+
+Unlike accordion or dropdown, this script exposes no public init function. It binds every `.password-toggle` it finds once, at load. Markup added to the page afterward (for example, injected via a SPA route change or Barba transition) is not wired up automatically — re-run the script's init logic, or wait for a page reload, before relying on toggles in dynamically inserted markup.
+
+---
+
+## Accessibility
+
+- The button must sit inside a `.password-field` wrapper alongside its `input` — the script locates the input via `closest('.password-field')` then `querySelector('input')`, and does nothing if either lookup fails
+- Set the initial `aria-label="Show password"` and `aria-pressed="false"` in markup — the script only updates these attributes after a click, it does not set them on initialisation
+- Use a `<button type="button">`, never a bare `<div>` or `<a>` — this gives native keyboard support (Enter/Space) and stops the button from submitting the form
+- Mark the icon `aria-hidden="true"` — it's decorative and doesn't change between states, so it carries no information of its own
+- `autocomplete` on the input should still reflect its purpose (`current-password`, `new-password`) — the toggle changes the input's `type`, not its autofill behaviour
+
+---
+
+## Usage rules
+
+**Do:**
+- Use on password inputs where letting a user verify what they typed reduces failed submits — login, account settings, password reset forms
+- Give every password field its own `.password-field` wrapper — each toggle manages exactly one input independently
+- Keep the input's initial `type="password"` in markup; the script only flips it to `text` in response to a click
+- Set the toggle's starting `aria-label`/`aria-pressed` in the markup, since the script doesn't initialise them
+
+**Don't:**
+- Don't place a `.password-toggle` outside a `.password-field` wrapper — the click handler can't locate the input and silently does nothing
+- Don't expect the icon to swap or animate between states — it doesn't; accessible state lives in `aria-pressed`/`aria-label`, not the icon
+- Don't inject `.password-field` markup after page load and assume it just works — there's no public re-init function, so late-inserted toggles need their own initialisation
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Styling
+
+| Property | Value |
+|---|---|
+| `.password-field` | `position: relative` — establishes the positioning context the toggle docks into |
+| `.password-field input` | `padding-right: var(--space-4xl)` — clears space so typed text doesn't run under the toggle |
+| `.password-toggle` | Absolutely positioned, vertically centred, `right: var(--space-m)`, no background or border |
+| `.password-toggle` colour | `var(--text-faded)`, shifting to `var(--text-primary)` on hover |
+| `.password-toggle .svg-icn` | 20×20px |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.password-field` | Wrapper; positions the toggle relative to the input |
+| `.password-field input` | The password input; gets reserved right padding |
+| `.password-toggle` | The show/hide button |
+| `.password-toggle:hover` | Hover colour state |
+| `.password-toggle .svg-icn` | Icon sizing |
+
+> These rules live in `design-system.css` (section 12, Forms), so a product installing `password-toggle.js` from the package gets a working control — behaviour and styling together.
+
 ### Progress
 
 Progress bars use the native `<progress>` element styled with design system tokens. They indicate completion percentage and support status colour variants.
@@ -6506,15 +6805,15 @@ Use the second argument to set the message type. The JS sets `data-type` on the 
 
 <div class="toast" data-type="warning" role="alert" >
       <span class="toast-message">Your session will expire in 5 minutes.</span>
-      <button class="toast-close" aria-label="Dismiss">{{icon:close}}</button>
+      <button class="button close-btn" type="button" data-icon-only data-size="small" aria-label="Dismiss">{{icon:close}}</button>
     </div>
     <div class="toast" data-type="danger" role="alert" >
       <span class="toast-message">Failed to upload file. Please try again.</span>
-      <button class="toast-close" aria-label="Dismiss">{{icon:close}}</button>
+      <button class="button close-btn" type="button" data-icon-only data-size="small" aria-label="Dismiss">{{icon:close}}</button>
     </div>
     <div class="toast" data-type="info" role="alert" >
       <span class="toast-message">New comment on your project.</span>
-      <button class="toast-close" aria-label="Dismiss">{{icon:close}}</button>
+      <button class="button close-btn" type="button" data-icon-only data-size="small" aria-label="Dismiss">{{icon:close}}</button>
     </div>
   </div>
 </div>
@@ -6552,7 +6851,7 @@ The JS creates this markup automatically:
 <div class="toast-container" aria-live="polite" aria-atomic="false">
   <div class="toast" data-type="success" role="alert">
     <span class="toast-message">Changes saved.</span>
-    <button class="toast-close" aria-label="Dismiss">
+    <button class="button close-btn" type="button" data-icon-only data-size="small" aria-label="Dismiss">
       <div class="svg-icn" data-icon="close">...</div>
     </button>
   </div>
@@ -6608,7 +6907,8 @@ This section documents how the component is built. For usage, see the sections a
 | `.toast[data-type="danger"]`, `.toast[data-type="red"]` | Danger colour variant |
 | `.toast[data-type="info"]`, `.toast[data-type="blue"]` | Info colour variant |
 | `.toast-message` | Message text span |
-| `.toast-close` | Dismiss button |
+| `.toast .button.close-btn` | Dismiss button — the shared `.close-btn` role class, re-pointed to the toast's own `currentColor` |
+| `.toast-close` | Deprecated bespoke dismiss button, kept for existing markup. Use `.button.close-btn` |
 
 ### Tooltip
 

@@ -1,3 +1,4 @@
+/* @bydefaultstudio/design-system v2.0.1 */
 // Copy button — unified handler for all .copy-btn variants
 // Supports data-copy (static value) and data-clipboard-target (element text content)
 // Docs-site copy chrome (token chips, icon tables, palette buttons) lives
