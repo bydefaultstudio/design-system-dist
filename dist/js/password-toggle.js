@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v2.1.0 */
+/* @bydefaultstudio/design-system v2.1.1 */
 /**
  * Script Purpose: Password show/hide toggle for auth forms
  * Author: By Default Studio

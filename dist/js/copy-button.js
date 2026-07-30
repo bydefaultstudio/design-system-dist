@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v2.1.0 */
+/* @bydefaultstudio/design-system v2.1.1 */
 // Copy button — unified handler for all .copy-btn variants
 // Supports data-copy (static value), data-clipboard-target (element text
 // content) and data-download (fetch-free file download via a temporary link).

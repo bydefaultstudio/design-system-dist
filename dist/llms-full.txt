@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v2.1.0 -->
+<!-- @bydefaultstudio/design-system v2.1.1 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 2.1.0 (package)**
+**Version: 2.1.1 (package)**
 
 ## Getting the System
 
@@ -7410,21 +7410,24 @@ By default, tooltips appear above the element. Use `data-tooltip-position` to ch
 
 This section documents how the component is built. For usage, see the sections above.
 
-### Tokens
+### Styling
 
-| Token | Default (Light) | Default (Dark) | Purpose |
-|-------|-----------------|----------------|---------|
-| `var(--tooltip-background)` | `var(--warm-black)` | `var(--neutral-100)` | Bubble background |
-| `var(--tooltip-text)` | `var(--off-white)` | `var(--warm-black)` | Bubble text colour |
-| `var(--tooltip-radius)` | `var(--radius-s)` | – | Corner radius |
-| `var(--tooltip-font-size)` | `var(--font-xs)` | – | Font size |
+The tooltip defines no component tokens — values are set directly on the component rules, and dark mode is handled on the component rather than by token swaps.
+
+| Property | Value |
+|---|---|
+| Background | `var(--warm-black)` — dark mode: `var(--neutral-100)` |
+| Text colour | `var(--off-white)` — dark mode: `var(--warm-black)` |
+| Corner radius | `var(--radius-s)` |
+| Padding | `var(--space-xs) var(--space-s)` |
+| Typography | `var(--font-primary)`, `var(--font-xs)`, `var(--font-weight-regular)`, `var(--line-height-m)` — pinned in full (with letter-spacing, case, style, and stretch normalised), because an unpinned pseudo-element inherits typography from its trigger: the same tooltip would render tighter on a button than on a span, and uppercase on a badge |
 
 ### Selectors
 
 | Selector | Purpose |
 |---|---|
 | `[data-tooltip]` | Base, sets relative positioning and `cursor: help` |
-| `[data-tooltip]::before` | Tooltip bubble, positioned above, hidden by default |
+| `[data-tooltip]::before` | Tooltip bubble, positioned above, hidden by default; typography pinned so it never inherits from the trigger |
 | `[data-tooltip]:hover::before`, `[data-tooltip]:focus-visible::before` | Shows tooltip on hover/focus |
 | `[data-tooltip-position="bottom"]::before` | Bottom placement |
 | `[data-tooltip-position="left"]::before` | Left placement |

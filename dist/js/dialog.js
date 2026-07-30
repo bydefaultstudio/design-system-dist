@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v2.1.0 */
+/* @bydefaultstudio/design-system v2.1.1 */
 /**
  * Dialog component
  * Opens and closes native <dialog> elements declaratively.

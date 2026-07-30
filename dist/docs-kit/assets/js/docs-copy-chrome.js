@@ -102,18 +102,27 @@
   });
 
   // ── Color swatch copy — .color-copy-btn with data-format="hex" or "css" ──
-  function rgbToHex(r, g, b) {
-    return '#' + [r, g, b].map(function (v) {
-      var hex = v.toString(16);
-      return hex.length === 1 ? '0' + hex : hex;
-    }).join('');
+  function toHexPair(value) {
+    var hex = value.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
   }
 
+  // Alpha matters here: several palette rows resolve to --*-alpha-* tokens
+  // (--background-faded, --text-faded). Dropping the alpha channel would copy
+  // #000000 for a near-white swatch — a wrong value delivered silently, which
+  // is worse than no value. Emit 8-digit hex whenever the colour is not opaque.
   function getComputedHex(element) {
     var rgb = getComputedStyle(element).backgroundColor;
-    var match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    var match = rgb.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)\s*(?:[,/]\s*([\d.]+)\s*)?\)/);
     if (!match) return null;
-    return rgbToHex(parseInt(match[1]), parseInt(match[2]), parseInt(match[3]));
+
+    var hex = '#' + toHexPair(parseInt(match[1], 10))
+      + toHexPair(parseInt(match[2], 10))
+      + toHexPair(parseInt(match[3], 10));
+
+    var alpha = match[4] === undefined ? 1 : parseFloat(match[4]);
+    if (isNaN(alpha) || alpha >= 1) return hex;
+    return hex + toHexPair(Math.round(alpha * 255));
   }
 
   document.addEventListener('click', function (e) {

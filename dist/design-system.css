@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v2.1.0 */
+/* @bydefaultstudio/design-system v2.1.1 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -2848,7 +2848,6 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
   bottom: calc(100% + var(--space-xs));
   background-color: var(--warm-black);
   color: var(--off-white);
-  font-size: var(--font-xs);
   border-radius: var(--radius-s);
   padding: var(--space-xs) var(--space-s);
   white-space: nowrap;
@@ -2879,7 +2878,6 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
   transform: translateX(-50%);
   background-color: var(--warm-black);
   color: var(--off-white);
-  font-size: var(--font-xs);
   border-radius: var(--radius-s);
   padding: var(--space-xs) var(--space-s);
   white-space: nowrap;
@@ -2887,6 +2885,22 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
   opacity: 0;
   transition: opacity 0.15s ease-in-out;
   z-index: 800;
+}
+
+/* Bubble typography pinned in full. A pseudo-element inherits from its
+   trigger and .progress-tooltip from its wrapper, so an unpinned bubble
+   renders per-host: a .button trigger collapses leading to 0.7, a .badge
+   would uppercase and letterspace it, a condensed ancestor narrows the face. */
+[data-tooltip]::before,
+.progress-tooltip {
+  font-family: var(--font-primary);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-m);
+  letter-spacing: 0;
+  text-transform: none;
+  font-style: normal;
+  font-stretch: var(--font-normal);
 }
 
 [data-tooltip]:hover::before,

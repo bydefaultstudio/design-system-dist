@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^2.1.0"
+npm install "github:bydefaultstudio/design-system-dist#semver:^2.1.1"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
