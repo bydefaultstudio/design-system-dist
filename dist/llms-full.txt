@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v2.1.1 -->
+<!-- @bydefaultstudio/design-system v2.2.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 2.1.1 (package)**
+**Version: 2.2.0 (package)**
 
 ## Getting the System
 
@@ -106,7 +106,7 @@ The same applies to spacing, typography, borders, and radii — every visual val
 
 ---
 ## Layout System
-This system provides a **predictable layout structure** that keeps spacing, alignment, and width consistent across all pages.
+Layout primitives control **structure and flow**: how content stacks, how columns form, and how sections are contained. They work with spacing tokens (see [Spacing](spacing.html)) but serve a different purpose: spacing defines distance, layout defines arrangement.
 
 ---
 
@@ -170,83 +170,80 @@ Sections group **major content areas** and control **vertical spacing**.
 
 ## Padding Global
 
-`.padding-global` provides **consistent horizontal padding**.
-
-### When to use
-
-* Inside every section
-* Whenever content needs safe spacing from screen edges
+`.padding-global` adds consistent horizontal padding to the page. It is applied once per section row, wrapping the container. Padding comes from `.padding-global`, **never from containers**.
 
 ```html
-<div class="padding-global">
-  <div class="container-m">
-    <!-- Content -->
+<section>
+  <div class="padding-global">
+    <div class="container-m">
+      <!-- Content here -->
+    </div>
   </div>
-</div>
+</section>
 ```
 
-Padding comes from `.padding-global`, **never from containers**.
+| Class | Effect |
+|-------|--------|
+| `.padding-global` | `padding-left: var(--space-xl)` + `padding-right: var(--space-xl)` |
 
 ---
 
 ## Containers
 
-Containers constrain width and centre content in the viewport.
-
-### When to use
-
-* Most page content
-* Any readable text or structured layout
-
-### Key rules
-
-* Containers centre content
-* Containers do **not** add padding
-* Use one container per section (in most cases)
-
-```html
-<div class="container-m">
-  <div class="block">
-    <h2>Heading</h2>
-    <p>Content</p>
-  </div>
-</div>
-```
-
-### Variants
+Containers centre content and cap its maximum width. Use them inside sections to control content density.
 
 <div >
-    <div class="container-m" >.container-m</div>
+    <div class="container-m" >
+      <p ><code>.container-m</code>, 1040px</p>
+    </div>
   </div>
   <div >
-    <div class="container-l" >.container-l</div>
+    <div class="container-l" >
+      <p ><code>.container-l</code>, 1200px</p>
+    </div>
   </div>
 </div>
 
-| Class              | Use                    |
-| ------------------ | ---------------------- |
-| `.container-s` | Narrow layouts |
-| `.container-m` | Default readable width |
-| `.container-l` | Wider layouts |
+```html
+<div class="container-s">Narrow content</div>
+<div class="container-m">Standard content</div>
+<div class="container-l">Wide content</div>
+```
+
+| Class | Max Width | Use Case |
+|-------|-----------|----------|
+| `.container-s` | 640px | Long-form text, forms, narrow content |
+| `.container-m` | 1040px | Standard page content |
+| `.container-l` | 1200px | Dashboards, wide layouts |
+
+### Rules
+
+- Containers add `margin-left: auto` and `margin-right: auto`. They centre themselves
+- Containers set `width: 100%` so they fill available space up to the max-width
+- Containers do **not** add padding — nest them inside `.padding-global` for consistent page margins
+- Use one container per section (in most cases)
 
 ---
 
-## Max-Width
+## Max-Width Utilities
 
-Max-width utilities apply **width limits only**.
+Max-width utilities cap width **without centring**. Use them on individual elements that need a width constraint but should stay in normal flow.
 
-### When to use
+| Class | Max Width |
+|-------|-----------|
+| `.max-width-s` | 640px |
+| `.max-width-m` | 960px |
+| `.max-width-l` | 1200px |
+| `.max-width-full` | 100% |
 
-* Special cases
-* Content that should not be centred
-* Breaking out of container behaviour
+```html
+<p class="max-width-s">This paragraph won't exceed 640px.</p>
+```
 
-| Class              | Use               |
-| ------------------ | ----------------- |
-| `.max-width-s` | Narrow constraint |
-| `.max-width-m` | Default readable |
-| `.max-width-l` | Wide constraint |
-| `.max-width-full` | No constraint |
+### Containers vs Max-Width
+
+- **Container** = max-width + auto margins (centred)
+- **Max-width** = max-width only (stays in flow, left-aligned)
 
 **Rule of thumb**
 
@@ -257,91 +254,103 @@ Max-width utilities apply **width limits only**.
 
 ## Blocks
 
-Blocks group **related content** and manage internal spacing.
+A `.block` is a vertical flex stack with a default gap of `var(--space-m)` between children. It is the fundamental building block for content layout — heading + text, text + buttons, image + caption, any content that belongs together.
 
-### When to use
+No margins on children — enforced in CSS: `.block > *` zeroes `margin-block`, so `gap-*` is the only source of vertical spacing inside a block. Flex gap does not collapse with margins, it adds to them; without the reset, element defaults would compound with the gap. Horizontal margins survive — `data-align="center"` relies on `margin-inline: auto`.
 
-* Heading + text
-* Text + buttons
-* Image + caption
-* Any content that belongs together
+### Default gap
 
-### Default behaviour
-
-* Vertical flex layout
-* Uses `gap` for spacing
-* No margins on children — enforced in CSS: `.block > *` zeroes `margin-block`, so `gap-*` is the only source of vertical spacing inside a block. Flex gap does not collapse with margins, it adds to them; without the reset, element defaults would compound with the gap. Horizontal margins survive — `data-align="center"` relies on `margin-inline: auto`.
+<div class="bg-faded" >Second item</div>
+    <div class="bg-faded" >Third item</div>
+  </div>
+  <p class="text-size-xsmall text-faded"><code>.block</code>: default gap is <code>--space-m</code> (12px)</p>
+</div>
 
 ```html
 <div class="block">
-  <h2>Heading</h2>
-  <p>Body text</p>
+  <div>First item</div>
+  <div>Second item</div>
+  <div>Third item</div>
 </div>
 ```
 
 ### Gap modifiers
 
-<div >Item</div>
-    <div >Item</div>
-  </div>
-  <div class="block gap-s" >
-    <div >.gap-s</div>
-    <div >Item</div>
-    <div >Item</div>
-  </div>
-  <div class="block gap-m" >
-    <div >.gap-m</div>
-    <div >Item</div>
-    <div >Item</div>
-  </div>
-  <div class="block gap-l" >
-    <div >.gap-l</div>
-    <div >Item</div>
-    <div >Item</div>
-  </div>
-  <div class="block gap-xl" >
-    <div >.gap-xl</div>
-    <div >Item</div>
-    <div >Item</div>
-  </div>
+Add `.gap-*` to control spacing between children. These work on both `.block` and `.grid`.
+
+<div class="bg-faded" >Second item</div>
+        <div class="bg-faded" >Third item</div>
+      </div>
+      <p class="text-size-xsmall text-faded"><code>.block .gap-none</code></p>
+    </div>
+    <div class="block gap-s">
+      <div class="block gap-xs border border-faded" >
+        <div class="bg-faded" >First item</div>
+        <div class="bg-faded" >Second item</div>
+        <div class="bg-faded" >Third item</div>
+      </div>
+      <p class="text-size-xsmall text-faded"><code>.block .gap-xs</code></p>
+    </div>
+    <div class="block gap-s">
+      <div class="block gap-s border border-faded" >
+        <div class="bg-faded" >First item</div>
+        <div class="bg-faded" >Second item</div>
+        <div class="bg-faded" >Third item</div>
+      </div>
+      <p class="text-size-xsmall text-faded"><code>.block .gap-s</code></p>
+    </div>
+    <div class="block gap-s">
+      <div class="block gap-l border border-faded" >
+        <div class="bg-faded" >First item</div>
+        <div class="bg-faded" >Second item</div>
+        <div class="bg-faded" >Third item</div>
+      </div>
+      <p class="text-size-xsmall text-faded"><code>.block .gap-l</code></p>
+    </div>
   </div>
 </div>
 
-| Class    | Effect      |
-| -------- | ----------- |
-| `.gap-xs` | Very tight |
-| `.gap-s` | Small |
-| `.gap-m` | Default |
-| `.gap-l` | Large |
-| `.gap-xl` | Extra large |
+| Class | Gap | Token |
+|-------|-----|-------|
+| `.gap-none` | 0 | `var(--space-none)` |
+| `.gap-xs` | 4px | `var(--space-xs)` |
+| `.gap-s` | 8px | `var(--space-s)` |
+| `.gap-m` | 12px | `var(--space-m)` (default) |
+| `.gap-l` | 16px | `var(--space-l)` |
+| `.gap-xl` | 24px | `var(--space-xl)` |
+| `.gap-2xl` | 32px | `var(--space-2xl)` |
+| `.gap-3xl` | 48px | `var(--space-3xl)` |
+
+### Horizontal row
+
+Add `.row` to a block to switch from vertical stacking to horizontal layout. Use `.row-reverse` for right-to-left order.
+
+<div class="bg-faded" >Centre</div>
+      <div class="bg-faded" >Right</div>
+    </div>
+    <p class="text-size-xsmall text-faded"><code>.block .row .gap-xl</code></p>
+  </div>
+</div>
 
 ```html
-<div class="block gap-l">
-  <h2>Heading</h2>
-  <p>More space between elements</p>
+<div class="block row gap-xl">
+  <div>Left</div>
+  <div>Centre</div>
+  <div>Right</div>
 </div>
 ```
 
----
+### Alignment modifiers
 
-## Block Layout Modifiers
+Use alignment classes on `.block` (or `.block .row`) to control cross-axis and main-axis positioning.
 
-Blocks can change layout or alignment.
-
-| Class          | Effect              |
-| -------------- | ------------------- |
-| `.row` | Horizontal layout |
-| `.row-reverse` | Reversed horizontal |
-| `.align-start` | Align items start |
-| `.align-center` | Centre items |
-| `.align-end` | Align items end |
-
-```html
-<div class="block row gap-m align-center">
-  <p>Text</p>
-  <button>Action</button>
-</div>
-```
+| Class | Effect |
+|-------|--------|
+| `.align-start` | `align-items: flex-start` |
+| `.align-center` | `align-items: center` |
+| `.align-end` | `align-items: flex-end` |
+| `.justify-center` | `justify-content: center` |
+| `.justify-end` | `justify-content: flex-end` |
 
 ---
 
@@ -376,51 +385,66 @@ Pair with one of:
 
 ## Grid
 
-Grids create **column-based layouts**.
-They are not spacing utilities.
+CSS grid layout with column presets. Grids create **column-based layouts** — they are not spacing utilities. The default is a responsive 2-column grid. Add `.cols-3` or `.cols-4` for more columns, and `.gap-*` to control gutter size.
 
-### Base grid
+### Default (2 columns)
 
-* Two equal columns
-* Default gap applied
-
-<div >Column 2</div>
+<div class="bg-faded" >Item 2</div>
+      <div class="bg-faded" >Item 3</div>
+      <div class="bg-faded" >Item 4</div>
+    </div>
+    <p class="text-size-xsmall text-faded"><code>.grid</code>: default 2 columns, gap <code>--space-m</code></p>
   </div>
 </div>
 
 ```html
 <div class="grid">
-  <div>Item</div>
-  <div>Item</div>
+  <div>Item 1</div>
+  <div>Item 2</div>
+  <div>Item 3</div>
+  <div>Item 4</div>
 </div>
 ```
 
-### Column modifiers
+### 3 columns
 
-<div >2</div>
-    <div >3</div>
-  </div>
-  <div class="grid cols-4">
-    <div >1</div>
-    <div >2</div>
-    <div >3</div>
-    <div >4</div>
+<div class="bg-faded" >Item 2</div>
+      <div class="bg-faded" >Item 3</div>
+      <div class="bg-faded" >Item 4</div>
+      <div class="bg-faded" >Item 5</div>
+      <div class="bg-faded" >Item 6</div>
+    </div>
+    <p class="text-size-xsmall text-faded"><code>.grid .cols-3</code></p>
   </div>
 </div>
-
-| Class       | Columns       |
-| ----------- | ------------- |
-| `.cols-2` | Two columns (the `.grid` default, made explicit) |
-| `.cols-3` | Three columns |
-| `.cols-4` | Four columns |
 
 ```html
 <div class="grid cols-3">
   <div>Item 1</div>
   <div>Item 2</div>
-  <div>Item 3</div>
+  ...
 </div>
 ```
+
+### 4 columns with small gap
+
+<div class="bg-faded" >Item 2</div>
+      <div class="bg-faded" >Item 3</div>
+      <div class="bg-faded" >Item 4</div>
+      <div class="bg-faded" >Item 5</div>
+      <div class="bg-faded" >Item 6</div>
+      <div class="bg-faded" >Item 7</div>
+      <div class="bg-faded" >Item 8</div>
+    </div>
+    <p class="text-size-xsmall text-faded"><code>.grid .cols-4 .gap-s</code></p>
+  </div>
+</div>
+
+| Class | Columns |
+|-------|---------|
+| `.grid` | 2 columns (default) |
+| `.cols-3` | 3 columns |
+| `.cols-4` | 4 columns |
 
 ### Item width
 
@@ -435,16 +459,37 @@ They are not spacing utilities.
 </div>
 ```
 
-### Rules
+---
 
-* Use grids for layout, not spacing
-* Use `gap-*` to adjust spacing
-* Combine column + gap modifiers as needed
+## Padding Utilities
+
+General-purpose padding utilities for spacing inside elements.
+
+| Class | Value | Token |
+|-------|-------|-------|
+| `.padding-s` | 8px | `var(--space-s)` |
+| `.padding-m` | 12px | `var(--space-m)` |
+| `.padding-l` | 16px | `var(--space-l)` |
+| `.padding-xl` | 24px | `var(--space-xl)` |
+| `.padding-2xl` | 32px | `var(--space-2xl)` |
+| `.padding-3xl` | 48px | `var(--space-3xl)` |
+
+---
+
+## Key Rules
+
+- **Sections** control macro spacing (`.top-*`, `.bottom-*` classes)
+- **Blocks** control micro spacing (`.gap-*` between children)
+- **Grids** control column layout. Use `.gap-*` for gutters
+- **Containers** control width and centring. Never apply spacing directly to them
+- Never mix responsibilities across layers
+- Never use spacer divs or apply margins inside blocks
+- Always use gap utilities for spacing between siblings, not margin on individual children
 
 ---
 
 ## Utility Classes
-A flat reference of every utility class in the system. Click any class, value, or token to copy it. For the full architecture and live demos see [Typography](typography.html), [Color](color.html), [Spacing](spacing.html), [Border](border.html), and [HTML Layout](/docs/layout.html).
+A flat reference of every utility class in the system. Click any class, value, or token to copy it. For the full architecture and live demos see [Typography](typography.html), [Color](color.html), [Spacing](spacing.html), [Border](border.html), and [Layout](layout.html).
 
 Every chip on this page follows the same convention so the markdown source matches what gets copied:
 
@@ -1345,13 +1390,21 @@ Dark mode values (e.g. `#1a1a1a`, `#e8e6e3`) are **overrides applied via `[data-
 
 - **`:root`**: light mode tokens (always present)
 - **`[data-theme="dark"]`**: overrides semantic tokens with dark values
-- **`@media (prefers-color-scheme: dark)`**: no-JS fallback for users with a dark OS preference
+- **`@media (prefers-color-scheme: dark)`**: fallback for users with a dark OS preference — applies only while `data-theme` is unset
 
-The toggle button in the site header sets `data-theme="dark"` on `<html>` and persists the choice in `localStorage`.
+The `data-theme` attribute on `<html>` is three-state:
+
+| State | Meaning |
+|---|---|
+| no attribute | No explicit choice — the OS preference decides (this is also what no-JS visitors get) |
+| `data-theme="light"` | Forced light. Light values are the `:root` defaults, so no extra CSS exists for this state — the attribute's presence defeats the OS fallback |
+| `data-theme="dark"` | Forced dark via the `[data-theme="dark"]` overrides |
+
+The toggle button in the site header always sets an explicit value — `"dark"` or `"light"` — and persists the choice in `localStorage`. **Never toggle by removing the attribute**: absence means "follow the OS", so removing it drops an OS-dark visitor straight back into dark mode and light can never stick.
 
 ### Scoped Usage
 
-You can apply dark mode to any element, not just the page:
+You can apply dark mode to any element, not just the page. Note this works for dark only: `data-theme="light"` is a root-level state — it defeats the OS fallback on `<html>` but has no overrides of its own, so it cannot light-mode a region nested inside `[data-theme="dark"]`.
 
 <div data-theme="dark" >
       <div class="block gap-xs">
@@ -1570,7 +1623,7 @@ Used for pullquotes and highlighted passages. Renders in the secondary serif fon
 
 ## Links
 
-Links use text-color underlines with a hover transition. The default state shows `var(--text-plain)` text with a `var(--text-link)` coloured underline. On hover, the text colour shifts to `var(--text-link)` and the underline moves down slightly. External links (`target="_blank"`) automatically show a share icon via `::after` that inherits the link colour.
+Links use text-color underlines with a hover transition. The default state shows `var(--text-plain)` text with a `var(--text-link)` coloured underline. On hover, the text colour shifts to `var(--text-link)` and the underline moves down slightly. External links (`target="_blank"`) automatically show a share icon via `::after` that inherits the link colour. The icon signals that a run of underlined text leaves the site, so it is suppressed on `.button` — a button already reads as its own affordance and carries its own icon slot.
 
 <div class="block gap-m">
       <p class="demo-eyebrow">External link</p>
@@ -1595,7 +1648,7 @@ Links use text-color underlines with a hover transition. The default state shows
 | Underline offset | 2.5px → 4px on hover |
 | Underline thickness | 1.5px |
 | Transition | 0.3s all |
-| External icon | `::after` on `a[target="_blank"]`, inherits `currentColor` |
+| External icon | `::after` on `a[target="_blank"]:not(.button)`, inherits `currentColor` |
 
 ---
 
@@ -2626,7 +2679,7 @@ Example (button component):
 | Component CSS | `assets/css/design-system.css` under a numbered section heading |
 | Component JS (if needed) | `assets/js/component-name.js` |
 | Documentation source | `cms/component-name.md` |
-| Generated docs page | `design-system/component-name.html` |
+| Generated docs page | `website/component-name.html` |
 
 Section headings in `design-system.css` follow the format:
 ```css
@@ -2710,6 +2763,48 @@ Current exceptions:
    ```bash
    cd cms/generator && npm run docgen
    ```
+
+---
+
+## The website channel
+
+The website is also a channel — one of the places the brand meets an audience — and the one where code, not export discipline, keeps it on-brand. Tokens carry the palette, type, spacing, and motion. If a page needs a value the tokens don't provide, the system is incomplete. Fix the tokens, not the page. The studio team owns this channel.
+
+### Identity here
+
+- **Logo**: the primary centred lockup holds the top nav; the avatar covers favicons and compact contexts. Variants, files, and clearspace: [4.1 Logo](/brand/logo.html).
+- **Colour and type**: never chosen per page. Semantic tokens only: [4.2 Colour](/brand/color.html), [4.3 Typography](/brand/typography.html). Embedded graphics and imagery follow the same palette.
+- **Motion**: transitions and animation run on the motion tokens ([Motion](/website/motion.html)); no hardcoded durations or easings.
+- **Icons**: brand icons only, prepared to system rules: [4.4 Iconography](/brand/iconography.html).
+
+### Specs
+
+| Asset | Size | Format | Max weight | Notes |
+|---|---|---|---|---|
+| Open Graph image | 1200×630 (1.91:1) | JPG/PNG | 1 MB | unique per page, absolute URL in the meta tag |
+| X card image | 1200×628 | JPG/PNG | 1 MB | `summary_large_image`; usually the OG image reused |
+| Favicon | SVG source + 32×32 PNG + ICO | SVG/PNG/ICO | – | avatar logo variant; lives in `assets/icons/` |
+| Apple touch icon | 180×180 | PNG | – | `assets/icons/apple-touch-icon.png` |
+| Page imagery | ratio set at render | – | – | `.img` + `img-1x1 / img-3x2 / img-4x3 / img-16x9 / img-21x9`, crop with the [image component](/website/image.html), not in the export |
+
+_Specs verified against platform documentation: 2026-07-05._
+
+The full meta-tag set is already wired into `templates/page-template.html`; the per-tag reference lives in [SEO best practices](/docs/seo-best-practices.html).
+
+### Templates & assets
+
+- **Page template**: every new page starts from `templates/page-template.html`; the SEO head, layout hierarchy, and script order are already correct there.
+- **Default OG image**: `assets/images/og/og-default.jpg`, the fallback when a page has no bespoke share image. Bespoke OG images live alongside it in `assets/images/og/`.
+- **Draft imagery**: the placeholder service returns an SVG at any size: `https://bydefault.design/image/{width}x{height}`. Use it while layouts settle; replace before ship.
+
+### Checklist
+
+- [ ] Unique title (50–60 characters) and meta description (150–160)
+- [ ] OG image present at 1200×630, absolute URL, unique to the page
+- [ ] Favicon set referenced in the head
+- [ ] Zero hardcoded values: colour, type, spacing, and motion all from tokens
+- [ ] Imagery cropped by ratio classes, alt text on everything
+- [ ] Keyboard navigation works; WCAG 2.1 AA holds; Lighthouse 90+
 
 ---
 
@@ -3614,6 +3709,465 @@ The scrubber gets a 30px `::before` hit area extending above the 8px track, so s
 
 Under 768px the centre button is hidden in preview state only (tapping the video or the unmute prompt starts playback), the unmute prompt moves to the top-right, buttons grow to 48px, and cue cards drop the thumbnail and excerpt for a text-plus-arrow row.
 
+### Book
+
+A documentation space is a set of books. The top level is a **shelf** of covers; opening one shows its **contents**; opening a line in the contents lands you on a page. The book family gives you the first two of those, as four classes: `.book-shelf`, `.book-cover`, `.book-contents`, and `.book-contents-item`.
+
+The row in a contents list is a contents *item*, not a page — in a book, the thing you click in the contents is an entry and the thing you land on is the page. Naming them apart is what keeps the model legible.
+
+Two components complete the model and live in their own docs: moving sideways between pages is [Page Navigation](/website/page-nav.html); moving back up is [Breadcrumb](/website/breadcrumb.html).
+
+---
+
+## Anatomy
+
+```
+.book-shelf                              ← L0 grid of covers
+  .book-shelf-title                      ← optional group heading
+  a.book-cover                           ← one closed book
+    .book-cover-header
+      .book-cover-leading                ← icon, varies per card
+      .book-cover-trailing               ← icon, hints at what clicking does
+    .book-cover-body
+      .book-cover-title
+      .book-cover-description
+    .book-cover-footer
+      .book-cover-byline                 ← "by X"
+      .book-cover-meta                   ← metadata
+
+.book-contents                           ← L1 table of contents
+  .book-contents-title                   ← optional group heading
+  a.book-contents-item                   ← one line in the contents
+    .book-contents-item-leading          ← icon, varies per row
+    .book-contents-item-body
+      .book-contents-item-title
+      .book-contents-item-description
+      .book-contents-item-meta           ← metadata, under the description
+        .book-contents-item-byline       ← "by X", inside meta
+    .book-contents-item-trailing         ← icon, hints at what clicking does
+```
+
+Slots are named on **two different principles**, because they hold two different kinds of thing:
+
+- **`leading` / `trailing`** name a *position*. They frame the surface and hold an icon. Deliberately generic — another product's trailing icon might be a chevron, an arrow, or a download glyph, and the name should not argue with any of them.
+- **`byline` / `meta`** name a *content type*. They carry text about the item, so naming them by position would say nothing useful about what belongs there.
+
+On a cover, `leading` and `trailing` are the header's two ends; the footer's two ends are `byline` and `meta`, because what belongs there is text rather than icons. A row has only one line, so `leading` and `trailing` are unambiguous, and `meta` moves inside the body.
+
+**Neither icon slot may hold an interactive control.** The card is already a link, so a nested button is invalid HTML and unreachable in several screen-reader modes. `trailing` holds an icon that *hints* at what clicking does — it is not an action control. A surface that needs a real second action wants a different component.
+
+Every slot is optional. Empty ones are simply left out — the end slot's auto margin holds its side either way, so no spacers are needed.
+
+**Engine and instance.** The component guarantees the slots. *Which* icon goes in `trailing`, and whether it stays the same down a shelf, is an instance decision. By Default keeps it constant, because constancy is what signals "this opens" — but that is a usage rule for this brand, not a property of the component. Another product can decide otherwise without the class names lying.
+
+Note the row has **no header or footer strip**. A cover is a vertical surface with room for two strips; a row is one horizontal line, so `leading` starts it and `trailing` ends it. The cover's separate `byline` and `meta` collapse into `meta` on the row for the same reason.
+
+Row meta sits **inside the body, under the description** — not as a fourth item on the line. On a cover, meta lives in the footer strip and gets a line of its own; a row has no strip, and `leading` and `trailing` both refuse to shrink, so a trailing meta would take its width straight out of the title. Under the description it wraps instead of squeezing.
+
+---
+
+## Basic usage
+
+A shelf holds covers. `.book-shelf` owns its own grid, so no utility classes are needed alongside it.
+
+</header>
+      <div class="book-cover-body">
+        <h3 class="book-cover-title">Brand Book</h3>
+        <p class="book-cover-description">Brand identity, values, positioning, and visual guidelines</p>
+      </div>
+      <footer class="book-cover-footer">
+        <span class="book-cover-byline"><em>by</em> Studio</span>
+      </footer>
+    </a>
+    <a href="#" class="book-cover">
+      <header class="book-cover-header"><div class="book-cover-trailing">{{icon:open-full}}</div></header>
+      <div class="book-cover-body">
+        <h3 class="book-cover-title">Design System</h3>
+        <p class="book-cover-description">Tokens, components, and styling patterns</p>
+      </div>
+      <footer class="book-cover-footer">
+        <span class="book-cover-byline"><em>by</em> Erlen</span>
+      </footer>
+    </a>
+  </div>
+</div>
+
+```html
+<div class="book-shelf">
+  <a href="/brand/" class="book-cover">
+    <header class="book-cover-header">
+      <div class="book-cover-trailing">
+        <div class="svg-icn" data-icon="open-full"><!-- inline svg --></div>
+      </div>
+    </header>
+    <div class="book-cover-body">
+      <h3 class="book-cover-title">Brand Book</h3>
+      <p class="book-cover-description">Brand identity, values, positioning, and visual guidelines</p>
+    </div>
+    <footer class="book-cover-footer">
+      <span class="book-cover-byline"><em>by</em> Studio</span>
+    </footer>
+  </a>
+  <!-- repeat for each book -->
+</div>
+```
+
+Covers share a minimum height so a row of mixed-length titles still reads as a shelf. Resize every cover at once by re-pointing `--book-cover-min-height`; never override the height on a single card.
+
+For auto-generated covers, the doc generator builds these from `cms/*.md` frontmatter. Set the byline with the `author:` frontmatter field, which falls back to `Studio` when omitted.
+
+---
+
+## Using the header slots
+
+The header is a strip with a start slot and an end slot. `.book-cover-trailing` holds the open affordance on the right; `.book-cover-leading` is the optional left slot that says *what this is*.
+
+Use `leading` when a shelf mixes kinds of thing and the title alone doesn't distinguish them — a brand book beside a tool beside a reference. On a shelf of like-for-like sections it is noise, so leave it out.
+
+<div class="book-cover-trailing">{{icon:open-full}}</div>
+      </header>
+      <div class="book-cover-body">
+        <h3 class="book-cover-title">Brand Book</h3>
+        <p class="book-cover-description">Identity, values, and visual guidelines</p>
+      </div>
+      <footer class="book-cover-footer">
+        <span class="book-cover-byline"><em>by</em> Studio</span>
+      </footer>
+    </a>
+    <a href="#" class="book-cover">
+      <header class="book-cover-header">
+        <div class="book-cover-leading">{{icon:tools}}</div>
+        <div class="book-cover-trailing">{{icon:open-full}}</div>
+      </header>
+      <div class="book-cover-body">
+        <h3 class="book-cover-title">Tools</h3>
+        <p class="book-cover-description">Utilities for ad ops and asset preparation</p>
+      </div>
+      <footer class="book-cover-footer">
+        <span class="book-cover-byline"><em>by</em> Studio</span>
+      </footer>
+    </a>
+  </div>
+</div>
+
+```html
+<header class="book-cover-header">
+  <div class="book-cover-leading">
+    <div class="svg-icn" data-icon="brand-book"><!-- inline svg --></div>
+  </div>
+  <div class="book-cover-trailing">
+    <div class="svg-icn" data-icon="open-full"><!-- inline svg --></div>
+  </div>
+</header>
+```
+
+The leading icon is visible at rest; the trailing icon fades in on hover and focus. That difference is the point — one says what this is, the other says what happens if you click.
+
+A leading icon that only repeats the title needs `aria-hidden="true"`. One that carries information the title doesn't needs an accessible name.
+
+---
+
+## Using the footer slots
+
+Same shape at the bottom: `.book-cover-byline` on the left, `.book-cover-meta` on the right. Meta is a status slot — a count, a date, an access level — and [Tag](/website/tag.html) or [Badge](/website/badge.html) sit in it directly.
+
+</header>
+      <div class="book-cover-body">
+        <h3 class="book-cover-title">Design System</h3>
+        <p class="book-cover-description">Tokens, components, and styling patterns</p>
+      </div>
+      <footer class="book-cover-footer">
+        <span class="book-cover-byline"><em>by</em> Studio</span>
+        <span class="book-cover-meta"><span class="tag">38 pages</span></span>
+      </footer>
+    </a>
+    <a href="#" class="book-cover">
+      <header class="book-cover-header">
+        <div class="book-cover-leading">{{icon:lock}}</div>
+        <div class="book-cover-trailing">{{icon:open-full}}</div>
+      </header>
+      <div class="book-cover-body">
+        <h3 class="book-cover-title">Commercial</h3>
+        <p class="book-cover-description">Rate cards, contracts, and partner terms</p>
+      </div>
+      <footer class="book-cover-footer">
+        <span class="book-cover-byline"><em>by</em> Studio</span>
+        <span class="book-cover-meta"><span class="tag" data-color="warning">Team only</span></span>
+      </footer>
+    </a>
+  </div>
+</div>
+
+```html
+<footer class="book-cover-footer">
+  <span class="book-cover-byline"><em>by</em> Studio</span>
+  <span class="book-cover-meta">
+    <span class="tag">38 pages</span>
+  </span>
+</footer>
+```
+
+Keep meta to a short noun. The whole card is one link, so its accessible name is every word inside it — a sentence in the footer makes each cover announce as a paragraph.
+
+A colour-only status fails [WCAG 1.4.1](https://www.w3.org/WAI/WCAG21/Understanding/use-of-color). "Team only" in an amber tag is fine; an amber dot on its own is not.
+
+---
+
+## Sizes
+
+`data-size` re-points height, title size, and content inset together. A short cover with a full-size title reads as a mistake rather than a variant, so the three move as one.
+
+</header>
+      <div class="book-cover-body">
+        <h3 class="book-cover-title">Small</h3>
+        <p class="book-cover-description">Dense shelves, secondary sections</p>
+      </div>
+      <footer class="book-cover-footer">
+        <span class="book-cover-byline"><em>by</em> Studio</span>
+      </footer>
+    </a>
+    <a href="#" class="book-cover">
+      <header class="book-cover-header"><div class="book-cover-trailing">{{icon:open-full}}</div></header>
+      <div class="book-cover-body">
+        <h3 class="book-cover-title">Default</h3>
+        <p class="book-cover-description">The canonical index cover</p>
+      </div>
+      <footer class="book-cover-footer">
+        <span class="book-cover-byline"><em>by</em> Studio</span>
+      </footer>
+    </a>
+    <a href="#" class="book-cover" data-size="large">
+      <header class="book-cover-header"><div class="book-cover-trailing">{{icon:open-full}}</div></header>
+      <div class="book-cover-body">
+        <h3 class="book-cover-title">Large</h3>
+        <p class="book-cover-description">A landing page's primary route in</p>
+      </div>
+      <footer class="book-cover-footer">
+        <span class="book-cover-byline"><em>by</em> Studio</span>
+      </footer>
+    </a>
+  </div>
+</div>
+
+```html
+<a href="#" class="book-cover" data-size="small">…</a>
+<a href="#" class="book-cover">…</a>          <!-- default -->
+<a href="#" class="book-cover" data-size="large">…</a>
+```
+
+| Size | Min height | Title | Title ≤959px | Content inset |
+|---|---|---|---|---|
+| `small` | `170px` | `--font-3xl` | `--font-xl` | `--space-l` |
+| default | `250px` | `--font-5xl` | `--font-3xl` | `--space-2xl` |
+| `large` | `340px` | `--font-6xl` | `--font-4xl` | `--space-3xl` |
+
+Each title drops two rungs below 960px, the same step the heading scale takes.
+
+**Keep one size per shelf.** Uniform height is what makes an index read as a shelf rather than a pile — mixing sizes in one grid is the fastest way to lose that. The demo above breaks the rule only to show the three side by side.
+
+---
+
+## Contents
+
+Inside a book, entries stack as wide horizontal rows rather than tall centred cards. The wrapper draws the outer border; each item draws its own bottom rule.
+
+<div class="book-contents-item-trailing">{{icon:open-full}}</div>
+    </a>
+    <a href="#" class="book-contents-item">
+      <div class="book-contents-item-body">
+        <h3 class="book-contents-item-title">Typography</h3>
+        <p class="book-contents-item-description" data-text-wrap="pretty">Type scale, weights, and text utilities</p>
+      </div>
+      <div class="book-contents-item-trailing">{{icon:open-full}}</div>
+    </a>
+  </div>
+</div>
+
+```html
+<div class="book-contents">
+  <a href="/website/color.html" class="book-contents-item">
+    <div class="book-contents-item-body">
+      <h3 class="book-contents-item-title">Colour</h3>
+      <p class="book-contents-item-description" data-text-wrap="pretty">Palette, scales, and semantic colour mappings</p>
+    </div>
+    <div class="book-contents-item-trailing">
+      <div class="svg-icn" data-icon="open-full"><!-- inline svg --></div>
+    </div>
+  </a>
+  <!-- repeat for each entry -->
+</div>
+```
+
+---
+
+## Using the row slots
+
+A row carries the same slot vocabulary as a cover, but **no header or footer strip**. A cover is a vertical surface, so it has room for two strips with two ends each. A row is one horizontal line: `leading` at the start, `trailing` at the end, and everything else in the body between them.
+
+That is also why the cover's separate `byline` and `meta` slots collapse here — on a footer strip they are two ends with two jobs, but a row has no strip, so the byline sits *inside* meta. Meta takes whatever the row needs to say about itself: an access tag, a byline, a date, or several.
+
+<div class="book-contents-item-body">
+        <h3 class="book-contents-item-title">Tone of Voice</h3>
+        <p class="book-contents-item-description" data-text-wrap="pretty">How we sound, and the words we avoid</p>
+        <span class="book-contents-item-meta"><span class="book-contents-item-byline"><em>by</em> Studio</span></span>
+      </div>
+      <div class="book-contents-item-trailing">{{icon:open-full}}</div>
+    </a>
+    <a href="#" class="book-contents-item">
+      <div class="book-contents-item-leading">{{icon:lock}}</div>
+      <div class="book-contents-item-body">
+        <h3 class="book-contents-item-title">Rate Card</h3>
+        <p class="book-contents-item-description" data-text-wrap="pretty">Commercial terms and partner pricing</p>
+        <span class="book-contents-item-meta"><span class="tag" data-color="warning">Team only</span></span>
+      </div>
+      <div class="book-contents-item-trailing">{{icon:open-full}}</div>
+    </a>
+    <a href="#" class="book-contents-item">
+      <div class="book-contents-item-body">
+        <h3 class="book-contents-item-title">Iconography</h3>
+        <p class="book-contents-item-description" data-text-wrap="pretty">The icon set, and when to request a new one</p>
+        <span class="book-contents-item-meta"><span class="tag">Updated</span> <span class="book-contents-item-byline"><em>by</em> Erlen</span></span>
+      </div>
+      <div class="book-contents-item-trailing">{{icon:open-full}}</div>
+    </a>
+  </div>
+</div>
+
+```html
+<a href="/brand/rate-card.html" class="book-contents-item">
+  <div class="book-contents-item-leading">
+    <div class="svg-icn" data-icon="lock"><!-- inline svg --></div>
+  </div>
+  <div class="book-contents-item-body">
+    <h3 class="book-contents-item-title">Rate Card</h3>
+    <p class="book-contents-item-description" data-text-wrap="pretty">Commercial terms and partner pricing</p>
+    <span class="book-contents-item-meta">
+    <span class="tag" data-color="warning">Team only</span>
+  </span>
+  </div>
+  <div class="book-contents-item-trailing">
+    <div class="svg-icn" data-icon="open-full"><!-- inline svg --></div>
+  </div>
+</a>
+```
+
+Both slots are optional and independent — the third row above has meta but no identity, and mixing them down a list is fine.
+
+Meta wraps rather than competing, so a row tolerates more here than a cover footer does. Identity and action still refuse to shrink, so keep those to a single icon.
+
+---
+
+## Columns
+
+`data-cols` re-points the column token. Two columns is the default and the canonical index layout — it gives every book room to breathe. Three suits shorter titles and denser sets.
+
+```html
+<div class="book-shelf" data-cols="3">…</div>
+```
+
+Both settings collapse to a single column at 768px. The breakpoint belongs to the component rather than the grid utility, so it travels with it into another product.
+
+---
+
+## Group headings
+
+`.book-shelf-title` and `.book-contents-title` label a group within a longer index. They carry the eyebrow treatment without depending on the `.eyebrow` utility, so a product can restyle them on their own.
+
+```html
+<h2 class="book-contents-title">Foundations</h2>
+<div class="book-contents">…</div>
+```
+
+---
+
+## Accessibility
+
+- **Use `<a>`, never a `<div>` with a click handler.** Every cover and contents item is a navigation link. The whole card is the link, so the accessible name is its full text content — title, description, and author together.
+- **Keep `meta` short.** Anything in `.book-cover-meta` or `.book-contents-item-meta` joins the link's accessible name. A date or a one-word status is fine; a sentence makes every card announce as a paragraph.
+- **The trailing icon is decorative** and must carry `aria-hidden="true"`. It repeats what the link already says. Icons rendered through the design system's `.svg-icn` wrapper already do this.
+- **A leading icon needs a decision.** If it duplicates the title, hide it with `aria-hidden="true"`; if it carries information the title does not, give it an accessible name.
+- **Never nest interactive content in a slot.** The card is already a link — a button or second link inside it is invalid HTML and unreachable in several screen-reader modes. A card needing a second action should be restructured so the action is a sibling of the link, not a child.
+- **Heading levels are the caller's responsibility.** Cards render `<h3>`. Place a group heading (`<h2>`) above the shelf or contents list so the page does not jump from `<h1>` to `<h3>`.
+- **Focus and hover reveal the trailing icon equally.** A keyboard user tabbing a shelf sees the same affordance a mouse user does. Both states also draw the focus ring, which is the real affordance — do not remove it.
+- **Reduced motion is handled.** `--book-cover-lift` is re-pointed to `0` under `prefers-reduced-motion: reduce`, so the hover lift stops while colour feedback stays.
+- **Status must not be colour-only.** A badge in a meta slot needs text or an icon alongside the colour.
+
+---
+
+## Usage rules
+
+**Do:**
+
+- Use `.book-shelf` + `.book-cover` on overview and landing pages, wherever a visitor chooses a section to open
+- Use `.book-contents` + `.book-contents-item` one level down, listing the pages inside a section
+- Keep cover titles to one to four words so they do not wrap to a third line
+- Keep descriptions to one sentence; covers already set `text-wrap: pretty`, contents rows need `data-text-wrap="pretty"` explicitly
+- Re-point tokens to restyle; a product changes `--book-cover-min-height`, not the rule
+
+**Don't:**
+
+- Don't add `.card` alongside `.book-cover` — it is standalone and ships its own background, border, and hover states
+- Don't override `min-height` on a single cover; uniform height is what makes a shelf read as a shelf
+- Don't swap the trailing icon per card — constancy is what signals "this opens". That is By Default's usage rule, not a component constraint
+- Don't put extra content in `.book-cover-body`; the centred slot is title and description only
+- Don't mix `.book-cover` and `.card` in one grid — pick one pattern per surface
+- Don't wrap a shelf in `.grid.cols-2.gap-xl`; the shelf owns its layout
+- Don't mix sizes in one shelf — uniform height is what makes an index read as a shelf
+- Don't give a contents row a header or footer strip; that turns a row into a card and blurs the shelf/contents distinction
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | What it controls |
+|---|---|---|
+| `--book-shelf-columns` | `2` | Column count on the shelf |
+| `--book-shelf-gap` | `var(--space-xl)` | Space between covers |
+| `--book-cover-min-height` | `250px` | Cover height — the shelf's visual rhythm |
+| `--book-cover-title-size` | `var(--font-5xl)` | Cover title; `data-size` and the 960px step re-point it |
+| `--book-cover-background` | `var(--background-primary)` | Cover fill; dark mode re-points to `var(--background-secondary)` |
+| `--book-cover-background-hover` | `var(--background-faded)` | Cover fill on hover |
+| `--book-cover-border` | `var(--border-s) solid var(--border-faded)` | Cover border |
+| `--book-cover-bar-padding` | `var(--space-m) var(--space-l)` | Header and footer strip inset |
+| `--book-cover-body-padding` | `var(--space-2xl)` | Centred content inset |
+| `--book-cover-lift` | `-2px` | Hover travel; re-pointed to `0` under reduced motion |
+| `--book-cover-shadow-hover` | `0 7px 1px -3px var(--black-alpha-10)` | Hover shadow |
+| `--book-contents-border` | `var(--border-s) solid var(--border-faded)` | Contents list outer border |
+| `--book-contents-item-padding` | `var(--space-xl)` | Row height |
+| `--book-contents-item-gap` | `var(--space-l)` | Space between a row's slots |
+| `--book-contents-item-title-size` | `var(--font-4xl)` | Row title; steps down at 960px |
+| `--book-contents-item-background-hover` | `var(--background-faded)` | Row fill on hover |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.book-shelf` | L0 grid of covers; owns columns and gap |
+| `.book-shelf[data-cols="3"]` | Three-column shelf |
+| `.book-cover[data-size="small\|large"]` | Smaller or larger cover — height, title, and inset together |
+| `.book-shelf-title` | Group heading above a shelf |
+| `.book-cover` | One closed book — a self-contained link card |
+| `.book-cover-header` / `.book-cover-footer` | Full-width strips, start slot and end slot |
+| `.book-cover-leading` | Header start icon; varies per card |
+| `.book-cover-trailing` | Header end icon; hints at what clicking does |
+| `.book-cover-body` | Centred title and description, absorbs remaining height |
+| `.book-cover-title` / `.book-cover-description` | Cover text |
+| `.book-cover-byline` | Footer start — "by X" |
+| `.book-cover-meta` | Footer end — metadata: a tag, a date, a count |
+| `.book-contents` | L1 table of contents; draws the outer border |
+| `.book-contents-title` | Group heading above a contents list |
+| `.book-contents-item` | One line in the contents |
+| `.book-contents-item-leading` | Leading icon; varies per row |
+| `.book-contents-item-body` | Title and description column; grows to fill |
+| `.book-contents-item-title` / `.book-contents-item-description` | Row text |
+| `.book-contents-item-meta` | Metadata, inside the body under the description |
+| `.book-contents-item-trailing` | Trailing icon; hints at what clicking does |
+| `.book-contents-item-byline` | "by X", inside meta |
+
 ### Breadcrumb
 
 Breadcrumbs show the user's location within a site hierarchy. The component uses native `<nav>` with `aria-label` for accessibility.
@@ -3626,7 +4180,7 @@ Breadcrumbs show the user's location within a site hierarchy. The component uses
 <nav class="breadcrumb" aria-label="Breadcrumb">
   <a href="/">Home</a>
   <span class="breadcrumb-separator" aria-hidden="true">/</span>
-  <a href="/design-system/">Design System</a>
+  <a href="/website/">Website</a>
   <span class="breadcrumb-separator" aria-hidden="true">/</span>
   <span aria-current="page">Breadcrumb</span>
 </nav>
@@ -3653,9 +4207,9 @@ Breadcrumbs support any depth. The last item uses `aria-current="page"` and is r
 <nav class="breadcrumb" aria-label="Breadcrumb">
   <a href="/">Home</a>
   <span class="breadcrumb-separator" aria-hidden="true">/</span>
-  <a href="/design-system/">Design System</a>
+  <a href="/website/">Website</a>
   <span class="breadcrumb-separator" aria-hidden="true">/</span>
-  <a href="/design-system/content/">Content</a>
+  <a href="/website/components/">Components</a>
   <span class="breadcrumb-separator" aria-hidden="true">/</span>
   <span aria-current="page">Breadcrumb</span>
 </nav>
@@ -3945,6 +4499,14 @@ Use `<button>` when clicking **does something on this page**. Use `<a href>` whe
 ```html
 <button class="button" type="submit">Submit (button)</button>
 <a class="button" href="/work" data-variant="outline">Navigate (link)</a>
+```
+
+### External links
+
+Prose links carrying `target="_blank"` get an external-link glyph appended by the design system. A button doesn't — the glyph is there to tell a run of underlined text apart from the surrounding copy, and a button is already a distinct affordance with its own icon slot. Keep `rel="noopener noreferrer"`, and say where the link goes in the label rather than leaning on a mark.
+
+```html
+<a class="button" href="https://figma.com/file/…" target="_blank" rel="noopener noreferrer">Open in Figma</a>
 ```
 
 ### Disabled links
@@ -4751,11 +5313,33 @@ Include `assets/js/dialog.js` on any page using dialogs.
 <script src="/assets/js/dialog.js"></script>
 ```
 
-- `data-dialog-open="dialog-id"` on a trigger opens the dialog via `showModal()`
-- `data-dialog-close` inside a dialog closes it
-- Clicking the backdrop also closes the dialog
+One script serves both Dialog and [Drawer](/website/drawer.html) — they are the same machinery, a modal `<dialog>` with native focus trapping, differing only in where the panel sits.
+
+| API | Purpose |
+|---|---|
+| `data-dialog-open="dialog-id"` | On a trigger, opens that dialog via `showModal()` |
+| `data-dialog-close` | Inside a dialog, closes it |
+| `data-static` | Opt out of closing on a backdrop press |
+| `dialog-hide` | Cancellable event fired before closing, with `detail.source` |
+| `window.bdRequestClose(el, source)` | Closes through the guard |
+| `window.bdCloseOpenDialogs()` | Force-closes every open dialog and drawer, skipping guards |
+
+Clicking the backdrop closes the dialog unless it carries `data-static`.
 
 Every listener is delegated from `document`, so dialogs added after page load — a CMS render, a client app, a Barba container swap — work with no re-init. `window.initDialog()` exists for parity with the other modules, but calling it again is a no-op.
+
+### Guarding the close
+
+Every user-driven close fires a cancellable `dialog-hide` first. `preventDefault()` keeps the dialog open and pulses it, so a blocked close reads as deliberate rather than broken. `event.detail.source` is `"close-button"`, `"backdrop"` or `"escape"`.
+
+```js
+dialog.addEventListener('dialog-hide', (event) => {
+  if (event.detail.source === 'close-button') return;
+  if (hasUnsavedChanges()) event.preventDefault();
+});
+```
+
+Two limits worth knowing. A direct `dialog.close()` bypasses the guard — route programmatic closes through `window.bdRequestClose(dialog, 'programmatic')` instead. And two Escape presses in a row with no interaction between them always close: the browser only makes the first close request cancellable. Treat the guard as protection against an accidental close, never as the only thing preventing lost work.
 
 ---
 
@@ -4796,7 +5380,7 @@ This relies on `@starting-style` and `transition-behavior: allow-discrete` — t
 
 | Key | Action |
 |-----|--------|
-| `Escape` | Closes the dialog |
+| `Escape` | Closes the dialog, unless a `dialog-hide` listener cancels it |
 | `Tab` | Cycles through focusable elements inside the dialog (focus is trapped) |
 | `Enter` / `Space` | Activates the focused button |
 
@@ -4825,7 +5409,7 @@ This relies on `@starting-style` and `transition-behavior: allow-discrete` — t
 - Don't use dialogs for content that should be inline on the page
 - Don't stack dialogs on top of each other
 - Don't use dialogs for simple alerts. Use callouts or toasts instead
-- Don't rely on backdrop dismissal alone for a dialog holding unsaved input — a stray click discards it. Listen for the `cancel` event and call `preventDefault()` if you need a "discard changes?" guard
+- Don't rely on backdrop dismissal alone for a dialog holding unsaved input — a stray click discards it. Add `data-static`, or listen for `dialog-hide` and call `preventDefault()`. Don't listen for the native `cancel` event: the script intercepts it so Escape runs through the same guard as every other close path
 
 ---
 
@@ -4861,6 +5445,7 @@ Re-point these to re-skin the dialog for a brand. Never override the `.dialog` r
 | `.dialog::backdrop` | Backdrop overlay colour |
 | `.dialog[open]` | Open state: `display` plus the settled opacity / translate. Layout deliberately lives on `.dialog` — see Motion |
 | `@starting-style .dialog[open]` | Pre-open state that makes the entrance animatable |
+| `.dialog.is-pulsing` | Blocked-close feedback, shared with Drawer |
 | `.dialog-header` | Flex row for title + close button |
 | `.dialog-title` | Dialog heading |
 | `.dialog-body` | Scrolling content area (`min-height: 0` so the footer can't be pushed out) |
@@ -4868,7 +5453,7 @@ Re-point these to re-skin the dialog for a brand. Never override the `.dialog` r
 | `.dialog-close` | Deprecated bespoke close button, kept for existing markup. Use `.button.close-btn` |
 | `[data-theme="dark"] .dialog` | Dark mode: re-points `--dialog-background` and `--dialog-shadow` |
 
-The close button is the shared `.close-btn` role class, documented in [Button](/design-system/button.html). It is not a dialog-specific component.
+The close button is the shared `.close-btn` role class, documented in [Button](/website/button.html). It is not a dialog-specific component.
 
 ### Disclosure
 
@@ -5113,6 +5698,329 @@ Use `.divider--vertical` inside a flex row to separate inline content.
 - Don't use dividers where spacing alone provides sufficient separation
 - Don't use dividers between every element. They should be intentional
 
+### Drawer
+
+Drawers are modal panels docked to an edge of the viewport, built on the native `<dialog>` element. They share their machinery with [Dialog](/website/dialog.html) — the same focus trapping, the same Escape handling, the same script. A drawer is the right choice when the content sits *beside* the page rather than interrupting it: navigation, filters, a detail view, a settings panel. The `.drawer` class is required, and `data-placement` chooses the edge.
+
+---
+
+## Anatomy
+
+| Axis | Mechanism | Example |
+|---|---|---|
+| Edge | `data-placement` | `data-placement="start"` |
+| Backdrop press | `data-static` | `data-static` |
+| Width or height | `--drawer-size` | `--drawer-size: 32rem` |
+
+The drawer defines its own component tokens, all prefixed `--drawer-*`. Re-point those to re-skin it; never override the rules themselves.
+
+---
+
+## Basic usage
+
+A drawer is a `<dialog class="drawer">`. A trigger carrying `data-drawer-open` opens it by `id`; any control inside carrying `data-drawer-close` closes it.
+
+</button>
+    </div>
+    <div class="drawer-body">
+      <p>Panel content goes here. The body scrolls on its own, so the header and footer stay in place however long this gets.</p>
+    </div>
+  </dialog>
+</div>
+
+```html
+<button class="button" type="button" data-drawer-open="my-drawer">Open drawer</button>
+
+<dialog id="my-drawer" class="drawer" aria-labelledby="my-drawer-title">
+  <div class="drawer-header">
+    <h2 class="drawer-title" id="my-drawer-title">Settings</h2>
+    <button class="button close-btn" type="button" data-icon-only data-size="small"
+            data-drawer-close aria-label="Close"><!-- close icon --></button>
+  </div>
+  <div class="drawer-body">…</div>
+</dialog>
+```
+
+---
+
+## Placement
+
+Four edges. `start` and `end` are inline edges and take a width; `top` and `bottom` are block edges and take a height. Omitting the attribute gives you `end`.
+
+<dialog id="demo-drawer-start" class="drawer" data-placement="start" aria-labelledby="demo-drawer-start-title">
+    <div class="drawer-header">
+      <h2 class="drawer-title" id="demo-drawer-start-title">Start</h2>
+      <button class="button close-btn" type="button" data-icon-only data-size="small" data-drawer-close aria-label="Close">
+        <div class="svg-icn" data-icon="close"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.4 19L5 17.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L5 6.4L6.4 5L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L17.6 5L19 6.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L19 17.6L17.6 19L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L6.4 19Z" fill="currentColor"/></svg></div>
+      </button>
+    </div>
+    <div class="drawer-body"><p>Docked to the inline start edge. This is the placement for navigation.</p></div>
+  </dialog>
+  <dialog id="demo-drawer-end" class="drawer" data-placement="end" aria-labelledby="demo-drawer-end-title">
+    <div class="drawer-header">
+      <h2 class="drawer-title" id="demo-drawer-end-title">End</h2>
+      <button class="button close-btn" type="button" data-icon-only data-size="small" data-drawer-close aria-label="Close">
+        <div class="svg-icn" data-icon="close"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.4 19L5 17.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L5 6.4L6.4 5L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L17.6 5L19 6.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L19 17.6L17.6 19L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L6.4 19Z" fill="currentColor"/></svg></div>
+      </button>
+    </div>
+    <div class="drawer-body"><p>The default. Use it for detail views and filters.</p></div>
+  </dialog>
+  <dialog id="demo-drawer-top" class="drawer" data-placement="top"  aria-labelledby="demo-drawer-top-title">
+    <div class="drawer-header">
+      <h2 class="drawer-title" id="demo-drawer-top-title">Top</h2>
+      <button class="button close-btn" type="button" data-icon-only data-size="small" data-drawer-close aria-label="Close">
+        <div class="svg-icn" data-icon="close"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.4 19L5 17.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L5 6.4L6.4 5L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L17.6 5L19 6.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L19 17.6L17.6 19L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L6.4 19Z" fill="currentColor"/></svg></div>
+      </button>
+    </div>
+    <div class="drawer-body"><p>Block edges take a height from <code>--drawer-size</code> instead of a width.</p></div>
+  </dialog>
+  <dialog id="demo-drawer-bottom" class="drawer" data-placement="bottom"  aria-labelledby="demo-drawer-bottom-title">
+    <div class="drawer-header">
+      <h2 class="drawer-title" id="demo-drawer-bottom-title">Bottom</h2>
+      <button class="button close-btn" type="button" data-icon-only data-size="small" data-drawer-close aria-label="Close">
+        <div class="svg-icn" data-icon="close"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.4 19L5 17.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L5 6.4L6.4 5L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L17.6 5L19 6.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L19 17.6L17.6 19L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L6.4 19Z" fill="currentColor"/></svg></div>
+      </button>
+    </div>
+    <div class="drawer-body"><p>Useful for mobile action sheets.</p></div>
+  </dialog>
+</div>
+
+```html
+<dialog class="drawer" data-placement="start">…</dialog>
+<dialog class="drawer" data-placement="end">…</dialog>   <!-- default -->
+<dialog class="drawer" data-placement="top">…</dialog>
+<dialog class="drawer" data-placement="bottom">…</dialog>
+```
+
+`start` and `end` follow the writing direction, so a right-to-left page docks them to the opposite side and the slide direction flips with them.
+
+---
+
+## Size
+
+One token covers both axes, because only one is ever free: `--drawer-size` is a width on `start` and `end`, a height on `top` and `bottom`. It defaults to `25rem` and is capped at the viewport, so a wide drawer degrades to full-bleed on a narrow screen rather than overflowing.
+
+```css
+.filters-drawer {
+  --drawer-size: 32rem;
+}
+```
+
+---
+
+## Header actions
+
+`.drawer-header-actions` holds supplementary controls beside the close button — a settings shortcut, a link out, an overflow menu.
+
+</button>
+        <button class="button close-btn" type="button" data-icon-only data-size="small" data-drawer-close aria-label="Close">
+          <div class="svg-icn" data-icon="close"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.4 19L5 17.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L5 6.4L6.4 5L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L17.6 5L19 6.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L19 17.6L17.6 19L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L6.4 19Z" fill="currentColor"/></svg></div>
+        </button>
+      </div>
+    </div>
+    <div class="drawer-body"><p>The close button stays last so its position is predictable across every drawer.</p></div>
+  </dialog>
+</div>
+
+```html
+<div class="drawer-header">
+  <h2 class="drawer-title" id="report-title">Report</h2>
+  <div class="drawer-header-actions">
+    <button class="button" type="button" data-variant="transparent" data-icon-only
+            data-size="small" aria-label="Download"><!-- icon --></button>
+    <button class="button close-btn" type="button" data-icon-only data-size="small"
+            data-drawer-close aria-label="Close"><!-- close icon --></button>
+  </div>
+</div>
+```
+
+---
+
+## Without a header
+
+Omit `.drawer-header` entirely. There is no attribute for this — the header is markup you write, so leaving it out is all it takes. A drawer with no header has no visible title, so it must carry `aria-label`, and it must still offer a way out: a close control somewhere in the body, or the backdrop left dismissible (no `data-static`).
+
+```html
+<dialog class="drawer" data-placement="start" aria-label="Navigation">
+  <div class="drawer-body">
+    <nav>…</nav>
+  </div>
+</dialog>
+```
+
+---
+
+## Footer
+
+`.drawer-footer` pins actions to the bottom while the body scrolls between it and the header.
+
+</button>
+    </div>
+    <div class="drawer-body">
+      <p>Long lists of filter controls scroll here.</p>
+      <p>The footer below never moves.</p>
+    </div>
+    <div class="drawer-footer">
+      <button class="button" data-variant="faded" type="button" data-drawer-close>Reset</button>
+      <button class="button" type="button" data-drawer-close autofocus>Apply</button>
+    </div>
+  </dialog>
+</div>
+
+```html
+<div class="drawer-footer">
+  <button class="button" data-variant="faded" type="button" data-drawer-close>Reset</button>
+  <button class="button" type="button" data-drawer-close autofocus>Apply</button>
+</div>
+```
+
+---
+
+## Static drawers
+
+Pressing the backdrop closes the drawer by default. Add `data-static` when the drawer holds unsaved work and closing it by accident would lose something.
+
+```html
+<dialog class="drawer" data-static aria-labelledby="edit-title">…</dialog>
+```
+
+The attribute is presence-only — there is no `data-static="false"`. A valued opt-out would fail unsafe: any typo in the value reads as "not false" and leaves the backdrop live on the one drawer that was being protected.
+
+With `data-static` the backdrop stops responding entirely, so the close button and Escape become the only ways out. One of them must always be present.
+
+---
+
+## Guarding the close
+
+Every user-driven close fires a cancellable `drawer-hide` event before anything happens. Calling `preventDefault()` keeps the drawer open and pulses it, so a blocked close reads as deliberate rather than broken.
+
+`event.detail.source` says what asked to close: `"close-button"`, `"backdrop"` or `"escape"`.
+
+```js
+const drawer = document.getElementById('edit-drawer');
+
+drawer.addEventListener('drawer-hide', (event) => {
+  // Let the explicit close button through; guard the accidental paths.
+  if (event.detail.source === 'close-button') return;
+  if (hasUnsavedChanges()) event.preventDefault();
+});
+```
+
+A direct `drawer.close()` bypasses the guard — the native method cannot be intercepted. Route programmatic closes through `window.bdRequestClose(drawer, 'programmatic')` when the guard should apply.
+
+The guard is a safety net, not a lock. Two Escape presses in a row with no interaction between them always close the drawer: the browser only makes the first close request cancellable, and cancelling it consumes the user activation that would make the next one cancellable too. Treat `drawer-hide` as protection against an accidental close, and never as the only thing standing between a user and lost work — persist a draft as well.
+
+---
+
+## JavaScript
+
+Include `assets/js/dialog.js` on any page with a drawer. One script serves both Dialog and Drawer; they are the same machinery, so there is no separate `drawer.js` to add.
+
+```html
+<script src="/assets/js/dialog.js" defer></script>
+```
+
+Every listener is delegated from `document`, so drawers rendered after load work without re-initialising.
+
+| API | Purpose |
+|---|---|
+| `data-drawer-open="id"` | On a trigger, opens that drawer |
+| `data-drawer-close` | Inside a drawer, closes it |
+| `drawer-hide` | Cancellable event fired before closing, with `detail.source` |
+| `window.bdRequestClose(el, source)` | Closes through the guard |
+| `window.bdCloseOpenDialogs()` | Force-closes every open dialog and drawer, skipping guards |
+
+A client-side router must call `bdCloseOpenDialogs()` before swapping page content. A modal that survives the swap keeps the new page inert; one destroyed while open strands focus with no announcement.
+
+---
+
+## Accessibility
+
+- Every drawer must be named. Use `aria-labelledby` pointing at `.drawer-title`, or `aria-label` when there is no header
+- Focus trapping, Escape and backdrop inertness are native to `<dialog>` opened with `showModal()` — do not reimplement them
+- Put `autofocus` on the control the user most likely wants. Without it the browser focuses the first focusable element, which is usually the close button
+- Icon-only controls in the header must carry `aria-label`, including the close button
+- The page behind a drawer is locked from scrolling while it is open, so a keyboard user cannot lose their place
+- Escape is intercepted so it runs through the same guard as the other close paths. A drawer that blocks Escape must offer a visible close control, or the keyboard user has no way out
+- Reduced motion replaces the slide with a short fade, and replaces the blocked-close pulse with a backdrop flash rather than dropping the feedback entirely
+
+---
+
+## Usage rules
+
+**Do:**
+- Use a drawer when content sits beside the page — navigation, filters, a detail view
+- Put it as a direct child of `<body>`, or at least outside `[data-barba="container"]`. A drawer destroyed mid-transition while open leaves the top layer and focus inconsistent
+- Use `start` for navigation and `end` for detail and filter panels, consistently across a product
+- Guard the close when the drawer holds unsaved work
+
+**Don't:**
+- Don't use a drawer for a confirmation or a short message — that is a [Dialog](/website/dialog.html)
+- Don't open a drawer from inside another drawer; two stacked modals leave no clear way back
+- Don't remove the close button when light dismiss is off
+- Don't set both `.dialog` and `.drawer` on one element — they are alternative treatments of the same base, not composable
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | What it controls |
+|---|---|---|
+| `--drawer-background` | `var(--background-primary)` | Panel background |
+| `--drawer-shadow` | `0 8px 32px var(--black-alpha-20)` | Panel shadow |
+| `--drawer-radius` | `0` | Corner radius |
+| `--drawer-padding` | `var(--space-xl)` | Inner padding |
+| `--drawer-backdrop` | `var(--background-modal)` | Backdrop fill |
+| `--drawer-size` | `25rem` | Width on inline edges, height on block edges |
+| `--drawer-travel` | `100%` | How far the drawer travels when closed |
+| `--drawer-offset` | Set per placement | Closed-state translate — direction only, magnitude comes from `--drawer-travel` |
+| `--drawer-enter-duration` | `var(--duration-s)` | Entrance duration |
+| `--drawer-enter-easing` | `var(--ease-out)` | Entrance easing |
+| `--drawer-exit-duration` | `var(--duration-xs)` | Exit duration |
+| `--drawer-exit-easing` | `var(--ease-in)` | Exit easing |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.drawer` | Base component, closed/exit state |
+| `.drawer::backdrop` | Backdrop, closed/exit state |
+| `.drawer:not([data-placement="top"]):not([data-placement="bottom"])` | Inline-edge sizing — also catches an unrecognised value |
+| `.drawer[data-placement="start"]` | Docked to the inline start edge |
+| `.drawer:not([data-placement="start"]):not(…top):not(…bottom)` | Docked to the inline end edge — the default, and the fallback |
+| `.drawer[data-placement="top"]` | Docked to the block start edge |
+| `.drawer[data-placement="bottom"]` | Docked to the block end edge |
+| `.drawer[data-placement="start"]:dir(rtl)` | Flips the slide direction to match the flipped inset |
+| `.drawer[open]` | Open state and entrance transition |
+| `.drawer[open]::backdrop` | Backdrop entrance transition |
+| `@starting-style .drawer[open]` | Pre-open state, required to transition in from the top layer |
+| `html:has(.drawer[open])`, `body:has(.drawer[open])` | Locks page scroll while a drawer is open |
+| `.dialog.is-pulsing`, `.drawer.is-pulsing` | Blocked-close feedback, shared with Dialog |
+| `.drawer-header` | Title row |
+| `.drawer-title` | Heading |
+| `.drawer-header-actions` | Supplementary header controls |
+| `.drawer-body` | Scrolling content region |
+| `.drawer-footer` | Pinned action row |
+| `[data-theme="dark"] .drawer` | Dark mode token re-point |
+
+### Key rules
+
+Placement pins one axis and stretches the other: inline placements set `inset-block: 0` and take `--drawer-size` as `inline-size`; block placements set `inset-inline: 0` and take it as `block-size`. The opposite inset is reset to `auto` so the UA's `inset: 0` cannot stretch the drawer across the viewport — without that reset, an over-constrained `end` drawer would dock to the start edge instead.
+
+The inline-edge rules are written as negations of the block-edge values rather than as a list of known values, so an unrecognised `data-placement` degrades to a working `end` drawer instead of a full-screen panel with no animation.
+
+Travel is split from direction. `--drawer-travel` carries the magnitude and is declared once on `.drawer`; the placement rules set direction only. That is what lets the reduced-motion block zero the travel — declaring the full offset on the placement rules would put it out of reach of a `.drawer`-level override, and reduced-motion users would get the whole slide compressed into a shorter duration.
+
+Page scroll is locked on `html` and `body` while a drawer is open. That only reaches documents whose scroller is the root: a product that scrolls a container element, or drives scrolling through a library, has to lock its own scroller.
+
+Entrance and exit use the same top-layer technique as Dialog — `@starting-style` to transition in, `allow-discrete` plus `overlay` to transition out. Engines missing either feature show and hide the drawer with no animation, which degrades cleanly rather than breaking.
+
+Reduced motion re-points the motion tokens rather than disabling the transition, so the discrete `display` and `overlay` steps still run and the drawer cannot get stuck mid-exit.
+
 ### Drop Cap
 
 A drop cap styles the first letter of a paragraph as a large decorative initial that the surrounding text wraps around. Apply it to the opening paragraph of an article or editorial piece.
@@ -5160,7 +6068,7 @@ The most common trigger. The `.dropdown-chevron` rotates 180 degrees when the dr
 <span>Account</span>
       <div class="svg-icn dropdown-chevron" data-icon="chevron-down"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15.375L6 9.375L7.4 7.975L12 12.575L16.6 7.975L18 9.375L12 15.375Z" fill="currentColor"/></svg></div>
     </button>
-    <div class="dropdown-menu">
+    <div class="dropdown-menu" role="menu">
       <button class="dropdown-item" role="menuitem" type="button">Profile</button>
       <button class="dropdown-item" role="menuitem" type="button">Settings</button>
       <div class="dropdown-divider" role="separator"></div>
@@ -5176,7 +6084,7 @@ The most common trigger. The `.dropdown-chevron` rotates 180 degrees when the dr
     <span>Account</span>
     <div class="svg-icn dropdown-chevron" data-icon="chevron-down"><!-- svg --></div>
   </button>
-  <div class="dropdown-menu">
+  <div class="dropdown-menu" role="menu">
     <!-- items -->
   </div>
 </div>
@@ -5187,7 +6095,7 @@ The most common trigger. The `.dropdown-chevron` rotates 180 degrees when the dr
 For toolbars and compact contexts. No text, no chevron. The icon alone signals "click for options."
 
 </button>
-    <div class="dropdown-menu is-right">
+    <div class="dropdown-menu" role="menu">
       <button class="dropdown-item" role="menuitem" type="button">Edit</button>
       <button class="dropdown-item" role="menuitem" type="button">Duplicate</button>
       <div class="dropdown-divider" role="separator"></div>
@@ -5207,7 +6115,7 @@ For toolbars and compact contexts. No text, no chevron. The icon alone signals "
 For page content where the trigger should look like a standard button.
 
 </button>
-    <div class="dropdown-menu">
+    <div class="dropdown-menu" role="menu">
       <button class="dropdown-item" role="menuitem" type="button">Option A</button>
       <button class="dropdown-item" role="menuitem" type="button">Option B</button>
       <button class="dropdown-item" role="menuitem" type="button">Option C</button>
@@ -5235,15 +6143,53 @@ For page content where the trigger should look like a standard button.
 
 ---
 
-## Menu alignment
+## Placement
 
-Menus open left-aligned by default. Add `.is-right` to right-align from the trigger.
+Menus open below the trigger, left-aligned. Set `data-placement` on the `.dropdown` to ask for something else.
+
+| Value | Opens |
+|---|---|
+| `bottom-start` | Below, left-aligned — the default |
+| `bottom-end` | Below, right-aligned |
+| `top-start` | Above, left-aligned |
+| `top-end` | Above, right-aligned |
 
 ```html
-<div class="dropdown-menu is-right">
+<div class="dropdown" data-placement="bottom-end">
 ```
 
-Use `.is-right` when the dropdown is near the right edge of the viewport to prevent overflow.
+Each of the four, spread across the row so the alignment is visible. The two `top-*` triggers open upward.
+
+<div class="dropdown" data-placement="bottom-end">
+    <button class="dropdown-trigger button" data-variant="outline" type="button" aria-haspopup="true" aria-expanded="false">bottom-end</button>
+    <div class="dropdown-menu" role="menu">
+      <button class="dropdown-item" role="menuitem" type="button">Below, right-aligned</button>
+      <button class="dropdown-item" role="menuitem" type="button">Anchored to the trigger</button>
+    </div>
+  </div>
+  <div class="dropdown" data-placement="top-start">
+    <button class="dropdown-trigger button" data-variant="outline" type="button" aria-haspopup="true" aria-expanded="false">top-start</button>
+    <div class="dropdown-menu" role="menu">
+      <button class="dropdown-item" role="menuitem" type="button">Above, left-aligned</button>
+      <button class="dropdown-item" role="menuitem" type="button">Opens upward</button>
+    </div>
+  </div>
+  <div class="dropdown" data-placement="top-end">
+    <button class="dropdown-trigger button" data-variant="outline" type="button" aria-haspopup="true" aria-expanded="false">top-end</button>
+    <div class="dropdown-menu" role="menu">
+      <button class="dropdown-item" role="menuitem" type="button">Above, right-aligned</button>
+      <button class="dropdown-item" role="menuitem" type="button">Opens upward</button>
+    </div>
+  </div>
+</div>
+
+**Placement is a request, not a guarantee.** On open the script measures the menu against the viewport and flips whichever axis would overflow, writing the result to `data-resolved-placement` — which is what the CSS actually styles. A menu near the bottom of the screen opens upward on its own; one near the right edge aligns right. Each axis flips only when the opposite side genuinely has more room, so a menu taller than the viewport stays where you asked rather than flipping into an equally bad spot.
+
+That means you no longer have to hand-place menus to avoid overflow. `.is-right` still works and is read as `bottom-end`, but new markup should use `data-placement`.
+
+**To watch it happen**, narrow the window until the `bottom-end` trigger above sits within a menu-width of the left edge — it will start opening left-aligned instead. Or open the `top-start` menu and scroll until there is no longer room above; it drops below. The flip re-runs on resize and scroll, not only at open, so a menu that was well placed a moment ago corrects itself rather than hanging off the edge.
+
+It resolves per axis, and only when the opposite side genuinely has more room. A menu taller than the viewport stays where you asked rather than trading one bad position for another — there is no placement that fits, so it keeps the one you chose.
 
 ---
 
@@ -5254,7 +6200,7 @@ Use `.is-right` when the dropdown is near the right edge of the viewport to prev
 The simplest item, just a label with no icon.
 
 </button>
-    <div class="dropdown-menu">
+    <div class="dropdown-menu" role="menu">
       <button class="dropdown-item" role="menuitem" type="button">Admin</button>
       <button class="dropdown-item" role="menuitem" type="button">Team</button>
       <button class="dropdown-item" role="menuitem" type="button">Public</button>
@@ -5271,7 +6217,7 @@ The simplest item, just a label with no icon.
 An icon before the text reinforces the action. Use for action verbs like Edit, Download, Delete.
 
 </button>
-    <div class="dropdown-menu">
+    <div class="dropdown-menu" role="menu">
       <button class="dropdown-item" role="menuitem" type="button">
         <div class="svg-icn" data-icon="settings"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M11 15H22V17H11V19H5V17H2V15H5V13H11V15ZM7 17H9V15H7V17Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M19 7H22V9H19V11H13V9H2V7H13V5H19V7ZM15 9H17V7H15V9Z" fill="currentColor"/></svg></div>
         <span>Settings</span>
@@ -5301,7 +6247,7 @@ An icon before the text reinforces the action. Use for action verbs like Edit, D
 Use `.dropdown-item-end` to push trailing content to the right edge. Ideal for keyboard shortcuts, badges, status indicators, or chevrons hinting at sub-menus.
 
 </button>
-    <div class="dropdown-menu">
+    <div class="dropdown-menu" role="menu">
       <button class="dropdown-item" role="menuitem" type="button">
         <span>Undo</span>
         <span class="dropdown-item-end"><kbd>Ctrl+Z</kbd></span>
@@ -5339,7 +6285,7 @@ Use `.dropdown-item-end` to push trailing content to the right edge. Ideal for k
 Use `.dropdown-desc` for supporting text below the label.
 
 </button>
-    <div class="dropdown-menu">
+    <div class="dropdown-menu" role="menu">
       <button class="dropdown-item" role="menuitem" type="button">
         <div>
           <div>Blank project</div>
@@ -5377,14 +6323,15 @@ For user menus showing the logged-in user's identity.
 
 </button>
     <div class="dropdown-menu is-right">
-      <div class="dropdown-item" >
-        <span class="auth-user-avatar" >E</span>
+      <div class="dropdown-header">
+        <span class="auth-user-avatar" aria-hidden="true" >E</span>
         <div>
-          <div>Erlen Masson</div>
+          <div id="demo-account-name">Erlen Masson</div>
           <div class="dropdown-desc">erlen@bydefault.studio</div>
         </div>
       </div>
       <div class="dropdown-divider" role="separator"></div>
+      <div class="dropdown-group" role="menu" aria-labelledby="demo-account-name">
       <button class="dropdown-item" role="menuitem" type="button">
         <div class="svg-icn" data-icon="settings"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M11 15H22V17H11V19H5V17H2V15H5V13H11V15ZM7 17H9V15H7V17Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M19 7H22V9H19V11H13V9H2V7H13V5H19V7ZM15 9H17V7H15V9Z" fill="currentColor"/></svg></div>
         <span>Account</span>
@@ -5393,36 +6340,63 @@ For user menus showing the logged-in user's identity.
         <div class="svg-icn" data-icon="logout"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 21C4.45 21 3.97917 20.8042 3.5875 20.4125C3.19583 20.0208 3 19.55 3 19V5C3 4.45 3.19583 3.97917 3.5875 3.5875C3.97917 3.19583 4.45 3 5 3H12V5H5V19H12V21H5ZM16 17L14.625 15.55L17.175 13H9V11H17.175L14.625 8.45L16 7L21 12L16 17Z" fill="currentColor"/></svg></div>
         <span>Log out</span>
       </button>
+      </div>
     </div>
   </div>
 </div>
+
+The identity row is not a menu item, and `role="menu"` may only own menu items, groups and separators. So the panel keeps the identity row and the divider, and `role="menu"` moves inward onto a `.dropdown-group` wrapping only the real items. The avatar letter is `aria-hidden` because the name follows it.
+
+```html
+<div class="dropdown-menu is-right">
+  <div class="dropdown-header">
+    <span class="auth-user-avatar" aria-hidden="true">E</span>
+    <div>
+      <div id="account-name">Erlen Masson</div>
+      <div class="dropdown-desc">erlen@bydefault.studio</div>
+    </div>
+  </div>
+  <div class="dropdown-divider" role="separator"></div>
+  <div class="dropdown-group" role="menu" aria-labelledby="account-name">
+    <button class="dropdown-item" role="menuitem" type="button">…</button>
+  </div>
+</div>
+```
 
 ---
 
 ## Section labels
 
-Use `.dropdown-label` to create non-interactive section headers that group items.
+Use `.dropdown-label` for non-interactive section headers. A label cannot be a direct child of `role="menu"` either, so wrap each section in a `.dropdown-group` with `role="group"` and point `aria-labelledby` at the label. Screen readers then announce "Actions, group, 3 items" instead of dropping the heading entirely.
 
 </button>
-    <div class="dropdown-menu">
-      <div class="dropdown-label">Actions</div>
-      <button class="dropdown-item" role="menuitem" type="button">Rename</button>
-      <button class="dropdown-item" role="menuitem" type="button">Duplicate</button>
-      <button class="dropdown-item" role="menuitem" type="button">Archive</button>
+    <div class="dropdown-menu" role="menu">
+      <div class="dropdown-group" role="group" aria-labelledby="demo-grp-actions">
+        <div class="dropdown-label" id="demo-grp-actions">Actions</div>
+        <button class="dropdown-item" role="menuitem" type="button">Rename</button>
+        <button class="dropdown-item" role="menuitem" type="button">Duplicate</button>
+        <button class="dropdown-item" role="menuitem" type="button">Archive</button>
+      </div>
       <div class="dropdown-divider" role="separator"></div>
-      <div class="dropdown-label">Danger zone</div>
-      <button class="dropdown-item dropdown-item--danger" role="menuitem" type="button">Delete project</button>
+      <div class="dropdown-group" role="group" aria-labelledby="demo-grp-danger">
+        <div class="dropdown-label" id="demo-grp-danger">Danger zone</div>
+        <button class="dropdown-item dropdown-item--danger" role="menuitem" type="button">Delete project</button>
+      </div>
     </div>
   </div>
 </div>
 
 ```html
-<div class="dropdown-label">Actions</div>
-<button class="dropdown-item" role="menuitem" type="button">Rename</button>
-...
+<div class="dropdown-group" role="group" aria-labelledby="grp-actions">
+  <div class="dropdown-label" id="grp-actions">Actions</div>
+  <button class="dropdown-item" role="menuitem" type="button">Rename</button>
+  <button class="dropdown-item" role="menuitem" type="button">Duplicate</button>
+</div>
 <div class="dropdown-divider" role="separator"></div>
-<div class="dropdown-label">Danger zone</div>
-<button class="dropdown-item dropdown-item--danger" role="menuitem" type="button">Delete project</button>
+<div class="dropdown-group" role="group" aria-labelledby="grp-danger">
+  <div class="dropdown-label" id="grp-danger">Danger zone</div>
+  <button class="dropdown-item dropdown-item--danger" role="menuitem" type="button">Delete project</button>
+</div>
 ```
 
 ---
@@ -5432,9 +6406,56 @@ Use `.dropdown-label` to create non-interactive section headers that group items
 </div>
 
 ```html
-<button class="dropdown-item is-disabled" role="menuitem" type="button" disabled aria-disabled="true">
+<button class="dropdown-item" role="menuitem" type="button" aria-disabled="true">
   Save as...
 </button>
+```
+
+Use `aria-disabled="true"`, not the `disabled` attribute. A `disabled` button is removed from the arrow cycle, so a keyboard user never learns the option exists while a mouse user can see it sitting there. `aria-disabled` keeps the item reachable and announced as unavailable, and `dropdown.js` refuses the activation.
+
+---
+
+## Checkable items
+
+Add `role="menuitemcheckbox"` with `aria-checked` for options that toggle. Selecting one does **not** close the menu — a multi-select the user has to reopen per choice is unusable. Use `role="menuitemradio"` inside a `role="group"` for one-of-N instead; the script clears the siblings for you.
+
+</button>
+    <div class="dropdown-menu" role="menu">
+      <button class="dropdown-item is-selected" role="menuitemcheckbox" type="button" data-value="name" aria-checked="true">
+        <span class="dropdown-checkmark"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9.55 17.6L4 12.05L5.4 10.65L9.55 14.8L18.6 5.75L20 7.15L9.55 17.6Z" fill="currentColor"/></svg></div></span>
+        <span>Name</span>
+      </button>
+      <button class="dropdown-item is-selected" role="menuitemcheckbox" type="button" data-value="status" aria-checked="true">
+        <span class="dropdown-checkmark"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9.55 17.6L4 12.05L5.4 10.65L9.55 14.8L18.6 5.75L20 7.15L9.55 17.6Z" fill="currentColor"/></svg></div></span>
+        <span>Status</span>
+      </button>
+      <button class="dropdown-item" role="menuitemcheckbox" type="button" data-value="owner" aria-checked="false">
+        <span class="dropdown-checkmark"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9.55 17.6L4 12.05L5.4 10.65L9.55 14.8L18.6 5.75L20 7.15L9.55 17.6Z" fill="currentColor"/></svg></div></span>
+        <span>Owner</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+```html
+<button class="dropdown-item is-selected" role="menuitemcheckbox" type="button"
+        data-value="name" aria-checked="true">
+  <span class="dropdown-checkmark"><!-- check icon, aria-hidden --></span>
+  <span>Name</span>
+</button>
+```
+
+The checkmark is what carries the state — a background tint alone would fail WCAG 1.4.1. Its space is reserved in both states, so toggling never reflows the row.
+
+### Reacting to a selection
+
+Activating any item fires a bubbling `dropdown-select` on the `.dropdown`.
+
+```js
+document.querySelector('.dropdown').addEventListener('dropdown-select', (event) => {
+  const { value, item, checked } = event.detail;
+  // checked is true/false for checkable items, null for plain ones
+});
 ```
 
 ---
@@ -5461,30 +6482,39 @@ Include `assets/js/dropdown.js` on any page. It auto-initialises all `.dropdown`
 <script src="/assets/js/dropdown.js"></script>
 ```
 
-Clicking a `.dropdown-trigger` toggles `.is-open` on the parent `.dropdown`. Clicking outside or pressing Escape closes all open dropdowns.
+Clicking a `.dropdown-trigger` toggles `.is-open` on the parent `.dropdown`. Clicking outside, moving focus away, or pressing Escape closes it.
+
+The script also wires the ARIA relationships you would otherwise repeat on every instance: `aria-controls` on the trigger, `aria-labelledby` on the menu, and `tabindex="-1"` on each item while the menu is open. You author the roles; the plumbing is applied for you.
 
 ---
 
 ## Keyboard interactions
 
+This is the WAI-ARIA menu button pattern in full. `role="menu"` commits a component to all of it — arrow keys alone are not enough.
+
 | Key | Action |
 |-----|--------|
-| `Enter` / `Space` | Opens the dropdown (on trigger), activates item (on item) |
-| `ArrowDown` | Moves focus to the next item |
-| `ArrowUp` | Moves focus to the previous item |
-| `Escape` | Closes the dropdown and returns focus to the trigger |
-| `Tab` | Moves focus out of the dropdown |
+| `Enter` / `Space` / `ArrowDown` | On the trigger: opens and focuses the **first** item |
+| `ArrowUp` | On the trigger: opens and focuses the **last** item |
+| `ArrowDown` / `ArrowUp` | In the menu: moves focus, wrapping from last to first and back |
+| `Home` / `End` | Jumps to the first or last item |
+| Printable character | Typeahead — focuses the next item whose label starts with what you typed. Repeating one character cycles through the items starting with it |
+| `Enter` / `Space` | On a plain item: activates it, closes the menu, returns focus to the trigger. On a checkable item: toggles it and stays open |
+| `Escape` | Closes and returns focus to the trigger |
+| `Tab` / `Shift`+`Tab` | Closes the menu and continues from the trigger |
 
 ---
 
 ## Accessibility
 
-- Trigger: `aria-haspopup="true"`, `aria-expanded="false"` (JS updates to `"true"` on open)
+- Trigger: `aria-haspopup="true"` and `aria-expanded`. The script adds `aria-controls`
 - Icon-only triggers: add `aria-label` describing the action
-- Menu: `role="menu"`
-- Items: `role="menuitem"` on buttons, or just `<a>` for link items
+- Menu: `role="menu"` — and it may own **only** `menuitem`, `menuitemcheckbox`, `menuitemradio`, `group` and `separator`. Any other content belongs in a `.dropdown-header` outside it, or inside a `.dropdown-group`
+- Items: `role="menuitem"` on buttons. An `<a>` used as an item takes `role="menuitem"` too, which replaces its link role — so reserve `<a>` items for genuine navigation and accept that they announce as menu items
 - Dividers: `role="separator"`
-- Disabled items: `disabled` attribute + `aria-disabled="true"`
+- Disabled items: `aria-disabled="true"` only. Never the `disabled` attribute, which drops the item out of the keyboard cycle
+- Checkable items: `role="menuitemcheckbox"` with `aria-checked` on the button itself. The checkmark icon must be `aria-hidden` or it double-announces with the state
+- Because `role="menu"` puts screen readers into application mode, rich item content (`.dropdown-desc`, `<kbd>` shortcuts) is flattened into the item's accessible name. Keep item content short and meaningful when read as one string
 
 ---
 
@@ -5499,10 +6529,14 @@ Clicking a `.dropdown-trigger` toggles `.is-open` on the parent `.dropdown`. Cli
 | Menu (right) | `.dropdown-menu .is-right` | Right-aligned from trigger |
 | Item | `.dropdown-item` | Clickable row |
 | Item (danger) | `.dropdown-item .dropdown-item--danger` | Destructive action |
-| Item (disabled) | `.dropdown-item .is-disabled` | Unavailable action |
+| Item (disabled) | `.dropdown-item[aria-disabled="true"]` | Unavailable action |
+| Item (checked) | `.dropdown-item .is-selected` | Selected checkable item |
+| Checkmark | `.dropdown-checkmark` | Selection indicator, space always reserved |
+| Group | `.dropdown-group` | `role="group"` or nested `role="menu"` wrapper |
+| Header | `.dropdown-header` | Non-interactive panel content, outside the menu role |
 | Trailing content | `.dropdown-item-end` | Right-aligned metadata inside an item |
 | Description | `.dropdown-desc` | Supporting text under item label |
-| Label | `.dropdown-label` | Non-interactive section header |
+| Label | `.dropdown-label` | Non-interactive section header, inside a group |
 | Divider | `.dropdown-divider` | Separator line between groups |
 
 ---
@@ -5514,7 +6548,8 @@ Clicking a `.dropdown-trigger` toggles `.is-open` on the parent `.dropdown`. Cli
 - Group related items with labels and dividers
 - Use icon-left for actions, icon-right for metadata
 - Add `aria-label` on icon-only triggers
-- Use `.is-right` near the right viewport edge
+- Leave placement alone unless you have a reason. The default opens below and left-aligned, and the script flips it if that would overflow
+- Reach for `data-placement` for genuine intent — an account menu anchored to the right of a header — not to dodge an overflow the script already handles
 
 **Don't:**
 - Don't use dropdowns for primary navigation, use tabs or links
@@ -5548,13 +6583,20 @@ This section documents how the component is built. For usage, see the sections a
 | `.dropdown-chevron` | Rotating arrow indicator, transitions `transform` |
 | `.dropdown.is-open .dropdown-chevron` | Chevron rotated 180deg when open |
 | `.dropdown-menu` | Absolutely positioned menu panel, hidden by default |
-| `.dropdown-menu.is-right` | Right-aligned menu positioning |
+| `.dropdown-menu.is-right` | Legacy right-alignment, read as `bottom-end` |
+| `.dropdown[data-resolved-placement$="-end"]` | Right-aligned, after collision resolution |
+| `.dropdown[data-resolved-placement^="top"]` | Opens upward, after collision resolution |
+| `.dropdown[data-resolved-placement$="-start"] .dropdown-menu.is-right` | Flip overriding the legacy class |
 | `.dropdown.is-open .dropdown-menu` | Visible menu state |
 | `.dropdown-item` | Clickable row: padding, hover background |
 | `.dropdown-item:hover` | Item hover, uses `var(--dropdown-item-hover)` |
-| `.dropdown-item:focus-visible` | Item focus ring |
+| `.dropdown-item:focus-visible` | Focus row tint. The ring itself comes from the global button rule |
 | `.dropdown-item .svg-icn` | Icon sizing inside items |
-| `.dropdown-item.is-disabled` | Disabled item: reduced opacity, no pointer events |
+| `.dropdown-item.is-disabled`, `.dropdown-item[aria-disabled="true"]` | Disabled item: reduced opacity, not-allowed cursor |
+| `.dropdown-group` | Group wrapper, re-declares column layout |
+| `.dropdown-header` | Non-interactive panel row |
+| `.dropdown-checkmark` | Selection indicator, hidden with `visibility` so the row cannot reflow |
+| `.dropdown-item[aria-checked="true"] .dropdown-checkmark` | Revealed checkmark |
 | `.dropdown-item--danger` | Destructive action, danger colour |
 | `.dropdown-item--danger:hover` | Danger item hover |
 | `.dropdown-divider` | Separator line between groups |
@@ -6272,6 +7314,230 @@ Include `assets/js/number-input.js` on any page. The script handles all `[data-n
 **Don't:**
 - Don't use for large numeric ranges. Use a slider instead
 - Don't use for values that aren't truly numeric (e.g. phone numbers)
+
+### Page Navigation
+
+Page navigation is the pager at the foot of a page: previous on the left, next on the right. It works across any ordered sequence and knows nothing about what the sequence is — pair it with [Book](/website/book.html) for a documentation space, or with anything else that has an order. The `.page-nav` class is required, and `data-direction` chooses the side.
+
+It is the sideways move in a three-part model. Down is [Book](/website/book.html) — shelf to cover to contents. Up is [Breadcrumb](/website/breadcrumb.html). Sideways is this.
+
+---
+
+## Anatomy
+
+```
+nav.page-nav
+  .page-nav-inner
+    a.page-nav-link          data-direction="prev"
+      .svg-icn.page-nav-arrow
+      .page-nav-text
+        .page-nav-label      ← "Previous" / "Next"
+        .page-nav-section    ← only when the neighbour is in another section
+        .page-nav-title      ← the target page's name
+    a.page-nav-link          data-direction="next"
+      …
+```
+
+Both directions render from **identical markup** — the arrow always comes first in the DOM. `data-direction="next"` reverses the row in CSS, so this is one component with a variant rather than two that happen to share class names.
+
+The title is a `<span>`, not a heading. It labels a link; it does not open a section. Two `<h3>`s in the page footer would put phantom entries in the document outline that screen-reader users navigate by.
+
+---
+
+## Basic usage
+
+Both halves filled — the reader is mid-sequence.
+
+<span class="page-nav-text">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">4.4 Iconography</span>
+        </span>
+      </a>
+      <a href="#" class="page-nav-link" data-direction="next" rel="next">
+        <div class="svg-icn page-nav-arrow" data-icon="chevron-right-large"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.775 22L7 20.225L13.8108 13.4142C14.5918 12.6332 14.5918 11.3668 13.8108 10.5858L7 3.775L8.775 2L18.775 12L8.775 22Z" fill="currentColor"/></svg></div>
+        <span class="page-nav-text">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">4.6 Motion</span>
+        </span>
+      </a>
+    </div>
+  </nav>
+</div>
+
+Note the arrow is written **first inside both links**. The next link only *looks* reversed — `data-direction="next"` flips the row in CSS. Narrow the window and watch the two halves stack; the chevron stays on the right where it belongs.
+
+```html
+<nav class="page-nav" aria-label="Page navigation">
+  <div class="page-nav-inner">
+    <a href="/brand/iconography.html" class="page-nav-link" data-direction="prev" rel="prev">
+      <div class="svg-icn page-nav-arrow"><!-- chevron-left-large --></div>
+      <span class="page-nav-text">
+        <span class="page-nav-label">Previous</span>
+        <span class="page-nav-title">4.4 Iconography</span>
+      </span>
+    </a>
+    <a href="/brand/tone-of-voice.html" class="page-nav-link" data-direction="next" rel="next">
+      <div class="svg-icn page-nav-arrow"><!-- chevron-right-large --></div>
+      <span class="page-nav-text">
+        <span class="page-nav-label">Next</span>
+        <span class="page-nav-title">4.6 Motion</span>
+      </span>
+    </a>
+  </div>
+</nav>
+```
+
+Note the arrow comes first in both links. Do not reorder it for the next direction — the CSS handles that, and moving it breaks the shared shape.
+
+`rel="prev"` and `rel="next"` describe the sequence to browsers and crawlers. Keep them.
+
+---
+
+## The section line
+
+`.page-nav-section` appears **only when the neighbour sits in a different section**. It marks the moment you leave one book for the next, which is the point at which the destination needs naming.
+
+Showing it on every link would turn a signpost into chrome — on a page whose neighbour is in the same section, repeating that section's name tells the reader nothing they don't already know.
+
+Here the reader is on the last page of the Brand Book. Previous stays inside the book and says nothing extra; next names where it is about to take them.
+
+<span class="page-nav-text">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">4.6 Motion</span>
+        </span>
+      </a>
+      <a href="#" class="page-nav-link" data-direction="next" rel="next">
+        <div class="svg-icn page-nav-arrow" data-icon="chevron-right-large"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.775 22L7 20.225L13.8108 13.4142C14.5918 12.6332 14.5918 11.3668 13.8108 10.5858L7 3.775L8.775 2L18.775 12L8.775 22Z" fill="currentColor"/></svg></div>
+        <span class="page-nav-text">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-section">Design System</span>
+          <span class="page-nav-title">Introduction</span>
+        </span>
+      </a>
+    </div>
+  </nav>
+</div>
+
+```html
+<span class="page-nav-text">
+  <span class="page-nav-label">Next</span>
+  <span class="page-nav-section">Design System</span>
+  <span class="page-nav-title">Introduction</span>
+</span>
+```
+
+Only render the element when it has content. An empty `<span class="page-nav-section"></span>` still draws a gap inside the column, because `.page-nav-text` is a flex container with a row gap.
+
+---
+
+## Ends of the sequence
+
+When there is no neighbour in a direction, render **nothing** for that side. Do not emit a hidden placeholder: `grid-column` pins each link to its own half, so the surviving link keeps its side on its own.
+
+First page in the sequence — next only, still sitting on the right:
+
+<span class="page-nav-text">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">1.2 Our Values</span>
+        </span>
+      </a>
+    </div>
+  </nav>
+</div>
+
+Last page — previous only, on the left:
+
+<span class="page-nav-text">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">6.4 Project Setup</span>
+        </span>
+      </a>
+    </div>
+  </nav>
+</div>
+
+```html
+<!-- first page in the sequence: next only, still on the right -->
+<nav class="page-nav" aria-label="Page navigation">
+  <div class="page-nav-inner">
+    <a href="…" class="page-nav-link" data-direction="next" rel="next">…</a>
+  </div>
+</nav>
+```
+
+If both neighbours are missing, render no `<nav>` at all rather than an empty one.
+
+---
+
+## Responsive
+
+Below 768px the two halves collapse into a single column and stack — previous above next — with a rule between them. The breakpoint belongs to the component rather than a shared responsive section, so it travels into another product with the rest of the CSS.
+
+The title also steps down a size below 960px, matching the heading scale. That step is carried by `--page-nav-title-size`, so re-pointing the token changes both sizes from one place.
+
+---
+
+## Accessibility
+
+- **Label the landmark.** `<nav>` needs `aria-label="Page navigation"`, so a screen-reader user moving by landmark can tell it apart from the site's main navigation.
+- **The title is a `<span>`, deliberately.** Using a heading here injects entries into the document outline at the foot of every page, which is misleading when navigating by heading.
+- **The arrow is decorative** and must carry `aria-hidden="true"`. It repeats the direction the label already states. Icons rendered through the `.svg-icn` wrapper already do this.
+- **The accessible name is the whole link text** — "Next", the section if present, and the title. That reads well and satisfies SC 2.4.4 Link Purpose. Do not add an `aria-label` that drops the title.
+- **`rel="prev"` / `rel="next"`** describe the sequence programmatically. They are not a substitute for the visible label.
+- **Reversing the row does not affect the tab order.** Each link is a single tab stop, and the reversal is visual only.
+
+---
+
+## Usage rules
+
+**Do:**
+
+- Keep the arrow first in the DOM for both directions and let `data-direction` do the flipping
+- Render the section line only when the neighbour is in a different section, and only when it has content
+- Omit the whole link when there is no neighbour in that direction
+- Re-point tokens to restyle — a product changes `--page-nav-link-padding`, not the rule
+
+**Don't:**
+
+- Don't use a heading element for `.page-nav-title`
+- Don't emit a hidden placeholder to hold an empty column; `grid-column` already does
+- Don't add `.padding-global` or a container class to `.page-nav-inner` — the links carry their own inset
+- Don't confuse `.page-nav-section` with the sidebar's `.nav-section`; they are unrelated components
+- Don't reach for this when the set has no meaningful order — a pager implies a sequence a reader can follow
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | What it controls |
+|---|---|---|
+| `--page-nav-background` | `var(--background-primary)` | Link fill |
+| `--page-nav-background-hover` | `var(--background-faded)` | Link fill on hover |
+| `--page-nav-border` | `var(--border-s) solid var(--border-faded)` | Top rule, and the divider between stacked links on mobile |
+| `--page-nav-link-padding` | `var(--space-xl) var(--space-2xl)` | Inset inside each half |
+| `--page-nav-link-gap` | `var(--space-m)` | Space between arrow and text |
+| `--page-nav-title-size` | `var(--font-5xl)` | Title size; steps to `var(--font-3xl)` below 960px |
+| `--page-nav-arrow-color` | `var(--text-secondary)` | Arrow at rest |
+| `--page-nav-arrow-color-hover` | `var(--text-link)` | Arrow on hover |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.page-nav` | Landmark wrapper; declares the component tokens and the top rule |
+| `.page-nav-inner` | Two-column grid, no gutter |
+| `.page-nav-link` | One direction — the whole half is the link |
+| `.page-nav-link[data-direction="prev"]` | Pinned to column 1 |
+| `.page-nav-link[data-direction="next"]` | Pinned to column 2, row reversed, right aligned |
+| `.page-nav-arrow` | Direction chevron; decorative |
+| `.page-nav-text` | Label, section, and title stacked |
+| `.page-nav-label` | Eyebrow naming the relationship |
+| `.page-nav-section` | Target's section — only when crossing |
+| `.page-nav-title` | Target page name, clamped to two lines |
 
 ### Password Toggle
 
@@ -7638,7 +8904,7 @@ Package consumers control which icons they ship via `icons.manifest.json` at the
 
 ### When to Subset
 
-Most sites reference 15–45 of the 169 icons in the registry. The master sprite — every icon, unfiltered — is roughly 104KB; a subset sprite trims that to just what the site uses.
+Most sites reference 15–45 of the 186 icons in the registry. The master sprite — every icon, unfiltered — is roughly 115KB; a subset sprite trims that to just what the site uses.
 
 | Situation | What to do |
 |---|---|
@@ -7656,6 +8922,30 @@ The `local` key points at directories of icons the project owns but the design s
 - **No collisions with design system names.** A local icon named `close` would shadow the shared `close` symbol depending on load order — invisible until the wrong icon renders somewhere. The build hard-fails on any collision rather than silently picking a winner.
 
 Both checks are fail-fast by design: a build that quietly resolved the conflict would ship the wrong icon with nothing to chase.
+
+### Renamed Icons
+
+An icon name is public API: it appears in consumer `icons.manifest.json` files this repo can't see. So a rename keeps the old name working rather than breaking those builds silently. The retired name stays on disk as a byte-identical source file and is recorded in `icons.aliases.json` at the project root:
+
+```json
+{
+  "aliases": {
+    "switch": { "renamedTo": "loop", "since": "2.2.0" }
+  }
+}
+```
+
+Listed names still build into the sprite and still resolve through a manifest, but they are hidden from the registry table, the Brand Book grid, and `llms.txt` — one glyph, one name, everywhere a person or a model goes looking. Alias files and their entries are deleted at the next major version.
+
+### Duplicate Detection
+
+The docs generator compares the path data of every icon at build time, ignoring coordinate precision, and warns when two names resolve to the same drawing:
+
+```
+⚠️  Duplicate icon geometry: "docs" is the same drawing as "page" — one of them is redundant
+```
+
+Matching filenames were always caught; matching *artwork* was not, which is how a re-export saved under a new name could quietly become the registry's second copy of an existing icon. The check warns rather than fails — a deliberate near-duplicate is a judgement call, but it should be a conscious one.
 
 ### Cursor Sprite (Separate Artifact)
 
@@ -7796,7 +9086,7 @@ echo '<svg>...</svg>' | npx svg-cleaner --current-color --icon --icon-name arrow
 
 The full brand icon set. This table is generated at build time from `assets/images/svg-icons/`, so it always matches the source directory. The `data-icon` value is the name to use with the wrapper, the shorthand, and the sprite. For a categorised view with copy and download, see the [Brand Book iconography page](/brand/iconography.html).
 
-`3d`, `accessibility`, `ad-left`, `ad-right`, `ad-top`, `add`, `ai`, `ai-chat`, `ai-large`, `ar`, `arrow-down`, `arrow-left`, `arrow-right`, `arrow-top`, `arrow-top-right`, `arrow-up`, `back-arrow`, `bolt`, `book`, `book-1`, `book-2`, `book-open`, `bookmark`, `brand-book`, `browser`, `calendar`, `catalog`, `chart`, `chat`, `check`, `check-circled`, `check-squared`, `checklist`, `chevron-down`, `chevron-down-large`, `chevron-left`, `chevron-left-large`, `chevron-right`, `chevron-right-large`, `chevron-up`, `chevron-up-large`, `circled`, `click-2`, `clock`, `close`, `close-circled`, `close-large`, `code`, `cog`, `copy`, `credit-card`, `cursor`, `cursor-pointer-1`, `cursor-pointer-2`, `cursor-pointer-3`, `cursor-pointer-4`, `dark-mode`, `design`, `design-system`, `desktop`, `docs`, `download`, `drag`, `exclamation`, `fast-forward`, `filter`, `flame`, `flame-spark`, `folder`, `font-size`, `frame`, `full-screen`, `game`, `gamepad`, `globe`, `headphones`, `heart`, `home`, `icon`, `info`, `instagram`, `light-mode`, `link`, `linkedin`, `list`, `lock`, `login`, `logout`, `mail`, `mail-1`, `map`, `menu`, `minus`, `mobile`, `moon`, `more-horizontal`, `more-vertical`, `news`, `open-full`, `page`, `paintbrush`, `partner`, `pause`, `pencil-draw`, `percentage`, `phone`, `photo`, `photos`, `pin`, `play`, `play-2`, `play-outline`, `present`, `question`, `reddit`, `refresh`, `reset`, `return`, `return-arrow`, `rewind`, `scroll-down`, `search`, `search-large`, `send`, `send-2`, `settings`, `share`, `share-1`, `shop`, `sidebar-close-2`, `sidebar-left-close`, `sidebar-left-open`, `sidebar-right-close`, `sidebar-right-open`, `smiling`, `sound`, `sound-off`, `sound-on`, `spotify`, `squared`, `stack`, `status-0`, `status-10`, `status-100`, `status-20`, `status-50`, `status-75`, `status-check`, `sticky-bottom`, `sticky-top`, `sun`, `sun-1`, `sun-2`, `switch`, `t-shirt`, `tablet`, `tap-3`, `thumbs-down`, `thumbs-up`, `tools`, `trending`, `unlock`, `user`, `users`, `video`, `warning`, `weapon`, `widgets`, `youtube`
+`3d`, `accessibility`, `ad-left`, `ad-right`, `ad-top`, `add`, `ai`, `ai-chat`, `ai-large`, `ar`, `arrow-down`, `arrow-left`, `arrow-right`, `arrow-top`, `arrow-top-right`, `arrow-up`, `back-arrow`, `bolt`, `book`, `book-1`, `book-2`, `book-open`, `bookmark`, `brand-book`, `browser`, `calendar`, `catalog`, `chart`, `chat`, `check`, `check-circled`, `check-squared`, `checklist`, `chevron-down`, `chevron-down-large`, `chevron-left`, `chevron-left-large`, `chevron-right`, `chevron-right-large`, `chevron-up`, `chevron-up-large`, `circled`, `click-2`, `clock`, `close`, `close-circled`, `close-large`, `code`, `cog`, `copy`, `credit-card`, `cursor`, `cursor-pointer-1`, `cursor-pointer-2`, `cursor-pointer-3`, `cursor-pointer-4`, `dark-mode`, `design`, `design-system`, `desktop`, `docs`, `download`, `drag`, `exclamation`, `fast-forward`, `file`, `file-audio`, `file-css`, `file-doc`, `file-font`, `file-html`, `file-img`, `file-json`, `file-md`, `file-txt`, `file-video`, `filter`, `flame`, `flame-spark`, `folder`, `folder-open`, `font-size`, `frame`, `full-screen`, `game`, `gamepad`, `globe`, `headphones`, `heart`, `home`, `icon`, `info`, `instagram`, `light-mode`, `link`, `linkedin`, `list`, `lock`, `login`, `logout`, `loop`, `loop-reverse`, `mail`, `mail-1`, `map`, `menu`, `minus`, `mobile`, `moon`, `more-horizontal`, `more-vertical`, `news`, `open-full`, `page`, `paintbrush`, `partner`, `pause`, `pencil`, `pencil-draw`, `percentage`, `phone`, `photo`, `photos`, `pin`, `play`, `play-2`, `play-outline`, `present`, `question`, `reddit`, `refresh`, `reset`, `return-arrow`, `rewind`, `scroll-down`, `search`, `search-large`, `send`, `send-2`, `settings`, `share`, `share-1`, `shop`, `shopping-bag`, `sidebar-close-2`, `sidebar-left-close`, `sidebar-left-open`, `sidebar-right-close`, `sidebar-right-open`, `smiling`, `sound`, `sound-off`, `sound-on`, `spotify`, `squared`, `stack`, `status-0`, `status-10`, `status-100`, `status-20`, `status-50`, `status-75`, `status-check`, `sticky-bottom`, `sticky-top`, `sun`, `sun-1`, `sun-2`, `swap`, `t-shirt`, `tablet`, `tap-3`, `target`, `thumbs-down`, `thumbs-up`, `tools`, `trash`, `trending`, `unlock`, `user`, `users`, `video`, `warning`, `weapon`, `widgets`, `youtube`
 
 ---
 

@@ -50,11 +50,36 @@ function namespaceIds(inner, prefix) {
   return out;
 }
 
+// A renamed icon keeps its old name on disk as a byte-identical copy so
+// consumer manifests keep resolving (see icons.aliases.json). Nothing stops
+// someone editing the new file and leaving the old one behind as a stale
+// glyph, which would ship silently to exactly the legacy consumers the alias
+// exists to protect — so verify the pair still matches on every build.
+function verifyAliases() {
+  const file = path.join(ROOT, "icons.aliases.json");
+  if (!fs.existsSync(file)) return;
+  const aliases = JSON.parse(fs.readFileSync(file, "utf8")).aliases || {};
+  for (const [oldName, entry] of Object.entries(aliases)) {
+    const oldFile = path.join(SRC_DIR, `${oldName}.svg`);
+    const newFile = path.join(SRC_DIR, `${entry.renamedTo}.svg`);
+    if (!fs.existsSync(newFile)) {
+      throw new Error(`alias "${oldName}" points at "${entry.renamedTo}", which has no source file`);
+    }
+    if (!fs.existsSync(oldFile)) {
+      throw new Error(`alias "${oldName}" has no source file — consumers naming it would fail to resolve`);
+    }
+    if (fs.readFileSync(oldFile, "utf8") !== fs.readFileSync(newFile, "utf8")) {
+      throw new Error(`alias "${oldName}" has drifted from "${entry.renamedTo}" — re-copy it or drop the alias`);
+    }
+  }
+}
+
 function buildSprite() {
   if (!fs.existsSync(SRC_DIR)) {
     console.error(`source directory not found: ${SRC_DIR}`);
     process.exit(1);
   }
+  verifyAliases();
   const files = fs.readdirSync(SRC_DIR)
     .filter((f) => f.endsWith(".svg") && !f.startsWith("_"))
     .sort();
@@ -97,4 +122,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { extractInner, extractViewBox, namespaceIds, buildSprite, main };
+module.exports = { extractInner, extractViewBox, namespaceIds, verifyAliases, buildSprite, main };

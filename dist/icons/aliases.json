@@ -1,0 +1,7 @@
+{
+  "$comment": "Deprecated icon names kept as byte-identical source files so consumer icons.manifest.json entries keep resolving. Aliases ship in the sprite and package but are hidden from the registry, the Brand Book table, and llms.txt. Remove the alias file and its entry here at the next major version.",
+  "aliases": {
+    "switch": { "renamedTo": "loop", "since": "2.2.0" },
+    "return": { "renamedTo": "loop-reverse", "since": "2.2.0" }
+  }
+}

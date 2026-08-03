@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v2.1.1 */
+/* @bydefaultstudio/design-system v2.2.0 */
 // Rating component — interactive star ratings
 (function () {
   document.querySelectorAll('.rating:not(.is-readonly)').forEach(function (rating) {

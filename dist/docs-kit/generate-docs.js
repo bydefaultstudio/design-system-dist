@@ -64,6 +64,7 @@ const CONFIG = {
   contactHref: userConfig.contactHref || null,
   contactLabel: userConfig.contactLabel || 'Contact',
   sectionIcons: userConfig.sectionIcons || {},
+  rootLinks: userConfig.rootLinks || [],
   markdownSourceBase: userConfig.markdownSourceBase || null,
   validateLayers: userConfig.validateLayers === true,
   uiScripts: userConfig.uiScripts || null, // null = kit-bundled copy-button + dropdown
@@ -185,6 +186,87 @@ const ICONS_DIR = CONFIG.iconsDir
 let ICON_MAP = {};
 
 /**
+ * Renamed icons keep a byte-identical source file under the old name so
+ * consumer icons.manifest.json entries keep resolving. Those files must ship
+ * in the sprite but stay out of every browsable surface, or the registry
+ * shows two names for one glyph.
+ * @returns {Set<string>} deprecated icon keys
+ */
+function readIconAliases() {
+  // Beside the icons first — that's where the package puts it for consumers
+  // building against dist/icons/src — then the project root, for this repo.
+  const file = [
+    path.join(ICONS_DIR, '..', 'aliases.json'),
+    path.join(ROOT, 'icons.aliases.json'),
+  ].find(p => fs.existsSync(p));
+  if (!file) return new Set();
+  try {
+    const aliases = JSON.parse(fs.readFileSync(file, 'utf8')).aliases;
+    if (!aliases || typeof aliases !== 'object' || Array.isArray(aliases)) {
+      console.warn(`⚠️  ${path.basename(file)} has no "aliases" object — deprecated icon names will show in the registry`);
+      return new Set();
+    }
+    return new Set(Object.keys(aliases).map(k => k.toLowerCase()));
+  } catch (err) {
+    console.warn(`⚠️  ${path.basename(file)} is unreadable (${err.message}) — deprecated icon names will show in the registry`);
+    return new Set();
+  }
+}
+
+// Numbers as SVG path data actually writes them: optional sign, optional
+// leading dot (".5"), optional exponent ("-1.52588e-05"). A naive \d+(\.\d+)?
+// splits both of those into garbage.
+const PATH_NUMBER = /-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g;
+
+/**
+ * Reduce an icon to its drawing: the sequence of path commands plus the
+ * coordinates they use. Attributes, formatting and element order around the
+ * paths are ignored — only the shape matters.
+ * @param {string} svg - raw SVG source
+ * @returns {{commands: string, coords: number[]}|null} null if it draws no paths
+ */
+function readGeometry(svg) {
+  const d = (svg.match(/\sd="[^"]*"/g) || []).join('');
+  if (!d) return null;
+  return {
+    commands: (d.match(/[A-Za-z]/g) || []).join(''),
+    coords: (d.match(PATH_NUMBER) || []).map(Number),
+  };
+}
+
+/**
+ * Two names for the same drawing is the failure that reaches designers: they
+ * look an icon up, find two entries, and have no basis to choose. Matching
+ * filenames were always caught; matching artwork was not, which is how a
+ * re-export saved under a new name becomes the registry's second copy.
+ *
+ * Compared numerically rather than as a string hash, so a re-export rounded to
+ * fewer decimal places still matches its full-precision original — string
+ * comparison of rounded coordinates misses those whenever a value sits near a
+ * rounding boundary, which most icons have somewhere.
+ * @param {Array<{key: string, geometry: object}>} shapes
+ */
+function warnDuplicateGeometry(shapes) {
+  const TOLERANCE = 0.05; // sub-pixel at any size the wrapper renders
+  const pairs = [];
+  for (let i = 0; i < shapes.length; i++) {
+    for (let j = i + 1; j < shapes.length; j++) {
+      const a = shapes[i].geometry;
+      const b = shapes[j].geometry;
+      if (a.commands !== b.commands || a.coords.length !== b.coords.length) continue;
+      if (a.coords.every((n, k) => Math.abs(n - b.coords[k]) <= TOLERANCE)) {
+        pairs.push(`${shapes[i].key}=${shapes[j].key}`);
+      }
+    }
+  }
+  // One line, not one per pair — a warning repeated eleven times is a warning
+  // nobody reads, and the twelfth is the one that matters.
+  if (pairs.length) {
+    console.warn(`⚠️  ${pairs.length} icon(s) duplicate another's artwork under a second name: ${pairs.join(', ')}`);
+  }
+}
+
+/**
  * Scan the icons dir and build icon-name → normalised SVG string map.
  * Called once at the start of generateDocs().
  */
@@ -196,11 +278,14 @@ function buildIconMap() {
   }
   // Underscore-prefixed files are drafts — the sprite builder skips them too
   const files = fs.readdirSync(ICONS_DIR).filter(f => f.endsWith('.svg') && !f.startsWith('_'));
+  const aliases = readIconAliases();
   const map = {};
   const seen = {};
+  const shapes = [];
 
   for (const file of files) {
     const key = file.replace(/\.svg$/i, '').toLowerCase().replace(/\s+/g, '-');
+    if (aliases.has(key)) continue; // deprecated name — ships in the sprite, hidden from the docs
 
     // The {{icon:...}} shorthand and warnBrandRegistryGaps only match
     // [a-z0-9-] keys — a filename outside that charset would publish as
@@ -220,6 +305,9 @@ function buildIconMap() {
       .replace(/\n\s*/g, '') // collapse to single line
       .trim();
 
+    const geometry = readGeometry(svg);
+    if (geometry) shapes.push({ key: key, geometry: geometry });
+
     // Normalise: replace fixed width/height with 100%
     svg = svg.replace(/(<svg[^>]*)\s+width=["']\d+["']/i, '$1 width="100%"');
     svg = svg.replace(/(<svg[^>]*)\s+height=["']\d+["']/i, '$1 height="100%"');
@@ -236,6 +324,7 @@ function buildIconMap() {
   }
 
   ICON_MAP = map;
+  warnDuplicateGeometry(shapes);
   console.log(`🎨 Icon map built: ${Object.keys(map).length} icons`);
 }
 
@@ -312,9 +401,13 @@ function warnBrandRegistryGaps() {
  * @param {string} [opts.subtitle] - card description (optional)
  * @param {string} [opts.author]  - footer author label (defaults to "Studio")
  * @param {string} [opts.access]  - data-access value (omitted if falsy)
+ * @param {number} [opts.headingLevel] - heading level for the title (default 3)
  * @returns {string} HTML string
  */
 function renderBookCover(opts) {
+  // Cards render h3 by default. A caller with no group heading above the
+  // list passes 2, so the page does not jump from h1 straight to h3.
+  const level = opts.headingLevel || 3;
   const author = opts.author || 'Studio';
   const accessAttr = opts.access ? ` data-access="${opts.access}"` : '';
   const description = opts.subtitle
@@ -323,38 +416,75 @@ function renderBookCover(opts) {
   const flipId = flipIdFromHref(opts.href);
   const flipAttr = flipId ? ` data-flip-id="${flipId}"` : '';
   return `<a href="${siteHref(opts.href)}" class="book-cover"${accessAttr}>
-        <header class="book-cover-header">${getIcon('open-full')}</header>
-        <div class="book-cover-content">
-          <h3 class="book-cover-title"${flipAttr}>${opts.title}</h3>
+        <header class="book-cover-header"><div class="book-cover-trailing">${getIcon('open-full')}</div></header>
+        <div class="book-cover-body">
+          <h${level} class="book-cover-title"${flipAttr}>${opts.title}</h${level}>
           ${description}
         </div>
         <footer class="book-cover-footer">
-          <span class="book-cover-author"><em>by</em> ${author}</span>
+          <span class="book-cover-byline"><em>by</em> ${author}</span>
         </footer>
       </a>`;
 }
 
 /**
- * Render a book-page row for L1 section index pages.
+ * Render a book-contents-item row for L1 section index pages.
  * Wide horizontal row — title + description left-aligned,
  * icon on the right (revealed on hover).
- * @param {Object} opts - { href, title, subtitle, author, access }
+ * @param {Object} opts - { href, title, subtitle, access, headingLevel, identity, meta }
  * @returns {string} HTML string
  */
-function renderBookPage(opts) {
+function renderBookContentsItem(opts) {
+  // Cards render h3 by default. A caller with no group heading above the
+  // list passes 2, so the page does not jump from h1 straight to h3.
+  const level = opts.headingLevel || 3;
   const accessAttr = opts.access ? ` data-access="${opts.access}"` : '';
   const description = opts.subtitle
-    ? `<p class="book-page-description" data-text-wrap="pretty">${opts.subtitle}</p>`
+    ? `<p class="book-contents-item-description" data-text-wrap="pretty">${opts.subtitle}</p>`
     : '';
   const flipId = flipIdFromHref(opts.href);
   const flipAttr = flipId ? ` data-flip-id="${flipId}"` : '';
-  return `<a href="${siteHref(opts.href)}" class="book-page"${accessAttr}>
-        <div class="book-page-content">
-          <h3 class="book-page-title"${flipAttr}>${opts.title}</h3>
-          ${description}
+  // Optional slots. Both are left out entirely when empty rather than emitted
+  // hollow — an empty slot still draws a gap inside the row's flex container.
+  const identity = opts.identity
+    ? `<div class="book-contents-item-leading">${opts.identity}</div>\n        `
+    : '';
+  // Meta goes inside the content column, under the description — a row has no
+  // footer strip, so a trailing meta would compete with the title for width.
+  const meta = opts.meta
+    ? `\n          <span class="book-contents-item-meta">${opts.meta}</span>`
+    : '';
+  return `<a href="${siteHref(opts.href)}" class="book-contents-item"${accessAttr}>
+        ${identity}<div class="book-contents-item-body">
+          <h${level} class="book-contents-item-title"${flipAttr}>${opts.title}</h${level}>
+          ${description}${meta}
         </div>
-        <div class="book-page-action">${getIcon('open-full')}</div>
+        <div class="book-contents-item-trailing">${getIcon('open-full')}</div>
       </a>`;
+}
+
+/**
+ * Audience tag for a contents row, or '' for the default audience.
+ *
+ * This is a *classification*, not a lock. Auth was removed in July 2026
+ * (CLAUDE.md §20): `auth.js` is gone, the page template no longer loads it,
+ * and nothing server-side reads `data-access`. So the label names who a page
+ * is written for, and must never imply it is protected — "Admin", not
+ * "Admin only". Restoring enforcement is a separate job from labelling it.
+ *
+ * Only non-default audiences are tagged. `team` is the frontmatter default and
+ * covers 87 of ~100 pages; tagging those would be chrome, not signal.
+ *
+ * @param {string} access - value from deriveDataAccess()
+ * @returns {string} HTML for the meta slot, or ''
+ */
+function audienceTag(access) {
+  if (!access || access === 'team') return '';
+  if (access === 'public') return '<span class="tag">Public</span>';
+  if (access.startsWith('admin')) return '<span class="tag" data-color="warning">Admin</span>';
+  if (access.startsWith('brand')) return '<span class="tag">Brand</span>';
+  if (access.startsWith('user:')) return '<span class="tag" data-color="warning">Named</span>';
+  return '';
 }
 
 /**
@@ -803,11 +933,11 @@ function generateIndexPage(template, filesBySection) {
   if (CONFIG.indexCards) {
     // Curated index (config: indexCards): one card per entry in a 2-column grid
     cards = `<div class="docs-section">
-      <div class="grid cols-2 gap-xl">`;
+      <div class="book-shelf">`;
 
     for (const card of CONFIG.indexCards) {
       cards += `
-        ${renderBookCover(card)}`;
+        ${renderBookCover({ ...card, headingLevel: 2 })}`;
     }
 
     cards += `
@@ -835,8 +965,8 @@ function generateIndexPage(template, filesBySection) {
       });
 
       cards += `<div class="docs-section">
-      <h2 class="eyebrow">${section}</h2>
-      <div class="grid cols-2 gap-xl">`;
+      <h2 class="book-shelf-title">${section}</h2>
+      <div class="book-shelf">`;
       for (const file of files) {
         cards += `
         ${renderBookCover({ href: file.htmlPath, title: file.title, subtitle: file.frontmatter.subtitle })}`;
@@ -894,16 +1024,14 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
   const sectionFolder = SECTION_FOLDERS[section];
   if (!sectionFolder) return null;
 
-  // Layer Discipline (CLAUDE.md §17): the Design System index lists only
-  // foundation + core layer pages. Docs-site components like asset-card,
-  // book-cover, dont-card etc. still get standalone pages but are hidden
-  // from the index so the design system surface stays portable.
-  if (section === 'Design System') {
-    files = files.filter(f => {
-      const layer = f.frontmatter.layer;
-      return layer === 'foundation' || layer === 'core';
-    });
-  }
+  // Layer Discipline (CLAUDE.md §17 Rule 5): docs-site chrome components
+  // (asset-card, book-cover, dont-card, sticky-bar) still get standalone
+  // pages but are hidden from every section index, so the browsable surface
+  // stays portable. Keyed on layer, not section label — the old section gate
+  // silently stopped filtering when pages moved or a section was renamed.
+  // An app-layer page misfiled into a portable section is a content error
+  // for review to catch, not for the index to hide.
+  files = files.filter(f => f.frontmatter.layer !== 'docs-site');
 
   // Sort files by order
   const sorted = [...files].sort((a, b) => {
@@ -930,7 +1058,7 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
 
   // Ungrouped files first
   if (ungrouped.length > 0) {
-    cards += `<div class="docs-section"><div class="book-page-list">`;
+    cards += `<div class="docs-section"><div class="book-contents">`;
     for (const file of ungrouped) {
       // Absolute href so the link resolves correctly from any depth and survives
       // Barba transitions that don't update the chrome's data-base.
@@ -949,12 +1077,13 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
         }
         cardAccess = file.frontmatter.actionAccess || file.frontmatter.toolAccess || cardAccess;
       }
-      cards += renderBookPage({
+      cards += renderBookContentsItem({
         href: cardHref,
         title: file.title,
         subtitle: file.frontmatter.subtitle,
-        author: file.frontmatter.author,
         access: cardAccess,
+        meta: audienceTag(cardAccess),
+        headingLevel: 2,
       });
     }
 
@@ -972,14 +1101,14 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
   });
 
   for (const sub of subs) {
-    cards += `<div class="docs-section"><h2 class="eyebrow">${sub}</h2><div class="book-page-list">`;
+    cards += `<div class="docs-section"><h2 class="book-contents-title">${sub}</h2><div class="book-contents">`;
     for (const file of grouped[sub]) {
-      cards += renderBookPage({
+      cards += renderBookContentsItem({
         href: '/' + file.htmlPath,
         title: file.title,
         subtitle: file.frontmatter.subtitle,
-        author: file.frontmatter.author,
         access: deriveDataAccess(file.frontmatter),
+        meta: audienceTag(deriveDataAccess(file.frontmatter)),
       });
     }
     cards += `</div></div>`;
@@ -1171,39 +1300,46 @@ function generatePageNav(file, pageOrder) {
     return '../' + target.htmlPath;
   }
 
+  /**
+   * One markup shape for both directions — the arrow always leads, and
+   * data-direction="next" reverses the row in CSS. The section line renders
+   * only when the target sits in a different section, marking the move from
+   * one book to the next.
+   *
+   * The title is a span, not a heading: it labels a link rather than opening
+   * a section, and two h3s in the page footer would put phantom entries in
+   * the document outline that screen-reader users navigate by.
+   *
+   * @param {string} direction - "prev" or "next"
+   * @param {object} target    - the page being linked to
+   * @param {string} label     - visible eyebrow ("Previous" / "Next")
+   * @param {string} arrow     - rendered arrow icon
+   */
+  function renderLink(direction, target, label, arrow) {
+    // Truthiness matters as well as inequality: a page with no `section` in
+    // frontmatter yields '', and '' !== 'Docs' would emit an empty span that
+    // still draws a gap inside the column flex container.
+    const sectionLabel = target.section && target.section !== file.section
+      ? `<span class="page-nav-section">${target.section}</span>`
+      : '';
+    return `<a href="${relativeHref(target)}" class="page-nav-link" data-direction="${direction}" rel="${direction}">
+      ${arrow}
+      <span class="page-nav-text">
+        <span class="page-nav-label">${label}</span>
+        ${sectionLabel}
+        <span class="page-nav-title">${target.title}</span>
+      </span>
+    </a>`;
+  }
+
   const arrowLeft = `<div class="svg-icn page-nav-arrow">${getRawIcon('chevron-left-large')}</div>`;
   const arrowRight = `<div class="svg-icn page-nav-arrow">${getRawIcon('chevron-right-large')}</div>`;
 
-  let html = '<nav class="page-nav" aria-label="Page navigation"><div class="page-nav-inner padding-global">';
-
-  if (prev) {
-    const sectionLabel = prev.section !== file.section ? `<span class="page-nav-section">${prev.section}</span>` : '';
-    html += `<a href="${relativeHref(prev)}" class="page-nav-link page-nav-prev" rel="prev">
-      ${arrowLeft}
-      <span class="page-nav-text">
-        <span class="page-nav-label">Previous</span>
-        ${sectionLabel}
-        <h3 class="page-nav-title">${prev.title}</h3>
-      </span>
-    </a>`;
-  } else {
-    html += '<span class="page-nav-link page-nav-placeholder"></span>';
-  }
-
-  if (next) {
-    const sectionLabel = next.section !== file.section ? `<span class="page-nav-section">${next.section}</span>` : '';
-    html += `<a href="${relativeHref(next)}" class="page-nav-link page-nav-next" rel="next">
-      <span class="page-nav-text">
-        <span class="page-nav-label">Next</span>
-        ${sectionLabel}
-        <h3 class="page-nav-title">${next.title}</h3>
-      </span>
-      ${arrowRight}
-    </a>`;
-  } else {
-    html += '<span class="page-nav-link page-nav-placeholder"></span>';
-  }
-
+  // No placeholder for a missing neighbour: grid-column pins each link to its
+  // own half, so the surviving link keeps its side on its own.
+  let html = '<nav class="page-nav" aria-label="Page navigation"><div class="page-nav-inner">';
+  if (prev) html += renderLink('prev', prev, 'Previous', arrowLeft);
+  if (next) html += renderLink('next', next, 'Next', arrowRight);
   html += '</div></nav>';
   return html;
 }
@@ -1260,13 +1396,30 @@ function buildPageScripts(section, frontmatter, navBase = '../') {
 // scripts/build-package.js via component-modules.json — a component whose
 // JS ships in dist/js/ automatically gets its script include documented.
 const COMPONENT_MODULES = require('./component-modules.json');
+const { isPortableComponentPage } = require('./portable');
+
+// An alias pointing at a module that isn't shipped would silently fall back to
+// "No JavaScript, nothing else to include" — the exact wrong claim the alias
+// exists to prevent, on a page that needs a script to work at all. Fail loudly.
+for (const [slug, moduleName] of Object.entries(COMPONENT_MODULES.moduleAliases || {})) {
+  if (!COMPONENT_MODULES.modules.includes(moduleName)) {
+    throw new Error(
+      `component-modules.json: moduleAliases "${slug}" → "${moduleName}" is not in modules[]`
+    );
+  }
+}
 
 function buildComponentUsage(file) {
-  if (file.section !== 'Design System') return '';
-  if (file.frontmatter.layer !== 'core') return '';
+  // Keyed on layer + filename, not section label (see portable.js) — the old
+  // section gate would have silently dropped this block from every core page
+  // the moment the section was renamed.
+  if (!isPortableComponentPage(file.markdownPath, file.frontmatter)) return '';
 
   const slug = file.markdownPath.replace(/\.md$/, '');
-  const moduleName = slug + '.js';
+  // Most components own a module named after themselves. Where two components
+  // share one implementation (drawer rides on dialog.js), the alias map is what
+  // stops the page claiming it needs no JavaScript at all.
+  const moduleName = (COMPONENT_MODULES.moduleAliases || {})[slug] || slug + '.js';
   const cssName = slug + '.css';
   const hasJs = COMPONENT_MODULES.modules.includes(moduleName);
   const hasOwnCss = (COMPONENT_MODULES.componentCss || []).includes(cssName);
@@ -1353,14 +1506,17 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
     // Markdown-source items only when the .md files are reachable from the
     // served site (config: markdownSourceBase)
     const mdHref = CONFIG.markdownSourceBase ? `${navBase}${CONFIG.markdownSourceBase}/${file.markdownPath}` : null;
-    const mdSourceItems = mdHref ? `<div data-auth-role="team">
-                <div class="dropdown-divider"></div>
-                <a href="${mdHref}" class="dropdown-item js-md-download" download>
+    // role="presentation" on the wrapper: role="menu" may only own menu items,
+    // groups and separators, and this div exists purely to carry the auth gate.
+    // Presentation hands its children straight to the menu.
+    const mdSourceItems = mdHref ? `<div data-auth-role="team" role="presentation">
+                <div class="dropdown-divider" role="separator"></div>
+                <a href="${mdHref}" class="dropdown-item js-md-download" role="menuitem" download>
                   ${getIcon('download')}
                   <span>Download .md file</span>
                 </a>
-                <div class="dropdown-divider"></div>
-                <a href="${mdHref}" class="dropdown-item js-md-open" target="_blank" rel="noopener noreferrer">
+                <div class="dropdown-divider" role="separator"></div>
+                <a href="${mdHref}" class="dropdown-item js-md-open" role="menuitem" target="_blank" rel="noopener noreferrer">
                   ${getIcon('open-full')}
                   <span>Open .md in new tab</span>
                 </a>
@@ -1379,8 +1535,8 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
             <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Markdown source options">
               ${getIcon('more-horizontal')}
             </button>
-            <div class="dropdown-menu is-right">
-              <button type="button" class="dropdown-item js-copy-url" aria-label="Copy page link to clipboard">
+            <div class="dropdown-menu is-right" role="menu">
+              <button type="button" class="dropdown-item js-copy-url" role="menuitem">
                 ${getIcon('link')}
                 <span>Copy link</span>
               </button>
@@ -1485,10 +1641,10 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
 
   if (hasSidebar) {
     // Hamburger for mobile sidebar
-    headerLeft += '<div class="top-nav-link top-nav-hamburger" role="button" tabindex="0" aria-label="Open navigation">'
+    headerLeft += '<button type="button" class="top-nav-link top-nav-hamburger" aria-label="Open navigation">'
       + '<div class="svg-icn hamburger-icon-open">' + ICON_HAMBURGER + '</div>'
       + '<div class="svg-icn hamburger-icon-close">' + ICON_CLOSE + '</div>'
-      + '</div>';
+      + '</button>';
   }
 
   headerLeft += '<a href="${siteHref('/index.html')}" class="top-nav-logo-link">'
@@ -1499,10 +1655,10 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
 
   var headerRight = '<div class="top-nav-right">'${contactNavJs}
     + '<div class="top-nav-auth-container"></div>'
-    + '<div class="top-nav-link dark-mode-toggle" role="button" tabindex="0" aria-label="Toggle dark mode">'
+    + '<button type="button" class="top-nav-link dark-mode-toggle" aria-label="Dark mode">'
     + '<div class="svg-icn dark-mode-icon-light">' + ICON_SUN + '</div>'
     + '<div class="svg-icn dark-mode-icon-dark">' + ICON_MOON + '</div>'
-    + '</div>'
+    + '</button>'
     + '</div>';
 
   var headerHtml = '<header class="top-nav">' + headerLeft + headerRight + '</header>';
@@ -1518,7 +1674,7 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
       + '</button>'
       + '</div>'
       + '<div class="site-sidebar-content">'
-      + '<a href="${siteHref('/index.html')}" class="nav-link nav-home" data-access="team">'
+      + '<a href="${siteHref('/index.html')}" class="nav-link nav-home" data-access="team" aria-label="Home" data-tooltip="Home" data-tooltip-position="right">'
       + '<div class="svg-icn">' + ICON_HOME + '</div>'
       + '<span>Home</span>'
       + '</a>'
@@ -1609,22 +1765,56 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
         this.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
       });
     }
+
+    // Esc dismisses the collapsed-sidebar tooltips (WCAG 1.4.13); moving the
+    // pointer to another row or shifting focus re-arms them.
+    var sidebarEl = mount.querySelector('.site-sidebar');
+
+    function dismissSidebarTooltips(e) {
+      if (e.key === 'Escape' && document.body.classList.contains('sidebar-collapsed')) {
+        document.body.classList.add('sidebar-tooltips-dismissed');
+      }
+    }
+
+    function rearmSidebarTooltips() {
+      document.body.classList.remove('sidebar-tooltips-dismissed');
+    }
+
+    document.addEventListener('keydown', dismissSidebarTooltips);
+    if (sidebarEl) {
+      sidebarEl.addEventListener('mouseover', rearmSidebarTooltips);
+      sidebarEl.addEventListener('focusin', rearmSidebarTooltips);
+    }
   }
 
-  // ── Section icon links: prevent details toggle without swallowing clicks ──
-  // These <a> tags live inside <summary>. stopPropagation would prevent the
-  // click from reaching any document-level router listener. Instead we
-  // intercept on the <summary> itself and preventDefault when the click
-  // originated from an icon link, which stops the toggle but lets the
-  // event keep bubbling so navigation still happens.
+  // ── Section toggle clicks: delegated guard on the sidebar ──
+  // Delegated (not per-summary) so it survives theme-loader.js rebuilding
+  // the nav for brand users. stopPropagation would hide the click from
+  // document-level router listeners; preventDefault stops the details
+  // toggle / native follow while the event keeps bubbling so navigation
+  // still happens.
   if (hasSidebar) {
-    var summaries = mount.querySelectorAll('.nav-section-toggle');
-    for (var s = 0; s < summaries.length; s++) {
-      summaries[s].addEventListener('click', function(e) {
-        if (e.target.closest && e.target.closest('.nav-section-icon')) {
-          e.preventDefault();
-        }
-      });
+    var sidebarClickRoot = mount.querySelector('.site-sidebar');
+
+    function guardSummaryClick(e) {
+      if (!e.target.closest || !e.target.closest('.nav-section-toggle')) return;
+      if (e.target.closest('.nav-section-icon')) {
+        e.preventDefault();
+        return;
+      }
+      // Collapsed strip (desktop only — the class persists on mobile,
+      // where the overlay still needs toggling): the list is hidden, so
+      // toggling would only flip aria-expanded with nothing revealed.
+      // Negated max-width matches the CSS breakpoint exactly, including
+      // fractional viewport widths between 768 and 769px.
+      if (document.body.classList.contains('sidebar-collapsed')
+          && !window.matchMedia('(max-width: 768px)').matches) {
+        e.preventDefault();
+      }
+    }
+
+    if (sidebarClickRoot) {
+      sidebarClickRoot.addEventListener('click', guardSummaryClick);
     }
   }
 
@@ -1659,24 +1849,46 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
   }
 
   // ── Dark mode toggle ──
+  // Three states on <html>: no data-theme = follow the OS (the
+  // prefers-color-scheme fallback), "light"/"dark" = explicit choice.
+  // Never remove the attribute — absence re-arms the fallback, so an
+  // OS-dark visitor could never reach light mode.
   var DARK_KEY = 'dark-mode';
   var darkToggle = mount.querySelector('.dark-mode-toggle');
 
-  // Apply saved preference or system default
-  var savedDark = localStorage.getItem(DARK_KEY);
-  if (savedDark === 'true' || (savedDark === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-    document.documentElement.setAttribute('data-theme', 'dark');
+  function isDarkNow() {
+    var choice = document.documentElement.getAttribute('data-theme');
+    if (choice) return choice === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  // Apply saved preference; without one the attribute stays unset and the
+  // OS preference drives the theme
+  var savedDark = null;
+  try { savedDark = localStorage.getItem(DARK_KEY); } catch (e) { /* storage unavailable */ }
+  if (savedDark !== null) {
+    document.documentElement.setAttribute('data-theme', savedDark === 'true' ? 'dark' : 'light');
   }
 
   if (darkToggle) {
+    darkToggle.setAttribute('aria-pressed', String(isDarkNow()));
     darkToggle.addEventListener('click', function toggleDarkMode() {
-      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      if (isDark) {
-        document.documentElement.removeAttribute('data-theme');
-      } else {
-        document.documentElement.setAttribute('data-theme', 'dark');
+      var next = isDarkNow() ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      darkToggle.setAttribute('aria-pressed', String(next === 'dark'));
+      try { localStorage.setItem(DARK_KEY, next === 'dark'); } catch (e) { /* theme still applies for this page */ }
+    });
+    // A held Enter re-fires click on native buttons — suppress the repeats
+    // so the page can't strobe between themes (WCAG 2.3.1)
+    darkToggle.addEventListener('keydown', function suppressHeldEnter(event) {
+      if (event.repeat) event.preventDefault();
+    });
+    // With no explicit choice the OS drives the theme — keep the reported
+    // state in sync when it changes mid-session
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function syncTogglePressed() {
+      if (!document.documentElement.hasAttribute('data-theme')) {
+        darkToggle.setAttribute('aria-pressed', String(isDarkNow()));
       }
-      localStorage.setItem(DARK_KEY, !isDark);
     });
   }
 
@@ -1707,6 +1919,25 @@ function buildNavSectionsHtml(filesBySection, sidebarOrderMap = {}) {
   const sectionIconMap = {};
   for (const [sectionName, iconKey] of Object.entries(CONFIG.sectionIcons)) {
     sectionIconMap[sectionName] = { icon: getRawIcon(iconKey) };
+  }
+
+  // Root-level links above the section list (config: rootLinks — array of
+  // { title, href, icon, access? }). Each renders as a single nav link in the
+  // same shape as the Home link, never as a one-item collapsible section.
+  // For root pages that belong to no section (e.g. the Glossary).
+  for (const link of CONFIG.rootLinks || []) {
+    // Fail loudly on a bad entry — a silent skip here would ship a nav with a
+    // missing or dead root link and nothing in the build output to say why.
+    if (!link.title || !link.href) {
+      console.error(`❌ rootLinks entry needs both title and href: ${JSON.stringify(link)}`);
+      process.exit(1);
+    }
+    if (link.icon && !ICON_MAP[link.icon]) {
+      console.error(`❌ rootLinks icon not in the registry: "${link.icon}" (${link.title})`);
+      process.exit(1);
+    }
+    const rootIconHtml = link.icon ? `<div class="svg-icn">${getRawIcon(link.icon)}</div>` : '';
+    html += `<a href="${siteHref(link.href)}" class="nav-link nav-root-link" data-access="${escapeAttr(link.access || 'team')}" aria-label="${escapeAttr(link.title)}" data-tooltip="${escapeAttr(link.title)}" data-tooltip-position="right">${rootIconHtml}<span>${escapeAttr(link.title)}</span></a>`;
   }
 
   // Read ordering from _defaults.md (configurable per directory)
@@ -1743,11 +1974,11 @@ function buildNavSectionsHtml(filesBySection, sidebarOrderMap = {}) {
     // Slug used by Phase 3 directional transitions to detect same/different section
     const sectionSlug = slugifySection(section);
     const iconHtml = sectionIcon
-      ? `<a href="${sectionIndexHref}" class="nav-section-icon" data-section="${sectionSlug}"><div class="svg-icn">${sectionIcon.icon}</div></a>`
+      ? `<a href="${sectionIndexHref}" class="nav-section-icon" data-section="${sectionSlug}" aria-label="${escapeAttr(sectionLabel)}"><div class="svg-icn">${sectionIcon.icon}</div></a>`
       : '';
 
     html += `<details class="nav-section">
-      <summary class="nav-section-toggle">
+      <summary class="nav-section-toggle" aria-label="${escapeAttr(sectionLabel)}" data-tooltip="${escapeAttr(sectionLabel)}" data-tooltip-position="right">
         ${iconHtml}<span>${sectionLabel}</span>
         ${navChevron}
       </summary>
@@ -1961,8 +2192,8 @@ function brandChromeSlots(manifest, base) {
 
 /**
  * Serialize the theme registry to assets/js/theme-config.js in one write.
- * JSON.stringify handles all quoting — the regex-rewrite escaping bugs
- * (CODE-AUDIT BUILD-6/7/8) can't recur.
+ * JSON.stringify handles all quoting, so the regex-rewrite escaping bugs
+ * this replaced can't recur.
  */
 function writeThemeConfig(themes) {
   const emitted = {};
@@ -2122,19 +2353,19 @@ function generateBrandDocs(template, themes) {
                 <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Markdown source options">
                   ${getIcon('more-horizontal')}
                 </button>
-                <div class="dropdown-menu is-right">
-                  <button type="button" class="dropdown-item js-copy-url" aria-label="Copy page link to clipboard">
+                <div class="dropdown-menu is-right" role="menu">
+                  <button type="button" class="dropdown-item js-copy-url" role="menuitem">
                     ${getIcon('link')}
                     <span>Copy link</span>
                   </button>
-                  <div data-auth-role="team">
-                    <div class="dropdown-divider"></div>
-                    <a href="${mdPath}" class="dropdown-item js-md-download" download>
+                  <div data-auth-role="team" role="presentation">
+                    <div class="dropdown-divider" role="separator"></div>
+                    <a href="${mdPath}" class="dropdown-item js-md-download" role="menuitem" download>
                       ${getIcon('download')}
                       <span>Download .md file</span>
                     </a>
-                    <div class="dropdown-divider"></div>
-                    <a href="${mdPath}" class="dropdown-item js-md-open" target="_blank" rel="noopener noreferrer">
+                    <div class="dropdown-divider" role="separator"></div>
+                    <a href="${mdPath}" class="dropdown-item js-md-open" role="menuitem" target="_blank" rel="noopener noreferrer">
                       ${getIcon('open-full')}
                       <span>Open .md in new tab</span>
                     </a>
@@ -2338,10 +2569,11 @@ function generateBrandSectionOverviews(template, themes) {
     // Docs overview — cards for all pages in the Docs section
     const docsPages = (theme.pages || []).filter(p => p.section === 'Docs' && p.title !== 'Overview');
     if (docsPages.length > 0) {
-      let cards = '<div class="docs-section"><div class="grid cols-2 gap-xl">';
+      let cards = '<div class="docs-section"><div class="book-shelf">';
       for (const page of docsPages) {
         // page.href is already absolute (`/<brand>/docs/<file>.html`).
         cards += renderBookCover({
+          headingLevel: 2,
           href: page.href,
           title: page.title,
           subtitle: page.subtitle,
@@ -2358,10 +2590,11 @@ function generateBrandSectionOverviews(template, themes) {
     // Tools overview — cards for tools this brand has access to (from frontmatter)
     const brandToolKeys = Object.keys(toolRegistry).filter(slug => brandHasToolAccess(toolRegistry[slug].toolAccess, brandKey));
     if (brandToolKeys.length > 0) {
-      let cards = '<div class="docs-section"><div class="grid cols-2 gap-xl">';
+      let cards = '<div class="docs-section"><div class="book-shelf">';
       for (const toolKey of brandToolKeys) {
         const tool = toolRegistry[toolKey];
         cards += renderBookCover({
+          headingLevel: 2,
           href: `/tools/${toolKey}.html`,
           title: tool.title,
           subtitle: tool.subtitle,
@@ -2771,7 +3004,7 @@ function generateBrandBook(template, themes) {
     // Demonstrates: book-cover, card-title, card-description, grid layout.
     contentHtml += `<section class="brand-book-section block gap-l">
       <h2>Three things worth your time</h2>
-      <div class="grid cols-3 gap-l">
+      <div class="book-shelf" data-cols="3">
         ${renderBookCover({ href: '#', title: 'Catchy article title example', subtitle: 'A short preview of the article content, crafted to grab attention and spark curiosity. Just enough to tempt the reader to click.' })}
         ${renderBookCover({ href: '#', title: 'Bold title for a blog post', subtitle: 'A few compelling lines that hint at the story within. Use this space to draw the reader in with tone, intrigue, or a bold statement.' })}
         ${renderBookCover({ href: '#', title: 'Short and scroll-stopping', subtitle: 'Bold insights, fresh thinking, and a reason to scroll. This placeholder shows how a post excerpt will look in your feed layout.' })}
@@ -2883,8 +3116,8 @@ function generateBrandIndexPages(template, themes) {
       });
 
       contentHtml += `<div class="docs-section">
-      <h2 class="eyebrow">${section}</h2>
-      <div class="grid cols-2 gap-xl">`;
+      <h2 class="book-shelf-title">${section}</h2>
+      <div class="book-shelf">`;
       for (const page of sectionGroups[section]) {
         // page.href is absolute (`/<brand>/<section>/<file>.html`) — use as-is.
         contentHtml += renderBookCover({
@@ -2901,8 +3134,8 @@ function generateBrandIndexPages(template, themes) {
     const brandToolKeys = Object.keys(toolRegistry).filter(slug => brandHasToolAccess(toolRegistry[slug].toolAccess, brandKey));
     if (brandToolKeys.length > 0) {
       contentHtml += `<div class="docs-section">
-      <h2 class="eyebrow">Tools</h2>
-      <div class="grid cols-2 gap-xl">`;
+      <h2 class="book-shelf-title">Tools</h2>
+      <div class="book-shelf">`;
       // Tools overview card first
       const toolsOverviewPage = (theme.pages || []).find(p => p.section === 'Tools' && p.title === 'Overview');
       if (toolsOverviewPage) {
@@ -3185,10 +3418,20 @@ async function generateDocs() {
       content: markdownContent
     };
 
-    if (!filesBySection[section]) {
-      filesBySection[section] = [];
+    // Root pages (an explicit filenameOverrides entry with folder: '') are
+    // standalone: the page is generated, but it joins no section — no nav
+    // group, no section index card, no prev/next chain. Nav presence comes
+    // from rootLinks, which renders a single link instead of a one-item
+    // collapsible section. Keyed on the override, not the derived folder: a
+    // missing sectionFolders entry also yields folder '', and those pages
+    // must stay visible in the nav so the misconfiguration gets noticed.
+    const isRootPage = FILENAME_OVERRIDES[filename] && FILENAME_OVERRIDES[filename].folder === '';
+    if (!isRootPage) {
+      if (!filesBySection[section]) {
+        filesBySection[section] = [];
+      }
+      filesBySection[section].push(file);
     }
-    filesBySection[section].push(file);
     allFiles.push(file);
   }
 

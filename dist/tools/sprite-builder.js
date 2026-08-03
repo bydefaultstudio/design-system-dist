@@ -3,8 +3,8 @@
  * bd-sprite — build a project icon sprite from a manifest.
  *
  * The design system ships every icon as an individual source file alongside
- * one master sprite. Most projects reference a handful, so shipping all 169
- * symbols to every site is waste. This assembles a sprite from a named
+ * one master sprite. Most projects reference a handful, so shipping every
+ * symbol to every site is waste. This assembles a sprite from a named
  * subset plus any site-local SVGs the project owns:
  *
  *   {

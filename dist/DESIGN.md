@@ -76,7 +76,7 @@ rounded:
   xl: '24px'
   pill: '999px'
 ---
-<!-- @bydefaultstudio/design-system v2.1.1 -->
+<!-- @bydefaultstudio/design-system v2.2.0 -->
 
 # By Default Design System
 
@@ -97,7 +97,7 @@ The semantic roles:
 - **Borders**: `--border-primary` ({colors.border-primary}), `--border-secondary` ({colors.border-secondary}) and `--border-faded` ({colors.border-faded}), in falling emphasis. Hairline dividers use `--border-faded`.
 - **Status**: `--status-info` ({colors.status-info}), `--status-success` ({colors.status-success}), `--status-warning` ({colors.status-warning}), `--status-danger` ({colors.status-danger}), each with a `-bg` pair for filled treatments.
 
-The dark mode contract: light is the default, always. Dark mode is opt-in by setting `data-theme="dark"` on a container (usually `<html>`, but any wrapper scopes it). Every semantic token re-resolves through the cascade, so components never carry their own dark CSS. This is exactly why values must never be hardcoded: the system holds two colour value sets, and writing either one into a rule (`#1a1a1a` or `#ffffff`) breaks the other theme. Always `background: var(--background-primary)`; never a hex value. If a design screenshot looks dark, ask which theme is intended; do not infer it.
+The dark mode contract: light is the default, always. Dark mode is opt-in by setting `data-theme="dark"` on a container (usually `<html>`, but any wrapper scopes it). The attribute is three-state on `<html>`: unset follows the OS preference via the `prefers-color-scheme` fallback, `"light"` and `"dark"` are explicit choices that defeat it — so a theme toggle always sets a value and never removes the attribute (removal would lock OS-dark visitors out of light mode). Every semantic token re-resolves through the cascade, so components never carry their own dark CSS. This is exactly why values must never be hardcoded: the system holds two colour value sets, and writing either one into a rule (`#1a1a1a` or `#ffffff`) breaks the other theme. Always `background: var(--background-primary)`; never a hex value. If a design screenshot looks dark, ask which theme is intended; do not infer it.
 
 ## Typography
 

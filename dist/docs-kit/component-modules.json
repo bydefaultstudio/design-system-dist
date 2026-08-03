@@ -18,6 +18,9 @@
     "bd-cursor.css",
     "bd-video.css"
   ],
+  "moduleAliases": {
+    "drawer": "dialog.js"
+  },
   "headless": [
     "bd-audio.js"
   ]

@@ -4,9 +4,9 @@
  *
  * Everything that only exists to power the BrandOS docs site itself —
  * the layout shell (top nav, sidebar, TOC, footer), the docs page
- * chrome (page header, prev/next, feedback widget), the auth UI, and
- * the reusable docs-only components (sticky bar, copy button, asset
- * card, book cover, don't card, token copy).
+ * chrome (page header, feedback widget), the auth UI, and the reusable
+ * docs-only components (sticky bar, copy button, asset card, don't
+ * card, token copy).
  *
  * None of this ships with the design system to other products — it
  * lives here so design-system.css stays portable.
@@ -24,7 +24,7 @@
  *   1. Sticky Bar         — fixed sub-header used by docs nav
  *   2. Copy Button        — affordance for copying tokens / snippets
  *   3. Token Copy         — inline copy chips inside generated token tables
- *   4. Book Cover         — landing-page section "spine" cards
+ *   4. (vacated)          — the book family moved to design-system.css §37
  *   5. Asset Card         — brand-asset showcase pattern
  *   6. Don't Card         — "do/don't" rule cards used in brand docs
  *      (cross-page transition styles ship separately with the site)
@@ -38,7 +38,7 @@
  *   13. Site sidebar         — fixed left rail (collapsible)
  *   14. Nav sections         — sidebar disclosure tree
  *   15. Docs footer
- *   16. Page navigation      — prev / next links
+ *   16. (vacated)            — .page-nav moved to design-system.css §38
  *   17. Page feedback        — bottom-of-page feedback widget
  *   18. Feedback modal
  *   19. Docs main content    — page header, scroll offsets
@@ -309,201 +309,8 @@
 }
 
 
-/* ------ 4. BOOK COVER ------
- * .book-cover is the card variant used on overview /
- * landing index pages — each card is the "cover" of a
- * section the user can open. It pairs with .grid.cols-2
- * for a generous, scannable index layout.
- *
- *   <a href="brand/" class="book-cover">
- *     <header class="book-cover-header">
- *       <div class="svg-icn" data-icon="open-full">…</div>
- *     </header>
- *     <div class="book-cover-content">
- *       <h3 class="card-title">Brand Book</h3>
- *       <p class="card-description">Brand identity, values…</p>
- *     </div>
- *     <footer class="book-cover-footer">
- *       <span class="book-cover-author"><em>by</em> Studio</span>
- *     </footer>
- *   </a>
- *
- * Self-contained: no .card needed alongside it. Inherits
- * background, border, and hover states from the card token
- * scale so it stays visually consistent. Header and footer
- * are full-width strips with their own borders; the centred
- * content sits between them and absorbs the remaining space.
- */
-
-.book-cover {
-  display: flex;
-  flex-direction: column;
-  min-height: 250px;
-  background: var(--background-primary);
-  border: var(--border-s) solid var(--border-faded);
-  color: inherit;
-  text-align: center;
-  text-decoration: none;
-  cursor: pointer;
-  transition: border 0.3s, background-color 0.3s, box-shadow 0.2s ease, transform 0.2s ease;
-  text-wrap: pretty;
-
-}
-
-.book-cover-header,
-.book-cover-footer {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  padding: var(--space-m) var(--space-l);
-}
-
-.book-cover-header {
-  justify-content: flex-end;
-}
-
-.book-cover-header .svg-icn {
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-a.book-cover:hover .book-cover-header .svg-icn {
-  opacity: 1;
-}
-
-.book-cover-footer {
-  justify-content: space-between;
-}
-
-.book-cover-author {
-  font-size: var(--font-s);
-  color: var(--text-secondary);
-}
-
-.book-cover-author em {
-  font-style: italic;
-}
-
-.book-cover-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-xs);
-  padding: var(--space-2xl);
-}
-
-.book-cover-title {
-  margin-top: 0;
-  margin-bottom: var(--space-s);
-  font-size: var(--font-5xl);
-  line-height: var(--title-leading);
-  font-weight: var(--font-weight-regular);
-}
-
-.book-cover-description {
-  color: var(--text-secondary);
-  font-size: var(--body-size);
-  margin-bottom: 0;
-}
-
-a.book-cover:hover {
-  color: var(--text-primary);
-  background: var(--background-faded);
-  transform: translateY(-2px);
-  box-shadow: 0 7px 1px -3px var(--black-alpha-10);
-}
-
-a.book-cover:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
-}
-
-/* -- Book cover dark mode -- */
-[data-theme="dark"] .book-cover {
-  background: var(--background-secondary);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .book-cover {
-    background: var(--background-secondary);
-  }
-}
-
-
-/* ------ 4b. BOOK PAGE ------
- * L1 section index variant. Instead of the tall, centred book-cover
- * used on L0, pages stack vertically as wide horizontal rows —
- * evoking pages inside an opened book.
- *
- *   <a class="book-page">
- *     <div class="book-page-content">
- *       <h3 class="book-page-title">Colour</h3>
- *       <p class="book-page-description">Palette, tokens…</p>
- *     </div>
- *     <div class="book-page-action"><div class="svg-icn">…</div></div>
- *   </a>
- */
-
-.book-page-list {
-  display: flex;
-  flex-direction: column;
-  border: var(--border-s) solid var(--border-faded);
-}
-
-.book-page {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-l);
-  padding: var(--space-xl) var(--space-xl);
-  border-bottom: var(--border-s) solid var(--border-faded);
-  color: inherit;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background-color var(--duration-xs) var(--ease-out);
-}
-
-.book-page:hover {
-  background: var(--background-faded);
-}
-
-.book-page:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
-}
-
-.book-page-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-  min-width: 0;
-}
-
-.book-page-title {
-  margin: 0;
-  font-size: var(--font-4xl);
-  line-height: var(--title-leading);
-  font-weight: var(--title-weight);
-}
-
-.book-page-description {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--body-size);
-}
-
-/* Icon: hidden by default, revealed on hover */
-.book-page-action .svg-icn {
-  opacity: 0;
-  flex-shrink: 0;
-  transition: opacity var(--duration-xs) var(--ease-out);
-}
-
-a.book-page:hover .book-page-action .svg-icn {
-  opacity: 1;
-}
+/* NOTE: the book family (.book-shelf, .book-cover, .book-contents) moved to
+ * design-system.css section 37 — see CLAUDE.md §17 (Layer Discipline) */
 
 
 /* ------ 5. ASSET CARD ------
@@ -918,9 +725,13 @@ html {
  * positioned containers during animation are constrained to that
  * cell — the sidebar is a separate grid track, completely unaffected.
  */
+/* The main track is minmax(0, 1fr), never a bare 1fr. A bare 1fr floors at the
+   min-content width of its widest descendant, so one wide table stretches the
+   whole grid and the page scrolls sideways — and .table-scroll never scrolls,
+   because the track grew to fit it rather than making it overflow. */
 .docs-layout {
   display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   grid-template-rows: var(--top-nav-height) 1fr;
   grid-template-areas:
     "sidebar topbar"
@@ -931,11 +742,11 @@ html {
 }
 
 body.sidebar-collapsed .docs-layout {
-  grid-template-columns: var(--sidebar-collapsed-width) 1fr;
+  grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);
 }
 
 body.no-sidebar .docs-layout {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
     "topbar"
     "main";
@@ -953,7 +764,7 @@ body.no-sidebar .docs-layout {
 
 .docs-content-grid {
   display: grid;
-  grid-template-columns: 1fr; /* Default: single column */
+  grid-template-columns: minmax(0, 1fr); /* Default: single column */
   gap: var(--space-2xl);
   max-width: 1080px;
   margin: 0 auto;
@@ -964,7 +775,7 @@ body.no-sidebar .docs-layout {
 
 /* When TOC exists, use 2-column layout */
 .docs-content-grid:has(.docs-toc) {
-  grid-template-columns: 1fr var(--toc-width);
+  grid-template-columns: minmax(0, 1fr) var(--toc-width);
 }
 
 
@@ -1054,9 +865,20 @@ body.no-sidebar .docs-layout {
   padding: 0 var(--space-m);
 }
 
-/* Swap icons based on dark mode state */
+/* Swap icons to match the rendered theme. With no data-theme set the OS
+   preference decides (mirrors the token fallback in design-system.css §2c).
+   Four mutually exclusive hide-only branches — nothing ever needs its
+   display restored */
 [data-theme="dark"] .dark-mode-icon-light { display: none; }
-:root:not([data-theme="dark"]) .dark-mode-icon-dark { display: none; }
+:root[data-theme="light"] .dark-mode-icon-dark { display: none; }
+
+@media not all and (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .dark-mode-icon-dark { display: none; }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .dark-mode-icon-light { display: none; }
+}
 
 /* Hamburger — visible on mobile only, uses top-nav-link pattern */
 .top-nav-hamburger {
@@ -1198,13 +1020,37 @@ body.sidebar-collapsed .nav-section[open] {
   background: none;
 }
 
-/* Sidebar tooltips: only visible when collapsed */
+/* Sidebar tooltips: only visible when collapsed. Esc dismisses them
+   (.sidebar-tooltips-dismissed set by nav.js — WCAG 1.4.13); pointer or
+   focus movement inside the sidebar re-arms. */
 .site-sidebar [data-tooltip]::before {
   display: none;
 }
-body.sidebar-collapsed .site-sidebar [data-tooltip]:hover::before,
-body.sidebar-collapsed .site-sidebar [data-tooltip]:focus-visible::before {
+body.sidebar-collapsed:not(.sidebar-tooltips-dismissed) .site-sidebar [data-tooltip]:hover::before,
+body.sidebar-collapsed:not(.sidebar-tooltips-dismissed) .site-sidebar [data-tooltip]:focus-visible::before {
   display: block;
+}
+
+/* Keyboard focus on the icon link nested in a section row — the tooltip
+   lives on the summary, so :focus-visible alone misses it. Kept out of the
+   list above so a browser without :has() can't invalidate the whole list,
+   and the bubble needs its own opacity lift: the base pattern only lifts
+   opacity for :hover/:focus-visible on the trigger itself. */
+body.sidebar-collapsed:not(.sidebar-tooltips-dismissed) .site-sidebar [data-tooltip]:has(:focus-visible)::before {
+  display: block;
+  opacity: 1;
+}
+
+/* Summary rows share ::before with the global disclosure chevron
+   (summary::before in design-system.css): once display flips back on, the
+   chevron's 0.5em box and borders bleed into the bubble, and
+   details[open] > summary::before outranks the position-right transform
+   with rotate(45deg). Pin the bubble's box and transform back. */
+body.sidebar-collapsed .site-sidebar .nav-section-toggle[data-tooltip]::before {
+  width: auto;
+  height: auto;
+  border: 0;
+  transform: translateY(-50%);
 }
 
 
@@ -1452,91 +1298,22 @@ body:not(.sidebar-collapsed) .nav-section[open] .nav-list {
 }
 
 
-/* ------ 2B. PAGE NAVIGATION (PREV / NEXT) ------ */
+/* NOTE: .page-nav moved to design-system.css section 38
+ * — see CLAUDE.md §17 (Layer Discipline) */
 
-.page-nav {
-  border-top: var(--border-s) solid var(--border-faded);
-}
 
-.page-nav-inner {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-  max-width: none;
-  margin: 0;
-  padding: 0;
-}
+/* ------ 2B-bis. FORM HONEYPOT ------ */
 
-.page-nav-link {
-  display: flex;
-  align-items: center;
-  gap: var(--space-m);
-  padding: var(--space-xl) var(--space-2xl);
-  border: none;
-  background: var(--background-primary);
-  text-decoration: none;
-  color: var(--text-primary);
-  transition: background-color 0.15s ease;
-}
-
-.page-nav-link:hover {
-  background-color: var(--background-faded);
-  color: var(--text-primary);
-}
-
-.page-nav-placeholder {
-  visibility: hidden;
-}
-
-.page-nav-next {
-  justify-content: flex-end;
-  text-align: right;
-}
-
-.page-nav-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-  min-width: 0;
-}
-
-.page-nav-label {
-  font-size: var(--font-xs);
-  font-family: var(--font-primary);
-  color: var(--text-secondary);
-  font-weight: var(--font-weight-bold);
-  text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-l);
-
-}
-
-.page-nav-section {
-  font-size: var(--font-2xs);
-  color: var(--text-faded);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: var(--font-weight-medium);
-}
-
-.page-nav-title {
-  font-family: var(--font-primary);
-  line-height: 1.3;
-  margin: 0;
+/* Spam-trap field shared by the Notion-backed forms (feedback, access-support,
+   notion-form). Kept in the DOM so bots fill it, but off-screen and out of the
+   tab/AT order so no human ever sees or focuses it. A non-empty value server-side
+   marks the submission as a bot. Not display:none — some bots skip hidden inputs. */
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.page-nav-arrow {
-  flex-shrink: 0;
-  color: var(--text-secondary);
-  transition: color 0.15s ease;
-}
-
-.page-nav-link:hover .page-nav-arrow {
-  color: var(--text-link);
 }
 
 
@@ -1954,7 +1731,7 @@ section[id] {
 @media (max-width: 1024px) {
 
   .docs-content-grid {
-    grid-template-columns: 1fr; /* TOC below content on tablet */
+    grid-template-columns: minmax(0, 1fr); /* TOC below content on tablet */
   }
 
   .docs-toc {
@@ -2017,7 +1794,7 @@ section[id] {
   /* Grid: single column on mobile (sidebar becomes overlay) */
   .docs-layout,
   body.sidebar-collapsed .docs-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: var(--top-nav-height) 1fr;
     grid-template-areas:
       "topbar"
@@ -2085,6 +1862,18 @@ section[id] {
     display: block;
   }
 
+  /* Sidebar tooltips: never on the mobile overlay — labels are visible
+     there. Selectors mirror the desktop enabling rules exactly (same
+     specificity, later in source) so these always win here. */
+  body.sidebar-collapsed:not(.sidebar-tooltips-dismissed) .site-sidebar [data-tooltip]:hover::before,
+  body.sidebar-collapsed:not(.sidebar-tooltips-dismissed) .site-sidebar [data-tooltip]:focus-visible::before {
+    display: none;
+  }
+
+  body.sidebar-collapsed:not(.sidebar-tooltips-dismissed) .site-sidebar [data-tooltip]:has(:focus-visible)::before {
+    display: none;
+  }
+
   .docs-content-grid {
     display: block;
     padding-left: var(--space-l);
@@ -2098,8 +1887,9 @@ section[id] {
     display: none;
   }
 
-  /* Mobile: Home link separator */
-  .nav-home {
+  /* Mobile: Home link and root-link separators */
+  .nav-home,
+  .nav-root-link {
     margin-bottom: 0;
     padding-bottom: var(--space-s);
     border-bottom: var(--border-s) solid var(--border-faded);
@@ -2152,25 +1942,6 @@ section[id] {
     margin: 0;
   }
 
-  /* Page nav: single column */
-  .page-nav-inner {
-    grid-template-columns: 1fr;
-  }
-
-  .page-nav-placeholder {
-    display: none;
-  }
-
-  .page-nav-prev {
-    border-bottom: var(--border-s) solid var(--border-faded);
-  }
-
-  .page-nav-next {
-    flex-direction: row;
-    text-align: left;
-    margin-left: 0;
-  }
-
   /* Feedback modal: full-width on mobile */
   .feedback-modal {
     width: calc(100vw - var(--space-xl) * 2);
@@ -2199,26 +1970,13 @@ section[id] {
 
 /* ------ AUTH ------ */
 
-/* --- Auth Loading State --- */
+/* Auth was removed 2026-08-01 (the site is public but unlisted; `_headers`
+   carries noindex). What remains here styles auth/login.html and
+   auth/account.html, kept as unwired layout references.
 
-body.auth-loading .docs-main-area,
-body.auth-loading .page-wrapper.has-sidebar {
-  visibility: hidden;
-}
-
-body.auth-loading .svg-logo.nav-logo {
-  visibility: hidden;
-}
-
-body.auth-ready .docs-main-area,
-body.auth-ready .page-wrapper.has-sidebar {
-  visibility: visible;
-}
-
-body.auth-ready .svg-logo.nav-logo {
-  visibility: visible;
-}
-
+   Deleted with it: the `.auth-loading` / `.auth-ready` visibility pair, which
+   hid the page until auth.js swapped the class. auth.js was the only code that
+   ever removed it, so those rules would have left every page blank. */
 
 .auth-login-btn {
   width: 100%;
@@ -2262,32 +2020,21 @@ body.auth-ready .svg-logo.nav-logo {
   width: 100%;
 }
 
-/* --- Element-Level Role Gating --- */
+/* --- Element-Level Role Gating (removed 2026-08-01) --- */
 
-[data-auth-role] {
-  display: none;
-}
+/* `[data-auth-role] { display: none }` used to hide every tagged element until
+   auth.js set a matching `body.auth-role-*` class. With auth gone that class is
+   never set, so the rule would have permanently hidden all 95 elements carrying
+   it — the "view / copy markdown source" affordances on every docs page.
+   Removing the gating shows them again.
 
-[data-auth-role="public"] {
-  display: revert;
-}
+   This changes nothing about real exposure: enforcement was always client-side,
+   so the markup shipped to every visitor regardless and JavaScript merely hid
+   it (documented in docs/access-control.html). The `data-auth-role` attributes
+   stay in the generated output as the record of intent.
 
-body.auth-role-brand [data-auth-role="brand"],
-body.auth-role-team [data-auth-role="team"],
-body.auth-role-team [data-auth-role="brand"],
-body.auth-role-admin [data-auth-role="admin"],
-body.auth-role-admin [data-auth-role="team"],
-body.auth-role-admin [data-auth-role="brand"] {
-  display: revert;
-}
-
-/* Public-only visitors: hide sidebar, keep header */
-body.auth-role-public:not(.auth-role-brand) .site-sidebar {
-  display: none;
-}
-body.auth-role-public:not(.auth-role-brand) .page-wrapper.has-sidebar {
-  margin-left: 0;
-}
+   The `body.auth-role-public` sidebar rules went the same way — that class is
+   also never set now, so they could never match. */
 
 /* --- Login Overlay --- */
 
