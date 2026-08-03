@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v2.2.0 -->
+<!-- @bydefaultstudio/design-system v2.2.1 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 2.2.0 (package)**
+**Version: 2.2.1 (package)**
 
 ## Getting the System
 
@@ -4209,7 +4209,7 @@ Breadcrumbs support any depth. The last item uses `aria-current="page"` and is r
   <span class="breadcrumb-separator" aria-hidden="true">/</span>
   <a href="/website/">Website</a>
   <span class="breadcrumb-separator" aria-hidden="true">/</span>
-  <a href="/website/components/">Components</a>
+  <a href="/website/components.html">Components</a>
   <span class="breadcrumb-separator" aria-hidden="true">/</span>
   <span aria-current="page">Breadcrumb</span>
 </nav>
@@ -8527,7 +8527,7 @@ showToast('Failed to save.', 'danger');
 showToast('New version available.', 'info');
 ```
 
-Each variant uses `--status-*` and `--status-*-bg` tokens for colour.
+Each variant takes its text colour from the matching `--status-*` token, and keeps it in both light and dark themes. Only the neutral toast inverts with the theme.
 
 ---
 
@@ -8593,10 +8593,21 @@ This section documents how the component is built. For usage, see the sections a
 
 ### Styling
 
+The neutral toast, meaning one with no `data-type`, inverts with the theme:
+
 | Property | Value (Light) | Value (Dark) |
 |---|---|---|
 | Background | `var(--warm-black)` | `var(--neutral-100)` |
 | Text colour | `var(--off-white)` | `var(--warm-black)` |
+
+A typed toast keeps its status colour as text in both themes, so only its surface changes:
+
+| Property | Value (Light) | Value (Dark) |
+|---|---|---|
+| Background | `var(--status-*-bg)` | `color-mix(in srgb, currentColor, var(--warm-black) 85%)` |
+| Text colour | `var(--status-*)` | `var(--status-*)` |
+
+The dark surface is derived from the status colour rather than read from `--status-*-bg`, because `--status-*` flips to a light tint in dark mode while `--status-*-bg` stays at its light pastel. Pairing the two tokens directly puts light text on a light surface, measured at 1.1:1; deriving instead holds every variant above 9:1.
 
 ### Selectors
 

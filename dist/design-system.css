@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v2.2.0 */
+/* @bydefaultstudio/design-system v2.2.1 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -1373,12 +1373,20 @@ button.button {
 
 /* -- Colour exceptions -- */
 /* Semantic names and brand aliases produce identical output.
-   --button-color drives bg, border, and faded automatically. */
+   --button-color drives bg, border, and faded automatically.
+
+   A colour sets --button-color and nothing else: the text colour belongs to
+   the variant. The base already declares --button-text-color: var(--text-inverted),
+   which is what a filled button wants, and every unfilled variant re-points it to
+   var(--button-color). Restating it here tied those variant rules at (0,2,0) and
+   won on source order, so an unfilled button was painted with text meant to sit
+   on a fill it does not have — inverted text on a transparent surface, i.e.
+   invisible. The role classes below are unaffected either way: .button.close-btn
+   re-points --button-text-color itself, and does so later still. */
 
 .button[data-color="danger"],
 .button[data-color="red"] {
   --button-color: var(--status-danger);
-  --button-text-color: var(--text-inverted);
 }
 
 .button[data-color="danger"]:hover,
@@ -1389,7 +1397,6 @@ button.button {
 .button[data-color="success"],
 .button[data-color="green"] {
   --button-color: var(--status-success);
-  --button-text-color: var(--text-inverted);
 }
 
 .button[data-color="success"]:hover,
@@ -3023,15 +3030,42 @@ a[data-tooltip],
 }
 
 /* -- Toast dark mode -- */
-[data-theme="dark"] .toast {
+/* Only the neutral toast inverts its surface. A typed toast keeps its status
+   colour as text in both themes.
+
+   Scoped on the presence or absence of data-type, which matches what toast.js
+   emits: it sets dataset.type only when the type is not 'default' (toast.js:65),
+   so a neutral toast carries no attribute at all. Selecting on that makes these
+   rules mutually exclusive with the .toast[data-type] rules above rather than
+   competing with them on specificity and source order. Previously they matched
+   every .toast and won — (0,2,0) tying with the typed rules and beating them on
+   source order, (0,3,0) beating them outright — which flattened success,
+   warning, danger and info to the same grey the moment dark mode was on.
+
+   The typed surface has to be re-derived here rather than left to the tokens.
+   --status-* flips to a light tint in dark mode but --status-*-bg stays at its
+   light pastel, so the authored pair lands light-on-light: measured at 1.1:1,
+   a worse failure than the flattening this fixes. Mixing the status colour into
+   the dark surface instead keeps the type legible and holds every variant above
+   9:1. The underlying --status-*-bg token gap is real and tracked separately;
+   this only stops the toast depending on it. */
+[data-theme="dark"] .toast:not([data-type]) {
   background-color: var(--neutral-100);
   color: var(--warm-black);
 }
 
+[data-theme="dark"] .toast[data-type] {
+  background-color: color-mix(in srgb, currentColor, var(--warm-black) 85%);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .toast {
+  :root:not([data-theme]) .toast:not([data-type]) {
     background-color: var(--neutral-100);
     color: var(--warm-black);
+  }
+
+  :root:not([data-theme]) .toast[data-type] {
+    background-color: color-mix(in srgb, currentColor, var(--warm-black) 85%);
   }
 }
 

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v2.2.0 */
+/* @bydefaultstudio/design-system v2.2.1 */
 /**
  * Toast component
  * Call window.showToast(message, type, duration) to display a notification.
