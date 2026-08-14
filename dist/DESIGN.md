@@ -76,7 +76,7 @@ rounded:
   xl: '24px'
   pill: '999px'
 ---
-<!-- @bydefaultstudio/design-system v2.2.1 -->
+<!-- @bydefaultstudio/design-system v3.0.0 -->
 
 # By Default Design System
 
@@ -152,7 +152,7 @@ The complete utility vocabulary, generated from the CSS. These are the only lega
 - **Padding**: `.padding-global`, `.padding-s`, `.padding-m`, `.padding-l`, `.padding-xl`, `.padding-2xl`, `.padding-3xl`, `.padding-section`
 - **Containers**: `.container-xs`, `.container-s`, `.container-m`, `.container-l`, `.container-xl`
 - **Max-widths**: `.max-width-xs`, `.max-width-s`, `.max-width-m`, `.max-width-l`, `.max-width-xl`, `.max-width-full`
-- **Text sizes**: `.text-size-xl`, `.text-size-l`, `.text-size-m`, `.text-size-s`, `.text-size-xs`
+- **Text sizes**: `.text-size-xl`, `.text-size-xlarge`, `.text-size-l`, `.text-size-large`, `.text-size-m`, `.text-size-medium`, `.text-size-s`, `.text-size-small`, `.text-size-xs`, `.text-size-xsmall`
 - **Borders**: `.border`, `.border-top`, `.border-bottom`, `.border-left`, `.border-right`, `.border-s`, `.border-m`, `.border-l`, `.border-solid`, `.border-dashed`, `.border-dotted`, `.border-primary`, `.border-secondary`, `.border-faded`
 
 ## Shapes

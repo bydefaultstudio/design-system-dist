@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v2.2.1 */
+/* @bydefaultstudio/design-system v3.0.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -374,6 +374,16 @@
   --dropdown-background: var(--background-primary);
   --dropdown-border: var(--border-faded);
   --dropdown-item-hover: var(--background-faded);
+  /* A floor, not a width — menus grow past it on their content. It is a knob
+     because it is the one thing that overflows a 375px screen, so a narrow
+     context needs to drop it rather than override the rule. */
+  --dropdown-menu-min-width: 250px;
+
+  /* -- Select picker tokens -- */
+  /* The customizable-select popup reuses the dropdown surface tokens above so
+     a native select and a .dropdown read as the same object. Only the scroll
+     ceiling is its own, because an option list has no item count limit. */
+  --select-picker-max-height: 18rem;
 
   /* -- Tag tokens removed — uses semantic tokens directly -- */
 
@@ -1166,27 +1176,39 @@ font-family: var(--font-secondary);
 /* Each class consumes its matching --text-size-* token (defined in :root). */
 /* xs stays fixed at the a11y floor; m reuses --body-size for clean reset.  */
 
-.text-size-xl {
+/* Two spellings, one scale. The long forms were the published API in
+   `classes.md` and were never defined here, so every one of them — 80 across
+   the repo, including generated pages and the docs' own demos — silently did
+   nothing. Aliasing them onto the short forms is what makes the documented
+   names true without minting a second scale that would differ from this one at
+   three of its five steps. The short forms stay: they have 129 working
+   consumers and are what the CSS has always meant. */
+.text-size-xl,
+.text-size-xlarge {
   font-size: var(--text-size-xl);
   line-height: var(--line-height-m);
 }
 
-.text-size-l {
+.text-size-l,
+.text-size-large {
   font-size: var(--text-size-l);
   line-height: var(--line-height-l);
 }
 
-.text-size-m {
+.text-size-m,
+.text-size-medium {
   font-size: var(--text-size-m);
   line-height: var(--line-height-l);
 }
 
-.text-size-s {
+.text-size-s,
+.text-size-small {
   font-size: var(--text-size-s);
   line-height: var(--line-height-xl);
 }
 
-.text-size-xs {
+.text-size-xs,
+.text-size-xsmall {
   font-size: var(--text-size-xs);
   line-height: var(--line-height-xl);
 }
@@ -1219,6 +1241,34 @@ font-family: var(--font-secondary);
   font-weight: var(--font-weight-regular);
   letter-spacing: var(--letter-spacing-l);
   text-transform: uppercase;
+}
+
+/* -- Label text --
+ * The form label's look as a class, for the places something should read as
+ * a label but is not a <label> — a heading over a column of links, a caption
+ * above a control group. Quieter than .eyebrow, which shouts in uppercase
+ * and belongs above a section heading.
+ *
+ * It resets more than it sets, and that is the point: the element this lands
+ * on is usually a heading, and h1–h6 carry a title family, -0.04em tracking
+ * and 24px/16px margins that would otherwise survive underneath. A class
+ * that says "this reads as a label" has to actually win, or it only changes
+ * the size and leaves the rest of the heading showing through.
+ *
+ * `display` is deliberately not set — that positions a label inside a form
+ * row, and a class applied to an arbitrary element should not decide its
+ * layout. Margin is different: it is not this class's margin, it is
+ * inherited debris this class has to clear. .toolbar-label (section 43)
+ * makes the same call.
+ */
+.label {
+  margin: 0;
+  font-family: var(--font-primary);
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-m);
+  letter-spacing: normal;
+  color: var(--text-primary);
 }
 
 /* -- Button reset (bare element) -- */
@@ -1554,6 +1604,29 @@ button.button {
   display: none !important;
 }
 
+/* -- Visually hidden --
+ * Removes something from the page without removing it from the accessibility
+ * tree. .is-hidden is display:none, which hides it from everyone — use this
+ * instead for text that a screen reader still needs: the page heading of a
+ * full-space tool, a live region, an instruction that the visual design makes
+ * obvious and a screen reader does not.
+ *
+ * clip-path over the old clip/1px-height recipe, and white-space: nowrap so a
+ * long string is not collapsed into a single wrapped column before clipping.
+ * Promoted from three private copies (logo tool, email signature, ad preview)
+ * once the third consumer arrived — CLAUDE.md section 17, rule 7. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ------ BASE ELEMENTS ------ */
 
 /* -- Reset -- */
@@ -1849,7 +1922,8 @@ input[type=checkbox]:focus-visible {
    Zero-padding buttons need the ring outside, or it strikes through the label. */
 .button[data-variant="text"]:focus-visible,
 .dialog-close:focus-visible,
-.toast-close:focus-visible {
+.toast-close:focus-visible,
+.footer-link:focus-visible {
   outline-offset: 2px;
 }
 
@@ -1887,7 +1961,7 @@ a:not([href]) {
   align-items: center;
   gap: var(--space-s);
   font-weight: var(--font-weight-semi-bold);
-  font-size: var(--font-s);
+  font-size: var(--font-m);
   line-height: var(--line-height-s);
 }
 
@@ -2085,6 +2159,249 @@ select {
   background-position: right var(--space-m) center;
   padding-right: var(--space-2xl);
   cursor: pointer;
+  border-radius: 0;
+}
+
+/* -- Select: customizable picker -- */
+/* `appearance: base-select` takes the option list out of the OS popup and into
+   a CSS box, so the list matches the input instead of the operating system.
+   Chromium-only at time of writing (not Baseline). Everything lives inside the
+   @supports block, so a browser without it silently keeps the appearance:none
+   input above and its native list — the fallback is the previous behaviour,
+   not a broken one.
+
+   Both the select and its ::picker() must opt in. Setting it on the select
+   alone restyles the input and leaves the popup native.
+
+   Scoped to drop-down selects. `base-select` also applies to listboxes
+   (`[multiple]`, `[size]`), which have no picker and no room for these row
+   metrics — those keep the native rendering above. A `size="1"` select is a
+   drop-down but is excluded too, since it cannot be told apart by selector;
+   it degrades to the same native fallback Safari and Firefox get. */
+@supports (appearance: base-select) {
+  select:not([multiple]):not([size]),
+  select:not([multiple]):not([size])::picker(select) {
+    appearance: base-select;
+  }
+
+  /* The base-appearance select is a real box again: the background-image caret
+     and the padding reserved for it are replaced by a laid-out ::picker-icon. */
+  select:not([multiple]):not([size]) {
+    display: flex;
+    align-items: center;
+    gap: var(--space-m);
+    background-image: none;
+    padding-right: var(--space-m);
+    text-align: left;
+  }
+
+  /* Sized from the artwork's own 12x8 ratio, not --icon-size — the caret is a
+     wide glyph and a square box would letterbox it. */
+  select::picker-icon {
+    content: "";
+    width: 0.75rem;
+    height: 0.5rem;
+    flex: none;
+    margin-inline-start: auto;
+    background-color: currentColor;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E");
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    transition: transform var(--duration-xs) var(--ease-out);
+  }
+
+  select:open::picker-icon {
+    transform: rotate(180deg);
+  }
+
+  /* Mirrors .dropdown-menu — same surface tokens, same square edge. */
+  select::picker(select) {
+    border: var(--border-s) solid var(--dropdown-border);
+    background-color: var(--dropdown-background);
+    padding: 0;
+    max-height: var(--select-picker-max-height);
+    overflow-y: auto;
+    opacity: 1;
+    transition:
+      opacity var(--duration-2xs) var(--ease-out),
+      display var(--duration-2xs) allow-discrete,
+      overlay var(--duration-2xs) allow-discrete;
+  }
+
+  /* The picker is a popover: it is display:none until open, so the entry
+     transition needs both allow-discrete above and a @starting-style origin. */
+  select:not(:open)::picker(select) {
+    opacity: 0;
+  }
+
+  @starting-style {
+    select:open::picker(select) {
+      opacity: 0;
+    }
+  }
+
+  /* Row metrics match .dropdown-item, including the leading checkmark — an
+     option row and a checkable dropdown row are the same row, so they align
+     on the same two columns. Nothing here claims the trailing edge, which
+     leaves the auto margin free for the row's own content. */
+  select:not([multiple]):not([size]) option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    padding: var(--space-l) var(--space-m);
+    font-size: var(--font-s);
+    line-height: var(--line-height-m);
+    color: var(--text-primary);
+    background-color: transparent;
+    cursor: pointer;
+    transition: background-color var(--duration-2xs) var(--ease-out);
+  }
+
+  select:not([multiple]):not([size]) option:hover {
+    background-color: var(--dropdown-item-hover);
+    color: var(--text-plain);
+  }
+
+  /* An option is in none of the element lists the global focus ring covers, so
+     the ring is drawn here. The row tint alone is a ~5% luminance shift, far
+     under the 3:1 non-text floor (1.4.11). Inset, because rows sit flush to
+     the picker border. */
+  select:not([multiple]):not([size]) option:focus-visible {
+    background-color: var(--dropdown-item-hover);
+    color: var(--text-plain);
+    outline: 1px solid var(--input-focus);
+    outline-offset: -2px;
+  }
+
+  select:not([multiple]):not([size]) option:disabled {
+    color: var(--input-disabled-text);
+    cursor: not-allowed;
+  }
+
+  select:not([multiple]):not([size]) option:disabled:hover {
+    background-color: transparent;
+  }
+
+  /* An option can hold an icon in base appearance. Sized exactly as
+     .dropdown-item .svg-icn, so an option row and a dropdown row line up. */
+  select:not([multiple]):not([size]) option .svg-icn {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  /* Markup order decides the side: an icon written before the label leads,
+     one written after it trails. No class either way — the row is a flex
+     line and this is nearly all the trailing case needs.
+     :not(:only-child) excludes an option holding nothing but an icon, which
+     would otherwise be pushed right for no reason (and has no accessible
+     name to begin with). Structural pseudo-classes count element children
+     only: the ::checkmark is a pseudo-element and cannot satisfy either half
+     of this, but a bare text label cannot satisfy them either — which is why
+     the docs require the label in its own <span>.
+     The end margin is zeroed because .svg-icn carries a -0.175em optical trim
+     on all four sides; left alone it would hang the icon into the row's right
+     padding and miss the edge the label column is measured to. */
+  select:not([multiple]):not([size]) option .svg-icn:not(:only-child):last-child {
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+  }
+
+  /* <selectedcontent> clones the selected option's child nodes into the closed
+     button, so those clones have no `option` ancestor and every rule above
+     misses them — without this the icon would jump from row size to the base
+     --icon-size the moment the picker closed. The start margin is reset for
+     the same reason in reverse: a cloned trailing icon must not keep an auto
+     margin that would compete with ::picker-icon's for the button's free
+     space and stop the caret sitting flush right. */
+  select:not([multiple]):not([size]) selectedcontent .svg-icn {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    margin-inline-start: 0;
+  }
+
+  /* A group label is a heading over rows, not a row: tighter and quieter than
+     the options under it. The UA's own optgroup chrome is neutralised first,
+     or the label keeps a native font and sits flush to the picker border. */
+  select:not([multiple]):not([size]) optgroup {
+    border: none;
+    padding: 0;
+  }
+
+  select:not([multiple]):not([size]) optgroup legend {
+    padding: var(--space-s) var(--space-m);
+    font-size: var(--font-xs);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+  }
+
+  /* The UA already hides the mark on unselected options; the explicit pair
+     below states it in the sheet rather than leaving it implied. Sized to
+     match .dropdown-checkmark. Colour alone would not carry selection
+     (1.4.1) — the mark is the signal.
+
+     It leads the row, where .dropdown-checkmark sits. `order` is declared
+     rather than left to the pseudo-element's generated position, so the rule
+     states where the mark goes instead of inheriting it from a detail of the
+     UA's box generation. Hidden with visibility, matching .dropdown-checkmark
+     exactly: the box is still generated, so its column is reserved on every
+     row and selecting one cannot shunt the labels sideways. That reservation
+     was invisible while the mark sat behind an auto margin at the trailing
+     edge; leading the row, it is what holds the two columns straight. */
+  option::checkmark {
+    content: "";
+    order: -1;
+    width: 1.25rem;
+    height: 1.25rem;
+    flex: none;
+    visibility: hidden;
+    background-color: currentColor;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z'/%3E%3C/svg%3E");
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+  }
+
+  option:checked::checkmark {
+    visibility: visible;
+  }
+
+  /* forced-colors flattens background-color to a system colour, which erases a
+     masked shape entirely — the caret and, worse, the only selection indicator
+     would both vanish. Hand both back to a real glyph, with empty alt text so
+     the mark is not announced twice on top of the option's selected state. */
+  @media (forced-colors: active) {
+    select::picker-icon {
+      content: "\25BE" / "";
+      width: auto;
+      height: auto;
+      background-color: transparent;
+      mask-image: none;
+    }
+
+    /* min-width rather than auto: the glyph is narrower than the 1.25rem
+       column, and now that the mark leads the row that difference would move
+       every label instead of hiding at the trailing edge. The floor keeps an
+       option row on the same column as a .dropdown-item row here too. */
+    option::checkmark {
+      content: "\2713" / "";
+      width: auto;
+      min-width: 1.25rem;
+      height: auto;
+      background-color: transparent;
+      mask-image: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    select::picker-icon,
+    select::picker(select),
+    select:not([multiple]):not([size]) option {
+      transition: none;
+    }
+  }
 }
 
 /* -- Disabled states -- */
@@ -2202,33 +2519,43 @@ input[type="radio"]:disabled:checked {
   cursor: pointer;
 }
 
-/* -- Segmented control (single-select button group) -- */
+/* -- Segmented control (single-select button group) --
+ * Nothing is drawn until something is selected: no track, no outer border, no
+ * rules between segments. The selected segment is the only filled one, and the
+ * fill is the same neutral the segment takes on hover.
+ *
+ * Selection is deliberately NOT an accent colour. A status hue in the middle of
+ * a control would spend a colour the system reserves for meaning, and the fill
+ * is already a non-colour difference — a shape appears where there was none —
+ * so 1.4.1 is satisfied without it.
+ *
+ * Hover and selected therefore look the same, which is the intended trade: a
+ * segment you are pointing at previews the state it would take. Away from the
+ * pointer, exactly one segment is filled. aria-pressed carries the state that
+ * the eye is momentarily ambiguous about; keep it in step with .is-active. */
 .segmented-control {
   display: inline-flex;
-  padding: 3px;
-  gap: 2px;
+  gap: var(--space-2xs);
 }
 
 .segmented-control-btn {
-  padding: var(--space-s) var(--space-l);
+  padding: var(--space-s) var(--space-m);
   font-size: var(--font-s);
   font-weight: var(--font-weight-regular);
-  border-radius: 0;
+  border-radius: var(--radius-s);
   border: none;
   background: transparent;
   color: var(--text-faded);
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color var(--duration-2xs) var(--ease-out),
+              color var(--duration-2xs) var(--ease-out);
   white-space: nowrap;
   font-family: inherit;
 }
 
-.segmented-control-btn:hover {
-  color: var(--text-primary);
-  background-color: color-mix(in srgb, var(--background-primary), var(--alpha-50));
-}
-
+.segmented-control-btn:hover,
 .segmented-control-btn.is-active {
+  background-color: var(--background-faded);
   color: var(--text-primary);
 }
 
@@ -2244,12 +2571,23 @@ input[type="radio"]:disabled:checked {
   justify-content: center;
 }
 
+/* Backgrounds flatten under forced colours, so the fill that carries selection
+   disappears. The system's own selected pair replaces it. */
+@media (forced-colors: active) {
+  .segmented-control-btn.is-active {
+    forced-color-adjust: none;
+    background-color: Highlight;
+    color: HighlightText;
+  }
+}
+
 /* -- Toggle / switch -- */
 .form-toggle {
   --toggle-width: 44px;
   --toggle-height: var(--space-xl);
   --toggle-knob-size: 18px;
   --toggle-knob-offset: 3px;
+  --toggle-transition-duration: var(--duration-xs);
 
   display: flex;
   align-items: center;
@@ -2276,7 +2614,7 @@ input[type="radio"]:disabled:checked {
   border: var(--border-s) solid var(--border-faded);
   border-radius: var(--radius-pill);
   position: relative;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--toggle-transition-duration) ease;
 }
 
 .form-toggle input[type="checkbox"]::after {
@@ -2289,7 +2627,9 @@ input[type="radio"]:disabled:checked {
   height: var(--toggle-knob-size);
   border-radius: 50%;
   background-color: var(--neutral-500);
-  transition: transform 0.2s ease, background-color 0.2s ease;
+  transition:
+    transform var(--toggle-transition-duration) ease,
+    background-color var(--toggle-transition-duration) ease;
 }
 
 .form-toggle input[type="checkbox"]:checked {
@@ -2314,6 +2654,16 @@ input[type="radio"]:disabled:checked {
 
 .form-toggle input[type="checkbox"]:disabled + label {
   cursor: not-allowed;
+}
+
+/* -- Reduced motion -- */
+/* Re-points the token rather than disabling the transition, matching .dialog,
+   .drawer and .book-cover. The knob still moves to its new position — it just
+   arrives immediately, so the checked state stays legible as a change. */
+@media (prefers-reduced-motion: reduce) {
+  .form-toggle {
+    --toggle-transition-duration: var(--duration-2xs);
+  }
 }
 
 /* -- Toggle dark mode -- */
@@ -3180,7 +3530,9 @@ abbr[title] {
 .img-21x9 { aspect-ratio: 21 / 9; }
 
 
-/* NOTE: .sticky-bar moved to docs-site.css — see CLAUDE.md §17 (Layer Discipline) */
+/* NOTE: .sticky-bar is section 41, near the end of this file. It sits beside
+   Site Header (section 40) because the two are the same bar shape and were
+   drifting apart while they lived in different files. */
 
 
 /* ------ 25. TABLE ------ */
@@ -3346,12 +3698,17 @@ hr.xl {
 }
 
 /* -- Trigger -- */
+/* Padding is tokenised because bars re-point it rather than overriding the
+   rule: a trigger inside a header or sticky bar takes its vertical rhythm from
+   the bar's height, not from its own padding. */
 .dropdown-trigger {
+  --dropdown-trigger-padding-y: var(--space-l);
+  --dropdown-trigger-padding-x: var(--space-m);
   display: flex;
   align-items: center;
   align-self: stretch;
   gap: var(--space-s);
-  padding: var(--space-l) var(--space-m);
+  padding: var(--dropdown-trigger-padding-y) var(--dropdown-trigger-padding-x);
   background: none;
   border: none;
   color: var(--text-primary);
@@ -3399,7 +3756,7 @@ hr.xl {
   position: absolute;
   top: 100%;
   left: 0;
-  min-width: 250px;
+  min-width: var(--dropdown-menu-min-width);
   background-color: var(--dropdown-background);
   border: var(--border-s) solid var(--dropdown-border);
   /* border-top: none; */
@@ -3590,20 +3947,33 @@ hr.xl {
 /* ------ 28. TAG ------ */
 
 .tag {
+  --tag-case: uppercase;
+  --tag-tracking: var(--letter-spacing-m);
+
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
   font-family: var(--font-primary);
   font-size: var(--font-2xs);
   font-weight: var(--font-weight-regular);
-  letter-spacing: .05em;
-  text-transform: uppercase;
+  letter-spacing: var(--tag-tracking);
+  text-transform: var(--tag-case);
   padding: var(--space-s) var(--space-s);
   background-color: var(--bg-faded-5);
   color: var(--text-secondary);
   white-space: nowrap;
   line-height: var(--line-height-xs);
   border-radius: 3px;
+}
+
+/* Sentence-case variant — customize case via the tokens above or this
+   attribute, never by overriding the class (Layer Rule 3). Required whenever a
+   tag carries content the consumer supplies rather than a fixed label: a
+   case-sensitive identifier, a proper noun, or a full sentence, none of which
+   survive being uppercased. */
+.tag[data-case="none"] {
+  --tag-case: none;
+  --tag-tracking: normal;
 }
 
 .tag[data-color="success"],
@@ -3792,7 +4162,7 @@ hr.xl {
 
 .dialog-title {
   font-size: var(--font-3xl);
-  font-weight: var(--font-weight-regular);
+  font-weight: var(--font-weight-medium);
   line-height: var(--line-height-m);
   color: var(--text-primary);
   margin: 0;
@@ -4349,11 +4719,15 @@ input[type="range"]:disabled::-webkit-slider-thumb {
 
 /* ------ 34. NUMBER INPUT ------ */
 
+/* One field with two steppers on it, not three controls in a row. The border and
+   radius belong to the whole thing; the steppers are transparent until pointed
+   at, so the field reads as the subject and the buttons as affordances on it. */
 .number-input {
   display: inline-flex;
   align-items: stretch;
   width: fit-content;
   border: var(--border-s) solid var(--input-border);
+  border-radius: var(--radius-s);
   overflow: hidden;
   background-color: var(--input-background);
 }
@@ -4363,12 +4737,16 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
 }
 
+/* tabular-nums so the field does not reflow as the value steps through digits
+   of different widths — the whole control would shift on every click. */
 .number-input input[type="number"] {
   border: none;
   background: transparent;
   text-align: center;
   width: 4rem;
+  min-height: 0;
   padding: var(--space-m) var(--space-xs);
+  font-variant-numeric: tabular-nums;
   box-shadow: none;
   -moz-appearance: textfield;
   appearance: textfield;
@@ -4385,24 +4763,27 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   -webkit-appearance: none;
 }
 
+/* Transparent, not filled: a permanently shaded stepper reads as two buttons
+   bolted either side of a field. The glyph sits at body size — at --font-xl it
+   was the loudest thing in the control and set its height. */
 .number-input-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  background-color: var(--background-faded);
+  width: 2rem;
+  background-color: transparent;
   border: none;
   border-radius: 0;
   color: var(--text-primary);
   cursor: pointer;
-  font-size: var(--font-xl);
+  font-size: var(--font-s);
   line-height: 1;
-  transition: background-color 0.1s ease;
+  transition: background-color var(--duration-2xs) var(--ease-out);
   flex-shrink: 0;
 }
 
 .number-input-btn:hover {
-  background-color: var(--background-darker);
+  background-color: var(--background-faded);
 }
 
 .number-input-btn:focus-visible {
@@ -5060,6 +5441,1420 @@ a.book-contents-item:focus-visible .book-contents-item-trailing .svg-icn {
 }
 
 
+/* ------ 39. NAV ------
+ * A flat row (or column) of navigation links.
+ *
+ * Deliberately not the docs sidebar's tree nav (.sidebar-nav-*, in
+ * docs-site.css) — that one has collapsible sections, sublists and an active
+ * trail, and is a different component that happens to also be navigation.
+ * This is the link set that appears in a site header, inside a nav drawer,
+ * and in a footer.
+ *
+ * Orientation is the only axis. Everything about width, position and
+ * background belongs to whatever contains it, so the same markup works in
+ * all three places without knowing which one it is in.
+ */
+
+:root {
+  --nav-gap: var(--space-xs);
+  --nav-link-padding: var(--space-s) var(--space-m);
+  --nav-link-color: var(--text-primary);
+  --nav-link-color-hover: var(--text-plain);
+  --nav-link-color-current: var(--text-plain);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--nav-gap);
+}
+
+.nav[data-orientation="vertical"] {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  padding: var(--nav-link-padding);
+  color: var(--nav-link-color);
+  font-family: var(--font-primary);
+  font-size: var(--font-s);
+  line-height: 1;
+  text-decoration: none;
+  transition: color var(--duration-2xs) var(--ease-out);
+}
+
+.nav-link:hover {
+  color: var(--nav-link-color-hover);
+}
+
+/* Current page is styled from the ARIA attribute rather than a class, so the
+   accessible state and the visible state cannot drift apart — there is only
+   one thing to set. */
+.nav-link[aria-current="page"] {
+  color: var(--nav-link-color-current);
+  font-weight: var(--font-weight-semi-bold);
+}
+
+/* Horizontal only: a header has no room to wrap, and a wrapped link there
+   changes the bar's height. A vertical nav has the width to wrap freely. */
+.nav:not([data-orientation="vertical"]) .nav-link {
+  white-space: nowrap;
+}
+
+
+/* ------ 39B. STICKY STACK / SCROLL OFFSET ------
+ * Anything docked to the top of the viewport hides whatever an in-page anchor
+ * scrolls to. A link in a sticky bar that jumps to a heading would otherwise
+ * land that heading underneath the bar that contains the link.
+ *
+ * CSS cannot add up how much is currently stuck there, so the page declares
+ * it once: --scroll-offset is the total of every docked bar plus whatever
+ * breathing room you want beneath them. The default of 0 means a product that
+ * has no sticky chrome inherits no offset and this costs nothing.
+ *
+ * Raise --site-header-height or --sticky-bar-height and the landing position
+ * follows, because the shell's --scroll-offset is written in terms of them.
+ *
+ * The stacking order of those docked bars lives here too, for the same reason:
+ * it is a relationship between components, not a property of any one of them.
+ * Each bar's own --*-z points at this scale rather than carrying a number, so
+ * the order can be read in one place instead of inferred from three literals
+ * scattered across three sections. A toolbar sits above a sticky bar because
+ * it belongs to the content below it and a sticky bar belongs to the page;
+ * both sit under the site header, which outranks everything.
+ */
+
+:root {
+  --scroll-offset: 0px;
+
+  --z-sticky-bar: 40;
+  --z-toolbar: 45;
+  --z-site-header: 100;
+}
+
+/* main[id] matters as much as the headings: the skip link targets it, and
+   without this the thing you skipped to lands underneath the header. */
+h1[id],
+h2[id],
+h3[id],
+h4[id],
+h5[id],
+h6[id],
+main[id],
+section[id] {
+  scroll-margin-top: var(--scroll-offset);
+}
+
+
+/* ------ 40. SITE HEADER ------
+ * The bar at the top of a page: identity on one side, controls on the other,
+ * an optional .nav (section 39) between them.
+ *
+ * The outer element is full-bleed and owns background, border and sticky;
+ * .site-header-inner owns max-width and centring. That split is what lets the
+ * border run edge to edge while the content lines up with the page column —
+ * the same division .sticky-bar (section 41) uses.
+ *
+ * Slots are optional, and the end slot is pushed over with an auto margin
+ * rather than justify-content: space-between. space-between resolves to
+ * flex-start with a single child, so a header carrying only an end slot would
+ * render on the left. With the auto margin every combination lands correctly
+ * and no empty slot has to be emitted just to hold the shape.
+ *
+ * Placement is the consumer's job — nothing here knows about a page grid.
+ */
+
+:root {
+  --site-header-height: 80px;
+  --site-header-logo-height: 50px;
+  /* Full-bleed by default: a header spans its container, and the identity and
+     actions sit at the outer edges. Set this to a length to line the contents
+     up with a content column instead — worth doing when the page below has a
+     narrow measure, but it is a choice, not the norm. */
+  --site-header-max-width: none;
+  --site-header-padding-inline: var(--space-l);
+  --site-header-gap: var(--space-m);
+  --site-header-background: var(--background-top-nav);
+  --site-header-text: var(--text-top-nav);
+  --site-header-border: var(--border-s) solid var(--border-faded);
+  --site-header-z: var(--z-site-header);
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--site-header-z);
+  height: var(--site-header-height);
+  background: var(--site-header-background);
+  color: var(--site-header-text);
+  border-bottom: var(--site-header-border);
+}
+
+.site-header[data-sticky="false"] {
+  position: static;
+}
+
+.site-header-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--site-header-gap);
+  height: 100%;
+  max-width: var(--site-header-max-width);
+  margin-inline: auto;
+  padding-inline: var(--site-header-padding-inline);
+}
+
+/* True centring needs equal side tracks. Flex with an auto margin cannot do
+   it — the centre would drift with whatever the sides weigh.
+
+   Named data-layout, not data-align: `[data-align="center"]` is already a
+   foundation utility (section 6) meaning "centre this box in its parent", and
+   it sets justify-self, which Chromium now honours in block layout — so
+   reusing the name made the header itself shrink to fit. Different axis,
+   different attribute. */
+.site-header[data-layout="center"] .site-header-inner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+}
+
+.site-header[data-layout="center"] .site-header-end {
+  justify-self: end;
+}
+
+.site-header-start,
+.site-header-end {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+}
+
+.site-header-start {
+  min-width: 0;
+}
+
+/* The auto margin, not space-between — see the section note above. */
+.site-header-end {
+  margin-inline-start: auto;
+}
+
+.site-header-logo {
+  display: flex;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.svg-logo.site-header-logo-image {
+  display: block;
+  height: var(--site-header-logo-height);
+  width: auto;
+  color: var(--text-plain);
+}
+
+.svg-logo.site-header-logo-image svg {
+  height: 100%;
+  width: auto;
+  object-fit: contain;
+}
+
+/* A trigger in the bar takes its vertical rhythm from the bar's height, not
+   from its own padding — the same re-point .sticky-bar makes in §41. */
+.site-header .dropdown-trigger {
+  --dropdown-trigger-padding-y: 0;
+  --dropdown-trigger-padding-x: var(--space-m);
+}
+
+/* -- Header action: a Button role class --
+ * Kept here rather than in the Button role-class block because it belongs to
+ * this component, the same reasoning that puts `.toast .button.close-btn` in
+ * the Toast section.
+ *
+ * Two rules that are not optional. It must stay written as
+ * `.button.header-action` — a bare `.header-action` is (0,1,0) and loses to
+ * the base, which also matches as `button.button` (0,1,1). And the :hover
+ * rule below is required, not decorative: `.button:hover` and
+ * `.button.header-action` both re-point --button-color, and the role class is
+ * later in the file, so without an explicit hover it would win *during* hover
+ * and the button would never change colour.
+ */
+.button.header-action {
+  --button-bg: transparent;
+  --button-border: transparent;
+  --button-color: var(--site-header-text);
+  --button-text-color: var(--button-color);
+  --button-padding-y: 0;
+  --button-padding-x: var(--space-m);
+  --button-text-size: var(--font-s);
+  align-self: stretch;
+  flex-shrink: 0;
+  min-block-size: 44px;
+  border-radius: 0;
+}
+
+.button.header-action:hover {
+  --button-color: var(--text-plain);
+  background-color: var(--background-faded);
+}
+
+/* -- Skip link --
+ * The first focusable thing on the page. Hidden by clipping rather than
+ * display:none or visibility:hidden — both of those remove it from the focus
+ * order, which is the one thing it exists to be in.
+ *
+ * Collapsing the box is load-bearing, not belt-and-braces. clip-path hides
+ * the painting but leaves the element its full layout box, and that box still
+ * receives pointer events — a clipped-only skip link sits invisibly across
+ * the header and swallows clicks meant for the controls beneath it.
+ *
+ * The padding has to live in the focused state for the same reason: under
+ * border-box, padding is a floor that width:1px cannot get under, so a
+ * padded hidden link is still a 26x18 click target.
+ */
+.skip-link {
+  position: absolute;
+  inset-block-start: var(--space-m);
+  inset-inline-start: var(--space-m);
+  z-index: calc(var(--site-header-z) + 1);
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  background: var(--background-primary);
+  color: var(--text-primary);
+  border: var(--site-header-border);
+  border-radius: var(--radius-s);
+  font-family: var(--font-primary);
+  font-size: var(--font-s);
+  text-decoration: none;
+  white-space: nowrap;
+  pointer-events: none;
+  clip-path: inset(50%);
+}
+
+.skip-link:focus-visible {
+  width: auto;
+  height: auto;
+  padding: var(--space-s) var(--space-m);
+  overflow: visible;
+  pointer-events: auto;
+  clip-path: none;
+}
+
+@media (max-width: 768px) {
+  /* Flush to the viewport edge, so the first and last actions read as
+     full-height tap targets rather than floating inside a gutter. */
+  .site-header-inner {
+    padding-inline: 0;
+  }
+
+  /* Labels collapse to icons. The accessible name lives on the button's
+     aria-label, so nothing is lost to a screen reader. */
+  .site-header .header-action-label {
+    display: none;
+  }
+
+  /* Opt in, not automatic. A product with a short header nav and no drawer
+     would otherwise lose its entire navigation here, with a class override as
+     the only way back — the incomplete-token-coverage case §17 Rule 3 names.
+     Set data-nav-collapse="drawer" once you have somewhere for it to go. */
+  .site-header[data-nav-collapse="drawer"] .nav {
+    display: none;
+  }
+
+  :root {
+    --site-header-logo-height: 45px;
+  }
+}
+
+
+/* ------ 41. STICKY BAR ------
+ * A horizontal bar of page-scoped controls — breadcrumbs, tabs, toggles,
+ * segmented controls, a dropdown — that stays put as the page scrolls.
+ *
+ * Not a Site Header (section 40) variant, and the distinction is the content
+ * model: a header carries site identity and global navigation, this carries
+ * controls that belong to the page you are on. It also sits *below* a header
+ * rather than beside it, so its offset depends on the header's height.
+ *
+ * The two do share a shape, which is why they live next to each other: an
+ * outer element owning sticky, background and border, and an inner container
+ * owning the flex row. The end slot is pushed over with an auto margin for the
+ * same reason the header's is — space-between resolves to flex-start with a
+ * single child, so a bar with only actions would render on the left.
+ *
+ * Child components stretch to the bar's height automatically, so tabs,
+ * breadcrumbs and toggles need no extra classes to line up inside one.
+ */
+
+:root {
+  --sticky-bar-height: 70px;
+  --sticky-bar-gap: var(--space-l);
+  --sticky-bar-background: var(--background-primary);
+  --sticky-bar-border: var(--border-s) solid var(--border-faded);
+  --sticky-bar-z: var(--z-sticky-bar);
+}
+
+.sticky-bar {
+  position: sticky;
+  top: 0;
+  z-index: var(--sticky-bar-z);
+  background: var(--sticky-bar-background);
+}
+
+/* The component owns its height, and --sticky-bar-height is the knob. It is
+   also one of the things --scroll-offset is summed from, so raising the bar
+   pushes anchored targets down by the same amount — a link inside the bar
+   cannot scroll its target underneath the bar itself. */
+.sticky-bar-container {
+  display: flex;
+  align-items: center;
+  gap: var(--sticky-bar-gap);
+  height: var(--sticky-bar-height);
+  border-bottom: var(--sticky-bar-border);
+}
+
+/* -- Scrollable content area --
+ * overflow-x: auto is what lets a long breadcrumb or tab set scroll instead
+ * of stretching the bar. It also clips, which is why a dropdown belongs in
+ * .sticky-bar-actions and never in here. */
+.sticky-bar-content {
+  display: flex;
+  align-items: center;
+  gap: var(--sticky-bar-gap);
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.sticky-bar-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* -- Actions --
+ * The auto margin, not space-between on the container — see the section note. */
+.sticky-bar-actions {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+  flex-shrink: 0;
+  margin-inline-start: auto;
+}
+
+/* NOTE: there is no .sticky-bar-breadcrumbs. Breadcrumb is a core component
+   (§18) and `.sticky-bar .breadcrumb` below adapts it to the bar. The docs
+   generator used to emit a parallel implementation under that name; it was
+   retired on 2026-08-11 and the bar composes the component like any other
+   consumer. All docs-site.css keeps is the truncation a bar needs and a page
+   does not. */
+
+/* -- Close: a dismiss affordance at the trailing edge -- */
+.sticky-bar-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  padding: 0 var(--space-l);
+  color: var(--text-primary);
+  text-decoration: none;
+  border-left: var(--border-s) solid var(--border-faded);
+  transition: background-color var(--duration-2xs) var(--ease-out),
+              color var(--duration-2xs) var(--ease-out);
+}
+
+.sticky-bar-close:hover {
+  background: var(--background-faded);
+  color: var(--text-plain);
+}
+
+.sticky-bar-close .svg-icn {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  flex-shrink: 0;
+}
+
+/* -- Dropdown inside a sticky bar -- */
+.sticky-bar .dropdown {
+  align-self: stretch;
+}
+
+.sticky-bar .dropdown-trigger {
+  --dropdown-trigger-padding-y: 0;
+  --dropdown-trigger-padding-x: var(--space-s);
+}
+
+/* -- Child components --
+ * Scoped so they stretch to the bar height without needing extra classes. */
+.sticky-bar .tabs {
+  align-self: stretch;
+  flex-shrink: 0;
+  border-bottom: none;
+}
+
+.sticky-bar .tab {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  padding: 0 var(--space-l);
+  font-size: var(--font-s);
+}
+
+/* Aligns the indicator with the container's bottom border rather than the
+   tab list's own -1px offset. */
+.sticky-bar .tab.is-active::after {
+  bottom: 0;
+}
+
+.sticky-bar .breadcrumb {
+  align-self: center;
+  font-size: var(--font-s);
+}
+
+.sticky-bar .form-toggle {
+  align-self: center;
+}
+
+.sticky-bar .segmented-control {
+  align-self: center;
+}
+
+
+/* ------ 42. AVATAR ------
+ * A person or organisation reduced to a small circle: an image where there is
+ * one, initials where there is not.
+ *
+ * The initial is decorative, not content. A name rendered as "E" tells a
+ * screen reader nothing useful and is usually sitting next to the full name
+ * anyway, so the element is hidden from the accessibility tree by default and
+ * the surrounding markup carries the identity.
+ *
+ * Size is one token, because the box is always square and the type scales with
+ * it. Everything else re-points a colour.
+ *
+ * Fallback is a stack, not a swap. Initials sit in the box as text and the
+ * photograph covers them from the layer above, so removing a broken image
+ * reveals the initials with no JavaScript beyond the removal itself.
+ */
+
+:root {
+  --avatar-size: 2rem;
+  --avatar-radius: var(--radius-pill);
+  --avatar-background: var(--background-secondary);
+  --avatar-color: var(--text-primary);
+  --avatar-icon-scale: 0.55;
+  /* A fraction, not a length. A custom property containing var() is resolved
+     where it is declared, so calc(var(--avatar-size) * 0.3) here would freeze
+     at the :root size and never follow a re-pointed avatar. The multiplication
+     happens at the avatar instead. */
+  --avatar-group-overlap: 0.3;
+  --avatar-group-ring-width: 2px;
+  --avatar-group-ring-color: var(--background-primary);
+}
+
+.avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  inline-size: var(--avatar-size);
+  block-size: var(--avatar-size);
+  overflow: hidden;
+  border-radius: var(--avatar-radius);
+  background: var(--avatar-background);
+  color: var(--avatar-color);
+  font-family: var(--font-primary);
+  /* Tied to the box rather than the type scale, so one token resizes both and
+     the initial can never outgrow its circle. */
+  font-size: calc(var(--avatar-size) * 0.4);
+  font-weight: var(--font-weight-semi-bold);
+  line-height: 1;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+/* Out of flow so it can sit over the initials without displacing them. */
+.avatar img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+/* The icon fallback. .svg-icn carries a -0.175em optical margin for inline use
+   next to text; inside a centred box it just pulls the icon off-centre.
+   inline-size and block-size are restated rather than left to .svg-icn's own
+   width/height, because context rules like .dropdown-item .svg-icn set a literal
+   size at (0,2,0) and would otherwise pin the icon at 20px inside an avatar. */
+.avatar > .svg-icn {
+  --icon-size: calc(var(--avatar-size) * var(--avatar-icon-scale));
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  margin: 0;
+}
+
+.avatar[data-size="small"] {
+  --avatar-size: 1.5rem;
+}
+
+.avatar[data-size="large"] {
+  --avatar-size: 3rem;
+}
+
+.avatar[data-size="xlarge"] {
+  --avatar-size: 4.5rem;
+}
+
+/* Colour follows the display-component axis (data-color), the same values
+   badge and tag use, so a rebrand is a token change rather than an edit here.
+   The set stops at two on purpose. Unlike badge and tag, this component paints
+   --text-inverted directly onto the saturated fill, so a value only earns its
+   place if it clears 4.5:1 in both themes AND without a brand theme loaded —
+   --status-success is 3.16:1 unthemed and was dropped for it. A person is not
+   a status anyway: the colour here is variety, not meaning. */
+.avatar[data-color="accent"] {
+  --avatar-background: var(--background-accent);
+  --avatar-color: var(--text-inverted);
+}
+
+.avatar[data-color="info"] {
+  --avatar-background: var(--status-info);
+  --avatar-color: var(--text-inverted);
+}
+
+/* Shape re-points the radius token rather than setting border-radius, so a
+   context that already re-pointed --avatar-radius is not silently overridden. */
+.avatar[data-shape="circle"] {
+  --avatar-radius: var(--radius-pill);
+}
+
+.avatar[data-shape="square"] {
+  --avatar-radius: 0;
+}
+
+.avatar[data-shape="rounded"] {
+  --avatar-radius: var(--radius-s);
+}
+
+/* Avatar group — the same component, not a second one. It has no meaning
+   without avatars inside it and adds no anatomy of its own: one rule pulls the
+   siblings together, one separates them from what they overlap. */
+.avatar-group {
+  display: flex;
+  align-items: center;
+}
+
+/* A ring rather than a border: a border would draw inside the box, eating into
+   the photograph and sitting under the overflow clip. box-shadow paints outside
+   it and touches neither.
+
+   Matched as a descendant, not a child, because the avatars in a real team list
+   are each wrapped in the <a> that links to the person — the component's own
+   rule is that the avatar itself is never the clickable element. */
+.avatar-group .avatar {
+  box-shadow: 0 0 0 var(--avatar-group-ring-width) var(--avatar-group-ring-color);
+}
+
+/* On the group's direct children, whatever they are, so a wrapped avatar still
+   overlaps. --avatar-size resolves on the group here rather than on the avatar,
+   so a per-avatar data-size inside a group does not shift the overlap. */
+.avatar-group > *:not(:first-child) {
+  margin-inline-start: calc(-1 * var(--avatar-size) * var(--avatar-group-overlap));
+}
+
+/* Forced colours drops box-shadow and flattens every background to Canvas, so
+   an overlapping group would merge into one silhouette of stacked letters. A
+   border is not dropped, and it gives every avatar an edge — which is all the
+   ring was ever providing. 1px inside the box costs a hairline of the
+   photograph and nothing of the overlap, which reads --avatar-size. */
+@media (forced-colors: active) {
+  .avatar {
+    border: 1px solid CanvasText;
+  }
+}
+
+
+/* ------ 43. TOOLBAR ------
+ * A horizontal bar of controls that act on the thing below it — a canvas, a
+ * preview, a document.
+ *
+ * Not a Sticky Bar (section 41), and the distinction is what the bar is *for*.
+ * A sticky bar carries page context that follows you as you scroll: where you
+ * are, what this page is, what you can do with it. A toolbar carries the
+ * instrument panel for the thing on screen. The tell is that a toolbar's
+ * controls change the content, and a sticky bar's describe it.
+ *
+ * It shares the header/sticky-bar shape — an outer element owning background
+ * and border so the rule runs edge to edge, an inner container owning the row,
+ * an end slot pushed over with an auto margin rather than space-between (which
+ * resolves to flex-start with a single child).
+ *
+ * Three things it does NOT share, each of them load-bearing:
+ *
+ * 1. No height token. A sticky bar sets its own height because its content is
+ *    uniform. A toolbar's height is built up instead — every control resolves
+ *    to --toolbar-control-height, and --toolbar-padding-y adds the bar's own
+ *    breathing room on top. Set a height here and the two disagree; see the
+ *    note on .toolbar-container for why the padding is not zero.
+ * 2. It wraps, it does not scroll. .sticky-bar-content uses overflow-x, which
+ *    is why dropdowns are barred from it. A toolbar is mostly dropdowns and
+ *    tooltips, and an overflow container clips both. Wrapping is also what
+ *    keeps every control reachable at 400% zoom (WCAG 1.4.10).
+ * 3. Not sticky by default. Most toolbars sit at the top of a fixed-height app
+ *    shell and never scroll; data-sticky="true" is for the ones that do. A
+ *    sticky toolbar must be added to the --scroll-offset sum, or an in-page
+ *    anchor will land underneath it.
+ *
+ * Controls are composed, never re-invented. Everything that goes in a toolbar
+ * is already a component — button, dropdown, segmented control, toggle, number
+ * input, divider. The bar adapts them by re-pointing their own custom
+ * properties, so nothing here needs a toolbar-specific class.
+ */
+
+:root {
+  --toolbar-background: var(--background-primary);
+  --toolbar-border: var(--border-s) solid var(--border-faded);
+  --toolbar-gap: var(--space-l);
+  --toolbar-group-gap: var(--space-s);
+  --toolbar-padding-x: var(--space-xl);
+  --toolbar-padding-y: var(--space-s);
+  /* Every control in the bar resolves to this. 36px is 8px of air around a
+     19px line box at the 16px body size, and clears the 24px WCAG 2.5.8 AA
+     target with room. Page forms keep their own 44px — dense tool chrome and
+     a form on a phone are not the same problem. */
+  --toolbar-control-height: 36px;
+  /* Wide enough for four digits and a unit without the field resizing the bar. */
+  --toolbar-number-input-width: 4.5rem;
+  /* Ceiling for a menu opened from the bar on a narrow screen. */
+  --toolbar-menu-max-width: 20rem;
+  --toolbar-z: var(--z-toolbar);
+  /* Where a sticky bar docks. 0 suits an app shell, where the bar is the top of
+     the window; a shell with a header above it re-points this to that header's
+     height. A knob rather than a rule to override, because overriding `top`
+     means winning a specificity argument against the [data-sticky] selector
+     below, while a custom property set on the element simply wins (§17 Rule 3). */
+  --toolbar-top: 0px;
+}
+
+.toolbar {
+  background: var(--toolbar-background);
+  border-bottom: var(--toolbar-border);
+  flex-shrink: 0;
+}
+
+/* Opt-in. See note 3 above — a sticky toolbar owes --scroll-offset its height. */
+.toolbar[data-sticky="true"] {
+  position: sticky;
+  top: var(--toolbar-top);
+  z-index: var(--toolbar-z);
+}
+
+/* The bar is one control tall plus its own breathing room. Both halves of that
+   matter: --toolbar-control-height stops the contents disagreeing, and
+   --toolbar-padding-y is what keeps the controls off the bar's edges.
+   Earlier versions of this component set no vertical padding at all, on the
+   reasoning that the controls should set the height. That was right about the
+   cause and wrong about the cure — the controls were disagreeing by 27px, and
+   removing the padding only made a bar whose contents touched its borders.
+   With the height enforced, padding is a density choice again. */
+.toolbar-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--toolbar-gap);
+  padding: var(--toolbar-padding-y) var(--toolbar-padding-x);
+}
+
+/* For a full-height app shell, where every row given to chrome is a row taken
+   from the canvas. The bar collapses to exactly one control tall. */
+.toolbar[data-density="compact"] {
+  --toolbar-padding-y: 0;
+}
+
+/* -- Group: a label and its control, or a set of related controls --
+ * Wraps for the same reason the container does (note 2 above): a bar that
+ * scrolls hides controls, and every control has to stay reachable at 400% zoom
+ * (WCAG 1.4.10). The container's own flex-wrap only breaks BETWEEN groups, so a
+ * group holding several controls — four switches captioned "Show" — could not
+ * break at all and pushed the page wider instead. The first bars to carry more
+ * than one control per group are what surfaced it. */
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--toolbar-group-gap);
+}
+
+/* The base label element is display:block with a medium weight and a bottom
+   margin (section 8). A caption is allowed to BE a real <label for>, so those
+   three are neutralised here or the same class would render two different ways
+   depending on the element it is written on — and inside an align-items:center
+   row it is the margin box that gets centred, so the margin would push the
+   caption off the control's centre line. .form-toggle label does the same. */
+.toolbar-label {
+  margin-bottom: 0;
+  color: var(--text-faded);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-regular);
+  white-space: nowrap;
+}
+
+/* -- Actions: the trailing cluster -- */
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--toolbar-group-gap);
+  margin-inline-start: auto;
+}
+
+/* -- One control height --
+ * The single most important rule in this section. Left alone, a toolbar renders
+ * a dropdown trigger at 27px, a select at 44px and a default button at 54px,
+ * because three unrelated rules set them: the trigger's padding, the base
+ * input's min-height, and --button-padding-y. Nothing reconciles the three, and
+ * the mismatch is what makes a bar look broken however well its groups are
+ * spaced.
+ *
+ * min-height: 0 is load-bearing. The base input rule sets min-height: 44px —
+ * the WCAG 2.5.5 AAA touch target, right for a form on a phone — and it beats
+ * any padding trim, so trimming padding alone changes nothing. The height here
+ * clears 2.5.8 Target Size (Minimum, AA), which asks for 24px.
+ *
+ * Excluded on purpose: range, checkbox, radio and colour size their own box and
+ * would be distorted rather than aligned. The swatch is squared below instead. */
+.toolbar .button,
+.toolbar .dropdown-trigger,
+.toolbar .copy-btn,
+.toolbar .segmented-control,
+.toolbar .number-input,
+.toolbar select,
+.toolbar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]) {
+  height: var(--toolbar-control-height);
+  min-height: 0;
+}
+
+/* With the height fixed, vertical padding only fights it. */
+.toolbar .button {
+  --button-padding-y: 0;
+  --button-padding-x: var(--space-m);
+}
+
+.toolbar .dropdown-trigger {
+  --dropdown-trigger-padding-y: 0;
+  --dropdown-trigger-padding-x: var(--space-s);
+}
+
+.toolbar select,
+.toolbar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* -- Quiet chrome --
+ * A toolbar is a row of tools, not a row of boxes. Everything that acts is
+ * transparent until you point at it; a visible border is reserved for the
+ * things you can type into, so an edge in the bar carries meaning instead of
+ * being decoration. This is the other half of what makes a dense bar read —
+ * matching the heights alone is not enough. */
+.toolbar .dropdown-trigger,
+.toolbar .button[data-variant="transparent"] {
+  border-radius: var(--radius-s);
+}
+
+.toolbar .dropdown-trigger:hover {
+  background-color: var(--background-faded);
+}
+
+/* Fields keep an edge, and re-point the input surface to the bar's own ground
+   so a bordered field reads as a well rather than a grey slab. */
+.toolbar select,
+.toolbar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+.toolbar .number-input {
+  --input-background: var(--toolbar-background);
+  border-radius: var(--radius-s);
+}
+
+/* A toggle is a compound — a 24px switch and its label — so left alone it sits
+   12px shorter than every bordered control beside it, and the row reads as
+   misaligned even though nothing is misplaced. It cannot join the height rule
+   above: that rule sets `height`, and its checkbox exclusion exists so a
+   checkbox's own box is never distorted. min-height on the wrapper gives the
+   toggle the row's height while the switch keeps the box it drew for itself. */
+.toolbar .form-toggle {
+  min-height: var(--toolbar-control-height);
+}
+
+/* Square, so an icon button matches the swatch and reads as a tool. Keyed on
+   data-icon-only rather than on .copy-btn or any other role class — a copy
+   button that carries a label must stay as wide as its label. */
+.toolbar .button[data-icon-only] {
+  width: var(--toolbar-control-height);
+  padding: 0;
+}
+
+.toolbar input[type="color"] {
+  height: var(--toolbar-control-height);
+  width: var(--toolbar-control-height);
+  align-self: center;
+  border-radius: var(--radius-s);
+}
+
+/* Fixed rather than fluid: a four-digit value must not resize the whole bar. */
+.toolbar .number-input input[type="number"] {
+  width: var(--toolbar-number-input-width);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The divider's own --divider-spacing is page-scale. In a bar it only needs to
+   separate two clusters, and the container's gap already provides most of it.
+   It already stretches itself, so only the margin is restated. */
+.toolbar .divider--vertical {
+  margin: var(--space-s) 0;
+}
+
+/* -- Narrow viewports --
+ * The labels go before the controls do. Every group in a toolbar is either a
+ * named control (the label repeats what the trigger already says) or an icon
+ * set that carries its own accessible name, so dropping the visible label
+ * costs width and no meaning. Menus are clamped so a panel still fits a 375px
+ * screen rather than overflowing it. */
+@media (max-width: 768px) {
+  /* Re-pointed, not overridden: a brand that moves --toolbar-gap or
+     --toolbar-padding-x must keep it at every width, and writing literals here
+     would silently discard the knob below 768px. */
+  .toolbar {
+    --toolbar-gap: var(--space-m);
+    --toolbar-padding-x: var(--space-l);
+  }
+
+  .toolbar-label {
+    display: none;
+  }
+
+  /* On a narrow screen a settings panel is often the only route to the controls
+     inside it, so the menu's own floor (--dropdown-menu-min-width, section 27)
+     is dropped and a ceiling applied instead. The ceiling subtracts the bar's
+     real gutter rather than a repeated literal, so moving the padding moves the
+     clamp with it. */
+  .toolbar .dropdown-menu {
+    --dropdown-menu-min-width: 0;
+    max-width: min(var(--toolbar-menu-max-width), calc(100vw - 2 * var(--toolbar-padding-x)));
+  }
+}
+
+
+/* ------ 44. PAGE HEADER ------
+ * The opening block of a page: eyebrow, title, subtitle, actions, and an
+ * optional background image. One header per page, always first, always full
+ * bleed.
+ *
+ * Not a Site Header (section 40), and the two are stacked on most pages. A
+ * site header is chrome — the same identity and navigation on every page, and
+ * it does not change when the route does. A page header is content — it names
+ * *this* page and offers the next step on it. The tell is that a site header
+ * survives navigation and a page header is replaced by it.
+ *
+ * One place this component breaks the house convention, worth stating plainly
+ * rather than discovering later:
+ *
+ *   There is no implicit medium size. Button, Avatar and Book Cover all treat
+ *   the bare class as their middle step, but a height on the bare class here
+ *   would silently stretch every header using it — the docs site alone has
+ *   122. So the bare class is content-sized — padding plus whatever is in it
+ *   — and data-size is the opt-in for a fixed height. This is also the honest
+ *   default on its own merits: a header with no media has no reason to
+ *   reserve space it will not fill.
+ *
+ * Heights are clamped rem/vh rather than plain vh. The rem floor is what stops
+ * a landscape phone collapsing a large header into a strip, and the rem
+ * ceiling stops a 27" display turning it into a full screen of empty ground.
+ * A product that genuinely wants a viewport-height hero re-points the token —
+ * see --page-header-min-height-large.
+ *
+ * Media is a child element, not a background-image, so the picture is a real
+ * <img>: it gets alt text, srcset, loading and fetchpriority, and it is not
+ * dropped when a browser declines background images. The scrim rides on the
+ * media wrapper, so a header with no image also has no scrim to unset.
+ */
+
+:root {
+  --page-header-background: var(--background-faded);
+  --page-header-border: var(--border-s) solid var(--border-faded);
+  --page-header-color: var(--text-primary);
+  --page-header-color-muted: var(--text-secondary);
+  --page-header-padding-y: var(--section-l);
+  --page-header-padding-x: var(--space-xl);
+  --page-header-max-width: var(--container-l);
+  --page-header-gap: var(--space-m);
+  --page-header-actions-gap: var(--space-s);
+  /* Bounded on both ends — see the section note. Re-point any of the three to
+     get a viewport-height hero (100svh) or a fixed pixel band. */
+  --page-header-min-height-small: clamp(12rem, 24vh, 18rem);
+  --page-header-min-height-medium: clamp(18rem, 40vh, 28rem);
+  --page-header-min-height-large: clamp(24rem, 60vh, 40rem);
+  /* Applied to the media wrapper, so it costs nothing on a header without one.
+     Set to transparent for a light image carrying its own contrast. */
+  --page-header-scrim: rgba(0, 0, 0, 0.45);
+  /* Fixed light, not --text-inverted: the scrim is dark in both themes, so a
+     token that flips with the theme would fail contrast in one of them. */
+  --page-header-color-on-media: var(--off-white);
+  /* The ground behind the picture, seen only while it loads or if it fails.
+     Fixed dark for the same reason as the colour above. */
+  --page-header-background-on-media: var(--off-black);
+  /* The subtitle is a line of prose, so it gets a reading measure rather than
+     the container's full width. */
+  --page-header-subtitle-max-width: var(--max-width-s);
+  /* Matches h1 at both steps of the heading scale. Restated rather than
+     inherited so the title can be an <h1> on a page and an <h2> in a demo
+     without changing size — see the note on .page-header-title. */
+  --page-header-title-size: var(--font-7xl);
+}
+
+.page-header {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  padding-block: var(--page-header-padding-y);
+  background: var(--page-header-background);
+  border-bottom: var(--page-header-border);
+  color: var(--page-header-color);
+  text-wrap: balance;
+}
+
+/* -- Height --
+   Opt-in only. See the section note for why the bare class has none. */
+.page-header[data-size="small"] {
+  min-height: var(--page-header-min-height-small);
+}
+
+.page-header[data-size="medium"] {
+  min-height: var(--page-header-min-height-medium);
+}
+
+.page-header[data-size="large"] {
+  min-height: var(--page-header-min-height-large);
+}
+
+/* -- Media --
+   Absolutely positioned rather than a background-image, so the <img> keeps its
+   alt text and loading hints. Nothing here clips the header itself: an
+   object-fit:cover image already fills the box exactly, and an overflow on the
+   shell would clip any Flip or scroll animation that leaves it. */
+.page-header-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.page-header-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.page-header-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--page-header-scrim);
+}
+
+/* Text over an image goes light automatically. Keyed on the media element
+   rather than an attribute so the two cannot disagree — an author who adds a
+   picture cannot forget to add the matching theme flag. */
+.page-header:has(.page-header-media) {
+  --page-header-color: var(--page-header-color-on-media);
+  --page-header-color-muted: var(--page-header-color-on-media);
+  --page-header-background: var(--page-header-background-on-media);
+  border-bottom-color: transparent;
+}
+
+/* Buttons over the scrim, and the reason this is not left to the author: the
+   text switch above fixes the prose and would leave every button behind. An
+   outline button reads --button-color, which is --text-primary — dark type and
+   a dark rule on a dark wash. So the colour is re-pointed for the whole
+   cluster, and the filled button additionally has its label flipped, because
+   the base sets --button-text-color: var(--text-inverted) and that is light in
+   light mode: light on a now-light fill.
+
+   Both are held off buttons that state their own colour. A danger button is a
+   deliberate choice and the header has no business overruling it — those keep
+   their semantic fill, which carries its own contrast. */
+.page-header:has(.page-header-media) .button:not([data-color]) {
+  --button-color: var(--page-header-color-on-media);
+}
+
+.page-header:has(.page-header-media) .button:not([data-color]):not([data-variant]) {
+  --button-text-color: var(--page-header-background-on-media);
+}
+
+/* -- Container --
+   Owns the gutter and the measure. It is also what lifts the content off the
+   media: the media sits at z-index 0, this at 1. A header using a .container-*
+   utility instead is fine as long as it has no media. */
+.page-header-container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-header-gap);
+  width: 100%;
+  max-width: var(--page-header-max-width);
+  margin-inline: auto;
+  padding-inline: var(--page-header-padding-x);
+}
+
+/* -- Content --
+   The gap owns the vertical rhythm, so the elements inside must not add
+   margins of their own. The heading scale is restated rather than inherited so
+   the title stays restylable without changing the element. */
+.page-header-title,
+.page-header-subtitle,
+.page-header .eyebrow {
+  margin: 0;
+}
+
+/* The size is set on the class, not taken from the element. A page header's
+   title is an <h1> in production and an <h2> in a demo beside one, and it
+   should look the same in both — the element is a document-outline decision,
+   not a size decision. Same reasoning as .book-cover-title (section 37). */
+.page-header-title {
+  font-size: var(--page-header-title-size);
+  line-height: var(--line-height-m);
+}
+
+.page-header-subtitle {
+  color: var(--page-header-color-muted);
+  font-size: var(--font-m);
+  max-width: var(--page-header-subtitle-max-width);
+  text-wrap: balance;
+}
+
+/* -- Actions --
+   A row that wraps. Buttons keep their own sizing; the header only spaces
+   them. margin-top adds to the container gap deliberately: an action cluster
+   earns more separation than a subtitle does. */
+.page-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--page-header-actions-gap);
+  margin-top: var(--space-s);
+}
+
+/* -- Alignment -- */
+.page-header[data-align="center"] .page-header-container {
+  align-items: center;
+  text-align: center;
+}
+
+.page-header[data-align="center"] .page-header-subtitle {
+  margin-inline: auto;
+}
+
+.page-header[data-align="center"] .page-header-actions {
+  justify-content: center;
+}
+
+/* -- Narrow viewports --
+   The title steps with the heading scale at 959px, the same breakpoint h1
+   uses; padding steps later, at 767px. The heights are already clamped, so
+   shrinking them again here would double-count. */
+@media (max-width: 959px) {
+  .page-header {
+    --page-header-title-size: var(--font-5xl);
+  }
+}
+
+@media (max-width: 767px) {
+  .page-header {
+    --page-header-padding-y: var(--section-m);
+    --page-header-padding-x: var(--space-l);
+  }
+}
+
+/* Forced colours drops the scrim and flattens every background, which would
+   leave light-on-light text over the image. Hide the picture and hand the
+   header back to the system palette. */
+@media (forced-colors: active) {
+  .page-header-media {
+    display: none;
+  }
+
+  .page-header:has(.page-header-media) {
+    --page-header-color: CanvasText;
+    --page-header-color-muted: CanvasText;
+    --page-header-background: Canvas;
+  }
+}
+
+
+/* ------ 45. FOOTER ------
+ * The block at the bottom of a page: an optional top region carrying
+ * identity and link columns, and a bottom region carrying the copyright and
+ * the legal links. On most sites the bottom region is the whole component.
+ *
+ * Same outer/inner split as .site-header (section 40) and .sticky-bar
+ * (section 41). The outer element is full-bleed and owns background and the
+ * top border; .footer-inner owns max-width, centring and the inset. That is
+ * what lets the border run edge to edge while the contents line up with the
+ * page column.
+ *
+ * The top region is three fixed slots — start, logo, end — rather than a
+ * variable column count. The logo is the middle one and the sides are
+ * optional, so the arrangement has to hold with one side, the other, or
+ * neither.
+ *
+ * Links here are .footer-link, not .nav-link (section 39). A nav link
+ * carries the padding a header bar needs to turn each link into a
+ * full-height hit area; a footer column has no bar to fill. Owning the link
+ * also means the footer wraps its rows freely without asking Nav to soften
+ * its "a header nav that needs to wrap needs a drawer" rule.
+ *
+ * Placement is the consumer's job. There is deliberately no margin-top: auto
+ * — a footer that pins to the bottom of a short page is a property of the
+ * page shell, not of the footer. Same rule .site-header follows.
+ */
+
+:root {
+  /* -- Component tokens (re-point these to re-skin; never override the rules) -- */
+
+  /* Full-bleed by default, matching .site-header. Set a length to line the
+     footer up with a content column. */
+  --footer-max-width: none;
+  /* Matches .padding-global, so the copyright lines up with the paragraph
+     above it rather than sitting on its own margin. */
+  --footer-padding-inline: var(--space-xl);
+  /* A footer has vertical size where a header has a fixed height, so this
+     stands in for --site-header-height rather than joining it. */
+  --footer-padding-block: var(--space-2xl);
+  /* Three jobs, one measure: the grid gap, the space either side of the
+     hairline, and the bottom row's gap. Splitting them would only give them
+     a way to drift apart. */
+  --footer-gap: var(--space-xl);
+  /* The tighter rhythm inside a slot — heading to links, and link to link. */
+  --footer-slot-gap: var(--space-s);
+  /* A floor, not a width. Without it a slot holding one short link collapses
+     to that word and drags the centre track off the page centre. */
+  --footer-side-min-width: 160px;
+  --footer-logo-height: 80px;
+  --footer-background: var(--background-primary);
+  /* Paired with the background deliberately. A background knob on its own is
+     a trap: the first brand to point it at something dark gets a contrast
+     bug and no knob to fix it with. Every other colour below exists for the
+     same reason — anything the background can break needs its own knob, or
+     the two-token re-skin the doc promises is a half-truth. */
+  --footer-text: var(--text-primary);
+  --footer-border: var(--border-s) solid var(--border-faded);
+  --footer-label-color: var(--text-faded);
+  --footer-logo-color: var(--text-plain);
+  --footer-link-color: var(--text-secondary);
+  --footer-link-color-hover: var(--text-primary);
+  --footer-link-color-current: var(--text-plain);
+  /* The WCAG 2.2 AA 2.5.8 floor, exposed rather than baked in: the rules are
+     not to be overridden, so a brand that wants a taller link needs a knob. */
+  --footer-link-min-size: 24px;
+  --footer-legal-gap: var(--space-m);
+}
+
+.footer {
+  background: var(--footer-background);
+  color: var(--footer-text);
+  border-top: var(--footer-border);
+  padding-block: var(--footer-padding-block);
+}
+
+.footer-inner {
+  max-width: var(--footer-max-width);
+  margin-inline: auto;
+  padding-inline: var(--footer-padding-inline);
+}
+
+/* The middle track takes the leftover width so the logo has room to sit at
+   the centre of it; the side tracks are content-sized above a floor.
+
+   All three slots are placed by explicit line number rather than left to
+   auto-placement. A footer carrying only an end slot would otherwise have it
+   auto-placed into the first track and rendered on the left, and an absent
+   slot has to keep holding its track open or the logo stops being centred
+   the moment one side is dropped. */
+.footer-top {
+  display: grid;
+  grid-template-columns:
+    minmax(var(--footer-side-min-width), auto)
+    minmax(0, 1fr)
+    minmax(var(--footer-side-min-width), auto);
+  gap: var(--footer-gap);
+  align-items: center;
+  margin-block-end: var(--footer-gap);
+  padding-block-end: var(--footer-gap);
+  border-bottom: var(--footer-border);
+}
+
+.footer-top-start,
+.footer-top-end {
+  display: flex;
+  flex-direction: column;
+  gap: var(--footer-slot-gap);
+}
+
+.footer-top-start {
+  grid-column: 1;
+}
+
+/* Right-aligned as a slot. align-items is what does the work — text-align
+   alone cannot move a stretched flex child, it can only move the text inside
+   one, so both are needed for the heading and the links to agree. */
+.footer-top-end {
+  grid-column: 3;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.footer-logo {
+  grid-column: 2;
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* .svg-logo is width-driven with a 300px ceiling, which is a poster rather
+   than a footer mark. Height-driven instead — the same re-point
+   .svg-logo.site-header-logo-image makes in section 40. */
+.svg-logo.footer-logo-image {
+  display: block;
+  height: var(--footer-logo-height);
+  width: auto;
+  color: var(--footer-logo-color);
+}
+
+.svg-logo.footer-logo-image svg {
+  height: 100%;
+  width: auto;
+  object-fit: contain;
+}
+
+/* Composes with .label (section 9): the shape comes from the utility and the
+   footer only steps the colour down, so the links stay the loudest thing in
+   the slot. */
+.footer-label {
+  color: var(--footer-label-color);
+}
+
+.footer-links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--footer-slot-gap);
+}
+
+.footer-top-end .footer-links {
+  align-items: flex-end;
+}
+
+/* No padding: a footer link has no bar to fill, and an inset would show the
+   moment a background were added. The height comes from min-block-size
+   instead — --font-s at --line-height-m is 19.2px, and WCAG 2.2 AA 2.5.8
+   asks for a 24×24 target. */
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--footer-link-min-size);
+  color: var(--footer-link-color);
+  font-family: var(--font-primary);
+  font-size: var(--font-s);
+  line-height: var(--line-height-m);
+  text-decoration: none;
+  transition: color var(--duration-2xs) var(--ease-out);
+}
+
+.footer-link:hover {
+  color: var(--footer-link-color-hover);
+}
+
+/* Current page is styled from the ARIA attribute rather than a class, so the
+   accessible state and the visible state cannot drift apart — there is only
+   one thing to set. Same reasoning as .nav-link in section 39. */
+.footer-link[aria-current="page"] {
+  color: var(--footer-link-color-current);
+  font-weight: var(--font-weight-semi-bold);
+}
+
+.footer-bottom {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--footer-gap);
+}
+
+.footer-bottom[data-layout="center"] {
+  justify-content: center;
+}
+
+/* The auto margin, not justify-content: space-between — space-between
+   resolves to flex-start with a single child, and a lone copyright is the
+   common case. Wrapping is the footer's own concern: a legal row has no bar
+   height to protect, so it may take a second line rather than overflow. */
+.footer-legal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--footer-legal-gap);
+  margin-inline-start: auto;
+}
+
+@media (max-width: 768px) {
+  .footer-top {
+    grid-template-columns: minmax(0, 1fr);
+    text-align: center;
+  }
+
+  /* Every pinned line number has to be released. A slot left pinned to line
+     3 would conjure two implicit columns beside the single explicit one. */
+  .footer-top-start,
+  .footer-top-end,
+  .footer-logo {
+    grid-column: auto;
+  }
+
+  /* Stacked, everything centres — including the slot that right-aligns when
+     there are three columns to align against. */
+  .footer-top-start,
+  .footer-top-end,
+  .footer-links,
+  .footer-top-end .footer-links {
+    align-items: center;
+  }
+
+  .footer-top-end {
+    text-align: center;
+  }
+
+  .footer-bottom,
+  .footer-legal {
+    justify-content: center;
+  }
+
+  .footer-legal {
+    margin-inline-start: 0;
+  }
+}
+
+
 /* ------ 15. COMPONENTS IN PROGRESS ------ */
 /*
  * The following components are actively being built.
@@ -5094,5 +6889,12 @@ a.book-contents-item:focus-visible .book-contents-item-trailing .svg-icn {
  * - [x] Drop Cap (.drop-cap)
  * - [x] Book (.book-shelf, .book-cover, .book-contents)
  * - [x] Page Navigation (.page-nav)
+ * - [x] Nav (.nav)
+ * - [x] Site Header (.site-header)
+ * - [x] Sticky Bar (.sticky-bar)
+ * - [x] Avatar (.avatar)
+ * - [x] Toolbar (.toolbar)
+ * - [x] Page Header (.page-header)
+ * - [x] Footer (.footer)
  */
 

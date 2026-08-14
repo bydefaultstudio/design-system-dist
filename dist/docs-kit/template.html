@@ -39,47 +39,57 @@
         <button onclick="document.getElementById('ds-missing-banner').style.display='none'" style="margin-left:auto;background:none;border:1px solid #f0c040;border-radius:4px;padding:4px 10px;cursor:pointer;color:#7a5c00;font-size:13px;">Dismiss</button>
     </div>
 
-    <!-- Layout grid: nav.js injects header + sidebar before <main> via insertAdjacentHTML -->
-    <div class="docs-layout" id="site-nav" data-base="{{NAV_BASE}}">
-    <main class="docs-main-area">
+    <!-- Layout grid: nav.js injects header + sidebar before the content column
+         via insertAdjacentHTML.
+
+         .docs-main-area is a <div>, not a <main>. It is the layout column — the
+         grid track beside the sidebar — and it holds the page header, the
+         sticky bar, the pager, the feedback block and the footer as well as the
+         content. Two things went wrong while it was a <main>: the page carried
+         two main landmarks (this one and .docs-main below), and <footer> mapped
+         to `generic` instead of `contentinfo`, because footer only becomes the
+         landmark when it is not inside main. nav.js gives this element id="main"
+         for the skip link, which it finds by class, so the element name is free
+         to be the honest one. -->
+    <div class="docs-layout" id="site-nav" data-base="{{NAV_BASE}}"{{LAYOUT_ATTRS}}>
+    <div class="docs-main-area">
     <div{{WRAPPER_ATTRS}}>
     <div{{CONTAINER_ATTRS}}>
+        <!-- The main landmark opens here, not at .docs-main below, so it holds
+             the page header as well as the article. A <header> maps to `banner`
+             unless it is inside main/article/aside/nav/section, so a page header
+             left outside main becomes a second banner alongside the site
+             header's. The tool pages are arranged the same way. -->
+        <main>
         <!-- Page Header (full width, outside grid) -->
         {{PAGE_HEADER}}
 
         <!-- Page sub-header bar (full width, sticky: breadcrumb + filename + actions) -->
         {{PAGE_STICKY_BAR}}
 
-        <!-- Main Content + TOC grid -->
-        <div class="docs-content-grid padding-global">
-            <!-- Main Content -->
-            <main class="docs-main">
-                <article>
-                    {{PAGE_CONTENT}}
-                </article>
-            </main>
-
-            <!-- Table of Contents -->
-            {{TOC_SECTION}}
-        </div>
+        <!-- Page body. The content frame is part of it, because the frame is
+             not universal: a `doc` gets the measured grid with its TOC rail, a
+             `page` gets the same grid at full measure, and a `tool` gets no
+             frame at all and lays itself out. See PAGE_TYPES. -->
+        {{PAGE_BODY}}
 
         <!-- Page Navigation (Previous / Next) -->
         {{PAGE_NAV}}
+        </main>
 
-        {{EXTRA_CONTENT}}
-
-        <!-- Footer -->
-        <footer class="docs-footer">
-            <div class="docs-footer-inner padding-global">
-                <p class="docs-footer-text">{{FOOTER_TEXT}}</p>
-            </div>
-        </footer>
+        <!-- Feedback block and footer. Filled per page, not once for the whole
+             template: a `tool` page brings its own layout and does not always
+             want either, so the page type decides (see PAGE_TYPES). Both sit
+             outside main — <footer> only maps to contentinfo when it is not
+             inside it — and inside the Barba container, because brand spaces
+             carry their own footer text and it has to swap with the page. -->
+        {{PAGE_CHROME}}
 
         <!-- Per-page scripts (inside the page container so they re-execute on transition) -->
         {{PAGE_SCRIPTS}}
-    </div>
-    </div>
-    </main>
+    </div><!-- /[data-barba="container"] -->
+    </div><!-- /[data-barba="wrapper"] -->
+    </div><!-- /.docs-main-area -->
     </div><!-- /.docs-layout #site-nav -->
 
     <!-- Syntax highlighting (source set in docs.config.js) -->
@@ -94,9 +104,15 @@
             var tocObserver = null;
             var tocScrollHandler = null;
 
-            window.bdInitHighlight = function initHighlight() {
+            // Scoped to the arriving container, because under Barba's sync
+            // transitions the leaving container is still in the document when
+            // afterEnter fires — highlighting from `document` reprocesses the
+            // old page's blocks. The :not() guard makes it idempotent whatever
+            // the scope: hljs stamps data-highlighted and warns on a re-run.
+            window.bdInitHighlight = function initHighlight(scope) {
                 if (!window.hljs) return;
-                document.querySelectorAll('pre code').forEach(function(block) {
+                var root = scope || document;
+                root.querySelectorAll('pre code:not([data-highlighted])').forEach(function(block) {
                     hljs.highlightElement(block);
                 });
             };

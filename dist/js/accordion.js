@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v2.2.1 */
+/* @bydefaultstudio/design-system v3.0.0 */
 /**
  * Accordion component
  * Initialises all .accordion containers on the page.
@@ -30,11 +30,14 @@
  *   End       — focus last header
  *   Enter/Space — toggle panel (native button behaviour)
  *
- * @version 1.1.0
+ * @version 1.2.0
  */
 (function () {
-  function initAccordion() {
-    document.querySelectorAll(".accordion").forEach(function (accordion) {
+  function initAccordion(scope) {
+    var root = scope || document;
+    var bound = 0;
+
+    root.querySelectorAll(".accordion").forEach(function (accordion) {
       var mode = accordion.getAttribute("data-accordion") || "multi";
       var items = Array.from(accordion.querySelectorAll(":scope > .accordion-item"));
 
@@ -46,6 +49,7 @@
         var trigger = item.querySelector(".accordion-header");
         if (!trigger || trigger.dataset.accordionBound) return;
         trigger.dataset.accordionBound = "true";
+        bound++;
 
         trigger.addEventListener("click", function () {
           var wasOpen = item.classList.contains("is-open");
@@ -95,16 +99,35 @@
       });
     });
 
-    console.log("[accordion] v1.1.0 — init");
+    // Only when something was actually wired. This runs on every arrival and on
+    // hard load, and most pages have no accordion at all.
+    if (bound) console.log("[accordion] v1.2.0 — init (" + bound + ")");
   }
 
-  // Expose globally for Barba re-init
+  // Exposed for parity with the other components; the after-nav listener below
+  // is the caller that matters.
   window.initAccordion = initAccordion;
 
-  // Auto-init on DOM ready
+  //
+  //------- Initialize -------//
+  //
+  // Registered twice: once for the initial load, once for Barba's after-nav
+  // event. DOMContentLoaded never re-fires after a container swap, so without
+  // the second listener every accordion goes inert on the first navigation.
+  // See cms/js-code-structure.md.
+  //
+  // Both fire on a hard load — Barba's once() runs the global afterEnter hook
+  // even with no transition registered — so initAccordion runs twice before any
+  // navigation happens. The dataset guard is what makes that harmless, on every
+  // page view rather than only after a swap.
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initAccordion);
+    document.addEventListener("DOMContentLoaded", function () { initAccordion(); });
   } else {
     initAccordion();
   }
+
+  document.addEventListener("bd:after-nav", function (event) {
+    initAccordion(event.detail && event.detail.container);
+  });
 })();

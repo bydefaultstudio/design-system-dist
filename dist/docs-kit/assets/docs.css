@@ -22,6 +22,7 @@
  *
  * Part A — Docs-site components (reusable patterns)
  *   1. Sticky Bar         — fixed sub-header used by docs nav
+ *  1A. Toolbar           — page variant of the control bar used by the tools
  *   2. Copy Button        — affordance for copying tokens / snippets
  *   3. Token Copy         — inline copy chips inside generated token tables
  *   4. (vacated)          — the book family moved to design-system.css §37
@@ -52,155 +53,93 @@
  * ===================================================================== */
 
 
-/* ------ 1. STICKY BAR ------ */
+/* ------ 1. STICKY BAR — page variant only ------
+ * The component itself is core (design-system.css §41). What stays here is
+ * the docs-site variant: the offset below this site's header, and the 1080px
+ * content column. Both are properties of this shell, not of the component.
+ */
 
-.sticky-bar {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  background: var(--background-primary);
-}
-
-/* -- Page sub-header variant: sticks below the top nav -- */
 .sticky-bar-page {
   top: var(--top-nav-height);
 }
 
+/* Height comes from the component (§41). What is docs-site here is the
+   content column the bar's contents line up with. */
 .sticky-bar-page .sticky-bar-container {
   max-width: 1080px;
   margin: 0 auto;
-  height: var(--sticky-bar-height);
   padding-left: var(--space-l);
 }
 
-.sticky-bar-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-l);
-  border-bottom: var(--border-s) solid var(--border-faded);
+/* ------ 1A. TOOLBAR — page variant only ------
+ * Same split as the sticky bar above: the component is core
+ * (design-system.css §43), and what belongs to this shell is where the bar
+ * docks and which column it lines up with.
+ *
+ * §43's default of --toolbar-top: 0 suits an app shell whose bar is the top of
+ * the window. Nothing exercises it today — display-ad-preview and logo-tool are
+ * both inside this shell but leave their bars static, so neither has ever
+ * docked. A tool page that opts into data-sticky has the site header above it,
+ * and every value below is re-pointed rather than overridden: no rule here has
+ * to out-specify §43, so none of this breaks if §43's selectors change.
+ */
+
+.toolbar-page {
+  --toolbar-top: var(--site-header-height);
 }
 
-/* -- Scrollable content area -- */
-.sticky-bar-content {
-  display: flex;
-  align-items: center;
-  gap: var(--space-l);
+/* Aligns the bar's controls with the page content below, rather than with the
+   1080px docs column the sticky bar uses — every tool that carries a toolbar
+   sits in .padding-global > .container-m. Adding the bar's own inline padding
+   back onto the container width is what lands the first control on the same
+   left edge as the tool content under the bar — not the page heading, which is
+   centred in a wider column; --toolbar-padding-x and .padding-global are both
+   var(--space-xl), so the two edges resolve to the same place. A tool built on
+   .container-l would need its own value here. */
+.toolbar-page .toolbar-container {
+  max-width: calc(var(--container-m) + (2 * var(--toolbar-padding-x)));
+  margin-inline: auto;
+}
+
+/* §43 narrows --toolbar-padding-x to --space-l below 768px, which is right for
+   an app shell where the bar is the whole chrome. Here it puts the bar's
+   controls 8px inside the page content they sit above, and a visible edge that
+   nearly lines up reads worse than one that plainly does not. --toolbar-gap is
+   deliberately left narrowed: that one is about density between groups, not
+   about lining up with anything.
+
+   .toolbar.toolbar-page, not .toolbar-page — §43's mobile block re-points the
+   same property on .toolbar at equal specificity, so a bare class would depend
+   on this file loading second rather than on being more specific. */
+@media (max-width: 768px) {
+  .toolbar.toolbar-page {
+    --toolbar-padding-x: var(--space-xl);
+  }
+}
+
+/* The bar composes the core Breadcrumb component (design-system.css §18), which
+   already knows it is in a bar — `.sticky-bar .breadcrumb` there centres it and
+   steps the size up. `.sticky-bar-breadcrumbs` is gone; it was a parallel
+   implementation, and §18's own note in design-system.css said so.
+ *
+ * What is left is truncation, which the component deliberately does not do: it
+ * wraps to a second line, which is right in a page but wrong in a bar of fixed
+ * height whose content column already scrolls horizontally. A documentation
+ * title is long and arbitrary, so the current page is clipped with an ellipsis
+ * and the section link before it is held on one line. */
+.sticky-bar .breadcrumb {
+  flex-wrap: nowrap;
   min-width: 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  height: 100%;
 }
 
-.sticky-bar-content::-webkit-scrollbar {
-  display: none;
-}
-
-/* -- Sticky bar breadcrumbs -- */
-.sticky-bar-breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: var(--space-s);
-  font-size: var(--font-s);
-  color: var(--text-secondary);
-  min-width: 0;
-}
-
-.sticky-bar-breadcrumbs a {
-  color: var(--text-secondary);
-  text-decoration: none;
+.sticky-bar .breadcrumb a {
   white-space: nowrap;
 }
 
-.sticky-bar-breadcrumbs a:hover {
-  color: var(--text-primary);
-}
-
-.sticky-bar-breadcrumbs > span:last-child {
-  color: var(--text-primary);
+.sticky-bar .breadcrumb > [aria-current="page"] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* -- Sticky bar actions -- */
-.sticky-bar-actions {
-  display: flex;
-  align-items: stretch;
-  align-self: stretch;
-  flex-shrink: 0;
-}
-
-/* -- Dropdown inside sticky bar -- */
-.sticky-bar .dropdown {
-  align-self: stretch;
-}
-
-.sticky-bar .dropdown-trigger {
-  padding: 0 var(--space-s);
-}
-
-/* -- Close button inside sticky bar (links back to section overview) -- */
-.sticky-bar-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  align-self: stretch;
-  padding: 0 var(--space-l);
-  color: var(--text-primary);
-  text-decoration: none;
-  border-left: 1px solid var(--border-faded);
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.sticky-bar-close:hover {
-  background: var(--background-faded);
-  color: var(--text-plain);
-}
-
-.sticky-bar-close .svg-icn {
-  width: 1.25rem;
-  height: 1.25rem;
-  flex-shrink: 0;
-}
-
-/* -- Sticky bar child elements -- */
-/* Children are scoped so they stretch to fill bar height automatically */
-
-/* Tabs inside sticky bar */
-.sticky-bar .tabs {
-  border-bottom: none;
-  align-self: stretch;
-  flex-shrink: 0;
-}
-
-.sticky-bar .tab {
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-l);
-  font-size: var(--font-s);
-}
-
-.sticky-bar .tab.is-active::after {
-  bottom: 0;
-}
-
-/* Breadcrumbs inside sticky bar */
-.sticky-bar .breadcrumb {
-  align-self: center;
-  font-size: var(--font-s);
-}
-
-/* Toggles inside sticky bar */
-.sticky-bar .form-toggle {
-  align-self: center;
-}
-
-/* Segmented control inside sticky bar */
-.sticky-bar .segmented-control {
-  align-self: center;
 }
 
 
@@ -702,15 +641,66 @@ button.color-row.is-copied {
 
 
 :root {
-  --top-nav-height: 80px;
-  --sticky-bar-height: 70px;
+  /* Alias, not a definition. The header owns its height as
+     --site-header-height (design-system.css §40); this name is kept because
+     18 places across five stylesheets already read it, including a published
+     code sample in cms/sticky-bar.md. Renaming those is a next-major job. */
+  --top-nav-height: var(--site-header-height);
   --sidebar-width: 280px;
   --sidebar-collapsed-width: 64px;
   --toc-width: 220px;
-  --toc-top-offset: calc(var(--top-nav-height) + var(--sticky-bar-height) + var(--space-xl));
+
+  /* What this shell docks to the top. Consumed by design-system.css §39B for
+     anchor targets, and by the TOC below for where it starts; both used to
+     carry this calc separately. The header is always there — the page
+     sub-header is not, so its height is added conditionally below rather than
+     assumed, or anchors land a bar's height low on the pages without one. */
+  --scroll-offset: calc(var(--site-header-height) + var(--space-xl));
+  --toc-top-offset: var(--scroll-offset);
   --toc-border: color-mix(in srgb, var(--text-primary) 10%, transparent);
   --toc-border-active: color-mix(in srgb, var(--text-primary) 30%, transparent);
+  /* Still hardcoded: the scale has no 300ms step, so tokenising this means
+     picking 200ms (--duration-xs) or 400ms (--duration-s) — a motion decision,
+     not a find-and-replace. Same for the two transform transitions further
+     down. Grouped in ROADMAP rather than changed silently. */
   --sidebar-transition: 0.3s ease;
+}
+
+/* Pages with a sub-header stack two bars, so anchors have to clear both.
+   Keyed off the bar actually being present rather than off frontmatter. */
+body:has(.sticky-bar-page) {
+  --scroll-offset: calc(var(--site-header-height) + var(--sticky-bar-height) + var(--space-xl));
+}
+
+/* Same debt, other bar. The toolbar deliberately has no height token — it is as
+   tall as its tallest control (design-system.css §43) — so the height is built
+   from the tokens that produce it: one control, the padding above and below it,
+   and the bottom rule. Resolves to 53px at today's values.
+
+   Three things this sum cannot see, none of them live today, all of them silent
+   if they arrive:
+   - It assumes one row. A bar that wraps on a narrow screen leaves the sum
+     short and an anchor lands under the second row. --sticky-bar-height's fixed
+     70px above has the same limitation, so it is not a regression, but it is
+     the first thing to check when an anchor lands wrong.
+   - --border-s is the one figure restated rather than read. The rule comes from
+     --toolbar-border, a shorthand with no width to extract, so a brand that
+     re-points it to 2px drifts this sum by 1px.
+   - data-density="compact" zeroes --toolbar-padding-y on the .toolbar element,
+     which this body-scoped calc cannot see; it would over-count by 16px. No
+     consumer today, and cms/toolbar.md presents the density as available
+     rather than in service.
+
+   A page carrying BOTH bars would take this rule and drop the sticky bar's 70px
+   — :has() lends its argument's specificity, so (0,2,1) here beats (0,1,1)
+   above. No page has both; a third rule with both :has() clauses is the fix if
+   one ever does. */
+body:has(.toolbar-page[data-sticky="true"]) {
+  --scroll-offset: calc(
+    var(--site-header-height)
+    + var(--toolbar-control-height) + (2 * var(--toolbar-padding-y)) + var(--border-s)
+    + var(--space-xl)
+  );
 }
 
 
@@ -778,92 +768,46 @@ body.no-sidebar .docs-layout {
   grid-template-columns: minmax(0, 1fr) var(--toc-width);
 }
 
+/* Wide frame — the `page` type (see cms/page-types.md).
+ *
+ * Same grid, same padding and rhythm, measure released. A doc page is prose
+ * and 1080px is the reading measure that serves it; a `page` carries custom
+ * markup — a comparison table, a gallery, a wide diagram — that the measure
+ * would crop for no benefit. It is a frame, not a full-bleed: the page keeps
+ * its gutters, which is what separates it from the `tool` type's `free`.
+ *
+ * No max-width rather than a larger one: .docs-main-area is already the
+ * sidebar-adjacent grid track, so the column is bounded by the layout. */
+.docs-content-grid[data-width="wide"] {
+  max-width: none;
+}
 
-/* ------ 1B. TOP NAV (Sticky in grid) ------ */
 
-.top-nav {
+/* ------ 1B. SITE HEADER — placement only ------
+ * The component is core (design-system.css §40). All that belongs here is
+ * where it sits in this shell's grid.
+ *
+ * Deleted rather than moved, because nothing produced them: the empty
+ * .top-nav-auth-container div and its .auth-login-btn child rule, plus
+ * .top-nav-logo-text and .top-nav-contact-link, which were emitted with no
+ * CSS anywhere in the repo.
+ */
+
+.docs-layout > .site-header {
   grid-area: topbar;
-  position: sticky;
-  top: 0;
-  height: var(--top-nav-height);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-l);
-  background: var(--background-top-nav);
-  color: var(--text-top-nav);
-  border-bottom: var(--border-s) solid var(--border-faded);
 }
 
-.top-nav-left {
-  display: flex;
-  align-items: stretch;
-  height: 100%;
-  gap: var(--space-m);
-  min-width: 0;
+/* The header is the only place the menu button appears, and it is hidden
+   above the mobile breakpoint. */
+.site-header .header-menu-btn {
+  display: none;
 }
 
-.top-nav-right {
-  display: flex;
-  align-items: stretch;
-  height: 100%;
-}
-
-.top-nav-logo-link {
-  display: flex;
-  align-items: center;
-  text-decoration: none;
-}
-
-.svg-logo.nav-logo {
-  display: block;
-  height: 50px;
-  width: auto;
-  color: var(--text-plain);
-}
-
-.svg-logo.nav-logo svg {
-  height: 100%;
-  width: auto;
-  object-fit: contain;
-}
-
-
-/* Top-nav links — standalone interactive items in top-nav-right (login, theme toggle) */
-.top-nav-link {
-  display: flex;
-  align-items: center;
-  align-self: stretch;
-  gap: var(--space-s);
-  padding: 0 var(--space-m);
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  cursor: pointer;
-  white-space: nowrap;
-  font-family: var(--font-primary);
-  font-size: var(--font-s);
-  line-height: 1;
-  text-decoration: none;
-  transition: color 0.2s, background 0.2s;
-}
-
-.top-nav-link:hover {
-  color: var(--text-plain);
-  background: var(--background-faded);
-}
-
-.top-nav-link .svg-icn {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-/* -- Top nav dropdown overrides -- */
-/* Dropdown triggers in the top nav have no vertical padding (bar height provides it) */
-.top-nav-right .dropdown-trigger {
-  padding: 0 var(--space-m);
-}
+/* Icon swap is driven off aria-expanded rather than a body class, so the
+   visible state cannot disagree with what a screen reader is told. */
+.header-menu-btn .hamburger-icon-close { display: none; }
+.header-menu-btn[aria-expanded="true"] .hamburger-icon-open { display: none; }
+.header-menu-btn[aria-expanded="true"] .hamburger-icon-close { display: block; }
 
 /* Swap icons to match the rendered theme. With no data-theme set the OS
    preference decides (mirrors the token fallback in design-system.css §2c).
@@ -880,45 +824,67 @@ body.no-sidebar .docs-layout {
   :root:not([data-theme]) .dark-mode-icon-light { display: none; }
 }
 
-/* Hamburger — visible on mobile only, uses top-nav-link pattern */
-.top-nav-hamburger {
-  display: none;
-}
 
-/* Swap hamburger/close icons */
-.hamburger-icon-close { display: none; }
-body.mobile-nav-open .hamburger-icon-open { display: none; }
-body.mobile-nav-open .hamburger-icon-close { display: block; }
-
-/* Auth slot in top nav (compact login/user) */
-.top-nav-auth-container {
-  display: flex;
-  align-items: stretch;
-  height: 100%;
-}
-
-.top-nav-auth-container .auth-login-btn {
-  width: auto;
-}
-
-
-/* ------ 1C. SITE SIDEBAR (Sticky in grid) ------ */
+/* ------ 1C. SITE SIDEBAR (Sticky in grid) ------
+ * The element is <dialog class="site-sidebar drawer">, one element in two
+ * modes. Below 769px it is a real modal drawer, which is what removes its
+ * ~130 links from the accessibility tree rather than only moving them
+ * off-screen. At 769px and up the reset block below turns it back into an
+ * ordinary in-flow sidebar; the menu button is hidden at that width, so
+ * showModal() is never called and it never enters the top layer.
+ *
+ * That reset is coupled to design-system.css §30 on purpose and is the one
+ * fragile thing here: it undoes §30's *closed* state (opacity, translate,
+ * insets, size, padding, gap, shadow, transition). Add a property to
+ * `.drawer`'s closed state and this block must learn about it, or the desktop
+ * sidebar breaks with no error. The selector is deliberately
+ * `dialog.site-sidebar.drawer:not([open])` at (0,4,1) — §30's widest placement
+ * rule is `.drawer:not([data-placement=...]):not(...):not(...)` at (0,4,0), so
+ * it wins by exactly one. A plain `.site-sidebar` (0,1,0) loses outright.
+ */
 
 .site-sidebar {
   grid-area: sidebar;
-  position: sticky;
-  top: 0;
-  height: 100vh;
   z-index: 50;
   overflow-y: auto;
   overflow-x: hidden;
-  background: var(--background-sidebar);
   color: var(--text-sidebar);
-  border-right: var(--border-s) solid var(--border-faded);
-  padding-bottom: var(--space-l);
-  display: flex;
   flex-direction: column;
-  transition: width var(--sidebar-transition), padding var(--sidebar-transition);
+}
+
+/* Desktop mode — see the section note. Every declaration here exists to undo
+   something §30 sets on a closed drawer; none of it is styling in its own
+   right.
+
+   background and border-right live here rather than on .site-sidebar above.
+   Both would tie §30 at (0,1,0) and win only because this file loads second —
+   true today, but not something that survives a bundler reordering the two,
+   an inlined critical-CSS pass, or @layer arriving. */
+@media (min-width: 769px) {
+  dialog.site-sidebar.drawer:not([open]) {
+    display: flex;
+    position: sticky;
+    inset: 0 auto auto auto;
+    block-size: 100vh;
+    max-block-size: none;
+    inline-size: auto;
+    max-inline-size: none;
+    padding: 0 0 var(--space-l);
+    gap: 0;
+    opacity: 1;
+    translate: none;
+    background: var(--background-sidebar);
+    border-right: var(--border-s) solid var(--border-faded);
+    border-radius: 0;
+    box-shadow: none;
+    transition: padding var(--sidebar-transition);
+  }
+
+  /* Collapsed rail. Must match the reset's specificity or it loses to it —
+     at (0,2,0) this silently did nothing and the rail kept the wrong padding. */
+  body.sidebar-collapsed dialog.site-sidebar.drawer:not([open]) {
+    padding: 0 0 var(--space-m);
+  }
 }
 
 /* Sidebar header: just the toggle button now (logo moved to header) */
@@ -928,6 +894,16 @@ body.mobile-nav-open .hamburger-icon-close { display: block; }
   align-items: center;
   padding: 0 var(--space-m);
   height: var(--top-nav-height);
+}
+
+/* Dismiss control for the drawer mode. Hidden at desktop, where the sidebar
+   is not a modal and there is nothing to dismiss.
+
+   Qualified with .button for the reason spelled out at design-system.css:1417
+   — the base also matches as `button.button` (0,1,1), so a bare
+   `.site-sidebar-close` (0,1,0) loses and the button stays visible. */
+.button.site-sidebar-close {
+  display: none;
 }
 
 /* Desktop sidebar toggle button */
@@ -943,7 +919,7 @@ body.mobile-nav-open .hamburger-icon-close { display: block; }
   cursor: pointer;
   color: var(--text-primary);
   padding: 0;
-  transition: color 0.2s, background 0.2s;
+  transition: color var(--duration-xs) var(--ease-out), background var(--duration-xs) var(--ease-out);
 }
 
 .site-sidebar-toggle:hover {
@@ -960,28 +936,19 @@ body.sidebar-collapsed .sidebar-icon-close { display: block; }
 .site-sidebar-content {
   flex: 1;
   overflow-y: auto;
-  transition: opacity 0.2s ease;
 }
 
-/* Mobile sidebar backdrop */
-.site-sidebar-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  top: var(--top-nav-height);
-  z-index: 49;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-body.mobile-nav-open .site-sidebar-backdrop {
-  display: block;
-}
+/* The hand-rolled mobile backdrop is gone — <dialog> has ::backdrop, styled
+   by §30, and showModal() makes the page behind genuinely inert rather than
+   merely covered. */
 
 /* --- Collapsed sidebar state (desktop) --- */
 
+/* The collapsed width comes from the grid track narrowing (.docs-layout above),
+   not from a width here — a width declaration at this specificity loses to the
+   desktop reset's `inline-size: auto`. Padding is handled in that same block
+   for the same reason. */
 body.sidebar-collapsed .site-sidebar {
-  width: var(--sidebar-collapsed-width);
-  padding-bottom: var(--space-m);
   overflow: visible;
 }
 
@@ -990,33 +957,29 @@ body.sidebar-collapsed .site-sidebar-header {
 }
 
 body.sidebar-collapsed .site-sidebar-content {
-  opacity: 1;
-  pointer-events: auto;
-  visibility: visible;
   overflow: visible;
 }
 
 /* Collapsed: hide text, lists, toggle chevrons, labels */
-body.sidebar-collapsed .nav-section-toggle span:not(.nav-toggle-icon),
-body.sidebar-collapsed .nav-section-toggle .nav-toggle-icon,
-body.sidebar-collapsed .nav-list,
-body.sidebar-collapsed .nav-label,
-body.sidebar-collapsed .nav-link > span,
-body.sidebar-collapsed .nav-home > span {
+body.sidebar-collapsed .sidebar-nav-section-toggle span:not(.sidebar-nav-toggle-icon),
+body.sidebar-collapsed .sidebar-nav-section-toggle .sidebar-nav-toggle-icon,
+body.sidebar-collapsed .sidebar-nav-list,
+body.sidebar-collapsed .sidebar-nav-link > span,
+body.sidebar-collapsed .sidebar-nav-home > span {
   display: none;
 }
 
 /* Collapsed: center icons in the narrow strip */
-body.sidebar-collapsed .nav-section-toggle,
-body.sidebar-collapsed .nav-link,
-body.sidebar-collapsed .nav-home {
+body.sidebar-collapsed .sidebar-nav-section-toggle,
+body.sidebar-collapsed .sidebar-nav-link,
+body.sidebar-collapsed .sidebar-nav-home {
   justify-content: center;
   padding: var(--space-l) 0;
   gap: 0;
 }
 
 /* Collapsed: remove open section background */
-body.sidebar-collapsed .nav-section[open] {
+body.sidebar-collapsed .sidebar-nav-section[open] {
   background: none;
 }
 
@@ -1046,7 +1009,7 @@ body.sidebar-collapsed:not(.sidebar-tooltips-dismissed) .site-sidebar [data-tool
    chevron's 0.5em box and borders bleed into the bubble, and
    details[open] > summary::before outranks the position-right transform
    with rotate(45deg). Pin the bubble's box and transform back. */
-body.sidebar-collapsed .site-sidebar .nav-section-toggle[data-tooltip]::before {
+body.sidebar-collapsed .site-sidebar .sidebar-nav-section-toggle[data-tooltip]::before {
   width: auto;
   height: auto;
   border: 0;
@@ -1056,12 +1019,8 @@ body.sidebar-collapsed .site-sidebar .nav-section-toggle[data-tooltip]::before {
 
 /* ------ 1D. NAV SECTIONS & LINKS ------ */
 
-.nav-section {
-  /* margin-bottom: var(--space-s); */
-}
-
 /* Desktop: Toggle styling */
-.nav-section-toggle {
+.sidebar-nav-section-toggle {
   display: flex;
   align-items: center;
   gap: var(--space-l);
@@ -1074,47 +1033,47 @@ body.sidebar-collapsed .site-sidebar .nav-section-toggle[data-tooltip]::before {
   cursor: pointer;
   list-style: none;
   user-select: none;
-  transition: color 0.2s, background 0.2s;
+  transition: color var(--duration-xs) var(--ease-out), background var(--duration-xs) var(--ease-out);
 }
 
-.nav-section-toggle:hover {
+.sidebar-nav-section-toggle:hover {
   color: var(--text-secondary);
   background: var(--background-faded);
 }
 
 /* Remove default WebKit arrow */
-.nav-section-toggle::-webkit-details-marker {
+.sidebar-nav-section-toggle::-webkit-details-marker {
   display: none;
 }
 
 /* Override global disclosure chevron — nav uses its own SVG icon */
-.nav-section-toggle::before {
+.sidebar-nav-section-toggle::before {
   display: none;
 }
 
 /* Section icon link (wraps .svg-icn inside summary) */
-.nav-section-icon {
+.sidebar-nav-section-icon {
   display: flex;
   text-decoration: none;
   color: inherit;
 }
 
 /* Toggle + link shared icon sizing */
-.nav-section-toggle .svg-icn {
+.sidebar-nav-section-toggle .svg-icn {
   width: 1.5rem;
   height: 1.5rem;
   flex-shrink: 0;
 }
 
 /* Toggle icon styling */
-.nav-toggle-icon {
+.sidebar-nav-toggle-icon {
   display: inline-flex;
   align-items: center;
   transition: transform 0.3s ease;
   margin-left: auto;
 }
 
-.nav-toggle-icon svg {
+.sidebar-nav-toggle-icon svg {
   display: block;
   width: 10px;
   height: 10px;
@@ -1123,24 +1082,24 @@ body.sidebar-collapsed .site-sidebar .nav-section-toggle[data-tooltip]::before {
 /* Rotate icon when open (90deg to point down) — scoped to the section's
    own toggle so subsection chevrons inside an open section stay governed
    by their own [open] rule */
-.nav-section[open] > .nav-section-toggle .nav-toggle-icon {
+.sidebar-nav-section[open] > .sidebar-nav-section-toggle .sidebar-nav-toggle-icon {
   transform: rotate(90deg);
 }
 
-/* Desktop: Show/hide nav-list based on details open state */
-.nav-section:not([open]) .nav-list {
+/* Desktop: Show/hide sidebar-nav-list based on details open state */
+.sidebar-nav-section:not([open]) .sidebar-nav-list {
   display: none;
 }
 
-.nav-section[open] {
+.sidebar-nav-section[open] {
   background: var(--bg-faded-3);
 }
 
-body:not(.sidebar-collapsed) .nav-section[open] .nav-list {
+body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   display: block;
 }
 
-.nav-list {
+.sidebar-nav-list {
   list-style: none;
   /* breathing room lives on the container, not li:last-child — with nested
      subsection sublists, last-child would over-match and stagger the rhythm */
@@ -1148,14 +1107,14 @@ body:not(.sidebar-collapsed) .nav-section[open] .nav-list {
   margin: 0;
 }
 
-.nav-list li {
+.sidebar-nav-list li {
   margin: 0;
 }
 
-.nav-home {
+.sidebar-nav-home {
 }
 
-.nav-link {
+.sidebar-nav-link {
   display: flex;
   align-items: center;
   gap: var(--space-l);
@@ -1165,52 +1124,41 @@ body:not(.sidebar-collapsed) .nav-section[open] .nav-list {
   font-family: var(--font-primary);
   font-size: var(--font-m);
     line-height: var(--line-height-l);
-  transition: color 0.2s, background 0.2s;
+  transition: color var(--duration-xs) var(--ease-out), background var(--duration-xs) var(--ease-out);
 }
 
-.nav-link:hover {
+.sidebar-nav-link:hover {
   color: var(--text-plain);
   background: var(--background-faded);
 }
 
-.nav-link:focus-visible {
+.sidebar-nav-link:focus-visible {
   outline: 2px solid var(--text-link);
   outline-offset: -2px;
 }
 
-.nav-link .svg-icn {
+.sidebar-nav-link .svg-icn {
   width: 1.5rem;
   height: 1.5rem;
   flex-shrink: 0;
 }
 
-.nav-link-active {
+.sidebar-nav-link-active {
   color: var(--text-link);
   font-weight: var(--font-weight-semi-bold);
   background: var(--background-faded);
 }
 
-.nav-list .nav-link {
+.sidebar-nav-list .sidebar-nav-link {
   padding: var(--space-l) var(--space-l) var(--space-l) var(--space-4xl);
 }
 
-.nav-label {
-  padding: var(--space-s) var(--space-m) var(--space-s) var(--space-xl);
-  margin-top: var(--space-s);
-  font-size: var(--font-2xs);
-  font-weight: var(--font-weight-semi-bold);
-  color: var(--text-faded);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  list-style: none;
-}
-
-/* Subsection dropdowns — nested <details> inside a section's nav-list.
+/* Subsection dropdowns — nested <details> inside a section's sidebar-nav-list.
    Collapsed by default; setActiveLink opens the active page's subsection. */
 /* Reads exactly like a nav link — same font, size, and colour. Level is
    carried by indentation (deeper than the section, shallower than its
    links) and the disclosure chevron, not by a smaller label treatment. */
-.nav-subsection-toggle {
+.sidebar-nav-subsection-toggle {
   display: flex;
   align-items: center;
   padding: var(--space-l) var(--space-l) var(--space-l) var(--space-xl);
@@ -1221,75 +1169,59 @@ body:not(.sidebar-collapsed) .nav-section[open] .nav-list {
   cursor: pointer;
   list-style: none;
   user-select: none;
-  transition: color 0.2s, background 0.2s;
+  transition: color var(--duration-xs) var(--ease-out), background var(--duration-xs) var(--ease-out);
 }
 
-.nav-subsection-toggle:hover {
+.sidebar-nav-subsection-toggle:hover {
   color: var(--text-plain);
   background: var(--background-faded);
 }
 
-.nav-subsection-toggle:focus-visible {
+.sidebar-nav-subsection-toggle:focus-visible {
   outline: 2px solid var(--text-link);
   outline-offset: -2px;
 }
 
 /* Remove default WebKit arrow */
-.nav-subsection-toggle::-webkit-details-marker {
+.sidebar-nav-subsection-toggle::-webkit-details-marker {
   display: none;
 }
 
 /* Override global disclosure chevron — nav uses its own SVG icon */
-.nav-subsection-toggle::before {
+.sidebar-nav-subsection-toggle::before {
   display: none;
 }
 
-.nav-subsection[open] > .nav-subsection-toggle .nav-toggle-icon {
+.sidebar-nav-subsection[open] > .sidebar-nav-subsection-toggle .sidebar-nav-toggle-icon {
   transform: rotate(90deg);
 }
 
-.nav-sublist {
+.sidebar-nav-sublist {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.nav-divider {
-  height: 0;
-  border-top: var(--border-s) solid var(--border-faded);
-  margin: var(--space-m) 0;
-}
+/* ------ 2. DOCS FOOTER ------
+ * The docs site uses the Footer component (design-system.css §45). All that
+ * belongs here is the width the docs column reads at — .docs-footer,
+ * .docs-footer-inner and .docs-footer-text restated the component's
+ * background, border, padding, max-width, centring and text colour one for
+ * one, and are gone.
+ *
+ * `margin-top: auto` did not come across, and it was not dropped by oversight:
+ * it never did anything. It was set on a footer whose parent chain is
+ * [data-barba="container"] > [data-barba="wrapper"], both `display: block`, and
+ * a vertical auto margin in normal flow computes to zero. The flex column is
+ * .docs-main-area, two levels up. So the docs site has never pinned its footer
+ * to the bottom of a short viewport, and this change does not start — it would
+ * be a new behaviour, not a preserved one. §45 is right that this is the
+ * shell's job; the shell simply is not doing it. Recorded in ROADMAP. */
 
-.nav-client-label {
-  padding: var(--space-s) var(--space-m);
-  font-size: var(--font-2xs);
-  font-weight: var(--font-weight-semi-bold);
-  color: var(--text-faded);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-
-/* ------ 2. DOCS FOOTER ------ */
-
-.docs-footer {
-  background: var(--background-primary);
-  border-top: var(--border-s) solid var(--border-faded);
-  padding: var(--space-2xl) 0;
-  margin-top: auto;
-  width: 100%;
-}
-
-.docs-footer-inner {
-  max-width: 1400px;
-  margin: 0 auto;
-  text-align: center;
-}
-
-.docs-footer-text {
-  color: var(--text-secondary);
-  font-size: var(--font-s);
-  margin: 0;
+.docs-main-area .footer {
+  /* The docs content column, not the component's full-bleed default. Scoped to
+     the shell so it never reaches a .footer inside a component demo. */
+  --footer-max-width: 1400px;
 }
 
 .back-to-top-btn {
@@ -1373,46 +1305,35 @@ body:not(.sidebar-collapsed) .nav-section[open] .nav-list {
 }
 
 
-/* ------ 2D. FEEDBACK MODAL ------ */
+/* ------ 2D. FEEDBACK MODAL ------
+ * Composes the Dialog component (design-system.css §29). .feedback-modal is a
+ * role class on top of .dialog, the way .close-btn composes with .button, and
+ * it exists for feedback.js to bind to as much as for these two rules.
+ *
+ * What used to be here and is now the component's: the surface, the backdrop,
+ * the padding, the max-height, the header/body/footer rhythm, and the enter
+ * and exit motion the hand-rolled version never had. .feedback-modal-content,
+ * .feedback-modal-title and .feedback-modal-actions are gone with it —
+ * .dialog-body, .dialog-title and .dialog-footer do those jobs.
+ *
+ * Two deliberate losses, both recorded rather than restored:
+ *   - The backdrop's `backdrop-filter: blur(2px)`. It was the only
+ *     backdrop-filter in the repo, so it made this one overlay behave unlike
+ *     every other dialog and drawer on the site. If the blur is wanted it
+ *     belongs on the component as a token, not here.
+ *   - `.feedback-textarea`'s `min-height: 100px`, which undercut the system's
+ *     own 120px floor for a textarea (design-system.css §12). The class stays
+ *     in the markup because feedback.js selects on it. */
 
 .feedback-modal {
-  background: var(--background-primary);
-  color: var(--text-primary);
-  padding: var(--space-2xl);
-  width: min(480px, calc(100vw - var(--space-2xl) * 2));
-  max-height: 85vh;
-  border: none;
-}
-
-.feedback-modal::backdrop {
-  background: var(--background-modal);
-  backdrop-filter: blur(2px);
-}
-
-.feedback-modal-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.feedback-modal-title {
-  font-size: var(--font-3xl);
-  margin: 0 0 var(--space-xs) 0;
+  /* Narrower than the component's 560px: the form is a label and one field. */
+  --dialog-max-width: 480px;
 }
 
 .feedback-modal-subtitle {
   font-size: var(--font-s);
   color: var(--text-secondary);
-  margin: 0 0 var(--space-l) 0;
-}
-
-.feedback-textarea {
-  min-height: 100px;
-  resize: vertical;
-}
-
-.feedback-modal-actions {
-  margin-top: var(--space-l);
-  justify-content: flex-end;
+  margin: 0 0 var(--space-m) 0;
 }
 
 .feedback-error {
@@ -1430,51 +1351,29 @@ body:not(.sidebar-collapsed) .nav-section[open] .nav-list {
   overflow: hidden;
 }
 
-/* Offset anchor targets — accounts for sticky top nav + sticky bar */
-h1[id],
-h2[id],
-h3[id],
-section[id] {
-  scroll-margin-top: calc(var(--top-nav-height) + var(--sticky-bar-height) + var(--space-xl));
-}
+/* Anchor offset is design-system.css §39B now, driven by --scroll-offset
+   above — the rule was identical to the TOC's calc and is no longer repeated
+   in two places. */
 
-/* -- Page header (full width, sits between sticky bar and content grid) -- */
-.page-header {
-  width: 100%;
-  padding-top: var(--section-l);
-  padding-bottom: var(--section-l);
-  background: var(--background-faded);
-  border-bottom: var(--border-s) solid var(--border-faded);
-  text-wrap: balance;
-}
-
-.page-header .container-s {
-  text-align: center;
-}
-
-.page-header h1 {
-  text-align: center;
-  margin-top: 0;
-  margin-bottom: var(--space-m);
-}
-
-.page-header .eyebrow {
-  text-align: center;
-  margin: 0 0 var(--space-s);
-}
-
-.page-subtitle {
-  color: var(--text-secondary);
-  font-size: var(--font-m);
-  margin-top: 0;
-  margin-bottom: var(--space-m);
-  text-align: center;
-}
-
-.page-source-link,
-.page-action-link {
-  display: inline-block;
-}
+/* -- Page header --
+ *
+ * Nothing here. `.page-header` is a core component (design-system.css §44) and
+ * every page the generator writes now emits its documented anatomy —
+ * `<header class="page-header" data-align="center">` with
+ * `.page-header-container`, `.page-header-title`, `.page-header-subtitle` and
+ * `.page-header-actions` — from one builder, `buildPageHeaderHtml`.
+ *
+ * What stood here until 2026-08-11 was a shim for the pre-component markup: a
+ * centred `.container-s`, the title and eyebrow margins that went with it, and
+ * a `.page-subtitle` class that shadowed the component's own
+ * `.page-header-subtitle`. It was scoped `div.page-header` so it could not
+ * reach the tool pages, which were written to the component's spec first. With
+ * the last three emit sites migrated there is no `div.page-header` left to
+ * match, and `data-align="center"` in the markup does what the centring rules
+ * did.
+ *
+ * The docs site now owns no page-header rule at all — the mobile height went
+ * with it, for the reasons in the note in the responsive section. */
 
 /* -- Brand book section spacing -- */
 .brand-book-section {
@@ -1492,10 +1391,11 @@ section[id] {
   margin-top: 0;
 }
 
-.page-source-link,
-.page-action-link {
-  display: inline-block;
-}
+/* NOTE: .page-source-link and .page-action-link had `display: inline-block`
+   here. Both are gone. Nothing in the repo emits .page-source-link at all, and
+   .page-action-link is now a flex item inside .page-header-actions, where
+   inline-block is blockified and ignored. The class stays on the anchor as a
+   hook; the rule did nothing. */
 
 
 /* ------ 4. DOCS TABLE OF CONTENTS ------ */
@@ -1578,6 +1478,50 @@ section[id] {
 
 .demo-preview .sticky-bar {
   top: 0;
+}
+
+/* A sticky component demoed in flat flow would creep around inside its demo
+   box as the page scrolls past. Direct children are pinned to relative;
+   anything inside a .demo-scroll below keeps its sticky behaviour, which is
+   the point of that container. */
+.demo-preview > .site-header,
+.demo-preview > .sticky-bar {
+  position: relative;
+}
+
+/* A demo header carries the real one's z-index and sits later in the DOM, so
+   without this it paints straight through the actual site header as the page
+   scrolls past it. Safe inside .demo-scroll too — that container's overflow
+   clips its own sticky child. */
+.demo-preview .site-header,
+.demo-preview .sticky-bar {
+  z-index: auto;
+}
+
+/* A short scrolling viewport, so a sticky component can be shown actually
+   sticking rather than described as if it did. */
+.demo-scroll {
+  max-height: 240px;
+  overflow-y: auto;
+  border: var(--border-s) solid var(--border-faded);
+  border-radius: var(--radius-s);
+}
+
+.demo-scroll-filler {
+  padding: var(--space-l);
+  color: var(--text-secondary);
+}
+
+/* A phone-width viewport, not a phone-width div. Media queries resolve against
+   the iframe's own viewport, so a component's responsive rules genuinely fire
+   inside one — a narrow <div> on a desktop page cannot show them at all. */
+.demo-frame {
+  display: block;
+  width: 390px;
+  max-width: 100%;
+  height: 320px;
+  border: var(--border-s) solid var(--border-faded);
+  border-radius: var(--radius-s);
 }
 
 /* Format preview — placeholder or template image shown at its intrinsic
@@ -1700,20 +1644,10 @@ section[id] {
 
 /* ------ 7. DOCS CARDS (Index Page) ------ */
 
-.docs-hero {
-  text-align: center;
-  margin-bottom: var(--space-6xl);
-}
-
-.docs-hero-title {
-  font-size: var(--font-8xl);
-  margin-bottom: var(--space-l);
-}
-
-.docs-hero-description {
-  font-size: var(--font-xl);
-  color: var(--text-secondary);
-}
+/* NOTE: .docs-hero is gone. Index pages now open with the Page Header
+ * component (design-system.css §44) in the {{PAGE_HEADER}} slot, the same
+ * band every documentation page uses, so there is nothing left for the docs
+ * site to restate here. */
 
 .docs-section {
   margin-bottom: var(--space-3xl);
@@ -1756,33 +1690,26 @@ section[id] {
     grid-template-columns: 1fr;
   }
 
-  /* Top nav: remove side padding, show hamburger */
-  .top-nav {
-    padding: 0;
+  /* The header's own mobile behaviour (flush edges, icon-only actions, 45px
+     logo) is in design-system.css §40. What is docs-site-specific is the menu
+     button, which only exists because this shell has a sidebar to open. */
+  .site-header .header-menu-btn {
+    display: inline-flex;
   }
 
-  .svg-logo.nav-logo {
-    height: 45px;
-  }
-
-  /* Mobile top-nav right side: icons only — hide text labels, tighten padding */
-  .top-nav-right .top-nav-link-label {
-    display: none;
-  }
-
-  .top-nav-right .top-nav-link,
-  .top-nav-right .dropdown-trigger {
-    padding: 0 var(--space-l);
+  /* Token re-point only — the button's own padding rule reads --button-padding-*,
+     so restating `padding` here would be a class override of a core component
+     (§17 Rule 3) and would make the token line dead weight. */
+  .site-header .header-action,
+  .site-header .dropdown-trigger {
+    --button-padding-x: var(--space-l);
+    --dropdown-trigger-padding-x: var(--space-l);
     gap: var(--space-xs);
   }
 
-  .top-nav-hamburger {
-    display: flex;
-    padding: 0 var(--space-l);
-  }
-
-  /* No-sidebar pages: logo is first child, supply the left padding the hamburger would have */
-  .top-nav-left > .top-nav-logo-link:first-child {
+  /* No-sidebar pages: the logo is the first child, so it supplies the inset
+     the menu button would otherwise have provided. */
+  .site-header-start > .site-header-logo:first-child {
     padding-left: var(--space-l);
   }
 
@@ -1801,64 +1728,56 @@ section[id] {
       "main";
   }
 
-  /* Sidebar: override sticky grid cell to fixed overlay */
+  /* Sidebar is a modal drawer at this width. §30 supplies the docking, the
+     slide, the backdrop and the reduced-motion handling; the only thing this
+     shell has an opinion about is how wide it opens. */
   .site-sidebar {
-    position: fixed;
-    top: var(--top-nav-height);
-    left: 0;
-    bottom: 0;
-    height: auto;
-    width: 75vw;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
+    --drawer-size: 75vw;
+    --drawer-padding: 0 0 var(--space-l);
     z-index: 101;
   }
 
-  body.mobile-nav-open .site-sidebar {
-    transform: translateX(0);
-    padding: 0 0 var(--space-l) 0;
-  }
-
-  /* Sidebar header: not needed on mobile (toggle is in header) */
+  /* The header stays, but now it carries the drawer's close button rather
+     than the collapse toggle (hidden above). */
   .site-sidebar-header {
-    display: none;
+    display: flex;
+    justify-content: flex-end;
+    height: auto;
+    padding: var(--space-m) var(--space-m) 0;
   }
 
-  body.sidebar-collapsed .site-sidebar {
-    position: fixed;
-    width: 75vw;
-    padding: 0;
+  .button.site-sidebar-close {
+    display: inline-flex;
   }
 
-  body.sidebar-collapsed .site-sidebar-content {
-    opacity: 1;
-    pointer-events: auto;
-    visibility: visible;
-  }
+  /* No collapsed state at this width — the sidebar is a modal drawer, and
+     `sidebar-collapsed` persists in localStorage regardless of viewport. The
+     rules that used to sit here were pre-dialog leftovers, and one of them
+     (`padding: 0`) silently cancelled the drawer's own --drawer-padding. */
 
-  body.sidebar-collapsed .nav-section-toggle span:not(.nav-toggle-icon),
-  body.sidebar-collapsed .nav-section-toggle .nav-toggle-icon,
-  body.sidebar-collapsed .nav-list,
-  body.sidebar-collapsed .nav-label,
-  body.sidebar-collapsed .nav-link > span,
-  body.sidebar-collapsed .nav-home > span {
+
+  body.sidebar-collapsed .sidebar-nav-section-toggle span:not(.sidebar-nav-toggle-icon),
+  body.sidebar-collapsed .sidebar-nav-section-toggle .sidebar-nav-toggle-icon,
+  body.sidebar-collapsed .sidebar-nav-list,
+  body.sidebar-collapsed .sidebar-nav-link > span,
+  body.sidebar-collapsed .sidebar-nav-home > span {
     display: revert;
   }
 
-  body.sidebar-collapsed .nav-section-toggle,
-  body.sidebar-collapsed .nav-link,
-  body.sidebar-collapsed .nav-home {
+  body.sidebar-collapsed .sidebar-nav-section-toggle,
+  body.sidebar-collapsed .sidebar-nav-link,
+  body.sidebar-collapsed .sidebar-nav-home {
     justify-content: flex-start;
     padding: var(--space-l) var(--space-m);
     gap: var(--space-s);
   }
 
-  body.sidebar-collapsed .nav-section[open] {
+  body.sidebar-collapsed .sidebar-nav-section[open] {
     background: var(--background-faded);
   }
 
-  body:not(.sidebar-collapsed) .nav-section[open] .nav-list,
-  body.sidebar-collapsed .nav-section[open] .nav-list {
+  body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list,
+  body.sidebar-collapsed .sidebar-nav-section[open] .sidebar-nav-list {
     display: block;
   }
 
@@ -1888,15 +1807,15 @@ section[id] {
   }
 
   /* Mobile: Home link and root-link separators */
-  .nav-home,
-  .nav-root-link {
+  .sidebar-nav-home,
+  .sidebar-nav-root-link {
     margin-bottom: 0;
     padding-bottom: var(--space-s);
     border-bottom: var(--border-s) solid var(--border-faded);
   }
 
   /* Mobile: Collapsible nav sections */
-  .nav-section {
+  .sidebar-nav-section {
     margin-bottom: 0;
     padding: 0;
     background: none;
@@ -1905,56 +1824,62 @@ section[id] {
     transition: none;
   }
 
-  .nav-section:last-of-type {
+  .sidebar-nav-section:last-of-type {
     border-bottom: none;
   }
 
-  .nav-section:hover {
+  .sidebar-nav-section:hover {
     background: none;
   }
 
   /* Toggle takes full width */
-  .nav-section-toggle {
+  .sidebar-nav-section-toggle {
     width: 100%;
     padding: var(--space-xl) var(--space-l);
     font-size: var(--font-xl);
   }
 
-  /* Show/hide nav-list based on details open state */
-  .nav-section:not([open]) .nav-list {
+  /* Show/hide sidebar-nav-list based on details open state */
+  .sidebar-nav-section:not([open]) .sidebar-nav-list {
     display: none;
   }
 
-  .nav-section[open] .nav-list {
+  .sidebar-nav-section[open] .sidebar-nav-list {
     display: block;
     margin-top: 0;
     padding-bottom: var(--space-s);
   }
 
   /* Child links: full-width, no borders */
-  .nav-link {
+  .sidebar-nav-link {
     padding: var(--space-xl) var(--space-l);
     white-space: normal;
     font-size: var(--font-xl);
   }
 
-  .nav-list li {
+  .sidebar-nav-list li {
     margin: 0;
   }
 
-  /* Feedback modal: full-width on mobile */
-  .feedback-modal {
-    width: calc(100vw - var(--space-xl) * 2);
-    padding: var(--space-xl);
-  }
-
-  /* Page header: taller hero on mobile */
-  .page-header {
-    min-height: 30vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+  /* NOTE: the docs site has no page-header rule here any more, on mobile or
+   * anywhere else. It used to force `--section-l` padding and a `min-height:
+   * 30vh` hero below 768px.
+   *
+   * It was deleted rather than repaired, and the distinction matters. The
+   * selector was `[data-barba="container"] > .page-header`, and the header
+   * moved inside a `<main>` when the landmark tree was fixed on 2026-08-11, so
+   * the child combinator stopped resolving and the rule had already been
+   * matching nothing for several commits. Every page was quietly running on
+   * §44's own defaults — 64px padding, no minimum height — and rendering
+   * correctly at 390px. Reinstating it would have introduced a behaviour, not
+   * restored one.
+   *
+   * The exclusion it needed was never expressible either. What the rule meant
+   * was "a page opening, not a tool page", and every key tried for that was
+   * wrong: the element name broke when index pages became `<header>`s, and
+   * `:not(:has(.toolbar))` excludes `website/toolbar.html`, a documentation
+   * page carrying twelve toolbar demos. If a taller mobile header is wanted,
+   * it belongs on the component as a size, where the page asks for it. */
 
   /* Auth: stack user info vertically on mobile */
   .auth-user-info {

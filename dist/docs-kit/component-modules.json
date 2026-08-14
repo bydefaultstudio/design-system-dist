@@ -1,5 +1,5 @@
 {
-  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^2.1.0",
+  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^3.0.0",
   "modules": [
     "accordion.js",
     "bd-audio.js",

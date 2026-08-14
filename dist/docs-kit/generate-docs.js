@@ -414,7 +414,7 @@ function renderBookCover(opts) {
     ? `<p class="book-cover-description" data-text-wrap="pretty">${opts.subtitle}</p>`
     : '';
   const flipId = flipIdFromHref(opts.href);
-  const flipAttr = flipId ? ` data-flip-id="${flipId}"` : '';
+  const flipAttr = flipId ? ` data-flip-id="${escapeAttr(flipId)}"` : '';
   return `<a href="${siteHref(opts.href)}" class="book-cover"${accessAttr}>
         <header class="book-cover-header"><div class="book-cover-trailing">${getIcon('open-full')}</div></header>
         <div class="book-cover-body">
@@ -443,7 +443,7 @@ function renderBookContentsItem(opts) {
     ? `<p class="book-contents-item-description" data-text-wrap="pretty">${opts.subtitle}</p>`
     : '';
   const flipId = flipIdFromHref(opts.href);
-  const flipAttr = flipId ? ` data-flip-id="${flipId}"` : '';
+  const flipAttr = flipId ? ` data-flip-id="${escapeAttr(flipId)}"` : '';
   // Optional slots. Both are left out entirely when empty rather than emitted
   // hollow — an empty slot still draws a gap inside the row's flex container.
   const identity = opts.identity
@@ -924,6 +924,267 @@ function generateTableOfContents(html) {
   return toc;
 }
 
+// ── Page types ──
+//
+// What a page IS, which decides which chrome it gets. One table, read by every
+// emitter — no emitter decides chrome inline, so the answer to "does this kind
+// of page have a pager?" is in exactly one place.
+//
+// Declared per page with an optional `type:` frontmatter field. Absent means
+// `doc`, which is what all but a handful of pages are; an invalid value fails
+// the build the way an invalid `layer:` does.
+//
+//   header    the Page Header component
+//   stickyBar 'full' = breadcrumb + .md dropdown + close; false = none
+//   toc       the on-this-page rail, and with it the 2-column content grid
+//   pager     prev/next through the reading order
+//   chrome    feedback block + footer
+//   frame     'grid' = the 1080px content grid; 'wide' = full measure;
+//             'free' = no frame at all, the body brings its own layout
+//   body      'markdown' | 'html' — 'html' skips markdownToHtml entirely
+//
+// `shelf` and `contents` are assigned by the generator for the pages it builds
+// itself (home, section indexes). They are in the table because the renderer
+// keys on them, not because anyone authors them.
+const PAGE_TYPES = {
+  shelf:    { level: 0, header: true,  stickyBar: false,  toc: false, pager: false, chrome: true,  frame: 'grid', body: 'markdown' },
+  contents: { level: 1, header: true,  stickyBar: 'full', toc: false, pager: false, chrome: true,  frame: 'grid', body: 'markdown' },
+  doc:      { level: 2, header: true,  stickyBar: 'full', toc: true,  pager: true,  chrome: true,  frame: 'grid', body: 'markdown' },
+  page:     { level: 2, header: true,  stickyBar: 'full', toc: false, pager: true,  chrome: true,  frame: 'wide', body: 'html' },
+  // The loosest type on purpose. A tool can look like anything; its only
+  // requirement is that the reader can get out, which is the data-page-close
+  // contract enforced at build time — not chrome this emits.
+  tool:     { level: 2, header: false, stickyBar: false,  toc: false, pager: false, chrome: false, frame: 'free', body: 'html' },
+  bare:     { level: null, header: false, stickyBar: false, toc: false, pager: false, chrome: false, frame: 'free', body: 'html' },
+};
+
+const DEFAULT_PAGE_TYPE = 'doc';
+
+/**
+ * Resolve a page's type preset, then apply the per-page overrides.
+ *
+ * The overrides are the escape hatch that keeps a type a default rather than a
+ * cage. Three of the four already existed and were read by generatePage;
+ * `chrome` is new, and is what lets a framed tool keep its footer and feedback
+ * block without the `tool` type forcing them on every tool.
+ *
+ * Frontmatter values are strings, so these compare against the literal 'false'
+ * / 'true' — only an explicit flag flips the preset.
+ */
+function resolvePageType(frontmatter = {}) {
+  const name = frontmatter.type || DEFAULT_PAGE_TYPE;
+  // hasOwnProperty, not a truthiness test on the lookup: `type: "constructor"`
+  // (or toString, valueOf, …) finds a function on Object.prototype, passes a
+  // plain `if (!preset)` check, and spreads to nothing — producing
+  // data-level="undefined" and no chrome from a typo the gate exists to catch.
+  if (!Object.prototype.hasOwnProperty.call(PAGE_TYPES, name)) return null;
+  const preset = PAGE_TYPES[name];
+
+  const resolved = { ...preset, name };
+  if (frontmatter.toc === 'false') resolved.toc = false;
+  if (frontmatter['sticky-bar'] === 'false') resolved.stickyBar = false;
+  if (frontmatter.pagination === 'false') resolved.pager = false;
+  if (frontmatter.chrome === 'false') resolved.chrome = false;
+  if (frontmatter.chrome === 'true') resolved.chrome = true;
+  return resolved;
+}
+
+// ── Spaces ──
+//
+// The generator writes two kinds of site from one template: the root docs site,
+// and one mini-site per brand instance under cms/brands/. They differ in seven
+// values and nothing else — theme stylesheet, theme attribute, favicons, OG
+// image, fonts, footer text, and the prefix on Barba's section slug.
+//
+// Before this descriptor existed, that difference was expressed by having two
+// of every emitter (generatePage/generateBrandDocs,
+// generateSectionIndexPage/generateBrandSectionOverviews, and so on), each a
+// near-copy of the other. A new page type had to be built twice or the two
+// sites silently disagreed, which is how the sticky bar's markup drifted apart.
+//
+// `brandRelBase` is a page's depth inside its own space, which is not the same
+// as navBase (depth from the output root). A brand page at
+// /acme/docs/x.html has navBase '../../' but brandRelBase '../'.
+
+const ROOT_SPACE = {
+  key: null,
+  manifest: ROOT_MANIFEST,
+  themeCss: (navBase) => rootThemeCss(navBase),
+  themeAttr: '',
+  slugPrefix: '',
+  footerText: () => SITE.footerText,
+  defaultsDir: () => DOCS_DIR,
+};
+
+function brandSpace(brandKey, theme) {
+  return {
+    key: brandKey,
+    manifest: theme.manifest,
+    // Relative to the brand's own root, where copyBrandAssets puts theme.css —
+    // so this takes brandRelBase, unlike the root space which takes navBase.
+    themeCss: (brandRelBase) =>
+      `<!-- Brand Theme Override (must load last to override base styles) -->\n    <link rel="stylesheet" href="${brandRelBase}assets/theme.css">`,
+    themeAttr: `data-brand-theme="${brandKey}"`,
+    slugPrefix: `${brandKey}-`,
+    footerText: () => buildFooterHtml(theme.manifest.footerText),
+    defaultsDir: () => path.join(DOCS_DIR, 'brands', brandKey),
+  };
+}
+
+/**
+ * Fill the page template's slots. Every page the generator writes goes through
+ * here — home, section indexes, doc pages, the brand book, brand overviews.
+ *
+ * Callers build their own content and pass finished strings; this function
+ * knows the slot names and nothing about what a page means. That is the point:
+ * adding a slot to the template is a change here and nowhere else.
+ *
+ * Replacements use function values throughout. A plain string replacement
+ * treats `$&`, `$'` and `` $` `` in the *replacement* as patterns, so a page
+ * whose content happened to contain them would silently corrupt itself.
+ */
+function renderPage(template, {
+  space,
+  navBase,
+  // The home page links its assets with a bare relative path but sets NAV_BASE
+  // to './' — an empty NAV_BASE would turn a dynamic import('{{NAV_BASE}}…')
+  // into a bare module specifier. The two bases are therefore not always equal.
+  assetBase = null,
+  brandRelBase = null,
+  title,
+  description = '',
+  header = '',
+  stickyBar = '',
+  content = '',
+  toc = '',
+  frame = 'grid',
+  pageNav = '',
+  access,
+  scripts = '',
+  sectionSlug,
+  pageSection,
+  order,
+  level,
+  chrome: hasChrome = true,
+  // Sidebar start state for this page. nav.js reads data-sidebar-default and
+  // matches the literal 'collapsed'; a user's saved preference still wins.
+  sidebar = null,
+  containerExtra = '',
+}) {
+  const assets = assetBase === null ? navBase : assetBase;
+  const chrome = brandChromeSlots(space.manifest, assets);
+  const themeCssBase = brandRelBase === null ? assets : brandRelBase;
+
+  // {{PAGE_BODY}} is filled LAST, and the order matters.
+  //
+  // .replace() with a string needle takes the first occurrence in the document.
+  // Every other slot sits either side of the body in the template, so if the
+  // body went in first, a page whose *content* contained a slot token would
+  // have the page's own copy substituted and the real slot left as a literal
+  // {{PAGE_NAV}} in the shipped HTML. That is not hypothetical here: this
+  // generator's own documentation page prints template tokens in code fences.
+  // Filling the body last means every real slot is already gone, and whatever
+  // the content says stays text. markdownToHtml makes the same move for
+  // {{icon:}} by skipping <code> and <pre>.
+  //
+  // {{NAV_BASE}} is the one exception left — it is replaceAll, so a doc quoting
+  // it verbatim still gets it rewritten. Nothing does, and the alternative is
+  // sentinels for a case that has not come up.
+  return template
+    .replaceAll('{{PAGE_TITLE}}', () => title)
+    .replaceAll('{{META_DESCRIPTION}}', () => description)
+    .replace('{{PAGE_HEADER}}', () => header)
+    .replace('{{PAGE_STICKY_BAR}}', () => stickyBar)
+    .replace('{{DESIGN_SYSTEM_PATH}}', () => prefixHref(assets, PROJECT_CONFIG.designSystemPath))
+    .replace('{{BRAND_CSS}}', () => brandCssLink(assets))
+    .replace('{{BRAND_THEME_CSS}}', () => space.themeCss(themeCssBase))
+    .replace('{{BRAND_THEME_ATTR}}', () => space.themeAttr)
+    .replace('{{FONT_HEAD}}', () => fontHeadHtml(space.manifest, navBase))
+    .replace('{{PAGE_NAV}}', () => pageNav)
+    .replace('{{PAGE_CHROME}}', () => hasChrome ? buildPageChrome(space.footerText()) : '')
+    .replace('{{FAVICON_LINKS}}', () => chrome.faviconLinks)
+    .replace('{{OG_IMAGE}}', () => chrome.ogImage)
+    .replace('{{PAGE_ACCESS}}', () => access)
+    .replace('{{PAGE_SCRIPTS}}', () => scripts)
+    .replace('{{SECTION_SLUG}}', () => sectionSlug)
+    .replace('{{PAGE_SECTION}}', () => pageSection)
+    .replace('{{PAGE_ORDER}}', () => String(order))
+    .replace('{{PAGE_LEVEL}}', () => String(level))
+    .replace('{{CONTAINER_EXTRA}}', () => containerExtra)
+    .replace('{{LAYOUT_ATTRS}}', () => sidebar ? ` data-sidebar-default="${escapeAttr(sidebar)}"` : '')
+    .replaceAll('{{NAV_BASE}}', () => navBase)
+    .replace('{{PAGE_BODY}}', () => buildPageBody({ frame, content, toc }));
+}
+
+/**
+ * The feedback block and footer, emitted into {{PAGE_CHROME}}.
+ *
+ * Kept together because they are one decision: either a page ends with the
+ * site's closing furniture or it does not. `tool` pages default to not.
+ */
+/**
+ * The page body — content, and the frame around it, emitted into {{PAGE_BODY}}.
+ *
+ * `free` returns the content untouched. That is the whole point of the `tool`
+ * type: no measured grid, no article wrapper, nothing between <main> and the
+ * markup the tool wrote.
+ *
+ * `wide` is the same grid as `doc` with its max-width lifted (docs-site.css
+ * §1, `.docs-content-grid[data-width="wide"]`), so a custom body can use the
+ * full column while keeping the page's padding and rhythm.
+ */
+function buildPageBody({ frame, content, toc = '' }) {
+  if (frame === 'free') return content;
+
+  const widthAttr = frame === 'wide' ? ' data-width="wide"' : '';
+  return `<div class="docs-content-grid padding-global"${widthAttr}>
+            <!-- Main Content -->
+            <div class="docs-main">
+                <article>
+                    ${content}
+                </article>
+            </div>
+
+            <!-- Table of Contents -->
+            ${toc}
+        </div>`;
+}
+
+let _extraContentHtml = null;
+function buildPageChrome(footerText) {
+  // Icons are expanded here, not inherited from the template's pre-pass. This
+  // block used to be substituted into the template before that pass ran; now
+  // it is injected per page afterwards, so it has to expand its own. Cached
+  // rather than computed at module load, because the icon map is built at the
+  // start of generateDocs and is empty before then.
+  if (_extraContentHtml === null) {
+    _extraContentHtml = CONFIG.extraContentHtml
+      .trimEnd()
+      .replace(/\{\{icon:([a-z0-9-]+)\}\}/g, (match, name) => getIcon(name));
+  }
+
+  return `${_extraContentHtml}
+
+        <footer class="footer">
+            <div class="footer-inner">
+                <div class="footer-bottom" data-layout="center">
+                    <p class="text-size-small text-secondary">${footerText}</p>
+                </div>
+            </div>
+        </footer>`;
+}
+
+/**
+ * Wrap a table of contents in the docs-toc aside. Empty in, empty out.
+ */
+function tocAside(tableOfContents) {
+  if (!tableOfContents) return '';
+  return `<aside class="docs-toc">
+      <span class="toc-header">On this page</span>
+      <div class="toc-wrapper">${tableOfContents}</div>
+    </aside>`;
+}
+
 /**
  * Generate index page HTML
  */
@@ -977,44 +1238,31 @@ function generateIndexPage(template, filesBySection) {
     }
   }
 
-  const indexContent = `
-    <div class="docs-hero">
-      <h1 class="docs-hero-title">${SITE.name}</h1>
-      <p class="docs-hero-description" data-text-wrap="balance">${SITE.description}</p>
-    </div>
-    ${cards}
-  `;
+  const indexContent = cards;
 
   const access = deriveDataAccess(loadDefaults(DOCS_DIR));
 
-  return template
-    .replaceAll('{{PAGE_TITLE}}', 'Home')
-    .replaceAll('{{META_DESCRIPTION}}', SITE.description)
-    .replace('{{PAGE_HEADER}}', '') // Index page doesn't need a header
-    .replace('{{PAGE_STICKY_BAR}}', '')
-    .replace('{{PAGE_CONTENT}}', indexContent)
-    .replace('{{TOC_SECTION}}', '')
-    .replace('{{DESIGN_SYSTEM_PATH}}', prefixHref('', PROJECT_CONFIG.designSystemPath))
-    .replace('{{BRAND_CSS}}', brandCssLink(''))
-    .replace('{{BRAND_THEME_CSS}}', rootThemeCss(''))
-    .replace('{{BRAND_THEME_ATTR}}', '')
-    .replace('{{FONT_HEAD}}', fontHeadHtml(ROOT_MANIFEST, './'))
-    .replace('{{PAGE_NAV}}', '')
-    .replace('{{FOOTER_TEXT}}', SITE.footerText)
-    .replace('{{FAVICON_LINKS}}', brandChromeSlots(null, '').faviconLinks)
-    .replace('{{OG_IMAGE}}', brandChromeSlots(null, '').ogImage)
-    .replace('{{PAGE_ACCESS}}', access)
-    .replace('{{SECTION_SLUG}}', 'home')
-    .replace('{{PAGE_SECTION}}', 'home')
-    .replace('{{PAGE_ORDER}}', '0')
-    .replace('{{PAGE_LEVEL}}', '0')
-    .replace('{{PAGE_SCRIPTS}}', '')
-    // Home lives at the repo root, so its NAV_BASE is the current directory.
-    // It must be './' not '' — an empty base turns the GoTrue dynamic
-    // import('{{NAV_BASE}}assets/...') into a bare module specifier, which
-    // throws "Failed to resolve module specifier" and breaks auth (the home
-    // page is data-access="team"), causing a login redirect loop.
-    .replaceAll('{{NAV_BASE}}', './');
+  // Home lives at the repo root, so its NAV_BASE is the current directory.
+  // It must be './' not '' — an empty base turns the GoTrue dynamic
+  // import('{{NAV_BASE}}assets/...') into a bare module specifier, which
+  // throws "Failed to resolve module specifier" and breaks auth (the home
+  // page is data-access="team"), causing a login redirect loop.
+  return renderPage(template, {
+    space: ROOT_SPACE,
+    navBase: './',
+    assetBase: '',
+    title: 'Home',
+    description: SITE.description,
+    header: buildPageHeaderHtml({ title: SITE.name, subtitle: SITE.description }),
+    content: indexContent,
+    access,
+    sectionSlug: 'home',
+    pageSection: 'home',
+    order: 0,
+    level: PAGE_TYPES.shelf.level,
+    frame: PAGE_TYPES.shelf.frame,
+    chrome: PAGE_TYPES.shelf.chrome,
+  });
 }
 
 /**
@@ -1114,7 +1362,6 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
     cards += `</div></div>`;
   }
 
-  const pageContent = `<div class="docs-hero"><h1 class="docs-hero-title">${section}</h1></div>${cards}`;
   const navBase = '../';
 
   // Section's index in the global sectionOrder — used by the level-based
@@ -1126,29 +1373,35 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
   const sectionIndex = globalSectionOrder.indexOf(section);
   const sectionOrderValue = sectionIndex === -1 ? 999 : sectionIndex;
 
-  return template
-    .replaceAll('{{PAGE_TITLE}}', `${section} - Overview`)
-    .replaceAll('{{META_DESCRIPTION}}', `Overview of all ${section} pages.`)
-    .replace('{{PAGE_HEADER}}', '')
-    .replace('{{PAGE_STICKY_BAR}}', '')
-    .replace('{{PAGE_CONTENT}}', pageContent)
-    .replace('{{TOC_SECTION}}', '')
-    .replace('{{DESIGN_SYSTEM_PATH}}', prefixHref(navBase, PROJECT_CONFIG.designSystemPath))
-    .replace('{{BRAND_CSS}}', brandCssLink(navBase))
-    .replace('{{BRAND_THEME_CSS}}', rootThemeCss(navBase))
-    .replace('{{BRAND_THEME_ATTR}}', '')
-    .replace('{{FONT_HEAD}}', fontHeadHtml(ROOT_MANIFEST, navBase))
-    .replace('{{PAGE_NAV}}', '')
-    .replace('{{FOOTER_TEXT}}', SITE.footerText)
-    .replace('{{FAVICON_LINKS}}', brandChromeSlots(null, navBase).faviconLinks)
-    .replace('{{OG_IMAGE}}', brandChromeSlots(null, navBase).ogImage)
-    .replace('{{PAGE_ACCESS}}', deriveDataAccess(loadDefaults(DOCS_DIR)))
-    .replace('{{SECTION_SLUG}}', `${slugifySection(section)}-overview`)
-    .replace('{{PAGE_SECTION}}', slugifySection(section))
-    .replace('{{PAGE_ORDER}}', String(sectionOrderValue))
-    .replace('{{PAGE_LEVEL}}', '1')
-    .replace('{{PAGE_SCRIPTS}}', '')
-    .replaceAll('{{NAV_BASE}}', navBase);
+  return renderPage(template, {
+    space: ROOT_SPACE,
+    navBase,
+    title: `${section} - Overview`,
+    description: `Overview of all ${section} pages.`,
+    header: buildPageHeaderHtml({ title: section }),
+    // A contents page closes to the shelf, the way a doc page closes to its
+    // contents. Without it the only routes home are the sidebar and the header
+    // logo, so the one level in the book model that could not be backed out of
+    // was the middle one.
+    //
+    // No .md source behind a generated index, so the dropdown carries Copy link
+    // alone — buildStickyBar omits the markdown items when mdHref is null.
+    stickyBar: PAGE_TYPES.contents.stickyBar
+      ? buildStickyBar({
+          sectionHref: siteHref('/index.html'),
+          sectionLabel: 'Home',
+          title: section,
+        })
+      : '',
+    content: cards,
+    access: deriveDataAccess(loadDefaults(DOCS_DIR)),
+    sectionSlug: `${slugifySection(section)}-overview`,
+    pageSection: slugifySection(section),
+    order: sectionOrderValue,
+    level: PAGE_TYPES.contents.level,
+    frame: PAGE_TYPES.contents.frame,
+    chrome: PAGE_TYPES.contents.chrome,
+  });
 }
 
 /**
@@ -1353,6 +1606,103 @@ function buildFooterHtml(override) {
 }
 
 /**
+ * The opening block of every page the generator writes — documentation pages,
+ * the brand book, the site home, section overviews and brand overviews.
+ *
+ * It is the Page Header component (design-system.css §44), emitted into
+ * {{PAGE_HEADER}}. That slot sits inside the page's <main> and outside the
+ * content grid, which is what the component expects: full bleed, with
+ * .page-header-container supplying the measure.
+ *
+ * One function for all seven call sites on purpose. Before this there were
+ * seven copies of the same markup — four emitting a `.docs-hero` into the page
+ * content and three emitting `<div class="page-header"><div class="container-s">`
+ * — and they had already drifted: two carried a description and two did not,
+ * one carried an eyebrow, two carried an action link in a `.button-group`
+ * rather than the component's own actions slot.
+ *
+ * No data-text-wrap on the subtitle: §44 sets text-wrap on
+ * .page-header-subtitle itself and wins the specificity tie on source order,
+ * so the attribute would be inert and imply behaviour that does not happen.
+ */
+function buildPageHeaderHtml({ title, subtitle = '', eyebrow = '', actions = '', flipId = '' } = {}) {
+  if (!title) return '';
+  const flipAttr = flipId ? ` data-flip-id="${escapeAttr(flipId)}"` : '';
+  const parts = [];
+  if (eyebrow) parts.push(`<p class="eyebrow">${eyebrow}</p>`);
+  parts.push(`<h1 class="page-header-title"${flipAttr}>${title}</h1>`);
+  if (subtitle) parts.push(`<p class="page-header-subtitle">${subtitle}</p>`);
+  if (actions) parts.push(`<div class="page-header-actions">${actions}</div>`);
+  return `<header class="page-header" data-align="center">
+      <div class="page-header-container">
+        ${parts.join('\n        ')}
+      </div>
+    </header>`;
+}
+
+/**
+ * The page sticky bar — breadcrumb, markdown-source dropdown, and the close
+ * that takes the reader back up a level. Emitted into {{PAGE_STICKY_BAR}}.
+ *
+ * One function for both spaces. The root and brand generators each carried a
+ * full copy of this markup and had already drifted apart in whitespace; a
+ * change to the dropdown had to be made twice or the two spaces disagreed.
+ *
+ * @param {string}      sectionHref  where the breadcrumb and close point (absolute)
+ * @param {string}      sectionLabel breadcrumb's first crumb
+ * @param {string}      title        current page, the crumb that is not a link
+ * @param {string|null} mdHref       markdown source; null omits the .md items,
+ *                                   which is what a project without a served
+ *                                   markdownSourceBase needs
+ */
+function buildStickyBar({ sectionHref, sectionLabel, title, mdHref = null }) {
+  // role="presentation" on the wrapper: role="menu" may only own menu items,
+  // groups and separators, and this div exists purely to carry the auth gate.
+  // Presentation hands its children straight to the menu.
+  const mdSourceItems = mdHref ? `<div data-auth-role="team" role="presentation">
+                <div class="dropdown-divider" role="separator"></div>
+                <a href="${mdHref}" class="dropdown-item js-md-download" role="menuitem" download>
+                  ${getIcon('download')}
+                  <span>Download .md file</span>
+                </a>
+                <div class="dropdown-divider" role="separator"></div>
+                <a href="${mdHref}" class="dropdown-item js-md-open" role="menuitem" target="_blank" rel="noopener noreferrer">
+                  ${getIcon('open-full')}
+                  <span>Open .md in new tab</span>
+                </a>
+              </div>` : '';
+
+  return `<div class="sticky-bar sticky-bar-page">
+      <div class="sticky-bar-container">
+        <div class="sticky-bar-content">
+          <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="${sectionHref}">${sectionLabel}</a>
+            <span class="breadcrumb-separator" aria-hidden="true">/</span>
+            <span aria-current="page">${title}</span>
+          </nav>
+        </div>
+        <div class="sticky-bar-actions">
+          <div class="dropdown">
+            <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Markdown source options">
+              ${getIcon('more-horizontal')}
+            </button>
+            <div class="dropdown-menu is-right" role="menu">
+              <button type="button" class="dropdown-item js-copy-url" role="menuitem">
+                ${getIcon('link')}
+                <span>Copy link</span>
+              </button>
+              ${mdSourceItems}
+            </div>
+          </div>
+          <a href="${sectionHref}" class="sticky-bar-close" data-page-close aria-label="Back to ${sectionLabel}">
+            ${getIcon('close-large')}
+          </a>
+        </div>
+      </div>
+    </div>`;
+}
+
+/**
  * Build script tags for a page based on section and frontmatter.
  * - Any page can request additional scripts via the "scripts" frontmatter field.
  *   e.g. scripts: "splide, splide-auto-scroll"
@@ -1459,131 +1809,94 @@ ${jsPart}
 
 function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
   const { frontmatter, content } = file;
-  let htmlContent = markdownToHtml(content + buildComponentUsage(file));
+
+  // The page type decides which chrome this page gets; the per-page flags in
+  // frontmatter override the preset. Validated in generateDocs, so an unknown
+  // type has already failed the build by the time we get here.
+  const type = resolvePageType(frontmatter);
+
+  // `html` bodies skip markdownToHtml entirely. Its post-passes rewrite markup
+  // unconditionally — <table> becomes .table-scroll > table.table, <pre><code>
+  // gains a copy button, inline <code> gets chipified — which is right for
+  // prose and wrong for a hand-written page body.
+  let htmlContent = type.body === 'html'
+    ? content
+    : markdownToHtml(content + buildComponentUsage(file));
 
   // Apply drop cap to first paragraph if enabled in frontmatter
   if (frontmatter.dropcap === 'true') {
     htmlContent = htmlContent.replace(/<p>/, '<p class="drop-cap">');
   }
 
-  // Opt-out flags. Frontmatter values are strings — compare against 'false'.
-  // Defaults are preserved: only an explicit `<flag>: false` suppresses output.
-  const tocEnabled = frontmatter.toc !== 'false';
-  const stickyBarEnabled = frontmatter['sticky-bar'] !== 'false';
-  const paginationEnabled = frontmatter.pagination !== 'false';
-
-  const tableOfContents = tocEnabled ? generateTableOfContents(htmlContent) : '';
+  const tableOfContents = type.toc ? generateTableOfContents(htmlContent) : '';
   const access = deriveDataAccess(frontmatter);
 
   // Generate full-width page header (lives outside the content grid)
-  let pageHeader = '';
   const actionUrl = frontmatter.actionUrl || frontmatter.toolUrl;
   const actionLabel = frontmatter.actionLabel || frontmatter.toolLabel || 'Open';
   const actionLinkHtml = actionUrl
-    ? `<div class="button-group justify-center">
-        <a href="${siteHref(actionUrl)}" class="button page-action-link" data-size="small">${actionLabel}</a>
-      </div>`
+    ? `<a href="${siteHref(actionUrl)}" class="button page-action-link" data-size="small">${actionLabel}</a>`
     : '';
-  if (frontmatter.title) {
-    const pageFlipId = flipIdFromHref(file.htmlName);
-    const pageFlipAttr = pageFlipId ? ` data-flip-id="${pageFlipId}"` : '';
-    pageHeader = `<div class="page-header">
-      <div class="container-s">
-        <h1${pageFlipAttr}>${frontmatter.title}</h1>
-        ${frontmatter.subtitle ? `<p class="page-subtitle" data-text-wrap="pretty">${frontmatter.subtitle}</p>` : ''}
-        ${actionLinkHtml}
-      </div>
-    </div>`;
-  }
+  pageHeader = type.header ? buildPageHeaderHtml({
+    title: frontmatter.title,
+    subtitle: frontmatter.subtitle,
+    actions: actionLinkHtml,
+    flipId: flipIdFromHref(file.htmlName),
+  }) : '';
 
   // Page depth drives every relative href; folderless pages sit at output root
   const navBase = file.htmlFolder ? '../' : './';
 
   // Generate sticky sub-header bar (breadcrumb + markdown dropdown)
+  //
+  // Root pages close to home. They belong to no section by design — an
+  // explicit filenameOverrides entry with folder '' keeps them at the output
+  // root and out of every section index, and the nav reaches them through
+  // rootLinks — so there is no section index to go back to. Before this they
+  // got no sticky bar at all, which left the Glossary as the one page on the
+  // site with no way out and no pager: reachable, and then a dead end.
   let pageSubbar = '';
-  if (stickyBarEnabled && frontmatter.title && file.htmlFolder) {
-    const sectionLabel = file.section || file.htmlFolder.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
-    // Markdown-source items only when the .md files are reachable from the
-    // served site (config: markdownSourceBase)
-    const mdHref = CONFIG.markdownSourceBase ? `${navBase}${CONFIG.markdownSourceBase}/${file.markdownPath}` : null;
-    // role="presentation" on the wrapper: role="menu" may only own menu items,
-    // groups and separators, and this div exists purely to carry the auth gate.
-    // Presentation hands its children straight to the menu.
-    const mdSourceItems = mdHref ? `<div data-auth-role="team" role="presentation">
-                <div class="dropdown-divider" role="separator"></div>
-                <a href="${mdHref}" class="dropdown-item js-md-download" role="menuitem" download>
-                  ${getIcon('download')}
-                  <span>Download .md file</span>
-                </a>
-                <div class="dropdown-divider" role="separator"></div>
-                <a href="${mdHref}" class="dropdown-item js-md-open" role="menuitem" target="_blank" rel="noopener noreferrer">
-                  ${getIcon('open-full')}
-                  <span>Open .md in new tab</span>
-                </a>
-              </div>` : '';
-    pageSubbar = `<div class="sticky-bar sticky-bar-page">
-      <div class="sticky-bar-container">
-        <div class="sticky-bar-content">
-          <nav class="sticky-bar-breadcrumbs" aria-label="Breadcrumb">
-            <a href="${siteHref(`/${file.htmlFolder}/index.html`)}">${sectionLabel}</a>
-            <span class="breadcrumb-separator">/</span>
-            <span>${frontmatter.title}</span>
-          </nav>
-        </div>
-        <div class="sticky-bar-actions">
-          <div class="dropdown">
-            <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Markdown source options">
-              ${getIcon('more-horizontal')}
-            </button>
-            <div class="dropdown-menu is-right" role="menu">
-              <button type="button" class="dropdown-item js-copy-url" role="menuitem">
-                ${getIcon('link')}
-                <span>Copy link</span>
-              </button>
-              ${mdSourceItems}
-            </div>
-          </div>
-          <a href="${siteHref(`/${file.htmlFolder}/index.html`)}" class="sticky-bar-close" aria-label="Close ${frontmatter.title}">
-            ${getIcon('close-large')}
-          </a>
-        </div>
-      </div>
-    </div>`;
+  if (type.stickyBar && frontmatter.title) {
+    const sectionHref = file.htmlFolder
+      ? siteHref(`/${file.htmlFolder}/index.html`)
+      : siteHref('/index.html');
+    const sectionLabel = file.htmlFolder
+      ? (file.section || file.htmlFolder.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' '))
+      : 'Home';
+    pageSubbar = buildStickyBar({
+      sectionHref,
+      sectionLabel,
+      title: frontmatter.title,
+      // Markdown-source items only when the .md files are reachable from the
+      // served site (config: markdownSourceBase)
+      mdHref: CONFIG.markdownSourceBase ? `${navBase}${CONFIG.markdownSourceBase}/${file.markdownPath}` : null,
+    });
   }
 
   // Build page scripts based on section and frontmatter
   const pageScripts = buildPageScripts(file.section, frontmatter, navBase);
 
-  return template
-    .replaceAll('{{PAGE_TITLE}}', frontmatter.title || 'Untitled')
-    .replaceAll('{{META_DESCRIPTION}}', frontmatter.description || '')
-    .replace('{{PAGE_HEADER}}', pageHeader)
-    .replace('{{PAGE_STICKY_BAR}}', pageSubbar)
-    .replace('{{PAGE_CONTENT}}', htmlContent)
-    .replace('{{TOC_SECTION}}', tocEnabled
-      ? `<aside class="docs-toc">
-      <span class="toc-header">On this page</span>
-      <div class="toc-wrapper">${tableOfContents}</div>
-    </aside>`
-      : '')
-    .replace('{{DESIGN_SYSTEM_PATH}}', prefixHref(navBase, PROJECT_CONFIG.designSystemPath))
-    .replace('{{BRAND_CSS}}', brandCssLink(navBase))
-    .replace('{{BRAND_THEME_CSS}}', rootThemeCss(navBase))
-    .replace('{{BRAND_THEME_ATTR}}', '')
-    .replace('{{FONT_HEAD}}', fontHeadHtml(ROOT_MANIFEST, navBase))
-    .replace('{{PAGE_NAV}}', paginationEnabled ? generatePageNav(file, pageOrder) : '')
-    .replace('{{FOOTER_TEXT}}', SITE.footerText)
-    .replace('{{FAVICON_LINKS}}', brandChromeSlots(null, navBase).faviconLinks)
-    .replace('{{OG_IMAGE}}', brandChromeSlots(null, navBase).ogImage)
-    .replace('{{PAGE_ACCESS}}', access)
-    .replace('{{PAGE_SCRIPTS}}', pageScripts)
-    .replace('{{SECTION_SLUG}}', slugifySection(file.section))
-    .replace('{{PAGE_SECTION}}', slugifySection(file.section))
+  return renderPage(template, {
+    space: ROOT_SPACE,
+    navBase,
+    title: frontmatter.title || 'Untitled',
+    description: frontmatter.description || '',
+    header: pageHeader,
+    stickyBar: pageSubbar,
+    content: htmlContent,
+    toc: type.toc ? tocAside(tableOfContents) : '',
+    frame: type.frame,
+    pageNav: type.pager ? generatePageNav(file, pageOrder) : '',
+    access,
+    scripts: pageScripts,
+    sectionSlug: slugifySection(file.section),
+    pageSection: slugifySection(file.section),
     // Per-section sidebar position (matches the data-order on the matching
-    // sidebar nav-link). Falls back to 999 for files not in any sidebar.
-    .replace('{{PAGE_ORDER}}', String(sidebarOrderMap[file.htmlPath] || 999))
-    .replace('{{PAGE_LEVEL}}', '2')
-    .replaceAll('{{NAV_BASE}}', navBase);
+    // sidebar sidebar-nav-link). Falls back to 999 for files not in any sidebar.
+    order: sidebarOrderMap[file.htmlPath] || 999,
+    level: type.level,
+    chrome: type.chrome,
+  });
 }
 
 /**
@@ -1595,21 +1908,25 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
  *   data-base="../"  → subdirectory pages (../assets/...)
  *   data-sidebar="false" → top nav only, no sidebar
  */
-function generateNavJs(filesBySection, sidebarOrderMap) {
+function generateNavJs(filesBySection) {
   // Build navigation HTML (no active page — active detection is done at runtime)
-  const navSectionsHtml = buildNavSectionsHtml(filesBySection, sidebarOrderMap);
+  const navSectionsHtml = buildNavSectionsHtml(filesBySection);
 
   // Escape backticks and backslashes for embedding in a JS template literal
   const esc = (s) => s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$').replace(/'/g, "\\'");
 
-  // Top-nav logo (config: logoHtml) — plain site name when not configured
-  const logoHtml = CONFIG.logoHtml || `<span class="top-nav-logo-text">${SITE.name}</span>`;
+  // Site-header logo (config: logoHtml) — plain site name when not configured.
+  // A bare <span> rather than a class, because the class would have no CSS
+  // anywhere; the link it sits in already supplies colour and alignment.
+  const logoHtml = CONFIG.logoHtml || `<span>${SITE.name}</span>`;
 
-  // Contact link (config: contactHref / contactLabel) — omitted when unset
+  // Contact link (config: contactHref / contactLabel) — omitted when unset.
+  // .header-action-label is what the header's mobile rules collapse away; the
+  // accessible name stays on aria-label, so nothing is lost when it goes.
   const contactNavJs = CONFIG.contactHref ? `
-    + '<a href="${siteHref(CONFIG.contactHref)}" class="top-nav-link top-nav-contact-link" aria-label="${CONFIG.contactLabel}">'
+    + '<a href="${siteHref(CONFIG.contactHref)}" class="button header-action header-contact-link" aria-label="${CONFIG.contactLabel}">'
     + '<div class="svg-icn">' + ICON_MAIL + '</div>'
-    + '<span class="top-nav-link-label">${CONFIG.contactLabel}</span>'
+    + '<span class="header-action-label">${CONFIG.contactLabel}</span>'
     + '</a>'` : '';
 
   const script = `/**
@@ -1632,57 +1949,73 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
   var ICON_EXPAND = '${esc(getRawIcon('sidebar-left-open'))}';
   var ICON_BACK = '${esc(getRawIcon('back-arrow'))}';
   var ICON_HOME = '${esc(getRawIcon('home'))}';
-  var ICON_SUN = '${esc(getRawIcon('sun-1'))}';
+  var ICON_SUN = '${esc(getRawIcon('sun'))}';
   var ICON_MOON = '${esc(getRawIcon('moon'))}';
   var ICON_MAIL = '${esc(getRawIcon('mail'))}';
 
-  // ── Build top nav HTML ──
-  var headerLeft = '<div class="top-nav-left">';
+  // ── Build site header HTML ──
+  var headerStart = '<div class="site-header-start">';
 
   if (hasSidebar) {
-    // Hamburger for mobile sidebar
-    headerLeft += '<button type="button" class="top-nav-link top-nav-hamburger" aria-label="Open navigation">'
+    // Opens the nav drawer. dialog.js supplies Escape, the focus trap, focus
+    // return and scroll lock from these attributes alone — there is no
+    // hand-written open/close code behind this button.
+    headerStart += '<button type="button" class="button header-action header-menu-btn" data-icon-only'
+      + ' data-drawer-open="site-nav-drawer" aria-controls="site-nav-drawer"'
+      + ' aria-expanded="false" aria-label="Open navigation">'
       + '<div class="svg-icn hamburger-icon-open">' + ICON_HAMBURGER + '</div>'
       + '<div class="svg-icn hamburger-icon-close">' + ICON_CLOSE + '</div>'
       + '</button>';
   }
 
-  headerLeft += '<a href="${siteHref('/index.html')}" class="top-nav-logo-link">'
+  headerStart += '<a href="${siteHref('/index.html')}" class="site-header-logo">'
     + '${esc(logoHtml)}'
     + '</a></div>';
 
   var ICON_CHEVRON_DOWN = '${esc(getRawIcon('chevron-down'))}';
 
-  var headerRight = '<div class="top-nav-right">'${contactNavJs}
-    + '<div class="top-nav-auth-container"></div>'
-    + '<button type="button" class="top-nav-link dark-mode-toggle" aria-label="Dark mode">'
+  var headerEnd = '<div class="site-header-end">'${contactNavJs}
+    + '<button type="button" class="button header-action dark-mode-toggle" data-icon-only aria-label="Dark mode">'
     + '<div class="svg-icn dark-mode-icon-light">' + ICON_SUN + '</div>'
     + '<div class="svg-icn dark-mode-icon-dark">' + ICON_MOON + '</div>'
     + '</button>'
     + '</div>';
 
-  var headerHtml = '<header class="top-nav">' + headerLeft + headerRight + '</header>';
+  // The skip link is first in the DOM so it is the first thing Tab reaches.
+  var headerHtml = '<header class="site-header">'
+    + '<a class="skip-link" href="#main">Skip to content</a>'
+    + '<div class="site-header-inner">' + headerStart + headerEnd + '</div>'
+    + '</header>';
 
   // ── Build sidebar HTML (if needed) ──
   var sidebarHtml = '';
   if (hasSidebar) {
-    sidebarHtml = '<aside class="site-sidebar" role="navigation" aria-label="Site navigation">'
+    // A <dialog>, not an <aside>. Above the mobile breakpoint the CSS
+    // overrides the UA's display:none and this behaves as an ordinary in-flow
+    // sidebar; below it, dialog.js opens it with showModal(), which is what
+    // actually removes its ~130 links from the accessibility tree rather than
+    // just moving them off-screen.
+    sidebarHtml = '<dialog id="site-nav-drawer" class="site-sidebar drawer" data-placement="start" aria-label="Site navigation">'
       + '<div class="site-sidebar-header">'
       + '<button class="site-sidebar-toggle" aria-label="Collapse sidebar" type="button">'
       + '<div class="svg-icn sidebar-icon-open">' + ICON_COLLAPSE + '</div>'
       + '<div class="svg-icn sidebar-icon-close">' + ICON_EXPAND + '</div>'
       + '</button>'
+      // Mobile only: closing by backdrop tap works but is not discoverable,
+      // and there is no Escape key on a touch device. data-drawer-close is
+      // dialog.js's own attribute, so this needs no extra wiring.
+      + '<button type="button" class="button close-btn site-sidebar-close" data-icon-only data-size="small" data-drawer-close aria-label="Close navigation">'
+      + '<div class="svg-icn">' + ICON_CLOSE + '</div>'
+      + '</button>'
       + '</div>'
       + '<div class="site-sidebar-content">'
-      + '<a href="${siteHref('/index.html')}" class="nav-link nav-home" data-access="team" aria-label="Home" data-tooltip="Home" data-tooltip-position="right">'
+      + '<a href="${siteHref('/index.html')}" class="sidebar-nav-link sidebar-nav-home" data-access="team" aria-label="Home" data-tooltip="Home" data-tooltip-position="right">'
       + '<div class="svg-icn">' + ICON_HOME + '</div>'
       + '<span>Home</span>'
       + '</a>'
       + \`${esc(navSectionsHtml)}\`
       + '</div>'
-      + ''
-      + '</aside>'
-      + '<div class="site-sidebar-backdrop"></div>';
+      + '</dialog>';
   }
 
   // ── Inject into page ──
@@ -1690,6 +2023,12 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
   // the template. Use insertAdjacentHTML to prepend the header + sidebar
   // BEFORE the existing <main>, preserving it in place as a grid sibling.
   mount.insertAdjacentHTML('afterbegin', headerHtml + sidebarHtml);
+
+  // Give the skip link something to land on. Done here rather than in the
+  // page template because hand-written pages (the tool apps) use the same
+  // mount without coming from that template — this covers both.
+  var mainEl = mount.querySelector('.docs-main-area');
+  if (mainEl && !mainEl.id) mainEl.id = 'main';
 
   // Sidebar nav links are emitted as absolute paths so they resolve correctly
   // regardless of the current page's depth — no runtime fixup needed.
@@ -1704,12 +2043,12 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
     }
 
     function setActiveLink() {
-      var navLinks = mount.querySelectorAll('.nav-link');
+      var navLinks = mount.querySelectorAll('.sidebar-nav-link');
       var currentNorm = normPath(window.location.pathname);
 
       // Clear previous active state (idempotent — safe to call repeatedly)
       for (var k = 0; k < navLinks.length; k++) {
-        navLinks[k].classList.remove('nav-link-active');
+        navLinks[k].classList.remove('sidebar-nav-link-active');
         navLinks[k].removeAttribute('aria-current');
       }
 
@@ -1720,14 +2059,14 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
         var resolvedNorm = normPath(resolvedPath);
 
         if (currentNorm === resolvedNorm) {
-          link.classList.add('nav-link-active');
+          link.classList.add('sidebar-nav-link-active');
           link.setAttribute('aria-current', 'page');
           // Open parent details section and subsection dropdown
-          var parentDetails = link.closest('.nav-section');
+          var parentDetails = link.closest('.sidebar-nav-section');
           if (parentDetails) {
             parentDetails.setAttribute('open', '');
           }
-          var parentSubsection = link.closest('.nav-subsection');
+          var parentSubsection = link.closest('.sidebar-nav-subsection');
           if (parentSubsection) {
             parentSubsection.setAttribute('open', '');
           }
@@ -1797,8 +2136,8 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
     var sidebarClickRoot = mount.querySelector('.site-sidebar');
 
     function guardSummaryClick(e) {
-      if (!e.target.closest || !e.target.closest('.nav-section-toggle')) return;
-      if (e.target.closest('.nav-section-icon')) {
+      if (!e.target.closest || !e.target.closest('.sidebar-nav-section-toggle')) return;
+      if (e.target.closest('.sidebar-nav-section-icon')) {
         e.preventDefault();
         return;
       }
@@ -1818,33 +2157,39 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
     }
   }
 
-  // ── Mobile hamburger toggle ──
+  // ── Mobile nav drawer ──
+  // Opening, closing, Escape, the focus trap, focus return and scroll lock
+  // all come from dialog.js via the button's data-drawer-open attribute.
+  // What is left here is the part dialog.js cannot know about: this element
+  // is only a drawer below the breakpoint, so a viewport that grows while it
+  // is open would strand an open modal styled as an in-flow sidebar.
   if (hasSidebar) {
-    var hamburger = mount.querySelector('.top-nav-hamburger');
-    var backdrop = mount.querySelector('.site-sidebar-backdrop');
+    var navDrawer = document.getElementById('site-nav-drawer');
+    var menuBtn = mount.querySelector('.header-menu-btn');
+    var desktopQuery = window.matchMedia('(min-width: 769px)');
 
-    function closeMobileNav() {
-      document.body.classList.remove('mobile-nav-open');
-      if (hamburger) hamburger.setAttribute('aria-label', 'Open navigation');
+    function closeDrawerOnDesktop(e) {
+      if (e.matches && navDrawer && navDrawer.open) {
+        window.bdRequestClose(navDrawer, 'resize');
+      }
     }
 
-    function openMobileNav() {
-      document.body.classList.add('mobile-nav-open');
-      if (hamburger) hamburger.setAttribute('aria-label', 'Close navigation');
-    }
+    desktopQuery.addEventListener('change', closeDrawerOnDesktop);
 
-    if (hamburger) {
-      hamburger.addEventListener('click', function() {
-        if (document.body.classList.contains('mobile-nav-open')) {
-          closeMobileNav();
-        } else {
-          openMobileNav();
-        }
+    // aria-expanded is the button's own state and dialog.js does not own it.
+    // Driven off the dialog's real open/close events so the two cannot drift.
+    if (menuBtn && navDrawer) {
+      function syncMenuBtn() {
+        var isOpen = navDrawer.open;
+        menuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        menuBtn.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
+      }
+
+      menuBtn.addEventListener('click', function() {
+        // The dialog opens on the same click; read state on the next frame.
+        window.requestAnimationFrame(syncMenuBtn);
       });
-    }
-
-    if (backdrop) {
-      backdrop.addEventListener('click', closeMobileNav);
+      navDrawer.addEventListener('close', syncMenuBtn);
     }
   }
 
@@ -1904,12 +2249,16 @@ function generateNavJs(filesBySection, sidebarOrderMap) {
 
 /**
  * Build nav sections HTML string for embedding in nav.js
+ *
+ * Takes no order map: nav links number themselves as they are emitted, which is
+ * what keeps them in step with buildSidebarOrderMap. The map was only ever read
+ * by the removed Tools `Guides` block.
  */
-function buildNavSectionsHtml(filesBySection, sidebarOrderMap = {}) {
+function buildNavSectionsHtml(filesBySection) {
   let html = '';
 
   // Shared chevron for section and subsection toggles
-  const navChevron = `<span class="nav-toggle-icon">
+  const navChevron = `<span class="sidebar-nav-toggle-icon">
           <svg width="6" height="6" viewBox="0 0 6 6" fill="none" aria-hidden="true">
             <path d="M3.58943 3L1.28943 0.7L1.98943 0L4.98943 3L1.98943 6L1.28943 5.3L3.58943 3Z" fill="currentColor"/>
           </svg>
@@ -1937,7 +2286,7 @@ function buildNavSectionsHtml(filesBySection, sidebarOrderMap = {}) {
       process.exit(1);
     }
     const rootIconHtml = link.icon ? `<div class="svg-icn">${getRawIcon(link.icon)}</div>` : '';
-    html += `<a href="${siteHref(link.href)}" class="nav-link nav-root-link" data-access="${escapeAttr(link.access || 'team')}" aria-label="${escapeAttr(link.title)}" data-tooltip="${escapeAttr(link.title)}" data-tooltip-position="right">${rootIconHtml}<span>${escapeAttr(link.title)}</span></a>`;
+    html += `<a href="${siteHref(link.href)}" class="sidebar-nav-link sidebar-nav-root-link" data-access="${escapeAttr(link.access || 'team')}" aria-label="${escapeAttr(link.title)}" data-tooltip="${escapeAttr(link.title)}" data-tooltip-position="right">${rootIconHtml}<span>${escapeAttr(link.title)}</span></a>`;
   }
 
   // Read ordering from _defaults.md (configurable per directory)
@@ -1974,25 +2323,25 @@ function buildNavSectionsHtml(filesBySection, sidebarOrderMap = {}) {
     // Slug used by Phase 3 directional transitions to detect same/different section
     const sectionSlug = slugifySection(section);
     const iconHtml = sectionIcon
-      ? `<a href="${sectionIndexHref}" class="nav-section-icon" data-section="${sectionSlug}" aria-label="${escapeAttr(sectionLabel)}"><div class="svg-icn">${sectionIcon.icon}</div></a>`
+      ? `<a href="${sectionIndexHref}" class="sidebar-nav-section-icon" data-section="${sectionSlug}" aria-label="${escapeAttr(sectionLabel)}"><div class="svg-icn">${sectionIcon.icon}</div></a>`
       : '';
 
-    html += `<details class="nav-section">
-      <summary class="nav-section-toggle" aria-label="${escapeAttr(sectionLabel)}" data-tooltip="${escapeAttr(sectionLabel)}" data-tooltip-position="right">
+    html += `<details class="sidebar-nav-section">
+      <summary class="sidebar-nav-section-toggle" aria-label="${escapeAttr(sectionLabel)}" data-tooltip="${escapeAttr(sectionLabel)}" data-tooltip-position="right">
         ${iconHtml}<span>${sectionLabel}</span>
         ${navChevron}
       </summary>
-      <ul class="nav-list">`;
+      <ul class="sidebar-nav-list">`;
 
     // Overview link (first item in every section, only when the section has a
     // folder and therefore an index page). data-order="0" so direction
     // detection always treats it as the lowest-order page in the section.
     if (sectionIndexHref) {
-      html += `<li><a href="${sectionIndexHref}" class="nav-link" data-section="${sectionSlug}" data-order="0" data-access="team"><span>Overview</span></a></li>`;
+      html += `<li><a href="${sectionIndexHref}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="0" data-access="team"><span>Overview</span></a></li>`;
     }
 
     // Sequential counter mirrors buildSidebarOrderMap — same walk order, so the
-    // data-order on each nav-link matches the data-order on its destination
+    // data-order on each sidebar-nav-link matches the data-order on its destination
     // page's container. Resets per section, starts at 1 (0 is Overview).
     let navPos = 1;
 
@@ -2014,10 +2363,6 @@ function buildNavSectionsHtml(filesBySection, sidebarOrderMap = {}) {
       let linkHref = siteHref('/' + file.htmlPath);
       let linkAccess = deriveDataAccess(file.frontmatter);
       const navActionUrl = file.frontmatter.actionUrl || file.frontmatter.toolUrl;
-      if (section === 'Tools' && !navActionUrl) {
-        // Pure guide pages (no tool app) render under the Guides label below.
-        continue;
-      }
       if (section === 'Tools' && navActionUrl) {
         // actionUrl is relative to the tool docs page (e.g. "./cpm-calculator.html").
         // Resolve to an absolute site path.
@@ -2026,25 +2371,26 @@ function buildNavSectionsHtml(filesBySection, sidebarOrderMap = {}) {
         linkHref = siteHref('/' + sectionFolder + '/' + fileName);
         linkAccess = file.frontmatter.actionAccess || file.frontmatter.toolAccess || 'brand';
       }
-      html += `<li><a href="${linkHref}" class="nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span></a></li>`;
+      html += `<li><a href="${linkHref}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span></a></li>`;
       navPos++;
     }
 
-    // Tools-only: the entries above point at the tool apps (actionUrl), which
-    // would leave the usage docs unreachable from any nav. List every tool's
-    // doc page under a Guides label, ordered by the sidebar order map — the
-    // same pattern the Docs section used before the docs consolidation.
-    if (section === 'Tools') {
-      html += `<li><details class="nav-subsection">
-        <summary class="nav-subsection-toggle"><span>Guides</span>${navChevron}</summary>
-        <ul class="nav-sublist">`;
-      for (const file of files) {
-        const guideAccess = deriveDataAccess(file.frontmatter);
-        const guidePos = sidebarOrderMap[file.htmlPath] || 999;
-        html += `<li><a href="${siteHref('/' + file.htmlPath)}" class="nav-link" data-section="${sectionSlug}" data-order="${guidePos}" data-access="${guideAccess}"><span>${file.title}</span></a></li>`;
-      }
-      html += `</ul></details></li>`;
-    }
+    // A Tools entry above points at the tool app, not at the tool's guide page.
+    // The guides used to be listed here too, under a `Guides` disclosure — but
+    // every entry in it repeated a label from the list directly above, so the
+    // sidebar showed each tool's name twice with nothing to say which was
+    // which, and the guides went unread behind a collapsed group.
+    //
+    // They are still generated, and each one still links out to its tool. But
+    // nothing links *in*: no tool app references its guide, and the section
+    // index points only at the apps, so the guides are now reachable by URL or
+    // by pager-walking the chain from the LLM Reference. That is the accepted
+    // cost of removing the duplicate rows, and it is temporary — the intended
+    // home for this content is a dialog opened from inside the tool, which is
+    // the edge that has always been missing. See ROADMAP.
+    //
+    // A Tools page with no `actionUrl` is a guide with no app (the LLM
+    // Reference), so it falls through the branch above and lists normally.
 
     // Render subsections in order
     const subsections = Object.keys(grouped).sort((a, b) => {
@@ -2059,12 +2405,12 @@ function buildNavSectionsHtml(filesBySection, sidebarOrderMap = {}) {
     // Each subsection is its own collapsed dropdown so long sections (Design
     // System, Brand Book) stay scannable. setActiveLink opens the active one.
     for (const sub of subsections) {
-      html += `<li><details class="nav-subsection">
-        <summary class="nav-subsection-toggle"><span>${sub}</span>${navChevron}</summary>
-        <ul class="nav-sublist">`;
+      html += `<li><details class="sidebar-nav-subsection">
+        <summary class="sidebar-nav-subsection-toggle"><span>${sub}</span>${navChevron}</summary>
+        <ul class="sidebar-nav-sublist">`;
       for (const file of grouped[sub]) {
         const linkAccess = deriveDataAccess(file.frontmatter);
-        html += `<li><a href="${siteHref('/' + file.htmlPath)}" class="nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span></a></li>`;
+        html += `<li><a href="${siteHref('/' + file.htmlPath)}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span></a></li>`;
         navPos++;
       }
       html += `</ul></details></li>`;
@@ -2272,6 +2618,7 @@ function generateBrandDocs(template, themes) {
     if (mdFiles.length === 0) continue;
 
     const theme = themes[brandKey];
+    const space = brandSpace(brandKey, theme);
     const pages = [];
     const brandFiles = [];
 
@@ -2309,25 +2656,17 @@ function generateBrandDocs(template, themes) {
       const navBase = sectionSlug ? '../../' : '../';
 
       // Full-width page header (lives outside the content grid)
-      let pageHeader = '';
       const brandActionUrl = frontmatter.actionUrl || frontmatter.toolUrl;
       const brandActionLabel = frontmatter.actionLabel || frontmatter.toolLabel || 'Open';
       const brandActionHtml = brandActionUrl
-        ? `<div class="button-group justify-center">
-            <a href="${siteHref(brandActionUrl)}" class="button page-action-link" data-size="small">${brandActionLabel}</a>
-          </div>`
+        ? `<a href="${siteHref(brandActionUrl)}" class="button page-action-link" data-size="small">${brandActionLabel}</a>`
         : '';
-      if (title) {
-        const brandPageFlipId = flipIdFromHref(htmlName);
-        const brandPageFlipAttr = brandPageFlipId ? ` data-flip-id="${brandPageFlipId}"` : '';
-        pageHeader = `<div class="page-header">
-          <div class="container-s">
-            <h1${brandPageFlipAttr}>${title}</h1>
-            ${frontmatter.subtitle ? `<p class="page-subtitle" data-text-wrap="pretty">${frontmatter.subtitle}</p>` : ''}
-            ${brandActionHtml}
-          </div>
-        </div>`;
-      }
+      pageHeader = buildPageHeaderHtml({
+        title,
+        subtitle: frontmatter.subtitle,
+        actions: brandActionHtml,
+        flipId: flipIdFromHref(htmlName),
+      });
 
       // Build sticky sub-header bar (breadcrumb + markdown dropdown)
       let pageSubbar = '';
@@ -2338,76 +2677,34 @@ function generateBrandDocs(template, themes) {
         const overviewHref = siteHref(sectionSlug
           ? `/${brandKey}/${sectionSlug}/index.html`
           : `/${brandKey}/index.html`);
-        const mdPath = `${navBase}${BRANDS_REL}/${brandKey}/${filename}`;
-        pageSubbar = `<div class="sticky-bar sticky-bar-page">
-          <div class="sticky-bar-container">
-            <div class="sticky-bar-content">
-              <nav class="sticky-bar-breadcrumbs" aria-label="Breadcrumb">
-                <a href="${overviewHref}">${sectionLabel}</a>
-                <span class="breadcrumb-separator">/</span>
-                <span>${title}</span>
-              </nav>
-            </div>
-            <div class="sticky-bar-actions">
-              <div class="dropdown">
-                <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Markdown source options">
-                  ${getIcon('more-horizontal')}
-                </button>
-                <div class="dropdown-menu is-right" role="menu">
-                  <button type="button" class="dropdown-item js-copy-url" role="menuitem">
-                    ${getIcon('link')}
-                    <span>Copy link</span>
-                  </button>
-                  <div data-auth-role="team" role="presentation">
-                    <div class="dropdown-divider" role="separator"></div>
-                    <a href="${mdPath}" class="dropdown-item js-md-download" role="menuitem" download>
-                      ${getIcon('download')}
-                      <span>Download .md file</span>
-                    </a>
-                    <div class="dropdown-divider" role="separator"></div>
-                    <a href="${mdPath}" class="dropdown-item js-md-open" role="menuitem" target="_blank" rel="noopener noreferrer">
-                      ${getIcon('open-full')}
-                      <span>Open .md in new tab</span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-              <a href="${overviewHref}" class="sticky-bar-close" aria-label="Close ${title}">
-                ${getIcon('close-large')}
-              </a>
-            </div>
-          </div>
-        </div>`;
+        pageSubbar = buildStickyBar({
+          sectionHref: overviewHref,
+          sectionLabel,
+          title,
+          mdHref: `${navBase}${BRANDS_REL}/${brandKey}/${filename}`,
+        });
       }
 
-      // Build brand-specific template
-      const brandCss = brandCssLink(navBase);
-      const brandThemeCss = `<!-- Brand Theme Override (must load last to override base styles) -->\n    <link rel="stylesheet" href="${sectionSlug ? '../' : ''}assets/theme.css">`;
-
-      let html = template
-        .replaceAll('{{PAGE_TITLE}}', `${theme.label} - ${title}`)
-        .replaceAll('{{META_DESCRIPTION}}', frontmatter.description || '')
-        .replace('{{PAGE_HEADER}}', pageHeader)
-        .replace('{{PAGE_STICKY_BAR}}', pageSubbar)
-        .replace('{{PAGE_CONTENT}}', htmlContent)
-        .replace('{{TOC_SECTION}}', tableOfContents
-          ? `<aside class="docs-toc"><span class="toc-header">On this page</span><div class="toc-wrapper">${tableOfContents}</div></aside>`
-          : '')
-        .replace('{{DESIGN_SYSTEM_PATH}}', prefixHref(navBase, PROJECT_CONFIG.designSystemPath))
-        .replace('{{BRAND_CSS}}', brandCss)
-        .replace('{{BRAND_THEME_CSS}}', brandThemeCss)
-        .replace('{{BRAND_THEME_ATTR}}', `data-brand-theme="${brandKey}"`)
-        .replace('{{FONT_HEAD}}', fontHeadHtml(theme.manifest, navBase))
-        .replace('{{PAGE_SCRIPTS}}', buildPageScripts(frontmatter.section || '', frontmatter, navBase))
-        .replace('{{FOOTER_TEXT}}', buildFooterHtml(theme.manifest.footerText))
-        .replace('{{FAVICON_LINKS}}', brandChromeSlots(theme.manifest, navBase).faviconLinks)
-        .replace('{{OG_IMAGE}}', brandChromeSlots(theme.manifest, navBase).ogImage)
-        .replace('{{PAGE_ACCESS}}', deriveDataAccess(frontmatter))
-        .replace('{{SECTION_SLUG}}', `${brandKey}-${slugifySection(frontmatter.section)}`)
-        .replace('{{PAGE_SECTION}}', `${brandKey}-${slugifySection(frontmatter.section)}`)
-        .replace('{{PAGE_ORDER}}', String(parseInt(frontmatter.order, 10) || 999))
-        .replace('{{PAGE_LEVEL}}', '2')
-        .replaceAll('{{NAV_BASE}}', navBase);
+      // {{PAGE_NAV}} is deliberately left unfilled — prev/next needs the whole
+      // brand's page order, which pass 2 below supplies.
+      const html = renderPage(template, {
+        space,
+        navBase,
+        brandRelBase: sectionSlug ? '../' : '',
+        title: `${theme.label} - ${title}`,
+        description: frontmatter.description || '',
+        header: pageHeader,
+        stickyBar: pageSubbar,
+        content: htmlContent,
+        toc: tocAside(tableOfContents),
+        pageNav: '{{PAGE_NAV}}',
+        access: deriveDataAccess(frontmatter),
+        scripts: buildPageScripts(frontmatter.section || '', frontmatter, navBase),
+        sectionSlug: `${brandKey}-${slugifySection(frontmatter.section)}`,
+        pageSection: `${brandKey}-${slugifySection(frontmatter.section)}`,
+        order: parseInt(frontmatter.order, 10) || 999,
+        level: 2,
+      });
 
       // Derive output path
       const dir = sectionSlug
@@ -2441,7 +2738,11 @@ function generateBrandDocs(template, themes) {
     // Pass 2: Inject prev/next nav and write files
     for (const file of brandFiles) {
       const pageNav = generatePageNav(file, brandFiles);
-      const finalHtml = file.html.replace('{{PAGE_NAV}}', pageNav);
+      // Function replacer, like every substitution in renderPage: a plain
+      // string replacement treats `$&`, `` $` ``, `$'` and `$$` in the
+      // *replacement* as patterns, and this one carries neighbouring page
+      // titles straight from brand frontmatter.
+      const finalHtml = file.html.replace('{{PAGE_NAV}}', () => pageNav);
 
       fs.mkdirSync(file.dir, { recursive: true });
       fs.writeFileSync(path.join(file.dir, file.htmlName), finalHtml);
@@ -2469,6 +2770,230 @@ function generateBrandDocs(template, themes) {
       theme.pages.push(entry);
     }
   }
+}
+
+/**
+ * Generate the tool app pages from cms/apps/.
+ *
+ * Each tool is a pair: `<slug>.md` carrying only frontmatter, and `<slug>.html`
+ * carrying the body that goes between <main> and </main>. Two files rather than
+ * one because the body cannot go through markdownToHtml — its post-passes
+ * rewrite <table> into .table-scroll > table.table, inject copy buttons into
+ * <pre><code> and chipify inline <code>, all of which are right for prose and
+ * wrong for an application's markup. cpm-calculator has a <table> that would be
+ * silently rewritten.
+ *
+ * These pages deliberately do NOT join filesBySection. The sidebar and the
+ * Tools index already link to them through their doc page's `actionUrl`; adding
+ * them again would list every tool twice.
+ *
+ * Output paths are unchanged from when these were hand-written (tools/<slug>.html)
+ * because those URLs are public and the doc pages point at them.
+ */
+/**
+ * Fill in the destination for a close link that does not name one.
+ *
+ * `<a data-page-close>` with no href gets the section index — the same place a
+ * doc page's close goes, so the default is "up one level" without every tool
+ * having to repeat the path. An author-supplied href is left alone, which is
+ * how a tool that should close somewhere else says so.
+ */
+function fillPageClose(body, sectionHref) {
+  return body.replace(/<a\s([^>]*\bdata-page-close(?![-\w])[^>]*)>/g, (match, attrs) => {
+    // `(?![-\w])` so data-page-close-target and friends are not mistaken for
+    // the attribute itself — \b alone treats the hyphen as a boundary and
+    // would silently rewrite an unrelated anchor's href.
+    //
+    // `\bhref` alone also matches data-href and xlink:href, which would read
+    // as author-supplied and leave the link inert. Require a real href.
+    if (/(^|\s)href\s*=/.test(attrs)) return match;
+    return `<a href="${sectionHref}" ${attrs}>`;
+  });
+}
+
+/**
+ * Strip HTML comments before scanning a body for the close.
+ *
+ * Without this a commented-out close satisfies the gate, and fillPageClose
+ * cheerfully injects an href inside the comment — the page ships with no way
+ * out, which is the one thing the gate exists to prevent.
+ */
+function stripHtmlComments(html) {
+  return html.replace(/<!--[\s\S]*?-->/g, '');
+}
+
+/**
+ * Generate pages from a standalone source directory under cms/.
+ *
+ * Two directories use this: `cms/apps/` (the tools) and `cms/examples/` (one
+ * live specimen per page type). Both hold pages that join no section — the
+ * sidebar and the section indexes never list them, because both are reached
+ * from somewhere specific: a tool from its doc page's action button, an
+ * example from the page-layouts reference.
+ *
+ * A page is a `<slug>.md` carrying frontmatter. Types whose body is HTML
+ * (`tool`, `page`) take theirs from a sibling `<slug>.html`, verbatim; types
+ * whose body is markdown take it from the .md itself. That split is what stops
+ * an application's markup going through markdownToHtml, whose post-passes
+ * rewrite tables, code blocks and inline code.
+ *
+ * @param {object}  opts.dirName       directory under cms/
+ * @param {string}  opts.outputFolder  fixed output folder, or null to derive
+ *                                     it from the page's section
+ * @param {string}  opts.defaultSection section when frontmatter omits one
+ * @param {boolean} opts.toolHook      emit data-tool="<slug>" on the container
+ * @param {string}  opts.closeHref     where a close goes, and the breadcrumb's
+ *                                     first crumb. Defaults to the output
+ *                                     folder's index, which is right for a tool
+ *                                     but wrong for a directory that has none
+ * @param {string}  opts.closeLabel    the crumb's text
+ */
+function generateSourceDirPages(template, {
+  dirName,
+  outputFolder = null,
+  defaultSection = 'Tools',
+  toolHook = false,
+  closeHref = null,
+  closeLabel = null,
+}) {
+  const srcDir = path.join(DOCS_DIR, dirName);
+  if (!fs.existsSync(srcDir)) return [];
+
+  const mdFiles = fs.readdirSync(srcDir)
+    .filter(f => f.endsWith('.md') && !f.startsWith('README') && !f.startsWith('_'))
+    .sort();
+
+  const closeErrors = [];
+  const generated = [];
+
+  for (const filename of mdFiles) {
+    const slug = filename.replace(/\.md$/, '');
+    const bodyPath = path.join(srcDir, `${slug}.html`);
+
+    const parsed = parseFrontmatter(fs.readFileSync(path.join(srcDir, filename), 'utf8'));
+    const frontmatter = parsed.frontmatter;
+
+    if (frontmatter.status === 'draft') {
+      console.log(`⏭️  Skipped (draft): ${dirName}/${filename}`);
+      continue;
+    }
+
+    const type = resolvePageType(frontmatter);
+    if (!type) {
+      closeErrors.push(`  ${dirName}/${slug}.md — invalid type "${frontmatter.type}" (valid: ${Object.keys(PAGE_TYPES).join(', ')})`);
+      continue;
+    }
+
+    // An HTML-bodied type needs its sibling; a markdown-bodied one must not
+    // have one, or the .md's own content would be silently ignored.
+    let body;
+    if (type.body === 'html') {
+      if (!fs.existsSync(bodyPath)) {
+        throw new Error(`cms/${dirName}/${filename} declares type "${type.name}", which needs a ${slug}.html body`);
+      }
+      body = fs.readFileSync(bodyPath, 'utf8').trimEnd();
+    } else {
+      if (fs.existsSync(bodyPath)) {
+        throw new Error(`cms/${dirName}/${slug}.html is ignored — type "${type.name}" takes its body from the markdown`);
+      }
+      body = markdownToHtml(parsed.content);
+    }
+
+    const section = frontmatter.section || defaultSection;
+    const folder = outputFolder || SECTION_FOLDERS[section] || section.toLowerCase();
+    const navBase = '../';
+    const upHref = siteHref(closeHref || `/${folder}/index.html`);
+    const upLabel = closeLabel || section;
+
+    // The close contract, enforced only where the type makes it: a `tool` owns
+    // its whole layout, so the generator cannot place a close for it — but it
+    // can refuse to ship one the reader cannot leave.
+    //
+    // Scanned with comments stripped: a commented-out close would otherwise
+    // satisfy the gate and ship a page with no way out.
+    const needsClose = type.name === 'tool';
+    if (needsClose) {
+      const scannable = stripHtmlComments(body);
+      if ((scannable.match(/\sdata-page-close(?![-\w])/g) || []).length === 0) {
+        closeErrors.push(`  ${dirName}/${slug}.html — no element carries data-page-close`);
+        continue;
+      }
+    }
+
+    // {{icon:name}} works in an HTML body the same way it works in markdown.
+    // That body skips markdownToHtml, which is where the expansion normally
+    // happens, so it is done here — otherwise every tool would have to paste
+    // raw SVG, which is how these files accumulated it in the first place.
+    let content = fillPageClose(body, upHref);
+    if (type.body === 'html') {
+      content = content.replace(/\{\{icon:([a-z0-9-]+)\}\}/g, (match, name) => getIcon(name));
+    }
+
+    // Assert the close came out navigable. The check above proves the attribute
+    // is there; this proves fillPageClose actually resolved it. Nothing in the
+    // JS reads data-page-close — it is a build-time marker, not a behaviour —
+    // so the close has to be a real <a> with a real href. A <button> carrying
+    // the attribute is inert, and would otherwise pass a gate whose whole job
+    // is to prevent exactly that.
+    if (needsClose) {
+      const resolved = (stripHtmlComments(content).match(/<a\s[^>]*\bdata-page-close(?![-\w])[^>]*>/g) || [])
+        .filter(tag => /(^|\s)href\s*=\s*["'][^"']+["']/.test(tag)).length;
+      if (resolved === 0) {
+        closeErrors.push(`  ${dirName}/${slug}.html — data-page-close is not on a link with a destination (an <a>; a <button> does nothing)`);
+        continue;
+      }
+    }
+
+    const html = renderPage(template, {
+      space: ROOT_SPACE,
+      navBase,
+      title: frontmatter.title || slug,
+      description: frontmatter.description || '',
+      header: type.header
+        ? buildPageHeaderHtml({ title: frontmatter.title, subtitle: frontmatter.subtitle })
+        : '',
+      content,
+      toc: type.toc ? tocAside(generateTableOfContents(content)) : '',
+      frame: type.frame,
+      stickyBar: type.stickyBar
+        ? buildStickyBar({
+            sectionHref: upHref,
+            sectionLabel: upLabel,
+            title: frontmatter.title || slug,
+          })
+        : '',
+      access: deriveDataAccess(frontmatter),
+      sectionSlug: slug,
+      pageSection: slugifySection(section),
+      order: parseInt(frontmatter.order, 10) || 999,
+      level: type.level,
+      chrome: type.chrome,
+      sidebar: frontmatter.sidebar || null,
+      // A stable root hook for the tool's own module, named after the page.
+      // email-signature.js already scopes every one of its queries to
+      // [data-tool="email-signature"] and returns early without it, so the
+      // tool goes silently dead if this is missing.
+      containerExtra: toolHook ? ` data-tool="${escapeAttr(slug)}"` : '',
+    });
+
+    const dir = path.join(OUTPUT_DIR, folder);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${slug}.html`), html);
+    console.log(`📄 Generated: ${folder}/${slug}.html`);
+    generated.push(`${folder}/${slug}.html`);
+  }
+
+  if (closeErrors.length > 0) {
+    console.error(`\n❌ cms/${dirName} — a \`tool\` page must give the reader a way out:`);
+    console.error(closeErrors.join('\n'));
+    console.error('\nPut data-page-close on an <a> anywhere the layout suits — the');
+    console.error('toolbar\'s trailing cluster, a corner of the canvas. Leave the href');
+    console.error('off and the section index is filled in. It must be a link, not a');
+    console.error('button: nothing reads the attribute at runtime. See cms/page-types.md.\n');
+    process.exit(1);
+  }
+
+  return generated;
 }
 
 /**
@@ -2524,9 +3049,8 @@ function generateBrandSectionOverviews(template, themes) {
 
   for (const [brandKey, theme] of Object.entries(themes)) {
     const brandLabel = theme.label || brandKey;
+    const space = brandSpace(brandKey, theme);
     const navBase = '../';
-    const brandCss = brandCssLink(navBase);
-    const brandThemeCss = `<!-- Brand Theme Override (must load last to override base styles) -->\n    <link rel="stylesheet" href="assets/theme.css">`;
 
     const dir = path.join(OUTPUT_DIR, brandKey);
     fs.mkdirSync(dir, { recursive: true });
@@ -2534,50 +3058,45 @@ function generateBrandSectionOverviews(template, themes) {
     // Helper to build a brand overview page
     function buildOverviewPage(title, cardsHtml, overrideNavBase) {
       const base = overrideNavBase || navBase;
-      const content = `<div class="docs-hero"><h1 class="docs-hero-title">${title}</h1></div>${cardsHtml}`;
       // Per-brand section order — used by the level-based directional
       // transitions for L1 → L1 sibling navigation within a brand space.
       // Docs comes first, then Tools, matching their order in the brand
       // sidebar. New brand sections would extend this map.
       const brandSectionOrder = { 'Docs': 0, 'Tools': 1, 'Brand Book': 2 };
       const overviewOrder = brandSectionOrder[title] !== undefined ? brandSectionOrder[title] : 999;
-      return template
-        .replace(/\{\{PAGE_TITLE\}\}/g, `${brandLabel} - ${title}`)
-        .replace(/\{\{META_DESCRIPTION\}\}/g, `${title} overview for ${brandLabel}.`)
-        .replace(/\{\{NAV_BASE\}\}/g, base)
-        .replace(/\{\{PAGE_ACCESS\}\}/g, deriveDataAccess(loadDefaults(path.join(DOCS_DIR, 'brands', brandKey))))
-        .replace('{{PAGE_HEADER}}', '')
-        .replace('{{PAGE_STICKY_BAR}}', '')
-        .replace('{{PAGE_CONTENT}}', content)
-        .replace('{{TOC_SECTION}}', '')
-        .replace('{{PAGE_NAV}}', '')
-        .replace('{{FOOTER_TEXT}}', buildFooterHtml(theme.manifest.footerText))
-        .replace('{{FAVICON_LINKS}}', brandChromeSlots(theme.manifest, base).faviconLinks)
-        .replace('{{OG_IMAGE}}', brandChromeSlots(theme.manifest, base).ogImage)
-        .replace('{{DESIGN_SYSTEM_PATH}}', prefixHref(base, PROJECT_CONFIG.designSystemPath))
-        .replace('{{BRAND_CSS}}', brandCssLink(base))
-        .replace('{{BRAND_THEME_CSS}}', `<!-- Brand Theme Override (must load last to override base styles) -->\n    <link rel="stylesheet" href="${base === '../../' ? '../' : ''}assets/theme.css">`)
-        .replace('{{BRAND_THEME_ATTR}}', `data-brand-theme="${brandKey}"`)
-        .replace('{{FONT_HEAD}}', fontHeadHtml(theme.manifest, base))
-        .replace('{{SECTION_SLUG}}', `${brandKey}-${slugifySection(title)}-overview`)
-        .replace('{{PAGE_SECTION}}', `${brandKey}-${slugifySection(title)}`)
-        .replace('{{PAGE_ORDER}}', String(overviewOrder))
-        .replace('{{PAGE_LEVEL}}', '1')
-        .replace('{{PAGE_SCRIPTS}}', '');
+      return renderPage(template, {
+        space,
+        navBase: base,
+        // Overviews in a section subfolder sit one level below the brand root
+        brandRelBase: base === '../../' ? '../' : '',
+        title: `${brandLabel} - ${title}`,
+        description: `${title} overview for ${brandLabel}.`,
+        header: buildPageHeaderHtml({ title }),
+        content: cardsHtml,
+        access: deriveDataAccess(loadDefaults(space.defaultsDir())),
+        sectionSlug: `${brandKey}-${slugifySection(title)}-overview`,
+        pageSection: `${brandKey}-${slugifySection(title)}`,
+        order: overviewOrder,
+        level: 1,
+      });
     }
 
-    // Docs overview — cards for all pages in the Docs section
+    // Docs overview — the section's contents list.
+    //
+    // book-contents, not book-shelf: the book metaphor puts covers on the shelf
+    // (L0) and a contents list inside a book (L1), and the root section indexes
+    // have always followed it. The brand spaces used covers at both levels, so
+    // a brand instance taught a different structure from the site it lives in.
     const docsPages = (theme.pages || []).filter(p => p.section === 'Docs' && p.title !== 'Overview');
     if (docsPages.length > 0) {
-      let cards = '<div class="docs-section"><div class="book-shelf">';
+      let cards = '<div class="docs-section"><div class="book-contents">';
       for (const page of docsPages) {
         // page.href is already absolute (`/<brand>/docs/<file>.html`).
-        cards += renderBookCover({
+        cards += renderBookContentsItem({
           headingLevel: 2,
           href: page.href,
           title: page.title,
           subtitle: page.subtitle,
-          author: page.author,
         });
       }
       cards += '</div></div>';
@@ -2590,15 +3109,14 @@ function generateBrandSectionOverviews(template, themes) {
     // Tools overview — cards for tools this brand has access to (from frontmatter)
     const brandToolKeys = Object.keys(toolRegistry).filter(slug => brandHasToolAccess(toolRegistry[slug].toolAccess, brandKey));
     if (brandToolKeys.length > 0) {
-      let cards = '<div class="docs-section"><div class="book-shelf">';
+      let cards = '<div class="docs-section"><div class="book-contents">';
       for (const toolKey of brandToolKeys) {
         const tool = toolRegistry[toolKey];
-        cards += renderBookCover({
+        cards += renderBookContentsItem({
           headingLevel: 2,
           href: `/tools/${toolKey}.html`,
           title: tool.title,
           subtitle: tool.subtitle,
-          author: tool.author,
         });
       }
       cards += '</div></div>';
@@ -2685,13 +3203,12 @@ function generateBrandBook(template, themes) {
     const pageDescription = frontmatter.description || `${brandLabel} brand book.`;
 
     // Build the full-width page header (slots into PAGE_HEADER, outside the content grid)
-    const brandBookPageHeader = `<div class="page-header">
-      <div class="container-s">
-        <p class="eyebrow">${brandLabel}</p>
-        <h1 data-flip-id="brand-book">${pageTitle}</h1>
-        <p class="page-subtitle" data-text-wrap="pretty">${pageSubtitle}</p>
-      </div>
-    </div>`;
+    const brandBookPageHeader = buildPageHeaderHtml({
+      title: pageTitle,
+      subtitle: pageSubtitle,
+      eyebrow: brandLabel,
+      flipId: 'brand-book',
+    });
 
     // Build page content
     let contentHtml = '';
@@ -3040,37 +3557,26 @@ function generateBrandBook(template, themes) {
 
     // Build page from template (same pattern as generateBrandIndexPages)
     const navBase = '../';
-    const brandCss = brandCssLink(navBase);
-    const brandThemeCss = `<!-- Brand Theme Override (must load last to override base styles) -->\n    <link rel="stylesheet" href="assets/theme.css">`;
 
     // Brand book uses the standard .copy-btn pattern (handled by copy-button.js)
     // and native <a download> for downloads — no inline script needed.
 
-    let html = template
-      .replace(/\{\{PAGE_TITLE\}\}/g, `${brandLabel} - ${pageTitle}`)
-      .replace(/\{\{META_DESCRIPTION\}\}/g, pageDescription)
-      .replace(/\{\{NAV_BASE\}\}/g, navBase)
-      .replace(/\{\{PAGE_ACCESS\}\}/g, deriveDataAccess(frontmatter))
-      .replace('{{PAGE_HEADER}}', brandBookPageHeader)
-      .replace('{{PAGE_STICKY_BAR}}', '')
-      .replace('{{PAGE_CONTENT}}', contentHtml)
-      .replace('{{TOC_SECTION}}', '')
-      .replace('{{PAGE_NAV}}', '')
-      .replace('{{FOOTER_TEXT}}', buildFooterHtml(theme.manifest.footerText))
-      .replace('{{FAVICON_LINKS}}', brandChromeSlots(theme.manifest, navBase).faviconLinks)
-      .replace('{{OG_IMAGE}}', brandChromeSlots(theme.manifest, navBase).ogImage)
-      .replace('{{DESIGN_SYSTEM_PATH}}', prefixHref(navBase, PROJECT_CONFIG.designSystemPath))
-      .replace('{{BRAND_CSS}}', brandCss)
-      .replace('{{BRAND_THEME_CSS}}', brandThemeCss)
-      .replace('{{BRAND_THEME_ATTR}}', `data-brand-theme="${brandKey}"`)
-      .replace('{{FONT_HEAD}}', fontHeadHtml(theme.manifest, navBase))
-      .replace('{{PAGE_SCRIPTS}}', '')
-      .replace('{{SECTION_SLUG}}', `${brandKey}-brand-book`)
-      .replace('{{PAGE_SECTION}}', `${brandKey}-brand-book`)
+    const html = renderPage(template, {
+      space: brandSpace(brandKey, theme),
+      navBase,
+      brandRelBase: '',
+      title: `${brandLabel} - ${pageTitle}`,
+      description: pageDescription,
+      header: brandBookPageHeader,
+      content: contentHtml,
+      access: deriveDataAccess(frontmatter),
+      sectionSlug: `${brandKey}-brand-book`,
+      pageSection: `${brandKey}-brand-book`,
       // Brand book is at order 2 in the per-brand section ordering
       // (Docs=0, Tools=1, Brand Book=2) — see buildOverviewPage above.
-      .replace('{{PAGE_ORDER}}', '2')
-      .replace('{{PAGE_LEVEL}}', '1');
+      order: 2,
+      level: 1,
+    });
 
     // Write to brand folder
     const dir = path.join(OUTPUT_DIR, brandKey);
@@ -3086,13 +3592,9 @@ function generateBrandIndexPages(template, themes) {
   for (const [brandKey, theme] of Object.entries(themes)) {
     let contentHtml = '';
 
-    // Hero section
+    // Both feed the page header, which is emitted into {{PAGE_HEADER}} below.
     const brandLabel = theme.label || brandKey;
     const brandDesc = theme.description || `Brand guidelines and tools for ${brandLabel}.`;
-    contentHtml += `<div class="docs-hero">
-      <h1 class="docs-hero-title">${brandLabel}</h1>
-      <p class="docs-hero-description" data-text-wrap="balance">${brandDesc}</p>
-    </div>`;
 
     // Brand pages grouped by section (exclude index.html and Tools pages — tools handled separately)
     const brandPages = (theme.pages || []).filter(p => !p.href.endsWith('/index.html') && p.section !== 'Tools');
@@ -3159,34 +3661,20 @@ function generateBrandIndexPages(template, themes) {
 
     // Build page from template
     const navBase = '../';
-    const brandCss = brandCssLink(navBase);
-    const brandThemeCss = `<!-- Brand Theme Override (must load last to override base styles) -->\n    <link rel="stylesheet" href="assets/theme.css">`;
-
-    let html = template
-      .replace(/\{\{PAGE_TITLE\}\}/g, `${brandLabel} - Brand Guidelines`)
-      .replace(/\{\{META_DESCRIPTION\}\}/g, brandDesc)
-      .replace(/\{\{NAV_BASE\}\}/g, navBase)
-      .replace(/\{\{PAGE_ACCESS\}\}/g, deriveDataAccess(loadDefaults(path.join(DOCS_DIR, 'brands', brandKey))))
-      .replace('{{PAGE_HEADER}}', '')
-      .replace('{{PAGE_STICKY_BAR}}', '')
-      .replace('{{PAGE_CONTENT}}', contentHtml)
-      .replace('{{TOC_SECTION}}', '')
-      .replace('{{PAGE_NAV}}', '')
-      .replace('{{FOOTER_TEXT}}', buildFooterHtml(theme.manifest.footerText))
-      .replace('{{FAVICON_LINKS}}', brandChromeSlots(theme.manifest, navBase).faviconLinks)
-      .replace('{{OG_IMAGE}}', brandChromeSlots(theme.manifest, navBase).ogImage)
-      .replace('{{BRAND_CSS}}', brandCss)
-      .replace('{{BRAND_THEME_CSS}}', brandThemeCss)
-      .replace('{{BRAND_THEME_ATTR}}', `data-brand-theme="${brandKey}"`)
-      .replace('{{FONT_HEAD}}', fontHeadHtml(theme.manifest, navBase))
-      .replace('{{SECTION_SLUG}}', `${brandKey}-home`)
-      .replace('{{PAGE_SECTION}}', `${brandKey}-home`)
-      .replace('{{PAGE_ORDER}}', '0')
-      .replace('{{PAGE_LEVEL}}', '0')
-      .replace('{{PAGE_SCRIPTS}}', '');
-
-    // Replace design system path placeholder
-    html = html.replace('{{DESIGN_SYSTEM_PATH}}', prefixHref(navBase, PROJECT_CONFIG.designSystemPath));
+    const html = renderPage(template, {
+      space: brandSpace(brandKey, theme),
+      navBase,
+      brandRelBase: '',
+      title: `${brandLabel} - Brand Guidelines`,
+      description: brandDesc,
+      header: buildPageHeaderHtml({ title: brandLabel, subtitle: brandDesc }),
+      content: contentHtml,
+      access: deriveDataAccess(loadDefaults(path.join(DOCS_DIR, 'brands', brandKey))),
+      sectionSlug: `${brandKey}-home`,
+      pageSection: `${brandKey}-home`,
+      order: 0,
+      level: 0,
+    });
 
     // Write to brand folder
     const dir = path.join(OUTPUT_DIR, brandKey);
@@ -3281,8 +3769,12 @@ function applyTemplateChrome(rawTemplate) {
     .replace('{{EXTRA_HEAD}}', () => CONFIG.extraHeadHtml.trimEnd())
     .replace('{{BODY_ATTRS}}', () => CONFIG.bodyAttrs)
     .replace('{{WRAPPER_ATTRS}}', () => CONFIG.wrapperAttrs)
-    .replace('{{CONTAINER_ATTRS}}', () => CONFIG.containerAttrs)
-    .replace('{{EXTRA_CONTENT}}', () => CONFIG.extraContentHtml.trimEnd())
+    // {{CONTAINER_EXTRA}} rides along after the configured container attrs so
+    // a page can add its own without every consumer config having to declare
+    // the slot. renderPage fills it; it is empty on all but tool pages.
+    .replace('{{CONTAINER_ATTRS}}', () => CONFIG.containerAttrs + '{{CONTAINER_EXTRA}}')
+    // {{EXTRA_CONTENT}} is not filled here — it is part of {{PAGE_CHROME}},
+    // which renderPage fills per page so a page type can omit it.
     .replace('{{HIGHLIGHT_JS}}', () => highlightTag)
     .replace('{{UI_SCRIPTS}}', () => uiScriptTags)
     .replace('{{EXTRA_SCRIPTS}}', () => extraScriptTags)
@@ -3374,6 +3866,7 @@ async function generateDocs() {
   // layer it belongs to. Drives docs-site index filtering and llms.txt scope.
   const VALID_LAYERS = new Set(['foundation', 'core', 'docs-site', 'app']);
   const layerErrors = [];
+  const typeErrors = [];
 
   for (const filename of markdownFiles) {
     const filePath = path.join(DOCS_DIR, filename);
@@ -3396,6 +3889,26 @@ async function generateDocs() {
       } else if (!VALID_LAYERS.has(frontmatter.layer)) {
         layerErrors.push(`  ${filename} — invalid layer "${frontmatter.layer}" (must be one of: foundation, core, docs-site, app)`);
       }
+    }
+
+    // Validate page type. Unlike layer, `type:` is optional — an absent type
+    // means `doc`, which is what nearly every page is. Only a value that is
+    // present and unrecognised fails, because that is a typo silently getting
+    // doc chrome rather than the chrome the author asked for.
+    if (frontmatter.type && !Object.prototype.hasOwnProperty.call(PAGE_TYPES, frontmatter.type)) {
+      typeErrors.push(`  ${filename} — invalid type "${frontmatter.type}"`);
+    }
+
+    // `tool` and `bare` are not producible from a cms/*.md file. A tool is a
+    // source pair in cms/apps/ (its body is raw HTML that must skip the
+    // markdown pipeline, and it has a close to enforce); a bare page has no
+    // sidebar and no Barba container, which this template cannot emit at all.
+    // Both would otherwise render as a half-formed doc with no error.
+    if (frontmatter.type === 'tool') {
+      typeErrors.push(`  ${filename} — type "tool" belongs in cms/apps/ as a <slug>.md + <slug>.html pair`);
+    }
+    if (frontmatter.type === 'bare') {
+      typeErrors.push(`  ${filename} — type "bare" is hand-authored, not generated (start from templates/page-template.html)`);
     }
 
     const title = frontmatter.title || filename.replace('.md', '');
@@ -3443,6 +3956,15 @@ async function generateDocs() {
     console.error(layerErrors.join('\n'));
     console.error('\nValid layers: foundation, core, docs-site, app');
     console.error('See CLAUDE.md §17 (Layer Discipline) for details.\n');
+    process.exit(1);
+  }
+
+  // Fail the build on an unrecognised page type (see cms/page-types.md)
+  if (typeErrors.length > 0) {
+    console.error('\n❌ Unknown page type:');
+    console.error(typeErrors.join('\n'));
+    console.error(`\nValid types: ${Object.keys(PAGE_TYPES).join(', ')}`);
+    console.error('Omit `type:` entirely for an ordinary documentation page.\n');
     process.exit(1);
   }
 
@@ -3497,8 +4019,23 @@ async function generateDocs() {
     }
   }
 
+  // Standalone source directories — only during full build. Both join no
+  // section, so nothing above depends on them and nothing below reads them.
+  if (!isSingleFile) {
+    generateSourceDirPages(template, { dirName: 'apps', toolHook: true });
+    // The examples have no index of their own — the page-layouts reference is
+    // their contents page, so that is where they close to.
+    generateSourceDirPages(template, {
+      dirName: 'examples',
+      outputFolder: 'examples',
+      defaultSection: 'Docs',
+      closeHref: '/docs/page-layouts.html',
+      closeLabel: 'Page Layouts',
+    });
+  }
+
   // Always regenerate nav.js (sidebar needs to stay current)
-  const navJs = generateNavJs(filesBySection, sidebarOrderMap);
+  const navJs = generateNavJs(filesBySection);
   const navJsPath = path.join(OUTPUT_DIR, 'assets', 'js', 'nav.js');
   fs.mkdirSync(path.dirname(navJsPath), { recursive: true });
   fs.writeFileSync(navJsPath, navJs);

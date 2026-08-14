@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^2.2.1"
+npm install "github:bydefaultstudio/design-system-dist#semver:^3.0.0"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -117,8 +117,8 @@ automatically — external URLs pass through untouched.
 | `sectionFolders` | `{}` (flat output) | map of section label → output subfolder; mapped sections get overview index pages |
 | `filenameOverrides` | `{}` | per-file output folder/name overrides |
 | `indexCards` | derived from pages | curated home page card list (`{ title, href, subtitle }`) |
-| `logoHtml` | site name as text | raw HTML for the top-nav logo |
-| `contactHref` / `contactLabel` | none | top-nav contact link |
+| `logoHtml` | site name as text | raw HTML for the site-header logo |
+| `contactHref` / `contactLabel` | none | site-header contact link |
 | `sectionIcons` | `{}` | map of section label → icon key for the sidebar |
 | `uiScripts` | kit-bundled copy-button + dropdown | script list for docs UI behaviours |
 | `markdownSourceBase` | none | serve path of the .md sources; enables "view as markdown" menu items |
@@ -203,7 +203,10 @@ those the same wrapper + base class yourself and compose the modifiers:
 
 Table styling lives in the design system stylesheet, not the docs chrome CSS
 — if you point `designSystemPath` at your own stylesheet, bring the `.table`
-and `.table-scroll` rules with you or tables render unstyled.
+and `.table-scroll` rules with you or tables render unstyled. The same applies
+to `.site-header`, `.nav` and `.sticky-bar`: they are design system components,
+so a custom `designSystemPath` must supply them or the docs chrome loses its
+header and page sub-header.
 
 ## Versioning
 
