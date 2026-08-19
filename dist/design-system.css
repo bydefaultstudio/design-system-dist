@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v3.0.0 */
+/* @bydefaultstudio/design-system v4.0.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -328,14 +328,18 @@
   --border-faded: var(--black-alpha-15);
 
 
-  /* -- Status colours (from brand book or defaults) -- */
-  --status-info: var(--blue);
+  /* -- Status colours (from brand book or defaults) --
+     Text and surface are a pair: -dark text on a -lighter surface. The mid
+     primitives only reach 3.0-4.2:1 on their own pastels — under AA for small
+     text — so every hue's text takes the -dark step, as warning always has.
+     Buttons consume the text half alone and follow it deliberately. */
+  --status-info: var(--blue-dark);
   --status-info-bg: var(--blue-lighter);
-  --status-success: var(--green);
+  --status-success: var(--green-dark);
   --status-success-bg: var(--green-lighter);
   --status-warning: var(--yellow-dark);
   --status-warning-bg: var(--yellow-lighter);
-  --status-danger: var(--red);
+  --status-danger: var(--red-dark);
   --status-danger-bg: var(--red-lighter);
   /* -- Form semantic tokens -- */
   --input-border: var(--border-secondary);
@@ -442,6 +446,14 @@
   --status-success: var(--green-light);
   --status-warning: var(--yellow-light);
   --status-danger: var(--red-light);
+  /* The pair flips as a pair: light text over the page ground pulled 15%
+     toward the hue. Anchored to --background-primary rather than --warm-black
+     (a toast-local colour), so a rethemed dark ground carries these surfaces
+     with it. Holds every variant above 7.7:1. */
+  --status-info-bg: color-mix(in srgb, var(--status-info), var(--background-primary) 85%);
+  --status-success-bg: color-mix(in srgb, var(--status-success), var(--background-primary) 85%);
+  --status-warning-bg: color-mix(in srgb, var(--status-warning), var(--background-primary) 85%);
+  --status-danger-bg: color-mix(in srgb, var(--status-danger), var(--background-primary) 85%);
 
   /* -- Form -- */
   --input-border: #3a3a3a;
@@ -500,6 +512,11 @@
     --status-success: var(--green-light);
     --status-warning: var(--yellow-light);
     --status-danger: var(--red-light);
+    /* Mirror of the [data-theme="dark"] status surfaces above */
+    --status-info-bg: color-mix(in srgb, var(--status-info), var(--background-primary) 85%);
+    --status-success-bg: color-mix(in srgb, var(--status-success), var(--background-primary) 85%);
+    --status-warning-bg: color-mix(in srgb, var(--status-warning), var(--background-primary) 85%);
+    --status-danger-bg: color-mix(in srgb, var(--status-danger), var(--background-primary) 85%);
 
     --input-border: #3a3a3a;
     --input-background: rgba(255, 255, 255, 0.08);
@@ -1258,7 +1275,7 @@ font-family: var(--font-secondary);
  * `display` is deliberately not set — that positions a label inside a form
  * row, and a class applied to an arbitrary element should not decide its
  * layout. Margin is different: it is not this class's margin, it is
- * inherited debris this class has to clear. .toolbar-label (section 43)
+ * inherited debris this class has to clear. .bar-label (section 41)
  * makes the same call.
  */
 .label {
@@ -1722,11 +1739,12 @@ p {
 /* -- Links -- */
 a {
   color: var(--text-plain);
-  /* text-underline-offset: 0.2em; */
+  /* explicit length, not auto — the offset transition can't interpolate from auto */
+  text-underline-offset: 0.15em;
   text-decoration: underline;
   -webkit-text-decoration-color: var(--text-link);
   text-decoration-color: var(--text-link);
-  text-decoration-thickness: 0.01em;
+  text-decoration-thickness: 0.06em;
   transition: color var(--duration-m) var(--ease-out),
               text-decoration-color var(--duration-m) var(--ease-out),
               text-underline-offset var(--duration-m) var(--ease-out);
@@ -1734,8 +1752,7 @@ a {
 
 a:not(.button):hover {
   color: var(--text-link);
-  
-
+  text-underline-offset: 0.25em;
 }
 
 /* The glyph warns that an underlined run of text leaves the site. A button is
@@ -1925,6 +1942,16 @@ input[type=checkbox]:focus-visible {
 .toast-close:focus-visible,
 .footer-link:focus-visible {
   outline-offset: 2px;
+}
+
+/* A filled button surrounds the inset ring with its own fill, where the
+   status hue can vanish — --status-info measured 1.03:1 inside a filled
+   danger button. The text colour is the one value guaranteed to clear its
+   own fill, so the ring borrows it. Unfilled variants re-point
+   --button-text-color at --button-color, which sits on the page ground. */
+.button:focus,
+.button:focus-visible {
+  outline-color: var(--button-text-color);
 }
 
 a:not([href]) {
@@ -3381,41 +3408,27 @@ a[data-tooltip],
 
 /* -- Toast dark mode -- */
 /* Only the neutral toast inverts its surface. A typed toast keeps its status
-   colour as text in both themes.
+   colour as text in both themes, and its surface now comes straight from
+   --status-*-bg — the dark theme derives those from the page ground, so the
+   local re-derivation that used to live here is retired.
 
-   Scoped on the presence or absence of data-type, which matches what toast.js
-   emits: it sets dataset.type only when the type is not 'default' (toast.js:65),
-   so a neutral toast carries no attribute at all. Selecting on that makes these
+   Scoped on the absence of data-type, which matches what toast.js emits: it
+   sets dataset.type only when the type is not 'default' (toast.js:65), so a
+   neutral toast carries no attribute at all. Selecting on that makes these
    rules mutually exclusive with the .toast[data-type] rules above rather than
    competing with them on specificity and source order. Previously they matched
    every .toast and won — (0,2,0) tying with the typed rules and beating them on
    source order, (0,3,0) beating them outright — which flattened success,
-   warning, danger and info to the same grey the moment dark mode was on.
-
-   The typed surface has to be re-derived here rather than left to the tokens.
-   --status-* flips to a light tint in dark mode but --status-*-bg stays at its
-   light pastel, so the authored pair lands light-on-light: measured at 1.1:1,
-   a worse failure than the flattening this fixes. Mixing the status colour into
-   the dark surface instead keeps the type legible and holds every variant above
-   9:1. The underlying --status-*-bg token gap is real and tracked separately;
-   this only stops the toast depending on it. */
+   warning, danger and info to the same grey the moment dark mode was on. */
 [data-theme="dark"] .toast:not([data-type]) {
   background-color: var(--neutral-100);
   color: var(--warm-black);
-}
-
-[data-theme="dark"] .toast[data-type] {
-  background-color: color-mix(in srgb, currentColor, var(--warm-black) 85%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) .toast:not([data-type]) {
     background-color: var(--neutral-100);
     color: var(--warm-black);
-  }
-
-  :root:not([data-theme]) .toast[data-type] {
-    background-color: color-mix(in srgb, currentColor, var(--warm-black) 85%);
   }
 }
 
@@ -3530,7 +3543,7 @@ abbr[title] {
 .img-21x9 { aspect-ratio: 21 / 9; }
 
 
-/* NOTE: .sticky-bar is section 41, near the end of this file. It sits beside
+/* NOTE: .bar is section 41, near the end of this file. It sits beside
    Site Header (section 40) because the two are the same bar shape and were
    drifting apart while they lived in different files. */
 
@@ -3688,7 +3701,7 @@ hr.xl {
    would pin the menu to the far side of the page rather than to the trigger.
    The wider the window, the further it flew — which is why it looked correct
    in a narrow preview pane and broke when maximised.
-   In a flex or grid parent (the sticky bar, tool toolbars) display is
+   In a flex or grid parent (a bar, a header) display is
    blockified back to flex, so those layouts are unaffected. */
 .dropdown {
   position: relative;
@@ -3699,7 +3712,7 @@ hr.xl {
 
 /* -- Trigger -- */
 /* Padding is tokenised because bars re-point it rather than overriding the
-   rule: a trigger inside a header or sticky bar takes its vertical rhythm from
+   rule: a trigger inside a header or bar takes its vertical rhythm from
    the bar's height, not from its own padding. */
 .dropdown-trigger {
   --dropdown-trigger-padding-y: var(--space-l);
@@ -3746,7 +3759,12 @@ hr.xl {
   flex-shrink: 0;
 }
 
-.dropdown.is-open .dropdown-chevron {
+/* Child combinator, load-bearing: a dropdown can contain another dropdown
+   (the bar's overflow panel holds demoted ones), and a descendant selector
+   here made opening the outer panel rotate the nested chevrons and paint the
+   nested menus as if the user had opened them all. Same discipline on every
+   .is-open and placement rule below. */
+.dropdown.is-open > .dropdown-trigger .dropdown-chevron {
   transform: rotate(180deg);
 }
 
@@ -3759,7 +3777,6 @@ hr.xl {
   min-width: var(--dropdown-menu-min-width);
   background-color: var(--dropdown-background);
   border: var(--border-s) solid var(--dropdown-border);
-  /* border-top: none; */
   z-index: 1000;
   flex-direction: column;
 }
@@ -3772,24 +3789,24 @@ hr.xl {
    menu cannot be told to open upward and then paint downward.
    .is-right predates this and still works; the script reads it as bottom-end. */
 .dropdown-menu.is-right,
-.dropdown[data-resolved-placement$="-end"] .dropdown-menu {
+.dropdown[data-resolved-placement$="-end"] > .dropdown-menu {
   left: auto;
   right: 0;
 }
 
-.dropdown[data-resolved-placement^="top"] .dropdown-menu {
+.dropdown[data-resolved-placement^="top"] > .dropdown-menu {
   top: auto;
   bottom: 100%;
 }
 
 /* A flip beats the legacy class, or a right-aligned menu near the right edge
    could never be pushed back inward. */
-.dropdown[data-resolved-placement$="-start"] .dropdown-menu.is-right {
+.dropdown[data-resolved-placement$="-start"] > .dropdown-menu.is-right {
   left: 0;
   right: auto;
 }
 
-.dropdown.is-open .dropdown-menu {
+.dropdown.is-open > .dropdown-menu {
   display: flex;
 }
 
@@ -3810,6 +3827,13 @@ hr.xl {
   font-family: var(--font-primary);
   line-height: var(--line-height-m);
   text-align: left;
+}
+
+/* The flex display above beats the UA's [hidden] rule, so without this an
+   item hidden by a consumer (per-mode options, a per-variant allow-list)
+   stays visible, focusable and clickable. */
+.dropdown-item[hidden] {
+  display: none;
 }
 
 .dropdown-item:hover {
@@ -3874,6 +3898,10 @@ hr.xl {
 /* -- Label (section header) -- */
 .dropdown-label {
   padding: var(--space-s) var(--space-m);
+  /* Neutralised so the class renders the same on a <p> as on a <div> — the
+     base paragraph margin (section 8) otherwise doubles the panel's own
+     spacing. Same reasoning as .bar-label. */
+  margin-bottom: 0;
   font-size: var(--font-2xs);
   font-weight: var(--font-weight-semi-bold);
   color: var(--text-faded);
@@ -3976,31 +4004,34 @@ hr.xl {
   --tag-tracking: normal;
 }
 
+/* Border colour rides the status text token at reduced strength instead of a
+   raw -light primitive, so it follows the pair through both themes. It only
+   paints when a consumer composes the tag with the border classes. */
 .tag[data-color="success"],
 .tag[data-color="green"] {
   background-color: var(--status-success-bg);
-  border-color: var(--green-light);
+  border-color: color-mix(in srgb, var(--status-success), transparent 60%);
   color: var(--status-success);
 }
 
 .tag[data-color="warning"],
 .tag[data-color="yellow"] {
   background-color: var(--status-warning-bg);
-  border-color: var(--yellow-light);
+  border-color: color-mix(in srgb, var(--status-warning), transparent 60%);
   color: var(--status-warning);
 }
 
 .tag[data-color="danger"],
 .tag[data-color="red"] {
   background-color: var(--status-danger-bg);
-  border-color: var(--red-light);
+  border-color: color-mix(in srgb, var(--status-danger), transparent 60%);
   color: var(--status-danger);
 }
 
 .tag[data-color="info"],
 .tag[data-color="blue"] {
   background-color: var(--status-info-bg);
-  border-color: var(--blue-light);
+  border-color: color-mix(in srgb, var(--status-info), transparent 60%);
   color: var(--status-info);
 }
 
@@ -5508,7 +5539,7 @@ a.book-contents-item:focus-visible .book-contents-item-trailing .svg-icn {
 
 /* ------ 39B. STICKY STACK / SCROLL OFFSET ------
  * Anything docked to the top of the viewport hides whatever an in-page anchor
- * scrolls to. A link in a sticky bar that jumps to a heading would otherwise
+ * scrolls to. A link in a docked bar that jumps to a heading would otherwise
  * land that heading underneath the bar that contains the link.
  *
  * CSS cannot add up how much is currently stuck there, so the page declares
@@ -5516,23 +5547,21 @@ a.book-contents-item:focus-visible .book-contents-item-trailing .svg-icn {
  * breathing room you want beneath them. The default of 0 means a product that
  * has no sticky chrome inherits no offset and this costs nothing.
  *
- * Raise --site-header-height or --sticky-bar-height and the landing position
- * follows, because the shell's --scroll-offset is written in terms of them.
+ * Raise --site-header-height or --bar-height and the landing position follows,
+ * because the shell's --scroll-offset is written in terms of them.
  *
- * The stacking order of those docked bars lives here too, for the same reason:
- * it is a relationship between components, not a property of any one of them.
- * Each bar's own --*-z points at this scale rather than carrying a number, so
- * the order can be read in one place instead of inferred from three literals
- * scattered across three sections. A toolbar sits above a sticky bar because
- * it belongs to the content below it and a sticky bar belongs to the page;
- * both sit under the site header, which outranks everything.
+ * The stacking order lives here too, for the same reason: it is a relationship
+ * between components, not a property of any one of them. The bar's own --bar-z
+ * points at this scale rather than carrying a number. A bar sits under the
+ * site header, which outranks everything. A page stacking two bars re-points
+ * --bar-z on the upper one locally — there is no second global slot, because
+ * which bar wins is that page's decision, not the system's.
  */
 
 :root {
   --scroll-offset: 0px;
 
-  --z-sticky-bar: 40;
-  --z-toolbar: 45;
+  --z-bar: 40;
   --z-site-header: 100;
 }
 
@@ -5557,7 +5586,7 @@ section[id] {
  * The outer element is full-bleed and owns background, border and sticky;
  * .site-header-inner owns max-width and centring. That split is what lets the
  * border run edge to edge while the content lines up with the page column —
- * the same division .sticky-bar (section 41) uses.
+ * the same division .bar (section 41) uses.
  *
  * Slots are optional, and the end slot is pushed over with an auto margin
  * rather than justify-content: space-between. space-between resolves to
@@ -5662,7 +5691,7 @@ section[id] {
 }
 
 /* A trigger in the bar takes its vertical rhythm from the bar's height, not
-   from its own padding — the same re-point .sticky-bar makes in §41. */
+   from its own padding — the same re-point .bar makes in §41. */
 .site-header .dropdown-trigger {
   --dropdown-trigger-padding-y: 0;
   --dropdown-trigger-padding-x: var(--space-m);
@@ -5771,95 +5800,337 @@ section[id] {
 }
 
 
-/* ------ 41. STICKY BAR ------
- * A horizontal bar of page-scoped controls — breadcrumbs, tabs, toggles,
- * segmented controls, a dropdown — that stays put as the page scrolls.
+/* ------ 41. BAR ------
+ * A horizontal strip at the top of a content region: breadcrumbs, a title,
+ * control groups, a trailing action cluster, a close.
  *
- * Not a Site Header (section 40) variant, and the distinction is the content
- * model: a header carries site identity and global navigation, this carries
- * controls that belong to the page you are on. It also sits *below* a header
- * rather than beside it, so its offset depends on the header's height.
+ * ONE component, not two. This was `.sticky-bar` and `.toolbar` until
+ * 2026-08-14, and they were the same component discovered twice — same box,
+ * same regions, same page-column variant. They had already converged from both
+ * ends: the sticky bar documented tabs, toggles and segmented controls inside
+ * it, and the toolbar grew a sticky variant. What actually differed was
+ * configuration, and configuration is now what it is: `data-density` for
+ * height, `data-width` for the column, `data-sticky` for docking.
  *
- * The two do share a shape, which is why they live next to each other: an
- * outer element owning sticky, background and border, and an inner container
- * owning the flex row. The end slot is pushed over with an auto margin for the
- * same reason the header's is — space-between resolves to flex-start with a
- * single child, so a bar with only actions would render on the left.
+ * Named for its form, not its contents — like .card, .drawer and .dialog. Any
+ * content-derived name is wrong somewhere: a doc page's bar holds a breadcrumb,
+ * not tools. **The class names the box; the ARIA role names the contents.**
+ * Give it role="toolbar" when it holds a set of controls; wrap a <nav> inside
+ * it when it holds a breadcrumb. Never role="toolbar" on the latter.
  *
- * Child components stretch to the bar's height automatically, so tabs,
- * breadcrumbs and toggles need no extra classes to line up inside one.
+ * Not a Site Header (section 40). A header carries site identity and global
+ * navigation; a bar carries what belongs to the page you are on, and sits
+ * *below* the header rather than beside it. They share a shape — an outer
+ * element owning background, border and sticky, an inner container owning the
+ * flex row, an end slot pushed over with an auto margin rather than
+ * space-between (which resolves to flex-start with a single child).
+ *
+ * -- The bar is always ONE row --
+ * It neither wraps nor lets its items scroll out of reach. Items that do not
+ * fit move into the overflow menu (assets/js/bar.js), keyed on data-priority.
+ * This replaced `flex-wrap: wrap`, which was previously justified here as the
+ * WCAG 1.4.10 answer. A disclosure satisfies 1.4.10 just as well — reflow asks
+ * for content to be *available*, not simultaneously visible — and one row is
+ * what makes `align-self: stretch` on the close safe at any density. A wrapping
+ * bar turned a stretched close into a tall slab down the trailing edge, which
+ * is the bug that started the merge.
+ *
+ * A single item too wide for the bar is not a collapse case — there is nothing
+ * to move — so it handles its own width: the breadcrumb truncates with an
+ * ellipsis (docs-site.css), fixed-width inputs stay fixed. .bar-content does
+ * not clip — it was a hidden-scrollbar scroll container once, and the clip
+ * silently swallowed every dropdown panel opened from inside it.
+ *
+ * Controls are composed, never re-invented. Everything that goes in a bar is
+ * already a component — button, dropdown, segmented control, toggle, number
+ * input, divider. The bar adapts them by re-pointing their own custom
+ * properties, so nothing here needs a bar-specific class.
  */
 
 :root {
-  --sticky-bar-height: 70px;
-  --sticky-bar-gap: var(--space-l);
-  --sticky-bar-background: var(--background-primary);
-  --sticky-bar-border: var(--border-s) solid var(--border-faded);
-  --sticky-bar-z: var(--z-sticky-bar);
+  --bar-background: var(--background-primary);
+  --bar-border: var(--border-s) solid var(--border-faded);
+  --bar-gap: var(--space-l);
+  --bar-group-gap: 0;
+  --bar-padding-x: var(--space-xl);
+  --bar-padding-y: var(--space-s);
+  /* The fixed height of data-density="regular" only. Compact builds its height
+     from the control plus --bar-padding-y instead. Both feed --scroll-offset,
+     so raising either pushes anchored targets down by the same amount — a link
+     inside the bar cannot scroll its target underneath the bar itself. */
+  --bar-height: 70px;
+  /* Every control in the bar resolves to this. 36px is 8px of air around a
+     19px line box at the 16px body size, and clears the 24px WCAG 2.5.8 AA
+     target with room. Page forms keep their own 44px — dense chrome and a form
+     on a phone are not the same problem. */
+  --bar-control-height: 36px;
+  /* Wide enough for four digits and a unit without the field resizing the bar. */
+  --bar-number-input-width: 4.5rem;
+  /* Ceiling for a menu opened from the bar on a narrow screen. */
+  --bar-menu-max-width: 20rem;
+  --bar-z: var(--z-bar);
+  /* Where a sticky bar docks. 0 suits an app shell, where the bar is the top of
+     the window; a shell with a header above it re-points this to that header's
+     height. A knob rather than a rule to override, because overriding `top`
+     means winning a specificity argument against the [data-sticky] selector
+     below, while a custom property set on the element simply wins (§17 Rule 3). */
+  --bar-top: 0px;
 }
 
-.sticky-bar {
+.bar {
+  background: var(--bar-background);
+  border-bottom: var(--bar-border);
+  flex-shrink: 0;
+}
+
+/* Opt-in, taking the toolbar's polarity rather than the sticky bar's always-on.
+   A sticky bar owes --scroll-offset its height. Note the polarity differs from
+   Site Header (§40), which sticks by default and opts out — each default
+   matches what that component usually does, but the attribute reads the same
+   and means the opposite, so check which component you are on. */
+.bar[data-sticky="true"] {
   position: sticky;
-  top: 0;
-  z-index: var(--sticky-bar-z);
-  background: var(--sticky-bar-background);
+  top: var(--bar-top);
+  z-index: var(--bar-z);
 }
 
-/* The component owns its height, and --sticky-bar-height is the knob. It is
-   also one of the things --scroll-offset is summed from, so raising the bar
-   pushes anchored targets down by the same amount — a link inside the bar
-   cannot scroll its target underneath the bar itself. */
-.sticky-bar-container {
+/* Default (compact) height is built up: one control tall plus the bar's own
+   breathing room. Both halves matter — --bar-control-height stops the contents
+   disagreeing, and --bar-padding-y keeps them off the bar's edges. An earlier
+   toolbar set no vertical padding at all, reasoning that the controls should
+   set the height. Right about the cause, wrong about the cure: the controls
+   were disagreeing by 27px, and removing the padding only made a bar whose
+   contents touched its borders. With the height enforced, padding is a density
+   choice again. */
+.bar-container {
   display: flex;
   align-items: center;
-  gap: var(--sticky-bar-gap);
-  height: var(--sticky-bar-height);
-  border-bottom: var(--sticky-bar-border);
+  gap: var(--bar-gap);
+  padding: var(--bar-padding-y) var(--bar-padding-x);
 }
 
-/* -- Scrollable content area --
- * overflow-x: auto is what lets a long breadcrumb or tab set scroll instead
- * of stretching the bar. It also clips, which is why a dropdown belongs in
- * .sticky-bar-actions and never in here. */
-.sticky-bar-content {
+/* -- Density --
+ * regular: a fixed 70px, for a bar whose content is uniform — a breadcrumb and
+ * a close. The vertical padding goes, because the height now sets itself.
+ * compact: the bar collapses to exactly one control tall, for a full-height
+ * app shell where every row given to chrome is a row taken from the canvas.
+ * Both re-point the token rather than setting padding-block directly, so the
+ * close's padding-derived weld margins below resolve to zero with them. */
+.bar[data-density="regular"] {
+  --bar-padding-y: 0;
+}
+
+.bar[data-density="regular"] .bar-container {
+  height: var(--bar-height);
+}
+
+.bar[data-density="compact"] {
+  --bar-padding-y: 0;
+}
+
+/* -- Content: the leading region --
+ * Holds a breadcrumb, a title, or the control groups. It does NOT clip. An
+ * earlier version set overflow-x: auto here, inherited from the sticky bar —
+ * which per spec makes this a scroll container on BOTH axes, and with the
+ * scrollbar hidden it silently swallowed any dropdown panel opened from
+ * inside: the menu painted below the bar's edge and simply vanished. Menus
+ * must be able to cross this edge. A set of items that no longer fits is the
+ * overflow menu's job (bar.js reads scrollWidth, which reports the overhang
+ * with or without a scroll container); a single too-wide item truncates
+ * itself, the way the breadcrumb does in docs-site.css. */
+.bar-content {
   display: flex;
   align-items: center;
-  gap: var(--sticky-bar-gap);
-  min-width: 0;
-  height: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.sticky-bar-content::-webkit-scrollbar {
-  display: none;
-}
-
-/* -- Actions --
- * The auto margin, not space-between on the container — see the section note. */
-.sticky-bar-actions {
-  display: flex;
-  align-items: stretch;
   align-self: stretch;
+  gap: var(--bar-gap);
+  min-width: 0;
+}
+
+/* -- Group: a label and its control, or a set of related controls --
+ * Moves into the overflow menu as one unit. That is deliberate: a group holding
+ * four switches captioned "Show" is one idea, and splitting it across the bar
+ * and the menu would read as two. */
+.bar-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  flex-shrink: 0;
+}
+
+/* The base label element is display:block with a medium weight and a bottom
+   margin (section 8). A caption is allowed to BE a real <label for>, so those
+   three are neutralised here or the same class would render two different ways
+   depending on the element it is written on — and inside an align-items:center
+   row it is the margin box that gets centred, so the margin would push the
+   caption off the control's centre line. .form-toggle label does the same. */
+.bar-label {
+  margin-bottom: 0;
+  color: var(--text-faded);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-regular);
+  white-space: nowrap;
+}
+
+/* -- Actions: the trailing cluster --
+ * The auto margin, not space-between on the container — see the section note.
+ * Holds only pinned items, so it never collapses, which is what lets the auto
+ * margin keep working while content grows from the left. */
+.bar-actions {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: var(--bar-group-gap);
   flex-shrink: 0;
   margin-inline-start: auto;
 }
 
-/* NOTE: there is no .sticky-bar-breadcrumbs. Breadcrumb is a core component
-   (§18) and `.sticky-bar .breadcrumb` below adapts it to the bar. The docs
-   generator used to emit a parallel implementation under that name; it was
-   retired on 2026-08-11 and the bar composes the component like any other
-   consumer. All docs-site.css keeps is the truncation a bar needs and a page
-   does not. */
+/* -- Menus in the actions cluster: full-height cells --
+ * A dropdown in .bar-actions is chrome, not a captioned control, so it takes
+ * the close's shape: a cell the bar's full height, with the menu hanging off
+ * the bar's bottom border instead of floating from a mid-bar origin. One
+ * stretch produces both, because the menu (top: 100%) is anchored to the
+ * wrapper. The sticky bar did exactly this before the merge; the merge lost it
+ * when every control was pinned to --bar-control-height.
+ *
+ * Both boxes stretch together, deliberately. dropdown.js measures the TRIGGER
+ * to decide placement while the CSS anchors the menu to the WRAPPER — stretch
+ * only one and the flip logic and the paint disagree by the difference, so a
+ * menu the script decides "fits below" can overflow the viewport. The negative
+ * block margins are the close's weld (see .bar-close), bleeding the cell over
+ * --bar-padding-y where a density preset has not already zeroed it.
+ *
+ * Child combinators, load-bearing: a dropdown that has travelled INTO the
+ * overflow panel is a row in a menu, not a cell in the bar, and must keep the
+ * control height these rules would otherwise override. */
+.bar-actions > .dropdown {
+  align-self: stretch;
+  margin-block: calc(-1 * var(--bar-padding-y));
+}
 
-/* -- Close: a dismiss affordance at the trailing edge -- */
-.sticky-bar-close {
+.bar-actions > .dropdown > .dropdown-trigger {
+  --dropdown-trigger-padding-y: 0;
+  --dropdown-trigger-padding-x: var(--space-l);
+  height: auto;
+  align-self: stretch;
+  border-radius: 0;
+}
+
+/* No border trimming on the attached panel, and that is deliberate. The menu
+   (top: 100% of the stretched wrapper) starts on the same pixel row as the
+   bar's border-bottom and paints over it, so its own border-top COINCIDES
+   with the bar's hairline — one visible line, drawn by overlap. Removing the
+   menu's border-top was tried (a commented-out attempt lived in §27 for a
+   while) and it cuts a 1px gap in the bar's rule across the panel's width. */
+
+/* -- Overflow: the "more" trigger and its panel --
+ * The trigger lives in .bar-actions, never in .bar-content — the universal
+ * order is content, actions, overflow, close, and the trigger is chrome, not
+ * one of the controls it collects. Hidden until bar.js finds something to put
+ * in it, so a bar whose items all fit shows no empty affordance. Open/close
+ * belongs to dropdown.js; bar.js only moves items in and out. */
+.bar-overflow[hidden] {
+  display: none;
+}
+
+/* Items keep their bar classes when they move into the panel, so the panel
+   restates the layout the row was providing: groups stack, each on its own
+   line with the label and control pushed apart. */
+
+/* The panel is a surface of relocated form controls, not a menu of flush
+   rows — flush-edge hover is a .dropdown-item affordance and nothing in here
+   is one. A gutter gives the rows breathing space instead. Child combinator,
+   so a nested dropdown's own static menu is not double-padded. */
+.bar-overflow > .dropdown-menu {
+  padding: var(--space-s);
+}
+
+.bar-overflow .dropdown-menu [data-bar-demoted],
+.bar-overflow .dropdown-menu [data-bar-spill] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.bar-overflow .dropdown-menu .bar-group {
+  justify-content: space-between;
+  padding: var(--space-2xs) var(--space-xs);
+}
+
+/* The narrow-viewport rule above hides labels to save bar width; in the panel
+   there is no width to save, and a control without its caption is a mystery. */
+.bar-overflow .dropdown-menu .bar-label {
+  display: block;
+}
+
+/* Bar geometry must not follow items into the panel: the 36px floor under a
+   toggle exists to align it with the bar's other controls, and in a stacked
+   panel row it just pads every switch. */
+.bar-overflow .dropdown-menu .form-toggle {
+  min-height: 0;
+}
+
+/* A vertical divider is row punctuation. The panel's own separator does its
+   job there, so a divider that travelled with its neighbours stays out of the
+   way rather than rendering as a stray tick. */
+.bar-overflow .dropdown-menu .divider--vertical {
+  display: none;
+}
+
+/* A dropdown that travelled into the panel cannot keep a floating menu: its
+   menu is positioned against its own wrapper, and inside a floating panel
+   those coordinates point at nothing — the menu painted half-detached beside
+   the panel. In the panel it becomes a disclosure instead: the menu goes
+   static, sheds the floating chrome, and expands in place, pushing the panel
+   taller. Same reasoning as the panel's other restatements above — the panel
+   provides the room the row could not. */
+.bar-overflow .dropdown-menu .dropdown {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* In the bar a trigger earns its width from its value; stacked in a panel a
+   shrink-wrapped trigger floats in space. It spreads to the row's full width
+   instead, chevron pushed to the far edge, so it reads like the select
+   beside it. (The group's label keeps its share — flex: 1 grows the dropdown
+   into what is left.) */
+.bar-overflow .dropdown-menu .bar-group > .dropdown {
+  flex: 1;
+}
+
+.bar-overflow .dropdown-menu .dropdown .dropdown-trigger {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.bar-overflow .dropdown-menu .dropdown .dropdown-menu {
+  position: static;
+  min-width: 0;
+  border: none;
+}
+
+/* -- Close: the exit, at the trailing edge --
+ * Always last. It is the terminal cell — a single border-left and a stretched
+ * box — so anything placed after it turns it into an interior cell with a
+ * divider on one side, which reads as a mistake. The overflow trigger goes
+ * BEFORE it. Safe at any density because the bar is always one row.
+ *
+ * The weld is in two parts. The container drops its inline-end padding when a
+ * close is present — the gutter belongs to every control except the exit, and
+ * :has() keeps that a property of the bar rather than a per-page override. The
+ * block margins bleed the cell over any vertical padding, written in the token
+ * so they are exactly as large as what they undo; both density presets zero
+ * --bar-padding-y, so they usually resolve to nothing. */
+.bar-container:has(.bar-close) {
+  padding-inline-end: 0;
+}
+
+.bar-close {
   display: flex;
   align-items: center;
   justify-content: center;
   align-self: stretch;
   padding: 0 var(--space-l);
+  margin-block: calc(-1 * var(--bar-padding-y));
   color: var(--text-primary);
   text-decoration: none;
   border-left: var(--border-s) solid var(--border-faded);
@@ -5867,36 +6138,137 @@ section[id] {
               color var(--duration-2xs) var(--ease-out);
 }
 
-.sticky-bar-close:hover {
+.bar-close:hover {
   background: var(--background-faded);
   color: var(--text-plain);
 }
 
-.sticky-bar-close .svg-icn {
+.bar-close .svg-icn {
   width: var(--icon-size);
   height: var(--icon-size);
   flex-shrink: 0;
 }
 
-/* -- Dropdown inside a sticky bar -- */
-.sticky-bar .dropdown {
-  align-self: stretch;
+/* -- One control height --
+ * The single most important rule in this section. Left alone, a bar renders a
+ * dropdown trigger at 27px, a select at 44px and a default button at 54px,
+ * because three unrelated rules set them: the trigger's padding, the base
+ * input's min-height, and --button-padding-y. Nothing reconciles the three, and
+ * the mismatch is what makes a bar look broken however well its groups are
+ * spaced.
+ *
+ * min-height: 0 is load-bearing. The base input rule sets min-height: 44px —
+ * the WCAG 2.5.5 AAA touch target, right for a form on a phone — and it beats
+ * any padding trim, so trimming padding alone changes nothing. The height here
+ * clears 2.5.8 Target Size (Minimum, AA), which asks for 24px.
+ *
+ * Excluded on purpose: range, checkbox, radio and colour size their own box and
+ * would be distorted rather than aligned. The swatch is squared below instead. */
+.bar .button,
+.bar .dropdown-trigger,
+.bar .copy-btn,
+.bar .segmented-control,
+.bar .number-input,
+.bar select,
+.bar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]) {
+  height: var(--bar-control-height);
+  min-height: 0;
 }
 
-.sticky-bar .dropdown-trigger {
+/* With the height fixed, vertical padding only fights it. */
+.bar .button {
+  --button-padding-y: 0;
+  --button-padding-x: var(--space-m);
+}
+
+.bar .dropdown-trigger {
   --dropdown-trigger-padding-y: 0;
   --dropdown-trigger-padding-x: var(--space-s);
 }
 
+.bar select,
+.bar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* -- Quiet chrome --
+ * A bar is a row of tools, not a row of boxes. Everything that acts is
+ * transparent until you point at it; a visible border is reserved for the
+ * things you can type into, so an edge in the bar carries meaning instead of
+ * being decoration. This is the other half of what makes a dense bar read —
+ * matching the heights alone is not enough. */
+.bar .dropdown-trigger,
+.bar .button[data-variant="transparent"] {
+  border-radius: var(--radius-s);
+}
+
+.bar .dropdown-trigger:hover {
+  background-color: var(--background-faded);
+}
+
+/* Fields keep an edge, and re-point the input surface to the bar's own ground
+   so a bordered field reads as a well rather than a grey slab. */
+.bar select,
+.bar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+.bar .number-input {
+  --input-background: var(--bar-background);
+  border-radius: var(--radius-s);
+}
+
+/* A toggle is a compound — a 24px switch and its label — so left alone it sits
+   12px shorter than every bordered control beside it, and the row reads as
+   misaligned even though nothing is misplaced. It cannot join the height rule
+   above: that rule sets `height`, and its checkbox exclusion exists so a
+   checkbox's own box is never distorted. min-height on the wrapper gives the
+   toggle the row's height while the switch keeps the box it drew for itself. */
+.bar .form-toggle {
+  min-height: var(--bar-control-height);
+  align-self: flex-start;
+}
+
+/* Square, so an icon button matches the swatch and reads as a tool. Keyed on
+   data-icon-only rather than on .copy-btn or any other role class — a copy
+   button that carries a label must stay as wide as its label. */
+.bar .button[data-icon-only] {
+  width: var(--bar-control-height);
+  padding: 0;
+}
+
+.bar input[type="color"] {
+  height: var(--bar-control-height);
+  width: var(--bar-control-height);
+  align-self: center;
+  border-radius: var(--radius-s);
+}
+
+/* Fixed rather than fluid: a four-digit value must not resize the whole bar. */
+.bar .number-input input[type="number"] {
+  width: var(--bar-number-input-width);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The divider's own --divider-spacing is page-scale. In a bar it only needs to
+   separate two clusters, and the container's gap already provides most of it.
+   It already stretches itself, so only the margin is restated. */
+.bar .divider--vertical {
+  margin: var(--space-s) 0;
+}
+
 /* -- Child components --
- * Scoped so they stretch to the bar height without needing extra classes. */
-.sticky-bar .tabs {
+ * NOTE: there is no .bar-breadcrumbs. Breadcrumb is a core component (§18) and
+ * `.bar .breadcrumb` adapts it here. The docs generator used to emit a parallel
+ * implementation under `.sticky-bar-breadcrumbs`; it was retired on 2026-08-11
+ * and the bar composes the component like any other consumer. All docs-site.css
+ * keeps is the truncation a bar needs and a page does not. */
+.bar .tabs {
   align-self: stretch;
   flex-shrink: 0;
   border-bottom: none;
 }
 
-.sticky-bar .tab {
+.bar .tab {
   display: flex;
   align-items: center;
   align-self: stretch;
@@ -5906,21 +6278,47 @@ section[id] {
 
 /* Aligns the indicator with the container's bottom border rather than the
    tab list's own -1px offset. */
-.sticky-bar .tab.is-active::after {
+.bar .tab.is-active::after {
   bottom: 0;
 }
 
-.sticky-bar .breadcrumb {
+.bar .breadcrumb {
   align-self: center;
   font-size: var(--font-s);
 }
 
-.sticky-bar .form-toggle {
+.bar .segmented-control {
   align-self: center;
 }
 
-.sticky-bar .segmented-control {
-  align-self: center;
+/* -- Narrow viewports --
+ * The labels go before the controls do. Every group in a bar is either a named
+ * control (the label repeats what the trigger already says) or an icon set that
+ * carries its own accessible name, so dropping the visible label costs width
+ * and no meaning. Menus are clamped so a panel still fits a 375px screen rather
+ * than overflowing it. */
+@media (max-width: 768px) {
+  /* Re-pointed, not overridden: a brand that moves --bar-gap or --bar-padding-x
+     must keep it at every width, and writing literals here would silently
+     discard the knob above. */
+  .bar {
+    --bar-gap: var(--space-m);
+    --bar-padding-x: var(--space-l);
+  }
+
+  .bar-label {
+    display: none;
+  }
+
+  /* On a narrow screen a menu is often the only route to the controls inside
+     it, so the menu's own floor (--dropdown-menu-min-width, section 27) is
+     dropped and a ceiling applied instead. The ceiling subtracts the bar's real
+     gutter rather than a repeated literal, so moving the padding moves the
+     clamp with it. */
+  .bar .dropdown-menu {
+    --dropdown-menu-min-width: 0;
+    max-width: min(var(--bar-menu-max-width), calc(100vw - 2 * var(--bar-padding-x)));
+  }
 }
 
 
@@ -6016,9 +6414,10 @@ section[id] {
    badge and tag use, so a rebrand is a token change rather than an edit here.
    The set stops at two on purpose. Unlike badge and tag, this component paints
    --text-inverted directly onto the saturated fill, so a value only earns its
-   place if it clears 4.5:1 in both themes AND without a brand theme loaded —
-   --status-success is 3.16:1 unthemed and was dropped for it. A person is not
-   a status anyway: the colour here is variety, not meaning. */
+   place if it clears 4.5:1 in both themes AND without a brand theme loaded.
+   Success was dropped when it sat at 3.16:1 unthemed; the -dark lift means it
+   would clear now, but a person is not a status anyway: the colour here is
+   variety, not meaning. */
 .avatar[data-color="accent"] {
   --avatar-background: var(--background-accent);
   --avatar-color: var(--text-inverted);
@@ -6081,277 +6480,7 @@ section[id] {
 }
 
 
-/* ------ 43. TOOLBAR ------
- * A horizontal bar of controls that act on the thing below it — a canvas, a
- * preview, a document.
- *
- * Not a Sticky Bar (section 41), and the distinction is what the bar is *for*.
- * A sticky bar carries page context that follows you as you scroll: where you
- * are, what this page is, what you can do with it. A toolbar carries the
- * instrument panel for the thing on screen. The tell is that a toolbar's
- * controls change the content, and a sticky bar's describe it.
- *
- * It shares the header/sticky-bar shape — an outer element owning background
- * and border so the rule runs edge to edge, an inner container owning the row,
- * an end slot pushed over with an auto margin rather than space-between (which
- * resolves to flex-start with a single child).
- *
- * Three things it does NOT share, each of them load-bearing:
- *
- * 1. No height token. A sticky bar sets its own height because its content is
- *    uniform. A toolbar's height is built up instead — every control resolves
- *    to --toolbar-control-height, and --toolbar-padding-y adds the bar's own
- *    breathing room on top. Set a height here and the two disagree; see the
- *    note on .toolbar-container for why the padding is not zero.
- * 2. It wraps, it does not scroll. .sticky-bar-content uses overflow-x, which
- *    is why dropdowns are barred from it. A toolbar is mostly dropdowns and
- *    tooltips, and an overflow container clips both. Wrapping is also what
- *    keeps every control reachable at 400% zoom (WCAG 1.4.10).
- * 3. Not sticky by default. Most toolbars sit at the top of a fixed-height app
- *    shell and never scroll; data-sticky="true" is for the ones that do. A
- *    sticky toolbar must be added to the --scroll-offset sum, or an in-page
- *    anchor will land underneath it.
- *
- * Controls are composed, never re-invented. Everything that goes in a toolbar
- * is already a component — button, dropdown, segmented control, toggle, number
- * input, divider. The bar adapts them by re-pointing their own custom
- * properties, so nothing here needs a toolbar-specific class.
- */
-
-:root {
-  --toolbar-background: var(--background-primary);
-  --toolbar-border: var(--border-s) solid var(--border-faded);
-  --toolbar-gap: var(--space-l);
-  --toolbar-group-gap: var(--space-s);
-  --toolbar-padding-x: var(--space-xl);
-  --toolbar-padding-y: var(--space-s);
-  /* Every control in the bar resolves to this. 36px is 8px of air around a
-     19px line box at the 16px body size, and clears the 24px WCAG 2.5.8 AA
-     target with room. Page forms keep their own 44px — dense tool chrome and
-     a form on a phone are not the same problem. */
-  --toolbar-control-height: 36px;
-  /* Wide enough for four digits and a unit without the field resizing the bar. */
-  --toolbar-number-input-width: 4.5rem;
-  /* Ceiling for a menu opened from the bar on a narrow screen. */
-  --toolbar-menu-max-width: 20rem;
-  --toolbar-z: var(--z-toolbar);
-  /* Where a sticky bar docks. 0 suits an app shell, where the bar is the top of
-     the window; a shell with a header above it re-points this to that header's
-     height. A knob rather than a rule to override, because overriding `top`
-     means winning a specificity argument against the [data-sticky] selector
-     below, while a custom property set on the element simply wins (§17 Rule 3). */
-  --toolbar-top: 0px;
-}
-
-.toolbar {
-  background: var(--toolbar-background);
-  border-bottom: var(--toolbar-border);
-  flex-shrink: 0;
-}
-
-/* Opt-in. See note 3 above — a sticky toolbar owes --scroll-offset its height. */
-.toolbar[data-sticky="true"] {
-  position: sticky;
-  top: var(--toolbar-top);
-  z-index: var(--toolbar-z);
-}
-
-/* The bar is one control tall plus its own breathing room. Both halves of that
-   matter: --toolbar-control-height stops the contents disagreeing, and
-   --toolbar-padding-y is what keeps the controls off the bar's edges.
-   Earlier versions of this component set no vertical padding at all, on the
-   reasoning that the controls should set the height. That was right about the
-   cause and wrong about the cure — the controls were disagreeing by 27px, and
-   removing the padding only made a bar whose contents touched its borders.
-   With the height enforced, padding is a density choice again. */
-.toolbar-container {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--toolbar-gap);
-  padding: var(--toolbar-padding-y) var(--toolbar-padding-x);
-}
-
-/* For a full-height app shell, where every row given to chrome is a row taken
-   from the canvas. The bar collapses to exactly one control tall. */
-.toolbar[data-density="compact"] {
-  --toolbar-padding-y: 0;
-}
-
-/* -- Group: a label and its control, or a set of related controls --
- * Wraps for the same reason the container does (note 2 above): a bar that
- * scrolls hides controls, and every control has to stay reachable at 400% zoom
- * (WCAG 1.4.10). The container's own flex-wrap only breaks BETWEEN groups, so a
- * group holding several controls — four switches captioned "Show" — could not
- * break at all and pushed the page wider instead. The first bars to carry more
- * than one control per group are what surfaced it. */
-.toolbar-group {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--toolbar-group-gap);
-}
-
-/* The base label element is display:block with a medium weight and a bottom
-   margin (section 8). A caption is allowed to BE a real <label for>, so those
-   three are neutralised here or the same class would render two different ways
-   depending on the element it is written on — and inside an align-items:center
-   row it is the margin box that gets centred, so the margin would push the
-   caption off the control's centre line. .form-toggle label does the same. */
-.toolbar-label {
-  margin-bottom: 0;
-  color: var(--text-faded);
-  font-size: var(--font-xs);
-  font-weight: var(--font-weight-regular);
-  white-space: nowrap;
-}
-
-/* -- Actions: the trailing cluster -- */
-.toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--toolbar-group-gap);
-  margin-inline-start: auto;
-}
-
-/* -- One control height --
- * The single most important rule in this section. Left alone, a toolbar renders
- * a dropdown trigger at 27px, a select at 44px and a default button at 54px,
- * because three unrelated rules set them: the trigger's padding, the base
- * input's min-height, and --button-padding-y. Nothing reconciles the three, and
- * the mismatch is what makes a bar look broken however well its groups are
- * spaced.
- *
- * min-height: 0 is load-bearing. The base input rule sets min-height: 44px —
- * the WCAG 2.5.5 AAA touch target, right for a form on a phone — and it beats
- * any padding trim, so trimming padding alone changes nothing. The height here
- * clears 2.5.8 Target Size (Minimum, AA), which asks for 24px.
- *
- * Excluded on purpose: range, checkbox, radio and colour size their own box and
- * would be distorted rather than aligned. The swatch is squared below instead. */
-.toolbar .button,
-.toolbar .dropdown-trigger,
-.toolbar .copy-btn,
-.toolbar .segmented-control,
-.toolbar .number-input,
-.toolbar select,
-.toolbar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]) {
-  height: var(--toolbar-control-height);
-  min-height: 0;
-}
-
-/* With the height fixed, vertical padding only fights it. */
-.toolbar .button {
-  --button-padding-y: 0;
-  --button-padding-x: var(--space-m);
-}
-
-.toolbar .dropdown-trigger {
-  --dropdown-trigger-padding-y: 0;
-  --dropdown-trigger-padding-x: var(--space-s);
-}
-
-.toolbar select,
-.toolbar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]) {
-  padding-top: 0;
-  padding-bottom: 0;
-}
-
-/* -- Quiet chrome --
- * A toolbar is a row of tools, not a row of boxes. Everything that acts is
- * transparent until you point at it; a visible border is reserved for the
- * things you can type into, so an edge in the bar carries meaning instead of
- * being decoration. This is the other half of what makes a dense bar read —
- * matching the heights alone is not enough. */
-.toolbar .dropdown-trigger,
-.toolbar .button[data-variant="transparent"] {
-  border-radius: var(--radius-s);
-}
-
-.toolbar .dropdown-trigger:hover {
-  background-color: var(--background-faded);
-}
-
-/* Fields keep an edge, and re-point the input surface to the bar's own ground
-   so a bordered field reads as a well rather than a grey slab. */
-.toolbar select,
-.toolbar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
-.toolbar .number-input {
-  --input-background: var(--toolbar-background);
-  border-radius: var(--radius-s);
-}
-
-/* A toggle is a compound — a 24px switch and its label — so left alone it sits
-   12px shorter than every bordered control beside it, and the row reads as
-   misaligned even though nothing is misplaced. It cannot join the height rule
-   above: that rule sets `height`, and its checkbox exclusion exists so a
-   checkbox's own box is never distorted. min-height on the wrapper gives the
-   toggle the row's height while the switch keeps the box it drew for itself. */
-.toolbar .form-toggle {
-  min-height: var(--toolbar-control-height);
-}
-
-/* Square, so an icon button matches the swatch and reads as a tool. Keyed on
-   data-icon-only rather than on .copy-btn or any other role class — a copy
-   button that carries a label must stay as wide as its label. */
-.toolbar .button[data-icon-only] {
-  width: var(--toolbar-control-height);
-  padding: 0;
-}
-
-.toolbar input[type="color"] {
-  height: var(--toolbar-control-height);
-  width: var(--toolbar-control-height);
-  align-self: center;
-  border-radius: var(--radius-s);
-}
-
-/* Fixed rather than fluid: a four-digit value must not resize the whole bar. */
-.toolbar .number-input input[type="number"] {
-  width: var(--toolbar-number-input-width);
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-/* The divider's own --divider-spacing is page-scale. In a bar it only needs to
-   separate two clusters, and the container's gap already provides most of it.
-   It already stretches itself, so only the margin is restated. */
-.toolbar .divider--vertical {
-  margin: var(--space-s) 0;
-}
-
-/* -- Narrow viewports --
- * The labels go before the controls do. Every group in a toolbar is either a
- * named control (the label repeats what the trigger already says) or an icon
- * set that carries its own accessible name, so dropping the visible label
- * costs width and no meaning. Menus are clamped so a panel still fits a 375px
- * screen rather than overflowing it. */
-@media (max-width: 768px) {
-  /* Re-pointed, not overridden: a brand that moves --toolbar-gap or
-     --toolbar-padding-x must keep it at every width, and writing literals here
-     would silently discard the knob below 768px. */
-  .toolbar {
-    --toolbar-gap: var(--space-m);
-    --toolbar-padding-x: var(--space-l);
-  }
-
-  .toolbar-label {
-    display: none;
-  }
-
-  /* On a narrow screen a settings panel is often the only route to the controls
-     inside it, so the menu's own floor (--dropdown-menu-min-width, section 27)
-     is dropped and a ceiling applied instead. The ceiling subtracts the bar's
-     real gutter rather than a repeated literal, so moving the padding moves the
-     clamp with it. */
-  .toolbar .dropdown-menu {
-    --dropdown-menu-min-width: 0;
-    max-width: min(var(--toolbar-menu-max-width), calc(100vw - 2 * var(--toolbar-padding-x)));
-  }
-}
-
-
-/* ------ 44. PAGE HEADER ------
+/* ------ 43. PAGE HEADER ------
  * The opening block of a page: eyebrow, title, subtitle, actions, and an
  * optional background image. One header per page, always first, always full
  * bleed.
@@ -6601,12 +6730,12 @@ section[id] {
 }
 
 
-/* ------ 45. FOOTER ------
+/* ------ 44. FOOTER ------
  * The block at the bottom of a page: an optional top region carrying
  * identity and link columns, and a bottom region carrying the copyright and
  * the legal links. On most sites the bottom region is the whole component.
  *
- * Same outer/inner split as .site-header (section 40) and .sticky-bar
+ * Same outer/inner split as .site-header (section 40) and .bar
  * (section 41). The outer element is full-bleed and owns background and the
  * top border; .footer-inner owns max-width, centring and the inset. That is
  * what lets the border run edge to edge while the contents line up with the
@@ -6891,9 +7020,8 @@ section[id] {
  * - [x] Page Navigation (.page-nav)
  * - [x] Nav (.nav)
  * - [x] Site Header (.site-header)
- * - [x] Sticky Bar (.sticky-bar)
+ * - [x] Bar (.bar)
  * - [x] Avatar (.avatar)
- * - [x] Toolbar (.toolbar)
  * - [x] Page Header (.page-header)
  * - [x] Footer (.footer)
  */

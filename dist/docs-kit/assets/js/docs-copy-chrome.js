@@ -1,6 +1,6 @@
 // Docs-site copy chrome — the copy behaviours that belong to the docs
 // site, not the portable copy button component (assets/js/copy-button.js):
-// token-table copy chips (.token-copy), the sticky-bar page-URL action
+// token-table copy chips (.token-copy), the page bar's copy-URL action
 // (.js-copy-url), colour-palette copy buttons (.color-copy-btn), and the
 // auto-generated icon-table Copy + Download columns.
 (function () {
@@ -71,7 +71,7 @@
     }).catch(warnCopyFailed);
   });
 
-  // ── Copy page URL — sticky-bar dropdown action ──
+  // ── Copy page URL — page bar dropdown action ──
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('.js-copy-url');
     if (!btn) return;

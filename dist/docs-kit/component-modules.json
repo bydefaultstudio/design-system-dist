@@ -1,7 +1,8 @@
 {
-  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^3.0.0",
+  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^4.0.0",
   "modules": [
     "accordion.js",
+    "bar.js",
     "bd-audio.js",
     "bd-cursor.js",
     "bd-video.js",

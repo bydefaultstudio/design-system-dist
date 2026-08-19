@@ -982,10 +982,15 @@ function resolvePageType(frontmatter = {}) {
 
   const resolved = { ...preset, name };
   if (frontmatter.toc === 'false') resolved.toc = false;
-  if (frontmatter['sticky-bar'] === 'false') resolved.stickyBar = false;
+  if (frontmatter.bar === 'false') resolved.stickyBar = false;
+  if (frontmatter.bar === 'true') resolved.stickyBar = 'full';
   if (frontmatter.pagination === 'false') resolved.pager = false;
   if (frontmatter.chrome === 'false') resolved.chrome = false;
   if (frontmatter.chrome === 'true') resolved.chrome = true;
+  // header can be opted into as well as out of, because `tool` hard-codes it
+  // off — which is why five tools used to hand-draw the same page header.
+  if (frontmatter.header === 'false') resolved.header = false;
+  if (frontmatter.header === 'true') resolved.header = true;
   return resolved;
 }
 
@@ -1000,7 +1005,7 @@ function resolvePageType(frontmatter = {}) {
 // of every emitter (generatePage/generateBrandDocs,
 // generateSectionIndexPage/generateBrandSectionOverviews, and so on), each a
 // near-copy of the other. A new page type had to be built twice or the two
-// sites silently disagreed, which is how the sticky bar's markup drifted apart.
+// sites silently disagreed, which is how the page bar's markup drifted apart.
 //
 // `brandRelBase` is a page's depth inside its own space, which is not the same
 // as navBase (depth from the output root). A brand page at
@@ -1273,7 +1278,7 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
   if (!sectionFolder) return null;
 
   // Layer Discipline (CLAUDE.md §17 Rule 5): docs-site chrome components
-  // (asset-card, book-cover, dont-card, sticky-bar) still get standalone
+  // (asset-card, book-cover, dont-card) still get standalone
   // pages but are hidden from every section index, so the browsable surface
   // stays portable. Keyed on layer, not section label — the old section gate
   // silently stopped filtering when pages moved or a section was renamed.
@@ -1385,9 +1390,9 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
     // was the middle one.
     //
     // No .md source behind a generated index, so the dropdown carries Copy link
-    // alone — buildStickyBar omits the markdown items when mdHref is null.
+    // alone — buildBar omits the markdown items when mdHref is null.
     stickyBar: PAGE_TYPES.contents.stickyBar
-      ? buildStickyBar({
+      ? buildBar({
           sectionHref: siteHref('/index.html'),
           sectionLabel: 'Home',
           title: section,
@@ -1641,7 +1646,7 @@ function buildPageHeaderHtml({ title, subtitle = '', eyebrow = '', actions = '',
 }
 
 /**
- * The page sticky bar — breadcrumb, markdown-source dropdown, and the close
+ * The page bar — breadcrumb, markdown-source dropdown, and the close
  * that takes the reader back up a level. Emitted into {{PAGE_STICKY_BAR}}.
  *
  * One function for both spaces. The root and brand generators each carried a
@@ -1655,7 +1660,7 @@ function buildPageHeaderHtml({ title, subtitle = '', eyebrow = '', actions = '',
  *                                   which is what a project without a served
  *                                   markdownSourceBase needs
  */
-function buildStickyBar({ sectionHref, sectionLabel, title, mdHref = null }) {
+function buildBar({ sectionHref, sectionLabel, title, mdHref = null, width = 'docs' }) {
   // role="presentation" on the wrapper: role="menu" may only own menu items,
   // groups and separators, and this div exists purely to carry the auth gate.
   // Presentation hands its children straight to the menu.
@@ -1672,16 +1677,21 @@ function buildStickyBar({ sectionHref, sectionLabel, title, mdHref = null }) {
                 </a>
               </div>` : '';
 
-  return `<div class="sticky-bar sticky-bar-page">
-      <div class="sticky-bar-container">
-        <div class="sticky-bar-content">
+  // The order inside .bar-actions is the component's universal rule: content,
+  // actions, overflow, close — close last, because it is the terminal cell
+  // (design-system.css §41). No role="toolbar" here: this bar carries a
+  // breadcrumb, and the class names the box while the role names the contents.
+  const widthAttr = width ? ` data-width="${width}"` : '';
+  return `<div class="bar" data-density="regular"${widthAttr} data-sticky="true">
+      <div class="bar-container">
+        <div class="bar-content">
           <nav class="breadcrumb" aria-label="Breadcrumb">
             <a href="${sectionHref}">${sectionLabel}</a>
             <span class="breadcrumb-separator" aria-hidden="true">/</span>
             <span aria-current="page">${title}</span>
           </nav>
         </div>
-        <div class="sticky-bar-actions">
+        <div class="bar-actions">
           <div class="dropdown">
             <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Markdown source options">
               ${getIcon('more-horizontal')}
@@ -1694,7 +1704,7 @@ function buildStickyBar({ sectionHref, sectionLabel, title, mdHref = null }) {
               ${mdSourceItems}
             </div>
           </div>
-          <a href="${sectionHref}" class="sticky-bar-close" data-page-close aria-label="Back to ${sectionLabel}">
+          <a href="${sectionHref}" class="bar-close" data-page-close aria-label="Back to ${sectionLabel}">
             ${getIcon('close-large')}
           </a>
         </div>
@@ -1853,7 +1863,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
   // explicit filenameOverrides entry with folder '' keeps them at the output
   // root and out of every section index, and the nav reaches them through
   // rootLinks — so there is no section index to go back to. Before this they
-  // got no sticky bar at all, which left the Glossary as the one page on the
+  // got no bar at all, which left the Glossary as the one page on the
   // site with no way out and no pager: reachable, and then a dead end.
   let pageSubbar = '';
   if (type.stickyBar && frontmatter.title) {
@@ -1863,7 +1873,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
     const sectionLabel = file.htmlFolder
       ? (file.section || file.htmlFolder.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' '))
       : 'Home';
-    pageSubbar = buildStickyBar({
+    pageSubbar = buildBar({
       sectionHref,
       sectionLabel,
       title: frontmatter.title,
@@ -2677,7 +2687,7 @@ function generateBrandDocs(template, themes) {
         const overviewHref = siteHref(sectionSlug
           ? `/${brandKey}/${sectionSlug}/index.html`
           : `/${brandKey}/index.html`);
-        pageSubbar = buildStickyBar({
+        pageSubbar = buildBar({
           sectionHref: overviewHref,
           sectionLabel,
           title,
@@ -2911,7 +2921,7 @@ function generateSourceDirPages(template, {
     //
     // Scanned with comments stripped: a commented-out close would otherwise
     // satisfy the gate and ship a page with no way out.
-    const needsClose = type.name === 'tool';
+    const needsClose = type.name === 'tool' && !type.stickyBar;
     if (needsClose) {
       const scannable = stripHtmlComments(body);
       if ((scannable.match(/\sdata-page-close(?![-\w])/g) || []).length === 0) {
@@ -2956,10 +2966,13 @@ function generateSourceDirPages(template, {
       toc: type.toc ? tocAside(generateTableOfContents(content)) : '',
       frame: type.frame,
       stickyBar: type.stickyBar
-        ? buildStickyBar({
+        ? buildBar({
             sectionHref: upHref,
             sectionLabel: upLabel,
             title: frontmatter.title || slug,
+            // A framed tool's bar lines up with the tool column; a full-bleed
+            // one (bar-width: "full") spans, matching the canvas below it.
+            width: frontmatter['bar-width'] === 'full' ? null : 'tool',
           })
         : '',
       access: deriveDataAccess(frontmatter),
@@ -2987,7 +3000,7 @@ function generateSourceDirPages(template, {
     console.error(`\n❌ cms/${dirName} — a \`tool\` page must give the reader a way out:`);
     console.error(closeErrors.join('\n'));
     console.error('\nPut data-page-close on an <a> anywhere the layout suits — the');
-    console.error('toolbar\'s trailing cluster, a corner of the canvas. Leave the href');
+    console.error('bar\'s trailing cluster, a corner of the canvas. Leave the href');
     console.error('off and the section index is filled in. It must be a link, not a');
     console.error('button: nothing reads the attribute at runtime. See cms/page-types.md.\n');
     process.exit(1);

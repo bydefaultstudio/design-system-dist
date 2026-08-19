@@ -13,10 +13,10 @@ colors:
   border-primary: '#1f1f1f'
   border-secondary: '#a3a3a3'
   border-faded: '#00000026'
-  status-info: '#2563EB'
-  status-success: '#16A34A'
+  status-info: '#1E3A8A'
+  status-success: '#14532D'
   status-warning: '#78350F'
-  status-danger: '#DC2626'
+  status-danger: '#7F1D1D'
 typography:
   headline:
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
@@ -76,7 +76,7 @@ rounded:
   xl: '24px'
   pill: '999px'
 ---
-<!-- @bydefaultstudio/design-system v3.0.0 -->
+<!-- @bydefaultstudio/design-system v4.0.0 -->
 
 # By Default Design System
 

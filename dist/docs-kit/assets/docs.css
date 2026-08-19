@@ -53,90 +53,81 @@
  * ===================================================================== */
 
 
-/* ------ 1. STICKY BAR — page variant only ------
+/* ------ 1. BAR — page variants only ------
  * The component itself is core (design-system.css §41). What stays here is
- * the docs-site variant: the offset below this site's header, and the 1080px
- * content column. Both are properties of this shell, not of the component.
+ * what belongs to this shell: where a docked bar sits (below this site's
+ * header rather than at the window top), and which content column each
+ * variant's contents line up with. Keyed on data-width, because the column is
+ * the only thing the two variants disagree on.
+ *
+ * Every value is re-pointed rather than overridden: no rule here has to
+ * out-specify §41, so none of this breaks if §41's selectors change.
  */
 
-.sticky-bar-page {
-  top: var(--top-nav-height);
+/* Any bar in this shell that docks, docks under the site header — including
+   the full-bleed ones, which carry no data-width. A token re-point, so it is
+   inert on a bar that never sticks. */
+.bar {
+  --bar-top: var(--top-nav-height);
 }
 
-/* Height comes from the component (§41). What is docs-site here is the
-   content column the bar's contents line up with. */
-.sticky-bar-page .sticky-bar-container {
+/* The docs column — the 1080px reading frame of .docs-content-grid. The left
+   inset is the frame's own, not --bar-padding-x: the doc sub-header predates
+   the merged component and its contents align with the docs grid, whose
+   gutter is --space-l. */
+.bar[data-width="docs"] .bar-container {
   max-width: 1080px;
   margin: 0 auto;
-  padding-left: var(--space-l);
+  padding-inline: var(--space-l) 0;
 }
 
-/* ------ 1A. TOOLBAR — page variant only ------
- * Same split as the sticky bar above: the component is core
- * (design-system.css §43), and what belongs to this shell is where the bar
- * docks and which column it lines up with.
- *
- * §43's default of --toolbar-top: 0 suits an app shell whose bar is the top of
- * the window. Nothing exercises it today — display-ad-preview and logo-tool are
- * both inside this shell but leave their bars static, so neither has ever
- * docked. A tool page that opts into data-sticky has the site header above it,
- * and every value below is re-pointed rather than overridden: no rule here has
- * to out-specify §43, so none of this breaks if §43's selectors change.
- */
-
-.toolbar-page {
-  --toolbar-top: var(--site-header-height);
-}
-
-/* Aligns the bar's controls with the page content below, rather than with the
-   1080px docs column the sticky bar uses — every tool that carries a toolbar
-   sits in .padding-global > .container-m. Adding the bar's own inline padding
-   back onto the container width is what lands the first control on the same
-   left edge as the tool content under the bar — not the page heading, which is
-   centred in a wider column; --toolbar-padding-x and .padding-global are both
-   var(--space-xl), so the two edges resolve to the same place. A tool built on
-   .container-l would need its own value here. */
-.toolbar-page .toolbar-container {
-  max-width: calc(var(--container-m) + (2 * var(--toolbar-padding-x)));
+/* The tool column. Aligns the bar's controls with the page content below —
+   every framed tool sits in .padding-global > .container-m. Adding the bar's
+   own inline padding back onto the container width is what lands the first
+   control on the same left edge as the tool content under the bar — not the
+   page heading, which is centred in a wider column; --bar-padding-x and
+   .padding-global are both var(--space-xl), so the two edges resolve to the
+   same place. A tool built on .container-l would need its own value here. */
+.bar[data-width="tool"] .bar-container {
+  max-width: calc(var(--container-m) + (2 * var(--bar-padding-x)));
   margin-inline: auto;
 }
 
-/* §43 narrows --toolbar-padding-x to --space-l below 768px, which is right for
-   an app shell where the bar is the whole chrome. Here it puts the bar's
-   controls 8px inside the page content they sit above, and a visible edge that
-   nearly lines up reads worse than one that plainly does not. --toolbar-gap is
+/* §41 narrows --bar-padding-x to --space-l below 768px, which is right for an
+   app shell where the bar is the whole chrome. Here it puts the bar's controls
+   8px inside the page content they sit above, and a visible edge that nearly
+   lines up reads worse than one that plainly does not. --bar-gap is
    deliberately left narrowed: that one is about density between groups, not
    about lining up with anything.
 
-   .toolbar.toolbar-page, not .toolbar-page — §43's mobile block re-points the
-   same property on .toolbar at equal specificity, so a bare class would depend
-   on this file loading second rather than on being more specific. */
+   .bar[data-width="tool"], not a bare shell class — §41's mobile block
+   re-points the same property on .bar at equal specificity, so the attribute
+   selector is what makes this win by specificity rather than by load order. */
 @media (max-width: 768px) {
-  .toolbar.toolbar-page {
-    --toolbar-padding-x: var(--space-xl);
+  .bar[data-width="tool"] {
+    --bar-padding-x: var(--space-xl);
   }
 }
 
 /* The bar composes the core Breadcrumb component (design-system.css §18), which
-   already knows it is in a bar — `.sticky-bar .breadcrumb` there centres it and
-   steps the size up. `.sticky-bar-breadcrumbs` is gone; it was a parallel
-   implementation, and §18's own note in design-system.css said so.
+   already knows it is in a bar — `.bar .breadcrumb` there centres it and steps
+   the size up.
  *
  * What is left is truncation, which the component deliberately does not do: it
  * wraps to a second line, which is right in a page but wrong in a bar of fixed
- * height whose content column already scrolls horizontally. A documentation
+ * height whose content region already scrolls horizontally. A documentation
  * title is long and arbitrary, so the current page is clipped with an ellipsis
  * and the section link before it is held on one line. */
-.sticky-bar .breadcrumb {
+.bar .breadcrumb {
   flex-wrap: nowrap;
   min-width: 0;
 }
 
-.sticky-bar .breadcrumb a {
+.bar .breadcrumb a {
   white-space: nowrap;
 }
 
-.sticky-bar .breadcrumb > [aria-current="page"] {
+.bar .breadcrumb > [aria-current="page"] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -644,7 +635,7 @@ button.color-row.is-copied {
   /* Alias, not a definition. The header owns its height as
      --site-header-height (design-system.css §40); this name is kept because
      18 places across five stylesheets already read it, including a published
-     code sample in cms/sticky-bar.md. Renaming those is a next-major job. */
+     code sample in cms/bar.md. Renaming those is a next-major job. */
   --top-nav-height: var(--site-header-height);
   --sidebar-width: 280px;
   --sidebar-collapsed-width: 64px;
@@ -666,39 +657,38 @@ button.color-row.is-copied {
   --sidebar-transition: 0.3s ease;
 }
 
-/* Pages with a sub-header stack two bars, so anchors have to clear both.
-   Keyed off the bar actually being present rather than off frontmatter. */
-body:has(.sticky-bar-page) {
-  --scroll-offset: calc(var(--site-header-height) + var(--sticky-bar-height) + var(--space-xl));
+/* Pages with a docked bar stack it under the header, so anchors have to clear
+   both. Keyed off the bar actually being present rather than off frontmatter.
+
+   Two sums, one per density, because only regular has a height token — a
+   compact bar is as tall as its tallest control (design-system.css §41), so
+   its height is built from the tokens that produce it: one control, the
+   padding above and below it, and the bottom rule.
+
+   Three things the compact sum cannot see, all of them silent if they arrive:
+   - Both sums assume one row, which the bar now guarantees — overflow moves
+     items to a menu instead of wrapping. If an anchor lands wrong, this is
+     still the first place to look.
+   - --border-s is the one figure restated rather than read. The rule comes
+     from --bar-border, a shorthand with no width to extract, so a brand that
+     re-points it to 2px drifts this sum by 1px.
+   - data-density="compact" zeroes --bar-padding-y on the .bar element, which a
+     body-scoped calc cannot see; the sum reads the :root value. The compact
+     preset zeroes it and so does regular, so today the padding term counts 0
+     twice over — it protects a default-density bar, which keeps 8px.
+
+   A page carrying BOTH a docked regular and a docked compact bar takes the
+   regular sum — its selector is (0,3,1) against (0,2,1) — and under-counts by
+   the compact bar's height. No page has both; a third rule with both :has()
+   clauses is the fix if one ever does. */
+body:has(.bar[data-density="regular"][data-sticky="true"]) {
+  --scroll-offset: calc(var(--site-header-height) + var(--bar-height) + var(--space-xl));
 }
 
-/* Same debt, other bar. The toolbar deliberately has no height token — it is as
-   tall as its tallest control (design-system.css §43) — so the height is built
-   from the tokens that produce it: one control, the padding above and below it,
-   and the bottom rule. Resolves to 53px at today's values.
-
-   Three things this sum cannot see, none of them live today, all of them silent
-   if they arrive:
-   - It assumes one row. A bar that wraps on a narrow screen leaves the sum
-     short and an anchor lands under the second row. --sticky-bar-height's fixed
-     70px above has the same limitation, so it is not a regression, but it is
-     the first thing to check when an anchor lands wrong.
-   - --border-s is the one figure restated rather than read. The rule comes from
-     --toolbar-border, a shorthand with no width to extract, so a brand that
-     re-points it to 2px drifts this sum by 1px.
-   - data-density="compact" zeroes --toolbar-padding-y on the .toolbar element,
-     which this body-scoped calc cannot see; it would over-count by 16px. No
-     consumer today, and cms/toolbar.md presents the density as available
-     rather than in service.
-
-   A page carrying BOTH bars would take this rule and drop the sticky bar's 70px
-   — :has() lends its argument's specificity, so (0,2,1) here beats (0,1,1)
-   above. No page has both; a third rule with both :has() clauses is the fix if
-   one ever does. */
-body:has(.toolbar-page[data-sticky="true"]) {
+body:has(.bar[data-sticky="true"]:not([data-density="regular"])) {
   --scroll-offset: calc(
     var(--site-header-height)
-    + var(--toolbar-control-height) + (2 * var(--toolbar-padding-y)) + var(--border-s)
+    + var(--bar-control-height) + (2 * var(--bar-padding-y)) + var(--border-s)
     + var(--space-xl)
   );
 }
@@ -1476,7 +1466,7 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   gap: var(--space-xl);
 }
 
-.demo-preview .sticky-bar {
+.demo-preview .bar {
   top: 0;
 }
 
@@ -1485,7 +1475,7 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
    anything inside a .demo-scroll below keeps its sticky behaviour, which is
    the point of that container. */
 .demo-preview > .site-header,
-.demo-preview > .sticky-bar {
+.demo-preview > .bar {
   position: relative;
 }
 
@@ -1494,7 +1484,7 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
    scrolls past it. Safe inside .demo-scroll too — that container's overflow
    clips its own sticky child. */
 .demo-preview .site-header,
-.demo-preview .sticky-bar {
+.demo-preview .bar {
   z-index: auto;
 }
 
@@ -1877,8 +1867,8 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
    * The exclusion it needed was never expressible either. What the rule meant
    * was "a page opening, not a tool page", and every key tried for that was
    * wrong: the element name broke when index pages became `<header>`s, and
-   * `:not(:has(.toolbar))` excludes `website/toolbar.html`, a documentation
-   * page carrying twelve toolbar demos. If a taller mobile header is wanted,
+   * `:not(:has(.bar))` excludes `website/bar.html`, a documentation
+   * page carrying a dozen bar demos. If a taller mobile header is wanted,
    * it belongs on the component as a size, where the page asks for it. */
 
   /* Auth: stack user info vertically on mobile */

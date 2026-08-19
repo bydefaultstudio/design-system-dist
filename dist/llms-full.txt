@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v3.0.0 -->
+<!-- @bydefaultstudio/design-system v4.0.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 3.0.0 (package)**
+**Version: 4.0.0 (package)**
 
 ## Getting the System
 
@@ -994,14 +994,13 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--border-primary` | `var(--text-primary)` |  |
 | `--border-secondary` | `var(--neutral-300)` |  |
 | `--border-faded` | `var(--black-alpha-15)` |  |
-| **Status colours (from brand book or defaults)** | | |
-| `--status-info` | `var(--blue)` |  |
+| `--status-info` | `var(--blue-dark)` |  |
 | `--status-info-bg` | `var(--blue-lighter)` |  |
-| `--status-success` | `var(--green)` |  |
+| `--status-success` | `var(--green-dark)` |  |
 | `--status-success-bg` | `var(--green-lighter)` |  |
 | `--status-warning` | `var(--yellow-dark)` |  |
 | `--status-warning-bg` | `var(--yellow-lighter)` |  |
-| `--status-danger` | `var(--red)` |  |
+| `--status-danger` | `var(--red-dark)` |  |
 | `--status-danger-bg` | `var(--red-lighter)` |  |
 | **Form semantic tokens** | | |
 | `--input-border` | `var(--border-secondary)` |  |
@@ -1230,6 +1229,10 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--status-success` | `var(--green-light)` |  |
 | `--status-warning` | `var(--yellow-light)` |  |
 | `--status-danger` | `var(--red-light)` |  |
+| `--status-info-bg` | `color-mix(in srgb, var(--status-info), var(--background-primary) 85%)` |  |
+| `--status-success-bg` | `color-mix(in srgb, var(--status-success), var(--background-primary) 85%)` |  |
+| `--status-warning-bg` | `color-mix(in srgb, var(--status-warning), var(--background-primary) 85%)` |  |
+| `--status-danger-bg` | `color-mix(in srgb, var(--status-danger), var(--background-primary) 85%)` |  |
 | **Form** | | |
 | `--input-border` | `#3a3a3a` |  |
 | `--input-background` | `rgba(255, 255, 255, 0.08)` |  |
@@ -1395,7 +1398,7 @@ Button colours are now component-scoped tokens on `.button`, not root-level vari
 
 ### Status
 
-Status tokens now reference the dark shade of each accent colour family. `var(--status-info)` maps to `var(--blue-dark)` (previously `var(--green)`), aligning with the conventional use of blue for informational states. In dark mode, status tokens flip to the light shades for readability.
+Status tokens reference the dark shade of each accent colour family — `var(--status-info)` maps to `var(--blue-dark)`, aligning with the conventional use of blue for informational states. Each status is a pair: the text token sits on a matching `--status-*-bg` surface. In dark mode the pair flips together — text moves to the light shades, and each surface is derived from the page ground pulled toward the status colour, so tags, badges, callouts and toasts of the same type stay legible in both themes.
 
 <div class="color-row is-text-light"  data-token="--status-success"><span class="color-row-name">status-success</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
   <div class="color-row is-text-light"  data-token="--status-warning"><span class="color-row-name">status-warning</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
@@ -2698,7 +2701,7 @@ Example (button component):
 
 ## Slot layout rule
 
-Components that lay content out in slots — [Site Header](/website/site-header.html) and [Sticky Bar](/website/sticky-bar.html) today — separate an outer element from an inner one and push the trailing slot over with an auto margin:
+Components that lay content out in slots — [Site Header](/website/site-header.html) and [Bar](/website/bar.html) today — separate an outer element from an inner one and push the trailing slot over with an auto margin:
 
 ```css
 .component        { /* sticky, background, border — full bleed */ }
@@ -2764,8 +2767,7 @@ Every interactive component must include:
 | Site Header | `.site-header`, `.site-header-inner` | No | `site-header.md` |
 | Footer | `.footer`, `.footer-inner`, `.footer-top`, `.footer-bottom`, `.footer-link` | No | `footer.md` |
 | Avatar | `.avatar` | No | `avatar.md` |
-| Sticky Bar | `.sticky-bar`, `.sticky-bar-container` | No | `sticky-bar.md` |
-| Toolbar | `.toolbar`, `.toolbar-container`, `.toolbar-group`, `.toolbar-actions` | No | `toolbar.md` |
+| Bar | `.bar`, `.bar-container`, `.bar-content`, `.bar-group`, `.bar-actions`, `.bar-overflow`, `.bar-close` | Yes — `bar.js` (overflow) | `bar.md` |
 | Page Header | `.page-header`, `.page-header-media`, `.page-header-container`, `.page-header-title`, `.page-header-subtitle`, `.page-header-actions` | No | `page-header.md` |
 | Mark / Abbr / Figure | `mark`, `abbr`, `figure` | No | `mark.md` |
 
@@ -3422,7 +3424,7 @@ See [Site Header](/website/site-header.html) for the full account menu in a head
 
 Initials render at `calc(--avatar-size * 0.4)`, which is 12.8px at the default size. That is normal text under WCAG, not large text, so the bar is **4.5:1** at every size — including `xlarge`, since one avatar in a set does not get a different rule.
 
-Measured: accent 6.3:1 and info 6.3:1 in light, 9.9:1 and 12.9:1 in dark, 5.2:1 and 5.2:1 with no brand theme loaded. All pass.
+Measured: accent 6.3:1 and info 12.8:1 in light, 9.9:1 and 12.9:1 in dark, 5.2:1 and 9.9:1 with no brand theme loaded. All pass. The info figures rose when the status text tokens lifted to the `-dark` primitives.
 
 **Those figures belong to the tokens, not to the component.** `data-color` resolves through `--background-accent` and `--status-info`, which a brand instance re-points. Re-point one and the ratio moves with it; `--avatar-color` stays `--text-inverted` and will not compensate. Any instance that changes a status colour has to re-measure — `scripts/verify-avatar.js` checks the light theme, the dark theme, and `design-system.css` on its own, which is the case that ships in `dist/`.
 
@@ -3683,6 +3685,475 @@ This section documents how the component is built. For usage, see the sections a
 | `.badge[data-color="warning"]`, `.badge[data-color="yellow"]` | Warning colour variant |
 | `.badge[data-color="danger"]`, `.badge[data-color="red"]` | Danger colour variant |
 | `.badge[data-color="info"]`, `.badge[data-color="blue"]` | Info colour variant |
+
+### Bar
+
+A bar is a horizontal strip at the top of a content region. It carries the page's identity — a breadcrumb, a title, the close — or the instrument panel for the thing below it — a size, a format, a colour, a view. Same box either way; what differs is configuration.
+
+**It used to be two components.** `.sticky-bar` and `.toolbar` were the same shape discovered twice — same outer/inner split, same trailing cluster, same page-column variant — and they had already converged from both ends before the merge on 2026-08-14. The old distinction ("a sticky bar *describes* the page, a toolbar *changes* the thing below it") survives as guidance for what you put in a bar, not as a component boundary.
+
+It is named for its form, like [Card](card.html), [Drawer](drawer.html) and [Dialog](dialog.html) — the class names the box, and the ARIA role names the contents. A bar of controls may take `role="toolbar"` **only if** the arrow-key behaviour that role promises is actually implemented (this component does not); a bar holding a breadcrumb wraps it in `<nav>` and must not.
+
+It is a container, and almost nothing else. Every control that goes in one is already a component — [button](button.html), [dropdown](dropdown.html), segmented control, toggle, number input, [divider](divider.html). The bar's job is to group them, label the groups, push the actions to the end, and keep everything reachable when space runs out.
+
+It is the counterpart to the [Site Header](site-header.html), not a variant of it. A header carries site identity and global navigation; a bar carries what belongs to the page you are on, and docks *below* the header rather than beside it.
+
+---
+
+## Anatomy
+
+```
+div.bar                       data-density="regular|compact" data-width="docs|tool" data-sticky="true"
+  div.bar-container           the row; one row, always — see Overflow
+    div.bar-content           leading region: breadcrumb, title, or control groups
+      div.bar-group           a labelled cluster        data-priority="pinned|menu"
+        span.bar-label        hidden below 768px
+        <any control>
+      hr.divider.divider--vertical
+    div.bar-actions           trailing cluster, pushed over with an auto margin
+      button.button           pinned actions
+      div.dropdown.bar-overflow   the "more" trigger, hidden until needed
+    a.bar-close               the exit; always last
+```
+
+The outer element owns background and border so the rule runs the full width; the inner owns the row. That split is what lets a bar sit inside a padded shell without the border stopping short of the edges.
+
+`.bar-content` is the region overflow manages. It does not clip — a menu opened from inside it crosses the bar's edge, and a single too-wide item truncates itself rather than scrolling. `.bar-actions` holds what never collapses, and a `.dropdown` sitting directly inside it renders as a full-height cell, the same shape as the close, with its panel hanging off the bar's bottom border. The close is still always last — anything placed after it turns its divider into a mistake.
+
+---
+
+## Density
+
+Two presets, both re-points of `--bar-padding-y` underneath.
+
+**`data-density="regular"`** is a fixed height — `--bar-height`, 70px — for a bar whose content is uniform: a breadcrumb and a close. This is the doc page sub-header. The fixed height is also what makes the full-height stretch of the close — and of every menu cell in the actions cluster — safe.
+
+**`data-density="compact"`** collapses the bar to exactly one control tall, for a full-height app shell where every row given to chrome is a row taken from the canvas.
+
+The default (no attribute) is one control tall plus `--bar-padding-y` of breathing room either side — 52px at today's values. This is what the tool control bars use.
+
+</div>
+  </div>
+</div>
+
+</div>
+  </div>
+</div>
+
+```html
+<div class="bar" data-density="regular">…</div>   <!-- 70px, uniform content -->
+<div class="bar">…</div>                          <!-- one control + padding -->
+<div class="bar" data-density="compact">…</div>   <!-- exactly one control -->
+```
+
+---
+
+## Width
+
+The component is full-bleed. Two shell variants in `docs-site.css` constrain the *contents* to a content column while the border keeps running edge to edge:
+
+| Attribute | Column | Used by |
+|---|---|---|
+| `data-width="docs"` | 1080px — the docs reading frame | every doc page's sub-header |
+| `data-width="tool"` | `--container-m` plus the bar's own inline padding | framed tools' control bars |
+| *(none)* | full width, `--bar-padding-x` gutters | full-bleed app tools |
+
+The tool calc adds the bar's inline padding back onto the container width so the first control lands on the same left edge as the tool content beneath the bar. These are shell variants, not part of the component — a different product's shell defines its own columns.
+
+---
+
+## The close
+
+The exit lives at the bar's trailing edge: a full-height cell with a single left divider, welded to the container's edge (the container drops its inline-end padding when a close is present). A menu cell in the actions cluster takes the same full-height shape but carries **no divider of its own** — the close's left divider stays the only vertical rule at the trailing edge, so the cells read as one cluster ending in the exit.
+
+<div class="bar-actions">
+        <a href="#" class="bar-close" aria-label="Back to Tools">
+          <div class="svg-icn" data-icon="close-large"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 13.4L7.1 18.3L5.7 16.9L10.6 12L5.7 7.1L7.1 5.7L12 10.6L16.9 5.7L18.3 7.1L13.4 12L18.3 16.9L16.9 18.3L12 13.4Z" fill="currentColor"/></svg></div>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+```html
+<div class="bar-actions">
+  <a href="../index.html" class="bar-close" data-page-close aria-label="Back to Tools">
+    {{icon:close-large}}
+  </a>
+</div>
+```
+
+Three rules:
+
+- **The close is always last.** Anything after it gives its divider one side only, which reads as a bug. The overflow trigger goes before it — a full-height cell too, but an undivided one.
+- **It is an `<a>`, never a `<button>`.** On generated pages `data-page-close` is a build-time contract — nothing reads it at runtime, so a button is a dead end.
+- **One bar per page, one exit on it.** A doc page's bar carries a breadcrumb and the close; a tool's carries its controls and the close. Do not stack a second bar to hold the exit — the close belongs on the bar the page already has.
+
+The close is safe at any density because the bar is always one row — see Overflow.
+
+---
+
+## Overflow
+
+**The bar is always one row.** It neither wraps nor lets a set of controls scroll out of reach. Items in `.bar-content` that do not fit move into the overflow menu — a [dropdown](dropdown.html) carrying the `.bar-overflow` class in `.bar-actions` — and move back when space returns. `assets/js/bar.js` does the moving; open/close belongs to dropdown.js.
+
+Priority is authored on the items, not inferred:
+
+| `data-priority` | Behaviour |
+|---|---|
+| `pinned` | Never leaves the bar |
+| *(omitted)* | Collapses into the menu when space runs out |
+| `menu` | Always in the menu, whatever the space |
+
+<div class="bar-group" data-priority="menu">
+        <span class="bar-label">Grid</span>
+        <div class="form-toggle">
+          <input type="checkbox" id="bar-demo-grid" role="switch">
+          <label for="bar-demo-grid">Show</label>
+        </div>
+      </div>
+      </div>
+      <div class="bar-actions">
+        <button class="button" type="button">Export</button>
+        <div class="dropdown bar-overflow">
+          <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">
+            <div class="svg-icn" data-icon="more-horizontal"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 10L6 10V14H2L2 10ZM10 10L14 10V14H10V10ZM18 10L22 10V14H18V10Z" fill="currentColor"/></svg></div>
+          </button>
+          <div class="dropdown-menu is-right"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+```html
+<div class="bar-content">
+  <div class="bar-group">…collapses under pressure…</div>
+  <div class="bar-group" data-priority="pinned">…never leaves…</div>
+  <div class="bar-group" data-priority="menu">…always in the menu…</div>
+</div>
+<div class="bar-actions">
+  <button class="button" type="button">Export</button>
+  <div class="dropdown bar-overflow" hidden>
+    <!-- No aria-haspopup: the filled panel is a disclosure of relocated
+         controls, not a role="menu" -->
+    <button class="dropdown-trigger" type="button"
+            aria-expanded="false" aria-label="More controls">{{icon:more-horizontal}}</button>
+    <div class="dropdown-menu is-right"></div>
+  </div>
+</div>
+```
+
+How it behaves, and why:
+
+- **Whole items move, in trailing order.** A group is one idea — four switches captioned "Show" — and splitting it across bar and menu would read as two.
+- **Demoted items sit in a stable block at the top of the panel**, a separator below them, with overflow appended underneath. An item you deliberately demoted must not change position every time the window resizes.
+- **The trigger stays hidden until there is something to show.** No empty affordance.
+- **The primary action is pinned by position** — `.bar-actions` never collapses. Pinning exempts an item from the menu, not from responsiveness: a labelled button may still shed its label via `data-icon-only` at narrow widths.
+- **A single item too wide for the bar is not a collapse case** — there is nothing to move, so it truncates itself. The breadcrumb is the working example: the current page clips with an ellipsis, the section link holds one line. `.bar-content` deliberately does not scroll or clip — it was a hidden-scrollbar scroll container once, and the clip silently swallowed every menu opened from inside it.
+- **A dropdown that travels into the panel becomes a disclosure.** Its floating menu is positioned against its own wrapper, which points at nothing inside a floating panel — so in the panel the menu goes static and expands in place, pushing the panel taller. dropdown.js keeps the panel open while a nested dropdown is used; closing the panel closes anything nested inside it.
+- **This is the WCAG 1.4.10 answer.** The bar used to wrap instead; a disclosure satisfies reflow just as well — content must be *available*, not simultaneously visible — and one row is what makes the stretched close safe.
+
+Dividers travel with their neighbours and are hidden inside the panel; the panel's own separator does that job there.
+
+### Menus in the actions cluster
+
+A `.dropdown` sitting **directly inside `.bar-actions`** — the overflow trigger, a doc page's markdown menu, a tool's export options — is chrome, not a captioned control, and renders as a cell: the wrapper and trigger stretch to the bar's full height, the trigger's corners square off, and the open panel hangs off the bar's bottom border with the shared hairline drawn once. This is one stretch doing two jobs — the menu is anchored to the wrapper, so the cell's bottom edge *is* the menu's top edge.
+
+The rules are keyed on the direct child on purpose: a dropdown demoted **into** the overflow panel is a row in a menu, not a cell in the bar, and keeps the 36px control height. A dropdown inside a `.bar-group` in the content region also keeps it — a labelled control beside a caption is not chrome.
+
+---
+
+## Breadcrumbs, tabs and page context
+
+The identity configuration: breadcrumb in the content region, actions and close trailing. Inside a bar, a [breadcrumb](breadcrumb.html) centres and steps up to `--font-s`; tabs stretch to the bar's height with the active indicator on the container's border.
+
+</div>
+</div>
+
+<div class="bar-actions">
+        <div class="dropdown">
+          <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="More options">
+            <div class="svg-icn" data-icon="more-horizontal"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 10L6 10V14H2L2 10ZM10 10L14 10V14H10V10ZM18 10L22 10V14H18V10Z" fill="currentColor"/></svg></div>
+          </button>
+          <div class="dropdown-menu is-right" role="menu">
+            <a href="#" class="dropdown-item" role="menuitem">Export</a>
+            <a href="#" class="dropdown-item" role="menuitem">Share</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+```html
+<div class="bar" data-density="regular" data-width="docs" data-sticky="true">
+  <div class="bar-container">
+    <div class="bar-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="../website/index.html">Design System</a>
+        <span class="breadcrumb-separator" aria-hidden="true">/</span>
+        <span aria-current="page">Button</span>
+      </nav>
+    </div>
+    <div class="bar-actions">
+      <div class="dropdown">…</div>
+      <a href="../website/index.html" class="bar-close" data-page-close aria-label="Back to Design System">…</a>
+    </div>
+  </div>
+</div>
+```
+
+This exact shape is what the docs generator emits on every doc page. A tool's bar is the same component with controls in the content region instead of a breadcrumb, and the same trailing cluster — actions, overflow, close (see [Page Types](../docs/page-types.html)). Toggles and segmented controls centre themselves the same way — any supported child adapts without extra classes.
+
+---
+
+## Control groups
+
+The instrument configuration. Every control in the content region resolves to one height — `--bar-control-height`, 36px. That is the difference between a bar and a row of unrelated widgets, and it is the component's job, not the page's. The exception is structural, not stylistic: menu cells in the actions cluster and the close stretch to the bar's full height instead — see Menus in the actions cluster.
+
+<div class="bar-group">
+        <label class="bar-label" for="bar-colour">Colour</label>
+        <input type="color" id="bar-colour" value="#1f1f1f" aria-label="Colour">
+      </div>
+      <div class="bar-group">
+        <span class="bar-label" id="bar-format-cap">Format</span>
+        <div class="dropdown">
+          <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-labelledby="bar-format-cap bar-format-val">
+            <span id="bar-format-val">SVG</span>
+            <div class="svg-icn dropdown-chevron" data-icon="chevron-down"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M12 16.4L6 10.4L7.4 9L10.5858 12.1858C11.3668 12.9668 12.6332 12.9668 13.4142 12.1858L16.6 9L18 10.4L12 16.4Z" fill="currentColor"/></svg></div>
+          </button>
+          <div class="dropdown-menu" role="menu">
+            <button class="dropdown-item" role="menuitemradio" aria-checked="true" type="button">SVG</button>
+            <button class="dropdown-item" role="menuitemradio" aria-checked="false" type="button">PNG</button>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+A native select, a square colour swatch and a transparent menu trigger have nothing in common structurally, and the bar still reads as one row.
+
+Two things the height rule has to defeat, both of which look like they should already work:
+
+- **`min-height: 44px` on the base input rule.** The WCAG 2.5.5 AAA touch target, right for a form on a phone — but it beats any padding trim, so nothing changes until the floor is lifted with `min-height: 0`.
+- **`--button-padding-y`**, which makes a plain `.button` 54px tall. The bar re-points it to `0`; with a fixed height, vertical padding only fights it.
+
+36px clears WCAG 2.5.8 Target Size (Minimum, AA), which asks for 24px. Page forms keep their 44px — dense tool chrome and a form on a phone are not the same problem.
+
+Excluded on purpose: `range`, `checkbox` and `radio` size their own box and would be distorted rather than aligned; a `.dropdown` directly inside `.bar-actions` is a full-height cell, not a 36px control. **A toggle is not excluded, it is handled differently** — a `.form-toggle` is a compound, a 24px switch plus its label, so it takes `min-height` on the wrapper: the row gets the height, the switch keeps the box it drew for itself.
+
+### Groups and labels
+
+A `.bar-group` is a label and its control, or a set of controls that belong together. Groups are what stop a bar reading as one long undifferentiated row — and a group is also the unit the overflow menu moves.
+
+`.bar-label` is a visible caption, not an accessible name. It is hidden below 768px, so the control inside the group must carry its own name regardless — and **`aria-label` or `aria-labelledby`, not a bare `<label for>`.**
+
+That distinction is the whole trap. `aria-labelledby` resolves a target that is `display: none`; a `<label for>` does not. A `<label class="bar-label" for="x">` therefore names its control at desktop width and leaves it **anonymous below 768px**, with nothing to warn you. A `<label>` may still wear `.bar-label` for the sighted caption; just give the control an `aria-label` as well.
+
+**Where a group has more than one control, give it `role="group"` and an `aria-label`.** A single labelled control does not need it.
+
+### Prefer a dropdown whose label is the answer
+
+Screen width is the scarcest thing in a bar. A dropdown whose trigger reads the *current value* states the setting and its answer in one control — roughly a quarter of the width of three labelled segments offering the same choice.
+
+Reach for a segmented control when the options are icons, when there are two of them, or when seeing all the choices at once is the point. Reach for a dropdown otherwise.
+
+**A trigger labelled with its value is not a named control.** Once the trigger reads "SVG", its accessible name is that value and nothing says which setting it belongs to. Name it from the caption *and* the value:
+
+```html
+<div class="bar-group">
+  <span class="bar-label" id="format-caption">Format</span>
+  <div class="dropdown">
+    <button class="dropdown-trigger" type="button" aria-haspopup="true"
+            aria-expanded="false"
+            aria-labelledby="format-caption format-value">
+      <span id="format-value">SVG</span>
+      …
+```
+
+The name resolves to "Format SVG", and survives the caption being hidden below 768px — which is exactly why the caption may be hidden at all. Do not put `aria-hidden="true"` on a caption referenced this way.
+
+**Read-only values belong on the canvas, not in the bar.** A file size or a scale percentage is a report, not a control.
+
+### Icons instead of words
+
+Where each option has an obvious picture — a device, an alignment, a placement — icon segments collapse a control to a fraction of its width without collapsing the choices out of sight. Icons only work when the picture is unambiguous on its own: "Draft" and "Published" have no pictures, and inventing two is worse than spending the width. Every icon segment still needs an `aria-label`, and a `data-tooltip` gives a sighted user the same word.
+
+At the end of that line is a trigger with no caption and no value text at all — one icon, one chevron. Both halves of its name become `.visually-hidden` spans joined by `aria-labelledby`; drop either and the control announces as an unnamed button. It costs a sighted user the label, so it needs a tooltip, and it is spent only where the bar is genuinely out of room.
+
+---
+
+## Select or dropdown?
+
+A `<select>` and a `.dropdown` look near enough identical in a bar, so the choice is made on what the control *returns*:
+
+| | Use | Chrome |
+|---|---|---|
+| **A value** — Format, Position, Zoom, Publisher | `<select>` | Bordered |
+| **An action** — Copy URL, Reset, Fullscreen, an overflow menu | `.dropdown` | Transparent |
+
+This is the [dropdown](dropdown.html) doc's own rule read from the bar end. A list of values dressed as a menu costs the native keyboard behaviour, the platform picker on mobile, and the correct role.
+
+**The exception is the menu itself.** Reach for a `.dropdown` on a value when the *options* need more than a string — a colour swatch on each row, a placement glyph, sections. Logo Tool's colour picker is the clear case; the format picker beside it is not.
+
+**Its cost, stated plainly:** a `<select>` cannot be styled once open — the option list is the platform's. For tool chrome that is a fair price for correct semantics and a free mobile picker.
+
+---
+
+## Quiet chrome
+
+Matching the heights is only half of it. In a bar, **a visible border means you can type here.**
+
+Anything that acts — a trigger, an icon button, a segment — is transparent until you point at it, and takes `--background-faded` on hover. Anything that accepts typing keeps a hairline border, a `--radius-s` corner, and re-points `--input-background` to the bar's own ground so a field reads as a well rather than a grey slab.
+
+The number input proves the rule: one field with two steppers, so the border goes round the whole control and the steppers stay transparent — bordered where you type, quiet where you press.
+
+> **A border means a value lives here. No border means pressing this does something.**
+
+Read that way, a `<select>` beside a `.dropdown-trigger` is not an inconsistency to design away — it is the bar telling you one holds an answer and the other opens a menu. A bar where everything is boxed tells you nothing about what any of it does.
+
+One boundary to the rule: **a structural cell edge is not a control border.** The close's left divider and the bar's own bottom rule mark where regions meet, not where values live — the close has always carried one without breaking the rule, and the actions-cluster cells keep to it by carrying none.
+
+---
+
+## Dividers
+
+Use the vertical [divider](divider.html) to separate clusters that are about different things. The bar sets its own margin, so it needs no modifier.
+
+Dividers are cheap to add and easy to overuse. A bar with a rule between every group has no grouping at all. Group first; add a divider only where two neighbours would otherwise read as one cluster. In the overflow panel a travelled divider hides itself — the panel's own separator does that job there.
+
+---
+
+## Actions
+
+`.bar-actions` holds what the bar *does* — export, download, copy, reset — as opposed to what it configures, plus the overflow trigger and the close. It is pushed to the end with an auto margin and **never collapses**, which is what makes membership of it the pinning mechanism.
+
+Order inside it is fixed: **actions, then overflow, then close.**
+
+**One icon per meaning for the trailing menu.** `more-horizontal` opens an *overflow menu* — every item an action or a relocated control. `settings` opens a *settings panel* of form controls, which makes it a disclosure rather than a menu. Pick by which one it is.
+
+A cluster of quiet icons ending in one solid button is the pattern to reach for: the quiet controls are the reversible ones, the solid one is the thing the tool exists to do.
+
+**Use `.button`, not `.dropdown-trigger`, for a button that opens nothing.**
+
+---
+
+## Sticky bars
+
+A bar is static by default; `data-sticky="true"` docks it at `--bar-top`.
+
+```html
+<div class="bar" data-density="regular" data-sticky="true">…</div>
+```
+
+`--bar-top` is `0` — right for an app shell whose bar is the top of the window. A shell with a header above it re-points the token rather than overriding `top` (which would mean out-specifying the component). This site's shell does exactly that for every bar, in `docs-site.css` §1.
+
+**A docked bar owes `--scroll-offset` its height**, or an in-page anchor scrolls its target underneath it. The shell sums it from the bar's own tokens — `--bar-height` for regular density, control height plus padding for the rest — so re-pointing a knob moves the landing position with it.
+
+**Note the polarity.** [Site Header](site-header.html) sticks by default and opts out; a bar is static by default and opts in. The attribute reads the same and means the opposite, so check which component you are on.
+
+**Do not stack two docked bars** without deciding their order and their combined `--scroll-offset` deliberately: there is one `--z-bar` on the shared scale (§39B), and a page stacking two bars re-points it locally on the upper one.
+
+---
+
+## Accessibility
+
+- **No `role="toolbar"` unless you implement it.** That role promises a single tab stop with arrow-key navigation between controls. This component does not ship that behaviour; claiming it leaves a keyboard user pressing arrows that do nothing. Every control is a normal tab stop.
+- **Every icon-only control needs an accessible name *and* a tooltip**, in the same words — `aria-label` on the control, `aria-hidden="true"` on the SVG, `data-tooltip` carrying the same string. A speech-control user says the word they see.
+- **A tooltip is never the name.** It needs hover, so on touch it does not exist. Anything important enough to be in the bar has to survive without it.
+- **`.bar-label` is not an accessible name.** It disappears below 768px. Name the control itself.
+- **Multi-control groups get `role="group"` + `aria-label`.**
+- **Overflow is the reflow answer.** Items that do not fit move to the menu, so every control stays reachable at 400% zoom (WCAG 1.4.10 — content must be available, not simultaneously visible). Do not re-add `flex-wrap` or `overflow` to the container.
+- **Keep the shell scrollable.** A bar inside a `100dvh` shell needs `overflow-y: auto` on that shell.
+- **Segmented controls carry `aria-pressed`, kept in step with `.is-active`**, not `role="radiogroup"` — the radio pattern obliges arrow-key traversal, and promising without building it is the `role="toolbar"` failure again.
+- One-of-N dropdown menus use `role="menuitemradio"` with `aria-checked`. Keep a `role="menu"` container to menu items only. If the panel is really a set of switches, it is a disclosure — drop `role="menu"` and wire `aria-expanded` + `aria-controls`. The overflow panel holds relocated form controls, so it is a disclosure, not a menu.
+- **The close needs an `aria-label`** naming where it goes — "Back to Tools", not "Close".
+
+---
+
+## Usage rules
+
+| Do | Don't |
+|---|---|
+| Compose existing components | Invent a bar-specific control |
+| Group related controls with `.bar-group` | Drop loose controls straight into the content region |
+| Author priority with `data-priority` | Re-add `flex-wrap` to keep everything visible |
+| Put the primary action in `.bar-actions` | Pin everything — a bar where nothing collapses just clips |
+| End the bar with the close, overflow before it | Put anything after the close |
+| Use a dropdown whose label is the current value | Spend a third of the bar on three labelled segments |
+| Use `<select>` for a value, `.dropdown` for a menu | Dress a list of options as `role="menu"` |
+| Name every icon-only control, and tooltip it in the same words | Rely on `.bar-label` for the name |
+| Add a divider between unrelated clusters | Put a divider between every group |
+| Show read-only values on the canvas | Fill the bar with readouts |
+| Use `.button` for a button that opens nothing | Borrow `.dropdown-trigger` for its look |
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | What it controls |
+|---|---|---|
+| `--bar-background` | `var(--background-primary)` | Bar fill |
+| `--bar-border` | `var(--border-s) solid var(--border-faded)` | The rule under the bar |
+| `--bar-gap` | `var(--space-l)` | Space between groups, and between content and actions |
+| `--bar-group-gap` | `var(--space-s)` | Space inside a group, and between actions |
+| `--bar-padding-x` | `var(--space-xl)` | Inline padding |
+| `--bar-padding-y` | `var(--space-s)` | Block padding. Both density presets zero it |
+| `--bar-height` | `70px` | Fixed height of `data-density="regular"` only |
+| `--bar-control-height` | `36px` | Every control in the content region resolves to this; actions-cluster menu cells and the close stretch instead |
+| `--bar-number-input-width` | `4.5rem` | Width of a number field in the bar |
+| `--bar-menu-max-width` | `20rem` | Ceiling for a menu opened from the bar below 768px |
+| `--bar-z` | `var(--z-bar)` | Stacking order when `data-sticky="true"` |
+| `--bar-top` | `0px` | Where a docked bar sits. Re-point it when a header sits above |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.bar` | Base; background, border, `flex-shrink: 0` |
+| `.bar[data-sticky="true"]` | Docks at `--bar-top` |
+| `.bar[data-density="regular"]` | Fixed `--bar-height`, zero block padding |
+| `.bar[data-density="compact"]` | Zeroes `--bar-padding-y`; one control tall |
+| `.bar-container` | The row. Drops inline-end padding when a `.bar-close` is present |
+| `.bar-content` | Leading region; no clip, no scroll — menus open across its edge, a too-wide item truncates itself |
+| `.bar-group` | A labelled cluster; the unit overflow moves |
+| `.bar-label` | Caption text; hidden below 768px, shown again inside the overflow panel |
+| `.bar-actions` | Trailing cluster, auto inline-start margin; never collapses |
+| `.bar-actions > .dropdown` | Full-height menu cell: wrapper and trigger stretch, weld margins, square corners, panel hangs off the bar's border with the shared hairline drawn once |
+| `.bar-overflow` | The "more" dropdown; hidden while empty. The panel takes a `--space-s` gutter and restates group layout; a dropdown demoted into it spreads to the row's full width and opens statically, as a disclosure |
+| `.bar-close` | Terminal cell: full-height stretch, left divider, weld margins |
+| `.bar .button`, `.dropdown-trigger`, `select`, `input`, `.segmented-control`, `.number-input` | One `height`, and `min-height: 0` to lift the base input's 44px floor |
+| `.bar .button[data-icon-only]`, `.bar input[type="color"]` | Square at the control height |
+| `.bar .number-input input[type="number"]` | Fixed width and tabular figures so a long value can't resize the bar |
+| `.bar .divider--vertical` | Bar-scale margin instead of page-scale |
+| `.bar .form-toggle` | `min-height` at the control height |
+| `.bar .tabs` / `.bar .tab` | Stretch to bar height; indicator on the container's border |
+| `.bar .breadcrumb` | Centres, steps up to `--font-s`; truncation is the docs shell's |
+
+### Key rules
+
+`min-height: 0` on the control list is the rule that makes the heights work — the base input's 44px floor beats padding, so trimming padding alone changes nothing.
+
+One row, enforced by the overflow model rather than by CSS alone: bar.js reads the content region's `scrollWidth` overhang and moves what does not fit into the menu — no clipping involved, which is what lets a menu open from inside the region at all. The old toolbar wrapped instead; the wrap came out because a wrapping bar makes a stretched close a tall slab and its `--scroll-offset` sum a lie.
+
+`.bar-actions` uses `margin-inline-start: auto`, not `justify-content: space-between` — with a single child, space-between resolves to flex-start. The site header makes the same move.
+
+Density comes from re-pointing each component's own custom properties rather than overriding its rules. Real declarations appear only for native `select` and `input`, which expose no properties to re-point.
+
+The 768px block hides `.bar-label`, re-points `--bar-gap` and `--bar-padding-x` (never literals, so a brand's re-point survives every width), and clamps `--dropdown-menu-min-width` so a panel fits a 375px screen. Hiding the caption is only safe because every control carries its own accessible name — see Groups and labels.
+
+`.bar-label` neutralises the base `label` element's `display: block`, weight and bottom margin, because a caption is allowed to *be* a real `<label for>` — and in an `align-items: center` row it is the margin box that gets centred.
+
+### Related
+
+[Site Header](site-header.html) · [Button](button.html) · [Dropdown](dropdown.html) · [Form](form.html) · [Divider](divider.html) · [Breadcrumb](breadcrumb.html) · [Tabs](tabs.html)
 
 ### BD Audio
 
@@ -4739,7 +5210,7 @@ Transparent background with a faded border. Use `data-variant="outline-faded"` f
 
 ### Transparent
 
-No background, no border. The button is invisible until hovered. Use `data-variant="transparent"` for icon buttons in toolbars, overlays, or minimal UI where the button chrome should disappear.
+No background, no border. The button is invisible until hovered. Use `data-variant="transparent"` for icon buttons in bars, overlays, or minimal UI where the button chrome should disappear.
 
 ```html
 <button class="button" data-variant="transparent">Transparent</button>
@@ -5087,14 +5558,16 @@ Callout types are powered by status colour tokens defined in `:root`:
 
 | Token | Default | Purpose |
 |---|---|---|
-| `var(--status-info)` | `var(--blue)` | Informational content |
+| `var(--status-info)` | `var(--blue-dark)` | Informational content |
 | `var(--status-info-bg)` | `var(--blue-lighter)` | Info background |
-| `var(--status-success)` | `var(--green)` | Tips, positive feedback |
+| `var(--status-success)` | `var(--green-dark)` | Tips, positive feedback |
 | `var(--status-success-bg)` | `var(--green-lighter)` | Success background |
-| `var(--status-warning)` | `var(--yellow-darker)` | Warnings, attention needed |
+| `var(--status-warning)` | `var(--yellow-dark)` | Warnings, attention needed |
 | `var(--status-warning-bg)` | `var(--yellow-lighter)` | Warning background |
-| `var(--status-danger)` | `var(--red)` | Risks, destructive actions |
+| `var(--status-danger)` | `var(--red-dark)` | Risks, destructive actions |
 | `var(--status-danger-bg)` | `var(--red-lighter)` | Danger background |
+
+In dark mode the pair flips together: text moves to the `-light` primitives and each `--status-*-bg` is derived from the page ground pulled toward the status colour — see [Tokens](tokens.html).
 
 Callouts, badges, toasts, and other components reference these tokens directly. No intermediate `--callout-*` layer needed.
 
@@ -6470,7 +6943,7 @@ Add `.drop-cap` directly to a `<p>` element. The paragraph must be long enough f
 
 ### Dropdown
 
-Dropdowns show a contextual menu when a trigger is clicked. They are the universal menu pattern, used in the site header, sticky bars, tool toolbars, and page content. One component, same classes everywhere.
+Dropdowns show a contextual menu when a trigger is clicked. They are the universal menu pattern, used in the site header, bars, and page content. One component, same classes everywhere.
 
 ---
 
@@ -6509,7 +6982,7 @@ The most common trigger. The `.dropdown-chevron` rotates 180 degrees when the dr
 
 ### Icon-only trigger
 
-For toolbars and compact contexts. No text, no chevron. The icon alone signals "click for options."
+For bars and compact contexts. No text, no chevron. The icon alone signals "click for options."
 
 </button>
     <div class="dropdown-menu" role="menu">
@@ -6607,6 +7080,14 @@ That means you no longer have to hand-place menus to avoid overflow. `.is-right`
 **To watch it happen**, narrow the window until the `bottom-end` trigger above sits within a menu-width of the left edge — it will start opening left-aligned instead. Or open the `top-start` menu and scroll until there is no longer room above; it drops below. The flip re-runs on resize and scroll, not only at open, so a menu that was well placed a moment ago corrects itself rather than hanging off the edge.
 
 It resolves per axis, and only when the opposite side genuinely has more room. A menu taller than the viewport stays where you asked rather than trading one bad position for another — there is no placement that fits, so it keeps the one you chose.
+
+### Inside a bar
+
+The [bar](bar.html) re-points placement for you, so don't hand-set it there. A dropdown directly inside `.bar-actions` becomes a full-height cell whose panel hangs off the bar's bottom border — the panel's own top border lands on the same pixel row as the bar's hairline and paints over it, so the two read as one line with no extra rules. Collision resolution still applies; the anchor moves, the logic does not.
+
+### Nesting
+
+A dropdown may contain another dropdown — the bar's overflow panel demotes whole groups, dropdowns included. The machinery is nesting-aware: opening a nested dropdown keeps its ancestor panel open, closing a panel closes anything nested inside it, and the open/placement selectors use child combinators so an outer `.is-open` cannot paint an inner menu. Inside the bar's overflow panel a nested menu renders statically, as a disclosure — see the bar doc's Overflow section.
 
 ---
 
@@ -7039,13 +7520,13 @@ This section documents how the component is built. For usage, see the sections a
 | `.dropdown-trigger .svg-icn` | Icon sizing inside trigger |
 | `.dropdown.is-open > .dropdown-trigger` | Active trigger state when menu is open |
 | `.dropdown-chevron` | Rotating arrow indicator, transitions `transform` |
-| `.dropdown.is-open .dropdown-chevron` | Chevron rotated 180deg when open |
+| `.dropdown.is-open > .dropdown-trigger .dropdown-chevron` | Chevron rotated 180deg when open (child-combined so an outer open never rotates a nested one) |
 | `.dropdown-menu` | Absolutely positioned menu panel, hidden by default |
 | `.dropdown-menu.is-right` | Legacy right-alignment, read as `bottom-end` |
-| `.dropdown[data-resolved-placement$="-end"]` | Right-aligned, after collision resolution |
-| `.dropdown[data-resolved-placement^="top"]` | Opens upward, after collision resolution |
-| `.dropdown[data-resolved-placement$="-start"] .dropdown-menu.is-right` | Flip overriding the legacy class |
-| `.dropdown.is-open .dropdown-menu` | Visible menu state |
+| `.dropdown[data-resolved-placement$="-end"] > .dropdown-menu` | Right-aligned, after collision resolution |
+| `.dropdown[data-resolved-placement^="top"] > .dropdown-menu` | Opens upward, after collision resolution |
+| `.dropdown[data-resolved-placement$="-start"] > .dropdown-menu.is-right` | Flip overriding the legacy class |
+| `.dropdown.is-open > .dropdown-menu` | Visible menu state (child-combined for the same nesting reason) |
 | `.dropdown-item` | Clickable row: padding, hover background |
 | `.dropdown-item:hover` | Item hover, uses `var(--dropdown-item-hover)` |
 | `.dropdown-item:focus-visible` | Focus row tint. The ring itself comes from the global button rule |
@@ -8301,7 +8782,7 @@ The control is **one field with two steppers on it**, not three controls in a ro
 
 The value is set in tabular figures. Without them the field reflows as the number steps through digits of different widths, and the whole control shifts on every click.
 
-Inside a [toolbar](toolbar.html) it takes the bar's control height and a fixed 4.5rem field, so a four-digit value cannot resize the bar around it.
+Inside a [bar](bar.html) it takes the bar's control height and a fixed 4.5rem field, so a four-digit value cannot resize the bar around it.
 
 ---
 
@@ -9243,7 +9724,7 @@ document.querySelector('.rating').addEventListener('rating-change', function (e)
 
 The site header is the bar at the top of a page: identity on one side, controls on the other, and an optional [Nav](/website/nav.html) between them. It is sticky by default and knows nothing about the page beneath it — placement is the consumer's job, so the same component works in a CSS grid shell, a marketing page, or a tool app.
 
-It is not the [Sticky Bar](/website/sticky-bar.html). The two share a shape, but a header carries site identity and global navigation while a sticky bar carries controls that belong to the page you are on — and the sticky bar sits *below* the header rather than beside it.
+It is not the [Bar](/website/bar.html). The two share a shape, but a header carries site identity and global navigation while a bar carries what belongs to the page you are on — and the bar sits *below* the header rather than beside it.
 
 ---
 
@@ -9423,9 +9904,9 @@ The header's menu button carries `data-drawer-open`. [Dialog](/website/dialog.ht
 
 `aria-expanded` is the button's own state and the drawer does not own it. Drive it from the dialog's `close` event rather than from the click, or the two drift apart the first time something else closes the drawer.
 
-### With a sticky bar beneath
+### With a bar beneath
 
-A page sub-header docks below the header at `top: var(--top-nav-height)`, and the header's `z-index: 100` sits above the bar's `40`. See [Sticky Bar](/website/sticky-bar.html).
+A page sub-header docks below the header at `top: var(--top-nav-height)`, and the header's `z-index: 100` sits above the bar's `40`. See [Bar](/website/bar.html).
 
 ---
 
@@ -9487,7 +9968,7 @@ If thumb reach matters more than convention on a given product, move both: the b
 **Don't:**
 
 - Don't emit an empty slot to hold the layout — the auto margin handles absent slots
-- Don't put a dropdown inside a clipping ancestor. `.sticky-bar-content` is `overflow-x: auto` and will cut the menu off; the same hazard applies anywhere you introduce `overflow`
+- Don't put a dropdown inside a clipping ancestor — any `overflow` other than `visible` cuts the menu off silently. (`.bar-content` was exactly this until it cost two tools their menus; it no longer clips, but the hazard stands anywhere you introduce `overflow`)
 - Don't write a bare `.header-action` selector. The button base also matches as `button.button` (0,1,1), so an unqualified class loses; write `.button.header-action`
 - Don't assume tabs in a header re-bind themselves on a client-side page swap. `tabs.js` re-inits on `bd:after-nav`, so a router that dispatches that event is covered; one that does not leaves the tabs bound to markup that has been replaced
 - Don't set `grid-area` or any page-layout property on `.site-header` from the component side; placement belongs to the consumer
@@ -9509,7 +9990,7 @@ This section documents how the component is built. For usage, see the sections a
 | `--site-header-background` | `var(--background-top-nav)` | Bar background |
 | `--site-header-text` | `var(--text-top-nav)` | Bar foreground, inherited by actions |
 | `--site-header-border` | `var(--border-s) solid var(--border-faded)` | Bottom border |
-| `--site-header-z` | `100` | Stacking; sits above the sticky bar's `40` |
+| `--site-header-z` | `100` | Stacking; sits above the bar's `40` |
 
 ### Selectors
 
@@ -9533,7 +10014,7 @@ Logical properties throughout (`inset-inline`, `margin-inline`), so RTL works wi
 
 ### Related
 
-`--scroll-offset` (design-system.css §39B) is the total height of whatever is docked to the top of the viewport. A shell that has a header and a sticky bar declares it as the sum of both, and in-page anchors then clear them. Raise `--site-header-height` and anchor landings move with it.
+`--scroll-offset` (design-system.css §39B) is the total height of whatever is docked to the top of the viewport. A shell that has a header and a docked bar declares it as the sum of both, and in-page anchors then clear them. Raise `--site-header-height` and anchor landings move with it.
 
 ### Slider
 
@@ -9610,328 +10091,6 @@ Use `.slider-wrapper`, `.slider-header`, and `.slider-value` for a labelled slid
 **Don't:**
 - Don't use sliders for precise numeric entry. Use a number input instead
 - Don't use sliders without a visible label or value indicator
-
-### Sticky Bar
-
-The sticky bar is a horizontal bar of page context that stays visible as the page scrolls: breadcrumbs, tabs, page actions, or any combination.
-
-**Sticky bar or [toolbar](/website/toolbar.html)?** A sticky bar *describes* the page — where you are, what this page is, what you can do with it. A toolbar *changes* the thing below it. If the bar is breadcrumbs and a page title, it belongs here. If it is a format picker and an export button, it is a toolbar.
-
-It is the counterpart to the [Site Header](/website/site-header.html), not a variant of it. A header carries site identity and global navigation; this carries controls belonging to the page you are on, and it docks *below* the header rather than beside it. The two share a shape — an outer element owning sticky, background and border, an inner container owning the flex row — which is why they sit next to each other in the stylesheet.
-
-Child components (tabs, breadcrumbs, toggles, segmented controls) are styled automatically inside a `.sticky-bar`: they stretch to fill the bar height and align correctly without extra classes.
-
----
-
-## Tokens
-
-| Token | Default | What it controls |
-|---|---|---|
-| `--sticky-bar-height` | `70px` | Bar height. Also one of the values `--scroll-offset` is summed from |
-| `--sticky-bar-gap` | `var(--space-l)` | Space between content and actions, and between items |
-| `--sticky-bar-background` | `var(--background-primary)` | Bar background |
-| `--sticky-bar-border` | `var(--border-s) solid var(--border-faded)` | Bottom border on the container |
-| `--sticky-bar-z` | `40` | Above page content, below the header's `100` and below modals |
-
-**Height and anchor position are linked.** If the bar contains links that jump to headings on the same page, those headings have to clear the bar — otherwise the bar covers what its own link scrolled to. `--scroll-offset` (design-system.css §39B) is the total height of everything docked at the top, and the page declares it in terms of these tokens:
-
-```css
---scroll-offset: calc(var(--site-header-height) + var(--sticky-bar-height) + var(--space-xl));
-```
-
-Raise `--sticky-bar-height` and anchored targets move down by the same amount, with nothing else to update.
-
----
-
-## Breadcrumbs
-
-The most common usage: breadcrumb navigation inside the bar.
-
-</div>
-</div>
-
-```html
-<div class="sticky-bar">
-  <div class="sticky-bar-container">
-    <div class="sticky-bar-content">
-      <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="#">Home</a>
-        <span class="breadcrumb-separator" aria-hidden="true">/</span>
-        <a href="#">Design System</a>
-        <span class="breadcrumb-separator" aria-hidden="true">/</span>
-        <span aria-current="page">Button</span>
-      </nav>
-    </div>
-  </div>
-</div>
-```
-
----
-
-## Tabs
-
-Tab-style anchor links for page section navigation. Inside a `.sticky-bar`, tabs automatically stretch to the full bar height and the active indicator aligns with the bottom border.
-
-</div>
-  </div>
-</div>
-
-```html
-<div class="sticky-bar">
-  <div class="sticky-bar-container">
-    <div class="sticky-bar-content">
-      <div class="tabs">
-        <a href="#section-1" class="tab is-active">Overview</a>
-        <a href="#section-2" class="tab">Components</a>
-        <a href="#section-3" class="tab">Tokens</a>
-      </div>
-    </div>
-  </div>
-</div>
-```
-
----
-
-## Dropdown
-
-Dropdowns inside the sticky bar use the standard `.dropdown` component. The trigger gets tighter horizontal padding automatically when inside a `.sticky-bar`. Place the dropdown inside `.sticky-bar-actions` to keep it outside the scrollable content area.
-
-<div class="sticky-bar-actions">
-        <div class="dropdown">
-          <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="More options">
-            <div class="svg-icn" data-icon="more-horizontal"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 10L6 10V14H2L2 10ZM10 10L14 10V14H10V10ZM18 10L22 10V14H18V10Z" fill="currentColor"/></svg></div>
-          </button>
-          <div class="dropdown-menu is-right" role="menu">
-            <a href="#" class="dropdown-item" role="menuitem">Download</a>
-            <div class="dropdown-divider" role="separator"></div>
-            <a href="#" class="dropdown-item" role="menuitem">View source</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-```html
-<div class="sticky-bar">
-  <div class="sticky-bar-container">
-    <div class="sticky-bar-content">
-      <nav class="breadcrumb" aria-label="Breadcrumb">...</nav>
-    </div>
-    <div class="sticky-bar-actions">
-      <div class="dropdown">
-        <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="More options">
-          <!-- icon -->
-        </button>
-        <div class="dropdown-menu is-right" role="menu">
-          <a href="#" class="dropdown-item" role="menuitem">Download</a>
-          <div class="dropdown-divider" role="separator"></div>
-          <a href="#" class="dropdown-item" role="menuitem">View source</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-```
-
-See the [Dropdown](dropdown.html) docs for the full component reference.
-
----
-
-## Toggle
-
-Form toggles centre vertically inside the bar automatically.
-
-</div>
-  </div>
-</div>
-
-```html
-<div class="sticky-bar">
-  <div class="sticky-bar-container">
-    <div class="sticky-bar-content">
-      <div class="form-toggle">
-        <input type="checkbox" id="darkmode" role="switch">
-        <label for="darkmode">Dark mode</label>
-      </div>
-    </div>
-  </div>
-</div>
-```
-
----
-
-## Segmented control
-
-Segmented controls centre vertically inside the bar automatically.
-
-</div>
-  </div>
-</div>
-
-```html
-<div class="sticky-bar">
-  <div class="sticky-bar-container">
-    <div class="sticky-bar-content">
-      <span>View</span>
-      <div class="segmented-control" role="group" aria-label="View mode">
-        <button class="segmented-control-btn is-active" type="button">Grid</button>
-        <button class="segmented-control-btn" type="button">List</button>
-        <button class="segmented-control-btn" type="button">Table</button>
-      </div>
-    </div>
-  </div>
-</div>
-```
-
----
-
-## Combined
-
-A realistic example combining tabs and a dropdown action menu in one bar. The `.sticky-bar-content` area scrolls horizontally on mobile while the dropdown stays pinned.
-
-<div class="sticky-bar-actions">
-        <div class="dropdown">
-          <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="More options">
-            <div class="svg-icn" data-icon="more-horizontal"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 10L6 10V14H2L2 10ZM10 10L14 10V14H10V10ZM18 10L22 10V14H18V10Z" fill="currentColor"/></svg></div>
-          </button>
-          <div class="dropdown-menu is-right" role="menu">
-            <a href="#" class="dropdown-item" role="menuitem">Export</a>
-            <a href="#" class="dropdown-item" role="menuitem">Share</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-```html
-<div class="sticky-bar">
-  <div class="sticky-bar-container">
-    <div class="sticky-bar-content">
-      <div class="tabs">
-        <a href="#overview" class="tab is-active">Overview</a>
-        <a href="#settings" class="tab">Settings</a>
-        <a href="#activity" class="tab">Activity</a>
-      </div>
-    </div>
-    <div class="sticky-bar-actions">
-      <div class="dropdown">
-        <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="More options">
-          <!-- icon -->
-        </button>
-        <div class="dropdown-menu is-right" role="menu">
-          <a href="#" class="dropdown-item" role="menuitem">Export</a>
-          <a href="#" class="dropdown-item" role="menuitem">Share</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-```
-
----
-
-## Supported child components
-
-Any of these components automatically adapt when placed inside a `.sticky-bar`:
-
-| Component | Behaviour inside sticky bar |
-|-----------|---------------------------|
-| `.tabs` / `.tab` | Stretches to full bar height, indicator aligns with bottom border |
-| `.breadcrumb` | Centres vertically, steps up to --font-s |
-| `.form-toggle` | Centres vertically |
-| `.segmented-control` | Centres vertically |
-| `.dropdown` | Stretches to full bar height, trigger gets compact padding |
-| `.sticky-bar-actions` | Stretches to full bar height, aligns right |
-
----
-
-## Structure
-
-| Element | Class | Purpose |
-|---------|-------|---------|
-| Outer wrapper | `.sticky-bar` | Sticky positioning and background |
-| Layout container | `.sticky-bar-container` | Flexbox layout, border |
-| Scrollable content | `.sticky-bar-content` | Holds left-side content (breadcrumbs, tabs, toggles etc.), scrolls horizontally on mobile |
-| Actions | `.sticky-bar-actions` | Right-aligned action group, sits outside the scrollable area |
-| Dropdown | `.dropdown` | Standard dropdown component (see [Dropdown docs](dropdown.html)) |
-
-```
-.sticky-bar
-  .sticky-bar-container
-    .sticky-bar-content          ← scrolls horizontally on mobile
-      [breadcrumbs / tabs / toggles / segmented-control / labels]
-    .sticky-bar-actions          ← pinned, never clipped
-      .dropdown
-```
-
-**`.sticky-bar-content` is always required**, even when there is no dropdown. This keeps the structure consistent and ensures horizontal scrolling works when needed.
-
----
-
-## Docs site: page sub-header variant
-
-Doc and tool pages use a `.sticky-bar-page` modifier that promotes the sticky bar to act as the page's sub-header (carrying breadcrumb and the markdown actions menu). It sits directly below the fixed site header and is constrained to the article column width.
-
-```html
-<div class="sticky-bar sticky-bar-page">
-  <div class="sticky-bar-container">
-    <div class="sticky-bar-content">
-      <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="../website/index.html">Design System</a>
-        <span class="breadcrumb-separator" aria-hidden="true">/</span>
-        <span aria-current="page">Button</span>
-      </nav>
-    </div>
-    <div class="sticky-bar-actions">
-      <div class="dropdown">…</div>
-    </div>
-  </div>
-</div>
-```
-
-```css
-/* .sticky-bar-page is a docs-site variant, not part of the component.
-   It supplies the offset below this site's header and the content column;
-   the height comes from the component itself. */
-.sticky-bar-page {
-  top: var(--top-nav-height);
-}
-
-.sticky-bar-page .sticky-bar-container {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding-left: var(--space-l);
-}
-```
-
-Tool pages (calculator, SVG cleaner) may set their own `padding` on `.sticky-bar-container` to match their layout.
-
----
-
-## Accessibility notes
-
-- Use `<nav>` with `aria-label` for breadcrumb sections
-- Dropdown triggers should have `aria-label` describing their action
-- Tab links are focusable via Tab key
-- Toggle inputs should have `role="switch"` and associated labels
-
----
-
-## Do / Don't
-
-**Do:**
-- Use the sticky bar for page-level contextual controls
-- Combine children freely: tabs + dropdown, breadcrumbs + toggle, etc.
-- Override `top` when the bar needs to sit below a fixed header
-- Always use `.sticky-bar-content` to wrap the left-side content
-
-**Don't:**
-- Don't put primary page content in the sticky bar
-- Don't stack multiple sticky bars on the same page
-- Don't use the sticky bar as a replacement for the main site navigation
-- Don't place dropdowns inside `.sticky-bar-content`. Use `.sticky-bar-actions` so the menu isn't clipped by overflow
 
 ### Table
 
@@ -10538,14 +10697,14 @@ The neutral toast, meaning one with no `data-type`, inverts with the theme:
 | Background | `var(--warm-black)` | `var(--neutral-100)` |
 | Text colour | `var(--off-white)` | `var(--warm-black)` |
 
-A typed toast keeps its status colour as text in both themes, so only its surface changes:
+A typed toast keeps its status colour as text in both themes and reads its surface from the paired token:
 
 | Property | Value (Light) | Value (Dark) |
 |---|---|---|
-| Background | `var(--status-*-bg)` | `color-mix(in srgb, currentColor, var(--warm-black) 85%)` |
+| Background | `var(--status-*-bg)` | `var(--status-*-bg)` |
 | Text colour | `var(--status-*)` | `var(--status-*)` |
 
-The dark surface is derived from the status colour rather than read from `--status-*-bg`, because `--status-*` flips to a light tint in dark mode while `--status-*-bg` stays at its light pastel. Pairing the two tokens directly puts light text on a light surface, measured at 1.1:1; deriving instead holds every variant above 9:1.
+Both halves come from the tokens because the pair now flips together: in dark mode `--status-*-bg` is derived from the page ground pulled toward the status colour, holding every variant above 7.7:1. The toast previously re-derived its own dark surface to work around the `--status-*-bg` token gap; that patch is retired.
 
 ### Selectors
 
@@ -10560,568 +10719,6 @@ The dark surface is derived from the status colour rather than read from `--stat
 | `.toast-message` | Message text span |
 | `.toast .button.close-btn` | Dismiss button — the shared `.close-btn` role class, re-pointed to the toast's own `currentColor` |
 | `.toast-close` | Deprecated bespoke dismiss button, kept for existing markup. Use `.button.close-btn` |
-
-### Toolbar
-
-A toolbar is a horizontal bar of controls that act on the thing below it — a canvas, a preview, a document. It sits above the thing it changes and holds the settings a person changes while they work: a size, a format, a colour, a view. In an app shell that is the top of the page; in a documented tool it opens the working area, below the page header.
-
-It is a container, and almost nothing else. Every control that goes in one is already a component — [button](button.html), [dropdown](dropdown.html), segmented control, toggle, number input, [divider](divider.html). The toolbar's job is to group them, label the groups and push the actions to the end.
-
-It ships as `core` on the strength of the layer test rather than the consumer count: a toolbar is generic UI that would do something useful dropped into any product, and it holds nothing brand- or docs-specific. The usual three-consumers bar is waived because the two consumers it has were each maintaining a private copy of the same bar — the duplication the rule exists to catch, not the speculation it exists to prevent.
-
-**Toolbar or [sticky bar](sticky-bar.html)?** A toolbar's controls *change* the content. A sticky bar's *describe* it — where you are, what this page is, what you can do with it. If the bar is breadcrumbs and a page title, it is a sticky bar. If it is a format picker and an export button, it is a toolbar.
-
----
-
-## Anatomy
-
-```
-div.toolbar                    data-density="compact" | data-sticky="true"
-  div.toolbar-container        the row; wraps, never scrolls
-    div.toolbar-group          a labelled cluster
-      span.toolbar-label       hidden below 768px
-      <any control>
-    hr.divider.divider--vertical
-    div.toolbar-group
-      <any control>
-    div.toolbar-actions        pushed to the end with an auto margin
-      button.button
-```
-
-The outer element owns background and border so the rule runs the full width; the inner owns the row. That split is what lets a toolbar sit inside a padded shell without the border stopping short of the edges.
-
----
-
-## Basic usage
-
-Every control resolves to one height. That is the difference between a toolbar and a row of unrelated widgets, and it is the component's job — not the page's.
-
-<div class="toolbar-group">
-        <label class="toolbar-label" for="tb-colour">Colour</label>
-        <input type="color" id="tb-colour" value="#1f1f1f" aria-label="Colour">
-      </div>
-      <div class="toolbar-group">
-        <span class="toolbar-label" id="tb-format-cap">Format</span>
-        <div class="dropdown">
-          <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-labelledby="tb-format-cap tb-format-val">
-            <span id="tb-format-val">SVG</span>
-            <div class="svg-icn dropdown-chevron" data-icon="chevron-down"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M12 16.4L6 10.4L7.4 9L10.5858 12.1858C11.3668 12.9668 12.6332 12.9668 13.4142 12.1858L16.6 9L18 10.4L12 16.4Z" fill="currentColor"/></svg></div>
-          </button>
-          <div class="dropdown-menu" role="menu">
-            <button class="dropdown-item" role="menuitemradio" aria-checked="true" type="button">SVG</button>
-            <button class="dropdown-item" role="menuitemradio" aria-checked="false" type="button">PNG</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-```html
-<div class="toolbar">
-  <div class="toolbar-container">
-    <div class="toolbar-group">
-      <label class="toolbar-label" for="variation">Variation</label>
-      <select id="variation" aria-label="Variation">…</select>
-    </div>
-    <div class="toolbar-group">
-      <label class="toolbar-label" for="colour">Colour</label>
-      <input type="color" id="colour" value="#1f1f1f" aria-label="Colour">
-    </div>
-  </div>
-</div>
-```
-
-A native select, a square colour swatch and a transparent menu trigger have nothing in common structurally, and the bar still reads as one row.
-
----
-
-## A second bar
-
-The same component with a different set of controls — a text field and an icon-led segmented control, so the bar is mostly canvas rather than mostly chrome.
-
-<hr class="divider divider--vertical">
-      <div class="segmented-control" role="group" aria-label="Device">
-        <button type="button" class="segmented-control-btn is-icon is-active" aria-pressed="true" aria-label="Desktop" data-tooltip="Desktop" data-tooltip-position="bottom"><div class="svg-icn" data-icon="desktop"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M6 21V19H11V17H2V2H22V17H13V19H18V21H6ZM4 13C4 14.1046 4.89543 15 6 15H18C19.1046 15 20 14.1046 20 13V6C20 4.89543 19.1046 4 18 4H6C4.89543 4 4 4.89543 4 6V13Z" fill="currentColor"/></svg></div></button>
-        <button type="button" class="segmented-control-btn is-icon" aria-pressed="false" aria-label="Tablet" data-tooltip="Tablet" data-tooltip-position="bottom"><div class="svg-icn" data-icon="tablet"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M12 17C12.5523 17 13 17.4477 13 18C13 18.5523 12.5523 19 12 19C11.4477 19 11 18.5523 11 18C11 17.4477 11.4477 17 12 17Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M19 22H5V2H19V22ZM9 4C7.89543 4 7 4.89543 7 6V18C7 19.1046 7.89543 20 9 20H15C16.1046 20 17 19.1046 17 18V6C17 4.89543 16.1046 4 15 4H9Z" fill="currentColor"/></svg></div></button>
-        <button type="button" class="segmented-control-btn is-icon" aria-pressed="false" aria-label="Mobile" data-tooltip="Mobile" data-tooltip-position="bottom"><div class="svg-icn" data-icon="mobile"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M13 7H11V6H13V7Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M18 21H6V3H18V21ZM10 5C8.89543 5 8 5.89543 8 7V17C8 18.1046 8.89543 19 10 19H14C15.1046 19 16 18.1046 16 17V7C16 5.89543 15.1046 5 14 5H10Z" fill="currentColor"/></svg></div></button>
-      </div>
-    </div>
-  </div>
-</div>
-
----
-
-## Control heights
-
-`--toolbar-control-height` is 36px, and every control in the bar resolves to it: buttons, dropdown triggers, selects, text inputs, number inputs, segmented controls and the colour swatch. Icon-only buttons and the swatch are square at the same figure.
-
-Two things this has to defeat, both of which look like they should already work:
-
-- **`min-height: 44px` on the base input rule.** That is the WCAG 2.5.5 AAA touch target and it is right for a form on a phone, but it beats any padding trim — so trimming an input's padding in a toolbar changes nothing at all until the floor is lifted with `min-height: 0`.
-- **`--button-padding-y`,** which is `var(--space-l)` by default and makes a plain `.button` 54px tall. The bar re-points it to `0`; with a fixed height, vertical padding only fights it.
-
-36px clears WCAG 2.5.8 Target Size (Minimum, AA), which asks for 24px. Page forms keep their 44px — dense tool chrome and a form on a phone are not the same problem, and one number cannot serve both.
-
-Excluded on purpose: `range`, `checkbox` and `radio` size their own box and would be distorted rather than aligned.
-
-**A toggle is not excluded, it is handled differently.** A `.form-toggle` is a compound — a 24px switch plus its label — so setting a height on it would stretch the switch. It takes `min-height` on the wrapper instead: the row gets the height, the switch keeps the box it drew for itself. Without it a switch sits 12px shorter than its neighbours and the row reads as misaligned even though nothing is out of place.
-
----
-
-## Density
-
-The bar is one control tall plus its own breathing room: `--toolbar-padding-y`, 8px by default, so nothing sits flush against the bar's edges. At the default that makes a toolbar 52px above its 1px rule — a 36px control with 8px either side of it.
-
-</div>
-</div>
-
-`data-density="compact"` drops the padding to zero, collapsing the bar to exactly one control tall — 36px, again above the rule. It is available rather than in service: no bar in this repo uses it. The case it exists for is a full-height app shell where every row given to chrome is a row taken from the canvas, but both of ours read better with the default padding — 16px is cheap next to a bar whose controls touch its own rule.
-
-</div>
-</div>
-
-```html
-<div class="toolbar" data-density="compact">…</div>
-```
-
-Both are `--toolbar-padding-y` underneath, so a brand can re-point the knob rather than choosing between two fixed figures.
-
----
-
-## Quiet chrome
-
-Matching the heights is only half of it. In a toolbar, **a visible border means you can type here.**
-
-<div class="toolbar-group">
-        <span class="toolbar-label" id="tb-chrome-cap">Menu</span>
-        <div class="dropdown">
-          <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-labelledby="tb-chrome-cap tb-chrome-val">
-            <span id="tb-chrome-val">Transparent</span>
-            <div class="svg-icn dropdown-chevron" data-icon="chevron-down"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M12 16.4L6 10.4L7.4 9L10.5858 12.1858C11.3668 12.9668 12.6332 12.9668 13.4142 12.1858L16.6 9L18 10.4L12 16.4Z" fill="currentColor"/></svg></div>
-          </button>
-          <div class="dropdown-menu" role="menu">
-            <button class="dropdown-item" role="menuitem" type="button">An item</button>
-          </div>
-        </div>
-      </div>
-      <div class="toolbar-group">
-        <span class="toolbar-label" id="tb-chrome-both">Both</span>
-        <div class="number-input" role="group" aria-labelledby="tb-chrome-both">
-          <button class="number-input-btn" data-number-decrement type="button" aria-label="Decrease width">&minus;</button>
-          <input type="number" value="400" min="16" max="4000" aria-label="Width in pixels">
-          <button class="number-input-btn" data-number-increment type="button" aria-label="Increase width">+</button>
-        </div>
-        <span class="toolbar-label">px</span>
-      </div>
-      <div class="toolbar-actions">
-        <button class="button" data-variant="transparent" data-icon-only type="button" aria-label="Settings" data-tooltip="Settings" data-tooltip-position="bottom"><div class="svg-icn" data-icon="settings"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M11 15H22V17H11V19H5V17H2V15H5V13H11V15ZM7 17H9V15H7V17Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M19 7H22V9H19V11H13V9H2V7H13V5H19V7ZM15 9H17V7H15V9Z" fill="currentColor"/></svg></div></button>
-      </div>
-    </div>
-  </div>
-</div>
-
-Anything that acts — a trigger, an icon button, a segment — is transparent until you point at it, and takes `--background-faded` on hover. Anything that accepts typing keeps a hairline border and a `--radius-s` corner, and re-points `--input-background` to the bar's own ground so a field reads as a well rather than a grey slab.
-
-The number input is the case that proves the rule rather than breaking it. It is one field with two steppers on it, so the border goes round the whole control and the steppers stay transparent until you point at them — bordered where you type, quiet where you press.
-
-The payoff is that an edge in the bar carries information instead of being decoration. A bar where everything is boxed tells you nothing about what any of it does.
-
----
-
-## Select or dropdown?
-
-A `<select>` and a `.dropdown` look near enough identical in a bar — a word and a chevron — so the choice has to be made on what the control *returns*, not on how it renders.
-
-| | Use | Chrome |
-|---|---|---|
-| **A value** — Format, Position, Zoom, Publisher | `<select>` | Bordered |
-| **An action** — Copy URL, Reset, Fullscreen, an overflow menu | `.dropdown` | Transparent |
-
-This is the [dropdown](dropdown.html) doc's own rule — *don't use dropdowns for form field selection* — read from the toolbar end. A list of values is not a menu, and dressing one as a menu costs you the native keyboard behaviour, the platform picker on mobile, and the correct role: `role="menuitemradio"` announces a menu when the thing on screen is a set of options.
-
-**The exception is the menu itself.** Reach for a `.dropdown` on a value when the *options* need more than a string — a colour swatch on each row, a placement glyph, sections with headers, a visible checkmark. A `<select>` renders the OS list and can carry none of that. Logo Tool's colour picker is the clear case: every row is a swatch, so it earns the custom menu that the format picker beside it does not.
-
-That split is also what makes the bar's chrome legible, and it is the same rule as quiet chrome one step out:
-
-> **A border means a value lives here. No border means pressing this does something.**
-
-Field, select and number input are bordered; trigger, icon button and segment are not. Read that way, a `<select>` sitting beside a `.dropdown-trigger` is not an inconsistency to design away — it is the bar telling you that one of them holds an answer and the other opens a menu.
-
-**Its cost, stated plainly:** a `<select>` cannot be styled once open. The option list is the platform's, so it will not match the theme, and in dark mode it renders as the OS panel. For tool chrome that is a fair price for correct semantics and a free mobile picker. For a menu that needs icons or sections it is not, which is what `.dropdown` is for.
-
----
-
-## Groups and labels
-
-A `.toolbar-group` is a label and its control, or a set of controls that belong together. Groups are what stop a toolbar reading as one long undifferentiated row.
-
-A group wraps, for the reason the container does: a bar that scrolls hides controls, and every control has to stay reachable at 400% zoom. The container's wrapping only breaks *between* groups, so a group holding four switches under one caption would have nowhere to break and would push the page wider instead.
-
-The first group below is a caption and one control. The second is two controls under one caption — a swatch and the hex that names it — which is why it carries `role="group"` and an `aria-label` of its own.
-
-<div class="toolbar-group" role="group" aria-label="Background">
-        <span class="toolbar-label">Background</span>
-        <input type="color" value="#1c1c1c" aria-label="Background colour">
-        <input type="text" value="#1C1C1C" size="8" aria-label="Background hex">
-      </div>
-    </div>
-  </div>
-</div>
-
-```html
-<div class="toolbar-group">
-  <span class="toolbar-label">Variant</span>
-  <select aria-label="Variant">…</select>
-</div>
-
-<div class="toolbar-group" role="group" aria-label="Background">
-  <span class="toolbar-label">Background</span>
-  <input type="color" aria-label="Background colour">
-  <input type="text" aria-label="Background hex">
-</div>
-```
-
-`.toolbar-label` is a visible caption, not an accessible name. It is hidden below 768px, so the control inside the group must carry its own name regardless — and **`aria-label` or `aria-labelledby`, not a bare `<label for>`.**
-
-That distinction is the whole trap. `aria-labelledby` resolves a target that is `display: none`; a `<label for>` does not. A `<label class="toolbar-label" for="x">` therefore names its control at desktop width and leaves it **anonymous below 768px**, with nothing to warn you — the markup is valid, the label is real, and the name silently disappears at the breakpoint. A `<label>` may still wear `.toolbar-label` for the sighted caption; just give the control an `aria-label` as well.
-
-**Where a group has more than one control, give it `role="group"` and an `aria-label`.** A single labelled control does not need it; the label is already doing the work.
-
-### Prefer a dropdown whose label is the answer
-
-Screen width is the scarcest thing in a toolbar. A dropdown whose trigger reads the *current value* states the setting and its answer in one control. Both halves of the bar below set the same thing:
-
-<hr class="divider divider--vertical">
-      <div class="toolbar-group">
-        <span class="toolbar-label" id="tb-cmp-cap">Format</span>
-        <div class="dropdown">
-          <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-labelledby="tb-cmp-cap tb-cmp-val">
-            <span id="tb-cmp-val">SVG</span>
-            <div class="svg-icn dropdown-chevron" data-icon="chevron-down"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M12 16.4L6 10.4L7.4 9L10.5858 12.1858C11.3668 12.9668 12.6332 12.9668 13.4142 12.1858L16.6 9L18 10.4L12 16.4Z" fill="currentColor"/></svg></div>
-          </button>
-          <div class="dropdown-menu" role="menu">
-            <button class="dropdown-item" role="menuitemradio" aria-checked="true" type="button">SVG</button>
-            <button class="dropdown-item" role="menuitemradio" aria-checked="false" type="button">PNG</button>
-            <button class="dropdown-item" role="menuitemradio" aria-checked="false" type="button">JPG</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-```html
-<!-- Three labelled segments -->
-<span class="toolbar-label">Format</span>
-<div class="segmented-control">
-  <button class="segmented-control-btn is-active">SVG</button>
-  <button class="segmented-control-btn">PNG</button>
-  <button class="segmented-control-btn">JPG</button>
-</div>
-
-<!-- The same choice, roughly a quarter of the width -->
-<div class="dropdown">
-  <button class="dropdown-trigger">SVG …</button>
-  …
-</div>
-```
-
-Reach for a segmented control when the options are icons, when there are two of them, or when seeing all the choices at once is the point. Reach for a dropdown otherwise. This is why the logo tool shows five groups rather than nine.
-
-**A trigger labelled with its value is not a named control.** Once the trigger reads "SVG" or "390px", its accessible name is that value and nothing says which setting it belongs to. Name it from the caption *and* the value:
-
-```html
-<div class="toolbar-group">
-  <span class="toolbar-label" id="format-caption">Format</span>
-  <div class="dropdown">
-    <button class="dropdown-trigger" type="button" aria-haspopup="true"
-            aria-expanded="false"
-            aria-labelledby="format-caption format-value">
-      <span id="format-value">SVG</span>
-      …
-```
-
-The name resolves to "Format SVG". `aria-labelledby` still resolves a target that is `display: none`, so this survives the caption being hidden below 768px — which is exactly why the caption may be hidden at all. Do not put `aria-hidden="true"` on a caption you are referencing this way; it removes the text from the name and leaves the trigger announced as a bare value again.
-
-**Read-only values belong on the canvas, not in the bar.** A file size, a scale percentage or a contrast ratio is a report, not a control — put it on the thing it describes and give the bar back to the controls.
-
-### Icons instead of words
-
-The same trade applies inside a segmented control. Where each option has an obvious picture, icons collapse the control to a fraction of its width without collapsing the choices out of sight — which is the one thing a dropdown does cost you. The same three options, twice:
-
-<hr class="divider divider--vertical">
-      <div class="toolbar-group">
-        <span class="toolbar-label">Device</span>
-        <div class="segmented-control" role="group" aria-label="Device, as icons">
-          <button type="button" class="segmented-control-btn is-icon is-active" aria-pressed="true" aria-label="Desktop" data-tooltip="Desktop" data-tooltip-position="bottom"><div class="svg-icn" data-icon="desktop"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M6 21V19H11V17H2V2H22V17H13V19H18V21H6ZM4 13C4 14.1046 4.89543 15 6 15H18C19.1046 15 20 14.1046 20 13V6C20 4.89543 19.1046 4 18 4H6C4.89543 4 4 4.89543 4 6V13Z" fill="currentColor"/></svg></div></button>
-          <button type="button" class="segmented-control-btn is-icon" aria-pressed="false" aria-label="Tablet" data-tooltip="Tablet" data-tooltip-position="bottom"><div class="svg-icn" data-icon="tablet"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M12 17C12.5523 17 13 17.4477 13 18C13 18.5523 12.5523 19 12 19C11.4477 19 11 18.5523 11 18C11 17.4477 11.4477 17 12 17Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M19 22H5V2H19V22ZM9 4C7.89543 4 7 4.89543 7 6V18C7 19.1046 7.89543 20 9 20H15C16.1046 20 17 19.1046 17 18V6C17 4.89543 16.1046 4 15 4H9Z" fill="currentColor"/></svg></div></button>
-          <button type="button" class="segmented-control-btn is-icon" aria-pressed="false" aria-label="Mobile" data-tooltip="Mobile" data-tooltip-position="bottom"><div class="svg-icn" data-icon="mobile"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M13 7H11V6H13V7Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M18 21H6V3H18V21ZM10 5C8.89543 5 8 5.89543 8 7V17C8 18.1046 8.89543 19 10 19H14C15.1046 19 16 18.1046 16 17V7C16 5.89543 15.1046 5 14 5H10Z" fill="currentColor"/></svg></div></button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-Icons only work when the picture is unambiguous on its own — a device, a text alignment, a placement. "Draft" and "Published" have no pictures, and inventing two is worse than spending the width. Every icon segment still needs an `aria-label`, and a `data-tooltip` is what gives a sighted user the same word.
-
-### The narrowest control is an icon and a chevron
-
-At the end of that line is a trigger with no caption and no value text at all — one icon, one chevron, roughly the width of a single letter of the label it replaces. The menu carries what the trigger no longer shows: a checkmark on the left for the current choice, the label, and the placement icon on the right.
-
-<div class="dropdown">
-        <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-labelledby="tb-place-cap tb-place-val" data-tooltip="Placement" data-tooltip-position="bottom">
-          <span class="visually-hidden" id="tb-place-cap">Placement</span>
-          <div class="svg-icn" data-icon="ad-top"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M17 5V10H7V5H17ZM22 23H2V1H22V23ZM6 3C4.9 3 4 3.9 4 5V19C4 20.1 4.9 21 6 21H18C19.1 21 20 20.1 20 19V5C20 3.9 19.1 3 18 3H6Z" fill="currentColor"/><path opacity="0.2" d="M6 14H18V12H6V14ZM18 18H6V16H18V18Z" fill="currentColor"/></svg></div>
-          <span class="visually-hidden" id="tb-place-val">Top</span>
-          <div class="svg-icn dropdown-chevron" data-icon="chevron-down"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M12 16.4L6 10.4L7.4 9L10.5858 12.1858C11.3668 12.9668 12.6332 12.9668 13.4142 12.1858L16.6 9L18 10.4L12 16.4Z" fill="currentColor"/></svg></div>
-        </button>
-        <div class="dropdown-menu" role="menu">
-          <button class="dropdown-item" role="menuitemradio" aria-checked="false" type="button"><span class="dropdown-checkmark"><div class="svg-icn" data-icon="check"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M9.55 17.6L4 12.05L5.4 10.65L9.55 14.8L18.6 5.75L20 7.15L9.55 17.6Z" fill="currentColor"/></svg></div></span><span>Sidebar left</span><span class="dropdown-item-end"><div class="svg-icn" data-icon="ad-left"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M10 5V11H6V5H10ZM22 23H2V1H22V23ZM6 3C4.9 3 4 3.9 4 5V19C4 20.1 4.9 21 6 21H18C19.1 21 20 20.1 20 19V5C20 3.9 19.1 3 18 3H6Z" fill="currentColor"/><path opacity="0.2" d="M6 15H18V13H6V15ZM12 11H18V9H12V11ZM12 7H18V5H12V7ZM18 19H6V17H18V19Z" fill="currentColor"/></svg></div></span></button>
-          <button class="dropdown-item" role="menuitemradio" aria-checked="false" type="button"><span class="dropdown-checkmark"><div class="svg-icn" data-icon="check"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M9.55 17.6L4 12.05L5.4 10.65L9.55 14.8L18.6 5.75L20 7.15L9.55 17.6Z" fill="currentColor"/></svg></div></span><span>Sidebar right</span><span class="dropdown-item-end"><div class="svg-icn" data-icon="ad-right"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M18 5V11H14V5H18ZM22 23H2V1H22V23ZM6 3C4.9 3 4 3.9 4 5V19C4 20.1 4.9 21 6 21H18C19.1 21 20 20.1 20 19V5C20 3.9 19.1 3 18 3H6Z" fill="currentColor"/><path opacity="0.2" d="M6 15H18V13H6V15ZM6 11H12V9H6V11ZM6 7H12V5H6V7ZM18 19H6V17H18V19Z" fill="currentColor"/></svg></div></span></button>
-          <button class="dropdown-item" role="menuitemradio" aria-checked="true" type="button"><span class="dropdown-checkmark"><div class="svg-icn" data-icon="check"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M9.55 17.6L4 12.05L5.4 10.65L9.55 14.8L18.6 5.75L20 7.15L9.55 17.6Z" fill="currentColor"/></svg></div></span><span>Top</span><span class="dropdown-item-end"><div class="svg-icn" data-icon="ad-top"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M17 5V10H7V5H17ZM22 23H2V1H22V23ZM6 3C4.9 3 4 3.9 4 5V19C4 20.1 4.9 21 6 21H18C19.1 21 20 20.1 20 19V5C20 3.9 19.1 3 18 3H6Z" fill="currentColor"/><path opacity="0.2" d="M6 14H18V12H6V14ZM18 18H6V16H18V18Z" fill="currentColor"/></svg></div></span></button>
-          <div class="dropdown-divider" role="separator"></div>
-          <button class="dropdown-item" role="menuitemradio" aria-checked="false" type="button"><span class="dropdown-checkmark"><div class="svg-icn" data-icon="check"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M9.55 17.6L4 12.05L5.4 10.65L9.55 14.8L18.6 5.75L20 7.15L9.55 17.6Z" fill="currentColor"/></svg></div></span><span>Sticky top</span><span class="dropdown-item-end"><div class="svg-icn" data-icon="sticky-top"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M18 6V9H6V6H18ZM22 22H2V2H22V22ZM6 4C4.9 4 4 4.9 4 6V18C4 19.1 4.9 20 6 20H18C19.1 20 20 19.1 20 18V6C20 4.9 19.1 4 18 4H6Z" fill="currentColor"/></svg></div></span></button>
-          <button class="dropdown-item" role="menuitemradio" aria-checked="false" type="button"><span class="dropdown-checkmark"><div class="svg-icn" data-icon="check"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M9.55 17.6L4 12.05L5.4 10.65L9.55 14.8L18.6 5.75L20 7.15L9.55 17.6Z" fill="currentColor"/></svg></div></span><span>Sticky bottom</span><span class="dropdown-item-end"><div class="svg-icn" data-icon="sticky-bottom"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M18 15V18H6V15H18ZM22 22H2V2H22V22ZM6 4C4.9 4 4 4.9 4 6V18C4 19.1 4.9 20 6 20H18C19.1 20 20 19.1 20 18V6C20 4.9 19.1 4 18 4H6Z" fill="currentColor"/></svg></div></span></button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-This is the one place the caption-and-value naming rule is load-bearing rather than tidy. Nothing on the trigger is readable text, so both halves of the name are `.visually-hidden` spans and `aria-labelledby` joins them — the name still resolves to "Placement Top", exactly as it would with a visible caption. Drop either span and the control announces as an unnamed button.
-
-**It costs a sighted user the label, so give it a tooltip.** Nothing on screen says what the icon controls until the menu is open. Spend this only where the bar is genuinely out of room, and never on a setting somebody has to find in a hurry.
-
----
-
-## Dividers
-
-Use the vertical [divider](divider.html) to separate clusters that are about different things. The toolbar sets its own margin, so it needs no modifier.
-
-Below, two groups describe the document and one describes the view of it. One rule marks that seam; a second rule between the first two would erase the grouping it is meant to show.
-
-<div class="toolbar-group">
-        <span class="toolbar-label">Bleed</span>
-        <select aria-label="Bleed">
-          <option>3mm</option>
-          <option>None</option>
-        </select>
-      </div>
-      <hr class="divider divider--vertical">
-      <div class="toolbar-group">
-        <span class="toolbar-label">Zoom</span>
-        <select aria-label="Zoom">
-          <option>Fit</option>
-          <option>100%</option>
-        </select>
-      </div>
-    </div>
-  </div>
-</div>
-
-```html
-<div class="toolbar-group">…</div>
-<hr class="divider divider--vertical">
-<div class="toolbar-group">…</div>
-```
-
-Dividers are cheap to add and easy to overuse. A bar with a rule between every group has no grouping at all — if every group is separated, none of them are related. Group first; add a divider only where two neighbours would otherwise read as one cluster.
-
----
-
-## Actions
-
-`.toolbar-actions` holds what the toolbar *does* — export, download, copy, reset — as opposed to what it configures. It is pushed to the end with an auto margin, so it lands right whether there is one group before it or six.
-
-**One icon per meaning for the trailing menu.** A bar that runs out of room ends in one of two things, and they are not the same: `more-horizontal` opens an *overflow menu*, whose every item is an action, and stays a `role="menu"`. `settings` opens a *settings panel* holding form controls, which makes it a disclosure rather than a menu — see the rule at the end of Accessibility. Picking by which one it is keeps the icon meaningful; picking by which one looks better in the bar is how four tools ended up with two icons for the same job.
-
-Leave `.toolbar-actions` out entirely when there are no actions. An empty one is still a flex child with an auto margin, so it takes a line to itself and adds a row to a bar that looks like it needs one.
-
-<div class="toolbar-actions">
-        <button class="button" data-variant="transparent" data-icon-only type="button" aria-label="Open in new tab" data-tooltip="Open in new tab" data-tooltip-position="bottom"><div class="svg-icn" data-icon="arrow-top-right"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M6 16.6066L12.9019 9.70468C13.5319 9.07472 13.0857 7.99758 12.1948 7.99758L7 7.99758L7.01768 6H18.0208V16.9823L16.0232 17V11.826C16.0232 10.9351 14.9461 10.4889 14.3161 11.1189L7.41421 18.0208L6 16.6066Z" fill="currentColor"/></svg></div></button>
-        <button class="button" data-variant="transparent" data-icon-only type="button" aria-label="Copy URL" data-tooltip="Copy URL" data-tooltip-position="bottom"><div class="svg-icn" data-icon="copy"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z" fill="currentColor"/></svg></div></button>
-        <button class="button" data-variant="transparent" data-icon-only type="button" aria-label="Reset" data-tooltip="Reset" data-tooltip-position="bottom"><div class="svg-icn" data-icon="refresh"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M12 20C9.76667 20 7.875 19.225 6.325 17.675C4.775 16.125 4 14.2333 4 12C4 9.76667 4.775 7.875 6.325 6.325C7.875 4.775 9.76667 4 12 4C13.15 4 14.25 4.2375 15.3 4.7125C16.1007 5.07473 16.8142 5.55568 17.4404 6.15537C17.6421 6.34848 18 6.21237 18 5.93315V4H20V11H13V9H15.4768C16.2446 9 16.7011 8.17477 16.1456 7.6447C15.8078 7.32236 15.4301 7.0408 15.0125 6.8C14.0875 6.26667 13.0833 6 12 6C10.3333 6 8.91667 6.58333 7.75 7.75C6.58333 8.91667 6 10.3333 6 12C6 13.6667 6.58333 15.0833 7.75 16.25C8.91667 17.4167 10.3333 18 12 18C13.2833 18 14.4417 17.6333 15.475 16.9C16.5083 16.1667 17.2333 15.2 17.65 14H19.75C19.2833 15.7667 18.3333 17.2083 16.9 18.325C15.4667 19.4417 13.8333 20 12 20Z" fill="currentColor"/></svg></div></button>
-        <button class="button" type="button"><div class="svg-icn" data-icon="download"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M12 17L5 10L6.4 8.6L9.29482 11.4791C9.92557 12.1064 11 11.6597 11 10.7701V3H13V10.7608C13 11.6517 14.0771 12.0979 14.7071 11.4679L17.6 8.575L19 10L12 17Z" fill="currentColor"/><path d="M4 21V15H6V17C6 18.1046 6.89543 19 8 19H16C17.1046 19 18 18.1046 18 17V15H20V21H4Z" fill="currentColor"/></svg></div> Export logo</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-```html
-<div class="toolbar-actions">
-  <button class="button" data-variant="transparent" data-icon-only aria-label="Reset" data-tooltip="Reset" data-tooltip-position="bottom">…</button>
-  <button class="button">
-    <div class="svg-icn" data-icon="download">…</div> Export logo
-  </button>
-</div>
-```
-
-Icon-only actions use `data-variant="transparent"` so the chrome disappears and the icons read as a row of tools rather than a row of buttons. Every icon-only button needs an `aria-label` and a matching `data-tooltip` — see Accessibility.
-
-A cluster of quiet icons ending in one solid button is the pattern to reach for: the quiet controls are the reversible ones, the solid one is the thing the tool exists to do. Give that button its icon — a leading glyph inside the label reads as a single action, where the same icon set beside it as a fourth icon-only button would just be a fourth icon.
-
-**Use `.button`, not `.dropdown-trigger`, for a button that opens nothing.** `.dropdown-trigger` carries chevron and open-state styling that assumes a menu is attached.
-
----
-
-## Composing existing controls
-
-Nothing in this list is toolbar-specific. Each is documented where it lives, and the toolbar only adjusts its density:
-
-| Control | Where it's documented |
-|---|---|
-| Buttons and icon buttons | [Button](button.html) |
-| Menus, one-of-N pickers, settings panels | [Dropdown](dropdown.html) |
-| Segmented control, toggle, select, text input | [Form](form.html) |
-| Steppers | [Number Input](number-input.html) |
-| Separators | [Divider](divider.html) |
-| Hover hints | [Tooltip](tooltip.html) |
-
-If a control you need is not in that list, it is a new form control and belongs in [Form](form.html) — not in the toolbar.
-
----
-
-## Sticky toolbars
-
-By default a toolbar does not stick. Most sit at the top of a fixed-height shell where the bar never scrolls in the first place.
-
-```html
-<div class="toolbar" data-sticky="true">…</div>
-```
-
-Use `data-sticky="true"` when the toolbar sits above a normally scrolling page. When you do, add its height to `--scroll-offset` for that page — otherwise an in-page anchor scrolls its target underneath the bar.
-
-### Where it docks
-
-A sticky toolbar docks at `--toolbar-top`, which is `0`. That is right for an app shell whose bar is the top of the window, and wrong for a page with a header above it — so re-point the token rather than overriding `top`, which would mean out-specifying `.toolbar[data-sticky="true"]`.
-
-This site does exactly that, in `docs-site.css` §1A. The variant is not part of the component; it is what one shell needs, kept out of the portable file:
-
-```css
-/* docs-site.css — the shell's own variant, not part of the toolbar */
-.toolbar-page {
-  --toolbar-top: var(--site-header-height);
-}
-
-.toolbar-page .toolbar-container {
-  max-width: calc(var(--container-m) + (2 * var(--toolbar-padding-x)));
-  margin-inline: auto;
-}
-
-body:has(.toolbar-page[data-sticky="true"]) {
-  --scroll-offset: calc(
-    var(--site-header-height)
-    + var(--toolbar-control-height) + (2 * var(--toolbar-padding-y)) + var(--border-s)
-    + var(--space-xl)
-  );
-}
-```
-
-Two things worth copying from that, whatever the shell. The container's max-width adds the bar's own inline padding back onto the content width, which is what lands the first control on the same left edge as the tool content below rather than a gutter away from it. And the `--scroll-offset` sum is built from the toolbar's own tokens instead of a new height token — the bar has no fixed height to name, so anything else would be a number that drifts. The sum assumes one row; a bar that wraps on a narrow screen leaves it short.
-
-**Note the polarity.** [Site Header](site-header.html) sticks by default and takes `data-sticky="false"` to opt out; a toolbar is static by default and takes `data-sticky="true"` to opt in. Each default matches what that component is usually doing — a header is nearly always docked, a toolbar nearly always sits at the top of a fixed-height shell — but the attribute reads the same and means the opposite, so check which component you are on.
-
-Stacking order comes from the shared scale in section 39B: a toolbar sits above a sticky bar, and both sit under the site header.
-
----
-
-## Accessibility
-
-- **No `role="toolbar"`.** That role tells assistive technology the bar is a single tab stop with arrow-key navigation between controls. This component does not implement that, and claiming it would leave a keyboard user pressing arrows that do nothing. Every control is a normal tab stop.
-- **Every icon-only control needs an accessible name *and* a tooltip.** `aria-label` on the control, `aria-hidden="true"` on the SVG, and `data-tooltip` carrying the same words. This is a toolbar rule, not a system-wide one: a toolbar's icons are app-specific rather than conventional — a close cross or a hamburger explains itself, a placement glyph does not — and there is no text nearby to explain them. **Use the same string in both.** A speech-control user says the word they see, and a tooltip reading "Placement" against a name of "Placement, top" leaves the command with nothing to match.
-- **A tooltip is never the name.** It needs hover, so on touch it does not exist at all. Anything important enough to be in the bar has to survive without it — show the word at that width, or move the control into a menu whose items have text. The tooltip is a pointer-device convenience on top of a name that already works.
-- **The tooltip rule is currently suspended on the last control in `.toolbar-actions`.** The bubble is centred on its trigger with no clamp, and it is `opacity: 0` rather than `display: none`, so on a control flush to the end of the bar it sits permanently outside the page and widens it — measured at 11px on three tools, at every viewport width, which is a WCAG 1.4.10 failure the tooltip causes rather than the toolbar. Those controls carry `aria-label` alone until the tooltip is clamped; the name is what matters and the name is there. Tracked in ROADMAP alongside the tooltip's open 1.4.13 failure.
-- **`.toolbar-label` is not an accessible name.** It is decorative caption text and it disappears below 768px. Name the control itself.
-- **Multi-control groups get `role="group"` + `aria-label`.**
-- **The bar wraps rather than scrolls**, so every control stays reachable at 400% zoom. Do not add `overflow` to a toolbar; it would clip open dropdowns and tooltips and break WCAG 1.4.10.
-- **Keep the shell scrollable.** A toolbar inside a `100dvh` shell needs `overflow-y: auto` on that shell — at high zoom the wrapped bar alone can exceed the viewport.
-- **Segmented controls carry `aria-pressed`, kept in step with `.is-active`.** `aria-pressed` is right here rather than `role="radiogroup"` + `aria-checked`: the radio pattern obliges you to a single tab stop with arrow-key traversal, and promising that without building it is the same failure as claiming `role="toolbar"`. Selection must also be visible without colour — the component gives the selected segment a fill and a border against the track, not just a darker label.
-- One-of-N dropdown menus use `role="menuitemradio"` with `aria-checked`. Keep a `role="menu"` container to menu items only; a checkbox or a heading inside one is invisible to a screen reader in menu mode. If the panel is really a set of switches, it is a disclosure, not a menu — drop `role="menu"` and wire `aria-expanded` + `aria-controls`.
-
----
-
-## Usage rules
-
-| Do | Don't |
-|---|---|
-| Compose existing components | Invent a toolbar-specific control |
-| Group related controls with `.toolbar-group` | Drop loose controls straight into the container |
-| Let the controls set the bar's height | Add vertical padding to `.toolbar-container` |
-| Use a dropdown whose label is the current value | Spend a third of the bar on three labelled segments |
-| Use `<select>` for a value, `.dropdown` for a menu | Dress a list of options as `role="menu"` |
-| Reach for `.dropdown` when the options need icons or sections | Reach for it because the closed control looks tidier |
-| Put actions in `.toolbar-actions` | Hand-place them with a margin |
-| Name every icon-only control, and tooltip it in the same words | Rely on `.toolbar-label` for the name |
-| Keep an icon-only control usable without its tooltip | Treat a tooltip as the label — touch has no hover |
-| Add a divider between unrelated clusters | Put a divider between every group |
-| Show read-only values on the canvas | Fill the bar with readouts |
-| Use `.button` for a button that opens nothing | Borrow `.dropdown-trigger` for its look |
-
----
-
-## CSS reference
-
-This section documents how the component is built. For usage, see the sections above.
-
-### Tokens
-
-| Token | Default | What it controls |
-|---|---|---|
-| `--toolbar-background` | `var(--background-primary)` | Bar fill |
-| `--toolbar-border` | `var(--border-s) solid var(--border-faded)` | The rule under the bar |
-| `--toolbar-gap` | `var(--space-l)` | Space between groups |
-| `--toolbar-group-gap` | `var(--space-s)` | Space inside a group, and between actions |
-| `--toolbar-padding-x` | `var(--space-xl)` | Inline padding |
-| `--toolbar-padding-y` | `var(--space-s)` | Block padding — the bar's breathing room; `data-density="compact"` zeroes it |
-| `--toolbar-control-height` | `36px` | Every control in the bar resolves to this. Icon buttons and the swatch are square at the same figure |
-| `--toolbar-number-input-width` | `4.5rem` | Width of a number field in the bar |
-| `--toolbar-menu-max-width` | `20rem` | Ceiling for a menu opened from the bar below 768px |
-| `--toolbar-z` | `var(--z-toolbar)` | Stacking order when `data-sticky="true"` |
-| `--toolbar-top` | `0px` | Where a sticky bar docks. Re-point it when a header sits above the bar |
-
-### Selectors
-
-| Selector | Purpose |
-|---|---|
-| `.toolbar` | Base; background, border, `flex-shrink: 0` |
-| `.toolbar[data-sticky="true"]` | Sticks to the top of the scroll container |
-| `.toolbar[data-density="compact"]` | Zeroes `--toolbar-padding-y`; the bar becomes one control tall |
-| `.toolbar-container` | The wrapping flex row |
-| `.toolbar-group` | A labelled cluster. Wraps, for the same reason the container does |
-| `.toolbar-label` | Caption text; hidden below 768px |
-| `.toolbar-actions` | Trailing cluster, auto inline-start margin |
-| `.toolbar .button`, `.dropdown-trigger`, `select`, `input`, `.segmented-control`, `.number-input` | One `height`, and `min-height: 0` to lift the base input's 44px floor |
-| `.toolbar .button` | `--button-padding-y: 0` — a default button is 54px otherwise |
-| `.toolbar .dropdown-trigger` | Re-points the trigger's padding; `--radius-s` and a hover fill |
-| `.toolbar .button[data-icon-only]` | Square at the control height |
-| `.toolbar input[type="color"]` | Square at the control height |
-| `.toolbar select`, `.toolbar input`, `.toolbar .number-input` | Keep a border, gain `--radius-s`, and re-point `--input-background` to the bar's ground |
-| `.toolbar .number-input input[type="number"]` | Fixed 4.5rem and tabular figures so a long value can't resize the bar |
-| `.toolbar .divider--vertical` | Bar-scale margin instead of page-scale |
-| `.toolbar .form-toggle` | `min-height` at the control height, so a switch lines up with the bordered controls beside it |
-
-### Key rules
-
-There is no `--toolbar-height`, and there does not need to be: the bar is `--toolbar-control-height` plus twice `--toolbar-padding-y`, both of which are knobs. A sticky bar owns its own height because its content is uniform; a toolbar's is built from the controls up, so a fixed figure could only ever contradict them.
-
-`min-height: 0` on the control list is the rule that makes any of it work. The base input rule sets `min-height: 44px`, and it beats padding — trim an input's padding in a toolbar without lifting that floor and nothing at all happens.
-
-`flex-wrap: wrap` and no `overflow`. The sticky bar's scrolling content area clips, which is why dropdowns are barred from it. A toolbar is mostly dropdowns and tooltips, so it wraps instead — which is also what keeps every control reachable at 400% zoom.
-
-`.toolbar-actions` uses `margin-inline-start: auto`, not `justify-content: space-between` on the container. With a single child, space-between resolves to flex-start and the actions would render on the left. The site header and sticky bar make the same move for the same reason.
-
-Density comes from re-pointing each component's own custom properties (`--dropdown-trigger-padding-y`, `--dropdown-trigger-padding-x`) rather than overriding its rules. Real declarations appear only for native `select` and `input`, which expose no properties to re-point.
-
-The 768px block hides `.toolbar-label` rather than shrinking or stacking it. That is only safe because every control is required to carry its own accessible name — see Groups and labels — so the caption is redundant to a screen reader at any width and costs only pixels when it goes. The same block re-points `--dropdown-menu-min-width` to `0` and caps `max-width`: the 250px floor from section 27 overflows a 375px row, and on a narrow screen a settings panel is often the only route to the controls inside it.
-
-The mobile block re-points `--toolbar-gap` and `--toolbar-padding-x` rather than writing literals, so a brand that moves either keeps it at every width. The menu clamp subtracts `--toolbar-padding-x` for the same reason — change the gutter and the clamp follows.
-
-`.toolbar-label` neutralises the base `label` element's `display: block`, medium weight and bottom margin, because a caption is allowed to *be* a real `<label for>`. Without that, the same class would render two different ways depending on the element it was written on, and in an `align-items: center` row the margin box is what gets centred — so the margin would push the caption off the control's centre line.
-
-### Related
-
-[Sticky Bar](sticky-bar.html) · [Site Header](site-header.html) · [Button](button.html) · [Dropdown](dropdown.html) · [Form](form.html) · [Divider](divider.html)
 
 ### Tooltip
 

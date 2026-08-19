@@ -38,11 +38,17 @@
  *   dropdown-select — bubbling, fired on the .dropdown after an item is
  *     activated. detail: { value, item, checked }. `checked` is null for
  *     plain items.
+ *
+ * Nesting: a dropdown may contain another dropdown — the bar's overflow
+ * panel (bar.js) demotes whole groups, dropdowns included. closeAll keeps
+ * ancestors of the opening dropdown open, closing a panel closes anything
+ * nested inside it, and the CSS open/placement rules use child combinators
+ * so an outer .is-open cannot paint an inner menu.
  */
 (function () {
   "use strict";
 
-  var VERSION = "2.0.0";
+  var VERSION = "2.1.0";
   var ITEM_SELECTOR =
     '[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]';
   var TYPEAHEAD_RESET_MS = 500;
@@ -70,7 +76,13 @@
     var menu = getMenu(dropdown);
     if (!menu) return null;
     if (menu.getAttribute("role") === "menu") return menu;
-    return menu.querySelector('[role="menu"]');
+    // Ownership check, because dropdowns nest: a disclosure panel holding a
+    // demoted menu-type dropdown must not adopt the NESTED dropdown's role —
+    // that would put aria-haspopup on a disclosure trigger and hand the
+    // panel's form controls the menu keyboard contract (Tab closes, letters
+    // become typeahead), the exact lies this function exists to prevent.
+    var el = menu.querySelector('[role="menu"]');
+    return el && el.closest(".dropdown") === dropdown ? el : null;
   }
 
   function getItems(dropdown) {
@@ -79,6 +91,9 @@
     return Array.prototype.filter.call(
       menu.querySelectorAll(ITEM_SELECTOR),
       function isReachable(item) {
+        // Same ownership check as getMenuRoleEl: an open nested dropdown's
+        // items must not join the OUTER dropdown's roving cycle.
+        if (item.closest(".dropdown") !== dropdown) return false;
         // focus() on a display:none element is a silent no-op — it neither
         // moves focus nor throws. An unfiltered hidden item therefore
         // dead-ends arrow navigation and typeahead with nothing to debug
@@ -254,13 +269,27 @@
       // already-closed dropdown cannot yank focus out from under the user.
       if (returnFocus && wasOpen) trigger.focus();
     }
+    // A closing panel takes any dropdown nested inside it down too, so
+    // re-opening the panel cannot resurrect a menu the user never re-asked
+    // for. Runs after this dropdown's own teardown; the set only shrinks, so
+    // there is no recursion risk.
+    var nested = dropdown.querySelectorAll(".dropdown.is-open");
+    Array.prototype.forEach.call(nested, function closeNested(inner) {
+      closeDropdown(inner, false);
+    });
     resetTypeahead();
   }
 
   function closeAll(except) {
     var open = document.querySelectorAll(".dropdown.is-open");
     Array.prototype.forEach.call(open, function closeOne(dropdown) {
-      if (dropdown !== except) closeDropdown(dropdown, false);
+      if (dropdown === except) return;
+      // An ancestor of the opening dropdown stays open. Dropdowns nest — the
+      // bar's overflow panel holds demoted ones — and closing the panel that
+      // contains the dropdown being opened would take the new menu down with
+      // it, making every nested dropdown unusable.
+      if (except && dropdown.contains(except)) return;
+      closeDropdown(dropdown, false);
     });
   }
 
@@ -397,7 +426,7 @@
     if (trigger) {
       var dropdown = trigger.closest(".dropdown");
       // .dropdown-trigger is sometimes borrowed for its styling by a plain
-      // button that opens nothing (a toolbar Reset, for instance). Returning
+      // button that opens nothing (a bar's Reset, for instance). Returning
       // here would let that click pass without dismissing an open menu,
       // leaving the page with a menu nobody can explain.
       if (!dropdown) {

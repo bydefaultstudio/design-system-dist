@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^3.0.0"
+npm install "github:bydefaultstudio/design-system-dist#semver:^4.0.0"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -156,7 +156,7 @@ depth.
 | `subsection` | collapsible group inside a section |
 | `order` | sort position within the section |
 | `toc: false` | hide the table of contents |
-| `sticky-bar: false` | hide the breadcrumb bar |
+| `bar: false` | hide the breadcrumb bar |
 | `pagination: false` | hide prev/next links |
 | `status: draft` | skip the page |
 | `dropcap: true` | drop cap on the first paragraph |
@@ -204,7 +204,7 @@ those the same wrapper + base class yourself and compose the modifiers:
 Table styling lives in the design system stylesheet, not the docs chrome CSS
 — if you point `designSystemPath` at your own stylesheet, bring the `.table`
 and `.table-scroll` rules with you or tables render unstyled. The same applies
-to `.site-header`, `.nav` and `.sticky-bar`: they are design system components,
+to `.site-header`, `.nav` and `.bar`: they are design system components,
 so a custom `designSystemPath` must supply them or the docs chrome loses its
 header and page sub-header.
 
