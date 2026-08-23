@@ -67,6 +67,7 @@ const CONFIG = {
   rootLinks: userConfig.rootLinks || [],
   markdownSourceBase: userConfig.markdownSourceBase || null,
   validateLayers: userConfig.validateLayers === true,
+  pageTransitions: userConfig.pageTransitions === true,
   uiScripts: userConfig.uiScripts || null, // null = kit-bundled copy-button + dropdown
   // Extension surface (all off by default)
   extraHeadHtml: userConfig.extraHeadHtml || '',
@@ -88,6 +89,14 @@ const PROJECT_CONFIG = CONFIG;
 // break every nav link in the output.
 if (CONFIG.basePath && (!CONFIG.basePath.startsWith('/') || CONFIG.basePath.endsWith('/'))) {
   console.error(`❌ Invalid basePath: "${CONFIG.basePath}" — it must start with "/" and must not end with "/", e.g. "/docs/site". Leave it unset to serve from the site root.`);
+  process.exit(1);
+}
+
+// pageTransitions contract: strictly true or false/unset — an options object
+// is reserved for later, so anything else fails loudly rather than being
+// silently coerced to off.
+if (userConfig.pageTransitions !== undefined && typeof userConfig.pageTransitions !== 'boolean') {
+  console.error(`❌ Invalid pageTransitions: expected true or false, got ${JSON.stringify(userConfig.pageTransitions)}. Page transitions are opt-in — set pageTransitions: true only after reading the "Page transitions" section of the docs-kit README.`);
   process.exit(1);
 }
 
@@ -909,11 +918,17 @@ function generateTableOfContents(html) {
     }
   }
 
+  // Empty in, empty out — a falsy return collapses both TOC renderings
+  // (tocAside and tocDropdown), rather than shipping a wrapper around
+  // "no headings" copy.
   if (headings.length === 0) {
-    return '<div class="toc-empty">No headings found</div>';
+    return '';
   }
 
-  let toc = '<nav class="toc"><ul class="toc-list">';
+  // Labelled "Table of contents", not "On this page": the dropdown's
+  // <summary> already says "On this page", and a nav label repeating its
+  // disclosure's name gets announced twice.
+  let toc = '<nav class="toc" aria-label="Table of contents"><ul class="toc-list">';
 
   headings.forEach((heading) => {
     const { level, id, text } = heading;
@@ -1111,10 +1126,14 @@ function renderPage(template, {
     .replace('{{OG_IMAGE}}', () => chrome.ogImage)
     .replace('{{PAGE_ACCESS}}', () => access)
     .replace('{{PAGE_SCRIPTS}}', () => scripts)
-    .replace('{{SECTION_SLUG}}', () => sectionSlug)
-    .replace('{{PAGE_SECTION}}', () => pageSection)
-    .replace('{{PAGE_ORDER}}', () => String(order))
-    .replace('{{PAGE_LEVEL}}', () => String(level))
+    // replaceAll: these are page-scoped constants, and the pageTransitions
+    // flag appends a second set of occurrences to containerAttrs — a single
+    // .replace() would let chrome injected earlier in the document steal the
+    // one substitution and leave the container carrying literal tokens.
+    .replaceAll('{{SECTION_SLUG}}', () => sectionSlug)
+    .replaceAll('{{PAGE_SECTION}}', () => pageSection)
+    .replaceAll('{{PAGE_ORDER}}', () => String(order))
+    .replaceAll('{{PAGE_LEVEL}}', () => String(level))
     .replace('{{CONTAINER_EXTRA}}', () => containerExtra)
     .replace('{{LAYOUT_ATTRS}}', () => sidebar ? ` data-sidebar-default="${escapeAttr(sidebar)}"` : '')
     .replaceAll('{{NAV_BASE}}', () => navBase)
@@ -1145,13 +1164,14 @@ function buildPageBody({ frame, content, toc = '' }) {
   return `<div class="docs-content-grid padding-global"${widthAttr}>
             <!-- Main Content -->
             <div class="docs-main">
+                ${tocDropdown(toc)}
                 <article>
                     ${content}
                 </article>
             </div>
 
             <!-- Table of Contents -->
-            ${toc}
+            ${tocAside(toc)}
         </div>`;
 }
 
@@ -1181,6 +1201,8 @@ function buildPageChrome(footerText) {
 
 /**
  * Wrap a table of contents in the docs-toc aside. Empty in, empty out.
+ * Both TOC renderings are emitted by buildPageBody from the same raw list;
+ * docs-site.css §8 shows exactly one of them, keyed on content-area width.
  */
 function tocAside(tableOfContents) {
   if (!tableOfContents) return '';
@@ -1188,6 +1210,21 @@ function tocAside(tableOfContents) {
       <span class="toc-header">On this page</span>
       <div class="toc-wrapper">${tableOfContents}</div>
     </aside>`;
+}
+
+/**
+ * The narrow-state TOC: a disclosure at the top of the article column,
+ * directly under the sticky breadcrumb bar. Same list markup as the aside;
+ * the aside, being later in the DOM, keeps the scroll-position highlighting
+ * (template.html keys links by heading id — last copy wins), which a closed
+ * disclosure has no use for anyway.
+ */
+function tocDropdown(tableOfContents) {
+  if (!tableOfContents) return '';
+  return `<details class="docs-toc-dropdown">
+      <summary>On this page</summary>
+      <div class="disclosure-content">${tableOfContents}</div>
+    </details>`;
 }
 
 /**
@@ -1828,9 +1865,19 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
   // `html` bodies skip markdownToHtml entirely. Its post-passes rewrite markup
   // unconditionally — <table> becomes .table-scroll > table.table, <pre><code>
   // gains a copy button, inline <code> gets chipified — which is right for
-  // prose and wrong for a hand-written page body.
+  // prose and wrong for a hand-written page body. {{icon:name}} still expands:
+  // the expansion normally lives inside markdownToHtml, so it is done here for
+  // the bodies that skip it — the same parity the pair renderer keeps for
+  // tools, and what page-types.md promises for every HTML body. The guard
+  // matches the markdown path's: the shorthand stays literal inside <code>,
+  // <pre>, and HTML comments — an expansion inside a comment injects the
+  // fallback's own comment markers and breaks the comment open at the first
+  // `-->`, spilling the remainder into the rendered page.
   let htmlContent = type.body === 'html'
-    ? content
+    ? content.replace(
+        /(<code[^>]*>[\s\S]*?<\/code>)|(<pre[^>]*>[\s\S]*?<\/pre>)|(<!--[\s\S]*?-->)|\{\{icon:([a-z0-9-]+)\}\}/g,
+        (match, code, pre, comment, name) => (code || pre || comment) ? match : getIcon(name)
+      )
     : markdownToHtml(content + buildComponentUsage(file));
 
   // Apply drop cap to first paragraph if enabled in frontmatter
@@ -1894,7 +1941,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
     header: pageHeader,
     stickyBar: pageSubbar,
     content: htmlContent,
-    toc: type.toc ? tocAside(tableOfContents) : '',
+    toc: type.toc ? tableOfContents : '',
     frame: type.frame,
     pageNav: type.pager ? generatePageNav(file, pageOrder) : '',
     access,
@@ -2706,7 +2753,7 @@ function generateBrandDocs(template, themes) {
         header: pageHeader,
         stickyBar: pageSubbar,
         content: htmlContent,
-        toc: tocAside(tableOfContents),
+        toc: tableOfContents,
         pageNav: '{{PAGE_NAV}}',
         access: deriveDataAccess(frontmatter),
         scripts: buildPageScripts(frontmatter.section || '', frontmatter, navBase),
@@ -2963,7 +3010,7 @@ function generateSourceDirPages(template, {
         ? buildPageHeaderHtml({ title: frontmatter.title, subtitle: frontmatter.subtitle })
         : '',
       content,
-      toc: type.toc ? tocAside(generateTableOfContents(content)) : '',
+      toc: type.toc ? generateTableOfContents(content) : '',
       frame: type.frame,
       stickyBar: type.stickyBar
         ? buildBar({
@@ -3770,10 +3817,51 @@ function applyTemplateChrome(rawTemplate) {
   // All configured paths are site-root-relative; the {{NAV_BASE}} prefix
   // resolves them per page depth. Absolute URLs pass through untouched.
   const nav = (p) => prefixHref('{{NAV_BASE}}', p);
-  const styleLinks = CONFIG.extraStylesheets.map(href => `<link rel="stylesheet" href="${nav(href)}">`).join('\n    ');
+  let styleLinks = CONFIG.extraStylesheets.map(href => `<link rel="stylesheet" href="${nav(href)}">`).join('\n    ');
   const uiScriptTags = uiScripts.map(src => `<script src="${nav(src)}" defer></script>`).join('\n    ');
-  const extraScriptTags = CONFIG.extraScripts.map(src => `<script src="${nav(src)}" defer></script>`).join('\n    ');
+  let extraScriptTags = CONFIG.extraScripts.map(src => `<script src="${nav(src)}" defer></script>`).join('\n    ');
   const highlightTag = `<script src="${nav(CONFIG.highlightJs)}"></script>`;
+
+  // Page transitions (opt-in): ship the kit-bundled Barba assets and wire the
+  // markup the resolver needs. A config whose wrapperAttrs/containerAttrs
+  // already carry a data-barba attribute owns its Barba wiring outright — the
+  // flag is then skipped entirely (assets, tags, and attrs), because loading
+  // the kit's barba.min.js next to a site's own copy reassigns window.barba
+  // and boots a second router that intercepts every click twice.
+  let wrapperAttrs = CONFIG.wrapperAttrs;
+  let containerAttrs = CONFIG.containerAttrs;
+  const manualBarbaWiring = /data-barba\s*=/.test(wrapperAttrs + containerAttrs);
+  if (CONFIG.pageTransitions && manualBarbaWiring) {
+    console.warn('⚠️  pageTransitions: true ignored — wrapperAttrs/containerAttrs already carry data-barba markup, so this config owns its own Barba wiring (vendor script, init script, transition CSS). Remove the manual attrs to use the kit-bundled transitions.');
+  }
+  if (CONFIG.pageTransitions && !manualBarbaWiring) {
+    // The opt-in must not half-ship: pages linking scripts that 404 fail
+    // silently in the browser, so a missing bundled asset fails the build.
+    const barbaAssets = ['barba-transitions.css', 'js/barba-docs.js', 'js/vendor/barba.min.js', 'js/vendor/barba-LICENSE.txt'];
+    for (const rel of barbaAssets) {
+      if (!fs.existsSync(path.join(KIT_ASSETS, rel))) {
+        console.error(`❌ pageTransitions is on but a bundled asset is missing: ${path.join(KIT_ASSETS, rel)} — reinstall the docs-kit package.`);
+        process.exit(1);
+      }
+    }
+    copyKitAsset('barba-transitions.css', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'barba-transitions.css'));
+    copyKitAsset('js/vendor/barba.min.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'vendor', 'barba.min.js'));
+    copyKitAsset('js/vendor/barba-LICENSE.txt', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'vendor', 'barba-LICENSE.txt'));
+    copyKitAsset('js/barba-docs.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'barba-docs.js'));
+
+    // Before extraStylesheets so a consumer stylesheet can override; after
+    // extraScripts so consumer modules (window.bdBarbaOptions, bd:after-nav
+    // handlers) are in document order before the router boots.
+    const barbaStyleLink = `<link rel="stylesheet" href="${nav('assets/docs-kit/barba-transitions.css')}">`;
+    styleLinks = styleLinks ? `${barbaStyleLink}\n    ${styleLinks}` : barbaStyleLink;
+    const barbaScriptTags =
+      `<script src="${nav('assets/docs-kit/vendor/barba.min.js')}" defer></script>\n    ` +
+      `<script src="${nav('assets/docs-kit/barba-docs.js')}" defer></script>`;
+    extraScriptTags = extraScriptTags ? `${extraScriptTags}\n    ${barbaScriptTags}` : barbaScriptTags;
+
+    wrapperAttrs += ' data-barba="wrapper"';
+    containerAttrs += ' data-barba="container" data-barba-namespace="{{SECTION_SLUG}}" data-section="{{PAGE_SECTION}}" data-order="{{PAGE_ORDER}}" data-level="{{PAGE_LEVEL}}"';
+  }
 
   return rawTemplate
     .replaceAll('{{CONFIG_PATH}}', `${path.basename(DOCS_DIR)}/docs.config.js`)
@@ -3781,11 +3869,11 @@ function applyTemplateChrome(rawTemplate) {
     .replace('{{EXTRA_STYLESHEETS}}', () => styleLinks)
     .replace('{{EXTRA_HEAD}}', () => CONFIG.extraHeadHtml.trimEnd())
     .replace('{{BODY_ATTRS}}', () => CONFIG.bodyAttrs)
-    .replace('{{WRAPPER_ATTRS}}', () => CONFIG.wrapperAttrs)
+    .replace('{{WRAPPER_ATTRS}}', () => wrapperAttrs)
     // {{CONTAINER_EXTRA}} rides along after the configured container attrs so
     // a page can add its own without every consumer config having to declare
     // the slot. renderPage fills it; it is empty on all but tool pages.
-    .replace('{{CONTAINER_ATTRS}}', () => CONFIG.containerAttrs + '{{CONTAINER_EXTRA}}')
+    .replace('{{CONTAINER_ATTRS}}', () => containerAttrs + '{{CONTAINER_EXTRA}}')
     // {{EXTRA_CONTENT}} is not filled here — it is part of {{PAGE_CHROME}},
     // which renderPage fills per page so a page type can omit it.
     .replace('{{HIGHLIGHT_JS}}', () => highlightTag)

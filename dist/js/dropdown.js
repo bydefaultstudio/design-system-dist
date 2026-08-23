@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.0.0 */
+/* @bydefaultstudio/design-system v4.2.0 */
 /**
  * Dropdown component — WAI-ARIA menu button pattern
  *

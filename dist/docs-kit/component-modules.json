@@ -1,11 +1,12 @@
 {
-  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^4.0.0",
+  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^4.2.0",
   "modules": [
     "accordion.js",
     "bar.js",
     "bd-audio.js",
     "bd-cursor.js",
     "bd-video.js",
+    "cell-input.js",
     "copy-button.js",
     "dialog.js",
     "dropdown.js",
@@ -20,7 +21,8 @@
     "bd-video.css"
   ],
   "moduleAliases": {
-    "drawer": "dialog.js"
+    "drawer": "dialog.js",
+    "login": "password-toggle.js"
   },
   "headless": [
     "bd-audio.js"

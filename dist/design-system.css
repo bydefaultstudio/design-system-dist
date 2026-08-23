@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.0.0 */
+/* @bydefaultstudio/design-system v4.2.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -1681,7 +1681,7 @@ h4,
 h5,
 h6 {
   font-weight: 400;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   margin-top: var(--space-xl);
   margin-bottom: var(--space-l);
   font-family: var(--title-family);
@@ -1906,7 +1906,13 @@ dd {
 
 /* -- Focus styles -- */
 /* `button` is included so .button and every bare button share one ring
-   instead of falling back to the browser default. */
+   instead of falling back to the browser default.
+
+   The widest ring in this section paints 4px outside the border box
+   (2px outline + 2px offset on zero-padding buttons). .dialog-body and
+   .drawer-body size their clip-box padding to exactly that — widen an
+   outline or offset here and those two rules must grow with it, or
+   focus rings crop again at the body edges. */
 a:focus,
 button:focus,
 [role=button]:focus,
@@ -2825,6 +2831,21 @@ input[type="radio"]:disabled:checked {
   height: 1.25rem;
 }
 
+/* Icon state: eye-off while the password is hidden, eye once revealed.
+   Keyed on aria-pressed — the attribute the script already flips — so the
+   swap is pure CSS and the markup carries both icons. Scoped with :has()
+   to dual-icon toggles: legacy markup with a single eye keeps its static
+   icon rather than ending up with an empty button. Two rules, not one
+   selector list — a browser without :has() drops only the rule it cannot
+   parse, keeping the pressed-state half working. */
+.password-toggle:has(.svg-icn[data-icon="eye-off"]):not([aria-pressed="true"]) .svg-icn[data-icon="eye"] {
+  display: none;
+}
+
+.password-toggle[aria-pressed="true"] .svg-icn[data-icon="eye-off"] {
+  display: none;
+}
+
 /* ------ 13. DISCLOSURE (details / summary) ------ */
 
 /* -- Base disclosure -- */
@@ -3682,6 +3703,26 @@ td .svg-icn {
   border-top-width: var(--border-m);
 }
 
+/* -- Labelled divider --
+   A rule with a word in it ("or"). Not an <hr> — the label is content —
+   so this variant rides a <div>. Lines are pseudo-elements drawn from the
+   same divider tokens. No role="separator": the label should be read. */
+.divider--labelled {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  border-top: none;
+  font-size: var(--font-s);
+  color: var(--text-secondary);
+}
+
+.divider--labelled::before,
+.divider--labelled::after {
+  content: "";
+  flex: 1;
+  border-top: var(--divider-thickness) solid var(--divider-color);
+}
+
 hr {
   border: none;
   border-top: var(--divider-thickness) solid var(--divider-color, var(--border-faded));
@@ -4218,6 +4259,13 @@ hr.xl {
      shrinking and pushes the footer actions out of the dialog. */
   min-height: 0;
   overscroll-behavior: contain;
+  /* overflow-y turns the body into a clip box on both axes, and focus
+     outlines paint outside the border box — up to 4px (2px outline +
+     2px offset). Full-width fields touch the body's edges, so their
+     outlines were cropped. The padding keeps them inside the clip box;
+     the matching negative margin cancels it so nothing visibly moves. */
+  padding: 4px;
+  margin: -4px;
 }
 
 .dialog-body > *:first-child {
@@ -4529,6 +4577,10 @@ body:has(.drawer[open]) {
      shrinking and pushes the footer out of the drawer. */
   min-height: 0;
   overscroll-behavior: contain;
+  /* Same clip-box fix as .dialog-body: focus outlines paint up to 4px
+     outside the border box and were cropped at the body's edges. */
+  padding: 4px;
+  margin: -4px;
 }
 
 .drawer-body > *:first-child {
@@ -5217,8 +5269,13 @@ a.book-cover:focus-visible {
   background: var(--book-contents-item-background-hover);
 }
 
+/* The transparent outline is not dead code: forced-colors mode (Windows High
+   Contrast) suppresses box-shadow, and an outline drawn transparent here is
+   repainted in the user's forced palette there — without it the ring
+   vanishes entirely for exactly the users who most need it. */
 .book-contents-item:focus-visible {
-  outline: none;
+  outline: 2px solid transparent;
+  outline-offset: -1px;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
 }
 
@@ -5300,6 +5357,107 @@ a.book-cover:focus-visible {
 a.book-contents-item:hover .book-contents-item-trailing .svg-icn,
 a.book-contents-item:focus-visible .book-contents-item-trailing .svg-icn {
   opacity: 1;
+}
+
+/* -- Contents row as a disclosure --
+ * The same row, opening in place instead of navigating: a <details> wearing
+ * .book-contents-item, for lists whose entries are short enough to live
+ * inline — a glossary definition, a spec. The summary is the row; the panel
+ * is what opening reveals.
+ *
+ *   <details class="book-contents-item" name="…">   ← same name = single-open
+ *     <summary>
+ *       <span class="book-contents-item-title">Channel</span>
+ *       <div class="book-contents-item-trailing">…chevron…</div>
+ *     </summary>
+ *     <div class="book-contents-item-panel">
+ *       <p class="book-contents-item-description">…</p>
+ *       <span class="book-contents-item-meta">…</span>
+ *     </div>
+ *   </details>
+ *
+ * The row layout moves from the element to the summary: on the anchor row the
+ * element IS the single line, but here the element also contains the open
+ * panel, and a flex row on it would sit summary and panel side by side.
+ * Same reason the hover moves — a highlight washing over an open panel would
+ * read as the whole thing being one button when only the summary is.
+ *
+ * The trailing icon is visible at rest, unlike the anchor row's
+ * hover-revealed arrow: a constant chevron says "opens in place" where the
+ * appearing arrow says "navigates". It rotates rather than swaps.
+ *
+ * No ARIA is added anywhere here on purpose: <details>/<summary> announce
+ * the disclosure role and expanded state natively, and duplicating state
+ * with aria-expanded double-announces in some screen readers.
+ */
+details.book-contents-item {
+  display: block;
+  padding: 0;
+  cursor: default;
+}
+
+details.book-contents-item:hover {
+  background: transparent;
+}
+
+/* Restates the row that section 13's bare-summary rule would otherwise
+   shrink: that rule is written for the small monospace disclosure and sets
+   its own font, padding and gap. */
+details.book-contents-item > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--book-contents-item-gap);
+  padding: var(--book-contents-item-padding);
+  font-size: inherit;
+  color: inherit;
+  transition: background-color var(--duration-xs) var(--ease-out);
+}
+
+/* Section 13 draws its own left-side chevron on every summary; this row
+   carries the real icon in the trailing slot, so the pseudo goes. */
+details.book-contents-item > summary::before {
+  content: none;
+}
+
+details.book-contents-item > summary:hover {
+  background: var(--book-contents-item-background-hover);
+  color: inherit;
+}
+
+/* The summary is the focusable element — a :focus-visible on the details
+   itself never matches — and it takes the family ring, not section 13's
+   inset outline, so the accordion matches its link siblings. The transparent
+   outline is the forced-colors fallback — see the family focus rule above. */
+details.book-contents-item > summary:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: -1px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+details.book-contents-item .book-contents-item-trailing .svg-icn {
+  opacity: 1;
+  transition: transform var(--duration-xs) var(--ease-out);
+}
+
+details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn {
+  transform: rotate(180deg);
+}
+
+/* --space-m, not the body slot's --space-2xs: the body pairs a title with
+   one line, but a panel holds paragraphs — at 2px they read as one blob. */
+.book-contents-item-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+  padding: 0 var(--book-contents-item-padding) var(--book-contents-item-padding);
+}
+
+/* Rotation is travel; the state change itself is the feedback. */
+@media (prefers-reduced-motion: reduce) {
+  details.book-contents-item .book-contents-item-trailing .svg-icn {
+    transition: none;
+  }
 }
 
 
@@ -6984,6 +7142,375 @@ section[id] {
 }
 
 
+/* ------ 45. SECTION HEADER ------
+ * A heading row that opens a region of content: a title on the left, an
+ * optional action on the right. The top border and block padding mark the
+ * boundary with whatever came before — the header owns that seam, so the
+ * content below it starts flush.
+ *
+ * Not a Page Header (that names the whole page, once) and not a Bar (that
+ * is persistent chrome with a bottom border). A section header is content:
+ * it repeats down a page, one per region, and the heading element chosen
+ * (h2/h3/h4) sets the size — the level is a document-outline decision and
+ * the scale follows it.
+ *
+ * There is deliberately no inline padding token: the layout hierarchy
+ * (padding-global) owns horizontal space, the header only owns the seam.
+ */
+
+:root {
+  /* The boundary line above the row — composes from the border system */
+  --section-header-border: var(--border-s) solid var(--border-faded);
+  /* Space between the line and the row content, mirrored below the row */
+  --section-header-padding-block: var(--space-l);
+  /* Minimum breathing room between title and actions when they crowd */
+  --section-header-gap: var(--space-m);
+  /* Space between controls inside the actions slot */
+  --section-header-actions-gap: var(--space-s);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--section-header-gap);
+  padding-block: var(--section-header-padding-block);
+  border-top: var(--section-header-border);
+}
+
+/* The element (h2/h3/h4) supplies the size; the class only removes the
+   document-flow margins, because the row's padding owns that rhythm.
+   min-width: 0 lets the title shrink as a flex item so one long unbroken
+   word wraps inside the row instead of overflowing it. */
+.section-header-title {
+  margin-block: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* -- Actions --
+   margin-inline-start: auto rather than justify-content: space-between on
+   the parent — with no actions present, the title still sits flush left
+   and gains no stray justification behaviour. When the row wraps, the
+   auto margin keeps the actions right-aligned on their own line — that is
+   intended, the slot holds trailing controls. */
+.section-header-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--section-header-actions-gap);
+  margin-inline-start: auto;
+}
+
+
+/* ------ 46. LOGIN ------
+   An authentication stack: header, one or more form panes, trailing text
+   actions. Thin by design — it composes .card, .form-group, .password-field
+   and .button rather than restyling them. Page centering belongs to the
+   consuming layout, not the component. Pane switching (sign in vs reset vs
+   one-time code) is consumer JavaScript toggling .is-hidden; the component
+   ships no script of its own. Password reveal is password-toggle.js. */
+
+:root {
+  --login-max-width: 380px;   /* one-column form measure */
+  --login-logo-height: 88px;  /* header logo slot */
+}
+
+.login {
+  width: 100%;
+  max-width: var(--login-max-width);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-l);
+}
+
+/* -- Header: logo + title + subtitle -- */
+.login-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-s);
+  text-align: center;
+}
+
+.login-logo {
+  height: var(--login-logo-height);
+  color: var(--text-primary);
+}
+
+.login-logo svg {
+  height: 100%;
+  width: auto;
+}
+
+/* Size is fixed by the class; weight stays with the heading element, so
+   an h1 and an h2 render the same size here but keep their own weight. */
+.login-title {
+  margin-block: 0;
+  font-size: var(--font-3xl);
+}
+
+.login-subtitle {
+  margin-block: 0;
+  font-size: var(--font-m);
+  color: var(--text-secondary);
+}
+
+/* Populated by flow JS (invite / recovery instructions); collapses when unused */
+.login-subtitle:empty {
+  display: none;
+}
+
+/* -- Form pane -- */
+/* A page may hold several panes and switch them with .is-hidden */
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+/* Tighter rhythm than the document-flow default: the pane's own gap owns
+   the spacing between groups, the group only owns label-to-input. */
+.login-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  margin-bottom: 0;
+}
+
+.login-form label {
+  color: var(--text-secondary);
+}
+
+/* Divider spacing is re-pointed, not overridden — the pane gap already
+   separates it from its neighbours. */
+.login-form .divider {
+  --divider-spacing: var(--space-2xs);
+}
+
+/* -- Meta row: remember-me vs forgot link -- */
+.login-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-s);
+}
+
+/* -- Status: form-level live region -- */
+/* Present but empty until consumer JS fills it */
+.login-status {
+  margin-block: 0;
+  font-size: var(--font-s);
+  text-align: center;
+}
+
+/* Not display: none — that would drop the live region out of the
+   accessibility tree while empty, and polite (role="status") regions
+   revealed from display:none are not reliably announced. The element
+   stays rendered at zero height; the negative margin cancels the extra
+   pane gap it would otherwise open. */
+.login-status:empty {
+  margin-top: calc(-1 * var(--space-s));
+}
+
+.login-status[data-type="danger"] {
+  color: var(--status-danger);
+}
+
+.login-status[data-type="success"] {
+  color: var(--status-success);
+}
+
+/* -- Footer: trailing text actions -- */
+.login-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+
+/* ------ 47. CELL INPUT ------ */
+
+/* Fixed-shape text entry rendered as one cell per character — quiz answers,
+   verification codes, PINs, dates, sort codes. One real input carries focus,
+   value and the accessible name; the cells are a projection of it, built and
+   painted by cell-input.js. A [data-static] instance is cells only — no
+   input, no JS — for displaying a code rather than entering one. */
+
+:root {
+  /* -- Component tokens (re-point these to re-skin; never override the rules) -- */
+  /* Cell geometry is the only value the component owns outright — everything
+     else rides the input/status semantic tokens. */
+  --cell-input-width: 2rem;
+  --cell-input-height: 2.5rem;
+  /* Surface defaults ride the input semantics so cells read as text fields;
+     re-point these for a brand that wants cells styled apart from its inputs. */
+  --cell-input-background: var(--input-background);
+  --cell-input-border-color: var(--input-border);
+  --cell-input-radius: var(--radius-s);
+  /* Separators are punctuation, not entry — narrower so they read as marks
+     between cells rather than empty cells. */
+  --cell-input-separator-width: 1.25rem;
+  /* Letter gap smaller than word gap, so words read as units. */
+  --cell-input-gap: var(--space-xs);
+  --cell-input-word-gap: var(--space-s);
+}
+
+/* The real input is stretched invisibly over the block, not hidden offscreen:
+   the OS caret and soft-keyboard geometry then sit exactly where the user is
+   looking (iOS scrolls and zooms to the input's rect), and the cells row is a
+   label for it, so tapping a cell focuses the input. */
+.cell-input {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.cell-input input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: none;
+}
+
+/* Invisible, so the caret cell below is the focus indicator — reset the
+   global input outline explicitly rather than relying on opacity to hide it */
+.cell-input input:focus {
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+
+.cell-input-cells {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--cell-input-word-gap);
+  width: fit-content;
+  max-width: 100%;
+  /* The element is a label — undo the global label margin and type so
+     neither leaks into the cells (see .form-check label for the precedent) */
+  margin-bottom: 0;
+  font-size: inherit;
+  border-radius: var(--cell-input-radius);
+  cursor: text;
+}
+
+.cell-input[data-static] .cell-input-cells {
+  cursor: default;
+}
+
+/* -- Words and cells -- */
+
+/* Words wrap as units; a word longer than the row wraps within itself */
+.cell-input-word {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--cell-input-gap);
+}
+
+.cell-input-cell {
+  display: grid;
+  place-items: center;
+  width: var(--cell-input-width);
+  height: var(--cell-input-height);
+  background-color: var(--cell-input-background);
+  border: var(--border-s) solid var(--cell-input-border-color);
+  border-radius: var(--cell-input-radius);
+  color: var(--input-text);
+  font-weight: var(--font-weight-semi-bold);
+  text-transform: uppercase;
+  transition:
+    border-color var(--duration-xs) var(--ease-out),
+    background-color var(--duration-xs) var(--ease-out);
+}
+
+/* The next empty cell reads as the caret — only while the input has focus —
+   and it IS the focus indicator (no ring around the group: the caret says
+   "focused, and here", which is strictly more than a ring says, so the ring
+   would be redundant ink). The inset shadow doubles the 1px border to a 2px
+   accent without shifting layout. cell-input.js keeps the caret on the last
+   cell when the row is full, so a complete entry never loses its indicator. */
+.cell-input:focus-within .cell-input-cell.is-active {
+  border-color: var(--input-focus);
+  box-shadow: inset 0 0 0 1px var(--input-focus);
+}
+
+/* Pre-revealed punctuation (hyphens, slashes, apostrophes) — shown, not typed */
+.cell-input-cell[data-cell="separator"] {
+  width: var(--cell-input-separator-width);
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--text-faded);
+}
+
+/* -- Reduced motion -- */
+@media (prefers-reduced-motion: reduce) {
+  .cell-input-cell {
+    transition: none;
+  }
+}
+
+/* forced-colors erases both the caret's border-color and its inset shadow,
+   and the focused element itself is invisible — high-contrast mode gets a
+   real outline around the row instead */
+@media (forced-colors: active) {
+  .cell-input:focus-within .cell-input-cells {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}
+
+/* -- Size -- */
+
+/* Long formats get compact cells; the variant re-points the geometry tokens */
+.cell-input[data-size="small"] {
+  --cell-input-width: 1.5rem;
+  --cell-input-height: 2rem;
+  --cell-input-separator-width: 1rem;
+}
+
+.cell-input[data-size="small"] .cell-input-cell {
+  font-size: var(--font-xs);
+}
+
+/* -- States -- */
+
+/* Verdict states colour the letter cells; separators stay quiet */
+.cell-input[data-type="success"] .cell-input-cell[data-cell="letter"] {
+  background: var(--status-success-bg);
+  border-color: var(--status-success);
+  color: var(--status-success);
+}
+
+.cell-input[data-type="danger"] .cell-input-cell[data-cell="letter"],
+.cell-input.is-error .cell-input-cell[data-cell="letter"] {
+  background: var(--status-danger-bg);
+  border-color: var(--status-danger);
+  color: var(--status-danger);
+}
+
+/* Pair .is-disabled with disabled on the input itself — the class paints,
+   the attribute stops focus and input. */
+.cell-input.is-disabled .cell-input-cells {
+  cursor: not-allowed;
+}
+
+.cell-input.is-disabled .cell-input-cell {
+  background: var(--input-disabled-bg);
+  color: var(--input-disabled-text);
+}
+
+
 /* ------ 15. COMPONENTS IN PROGRESS ------ */
 /*
  * The following components are actively being built.
@@ -7024,5 +7551,8 @@ section[id] {
  * - [x] Avatar (.avatar)
  * - [x] Page Header (.page-header)
  * - [x] Footer (.footer)
+ * - [x] Section Header (.section-header)
+ * - [x] Login (.login)
+ * - [x] Cell Input (.cell-input)
  */
 

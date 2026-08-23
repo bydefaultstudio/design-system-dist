@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^4.0.0"
+npm install "github:bydefaultstudio/design-system-dist#semver:^4.2.0"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -123,6 +123,7 @@ automatically — external URLs pass through untouched.
 | `uiScripts` | kit-bundled copy-button + dropdown | script list for docs UI behaviours |
 | `markdownSourceBase` | none | serve path of the .md sources; enables "view as markdown" menu items |
 | `validateLayers` | `false` | require a valid `layer:` field in every file's frontmatter |
+| `pageTransitions` | `false` | animated Barba.js page transitions — **opt-in only**; read the "Page transitions" section before enabling |
 
 ### Extension surface
 
@@ -207,6 +208,114 @@ and `.table-scroll` rules with you or tables render unstyled. The same applies
 to `.site-header`, `.nav` and `.bar`: they are design system components,
 so a custom `designSystemPath` must supply them or the docs chrome loses its
 header and page sub-header.
+
+## Page transitions
+
+`pageTransitions: true` turns the docs site into a single-page experience:
+navigations are fetched and animated instead of hard-loaded, with a
+directional scenario system driven by the page hierarchy the generator
+already emits — drilling into a doc slides up over its receding index,
+backing out slides down, sibling pages slide left and right in reading
+order, and anything unresolvable crossfades.
+
+**This is off by default, and enabling it is a decision, not a default.**
+Page transitions change how every script on your site runs: the page is no
+longer reloaded between navigations, so anything that assumes a fresh page
+per URL is now wrong. Do not enable it without reading this section, and
+expect to audit your page scripts when you do.
+
+### What the flag does
+
+- Emits `data-barba="wrapper"` / `data-barba="container"` markup, with the
+  scenario attributes (`data-level`, `data-section`, `data-order`) resolved
+  per page.
+- Copies the transition assets into the output (`assets/docs-kit/`):
+  `barba-docs.js`, `barba-transitions.css`, and a vendored `@barba/core`
+  2.9.7 (MIT — license ships alongside).
+- Links the stylesheet before your `extraStylesheets` (your overrides win)
+  and loads the two scripts after your `extraScripts` (your modules are in
+  document order before the router boots).
+
+If your `wrapperAttrs`/`containerAttrs` already carry a `data-barba`
+attribute, you own your Barba wiring outright and the flag is skipped
+entirely, with a build warning — loading a second copy of Barba next to
+your own would boot two routers and intercept every click twice. Use manual
+wiring or the flag, never both.
+
+### Conflicts checklist — read before enabling
+
+- **Scripts run once per session, not once per page.** `DOMContentLoaded`
+  fires only on the first load. A module that binds only there is inert
+  after the first navigation, with a clean console.
+- **Head scripts and stylesheets are never synced across a navigation.**
+  Every page must load the full script and style set. Meta tags (title,
+  description, OG/Twitter, canonical) are synced; `<script>` and
+  `<link rel="stylesheet">` are deliberately not.
+- **Sticky and fixed elements inside the container ride the transition
+  transform.** During a transition the containers are absolutely positioned
+  and translated; `position: sticky`/`fixed` descendants move with them. If
+  something must stay put, fade it via `body.is-animating` styling or mount
+  it outside the wrapper.
+- **In-page state does not survive navigation away and back** unless your
+  scripts rebuild it on arrival.
+- **Pages outside the generated output have no Barba markup.** A link into a
+  hand-authored page fails the router's container lookup. List such pages in
+  `preventPaths` so the router leaves them to the browser.
+- **Dark-first sites:** the transition backdrop falls back to white when
+  `--background-primary` is undefined. Define the token (the packaged
+  design-system CSS does) or override `[data-barba="container"]`'s
+  background in your own stylesheet.
+
+### The page-module contract
+
+Any script that touches page content must:
+
+1. Register its init on **both** `DOMContentLoaded` and the `bd:after-nav`
+   event (dispatched on `document` after every completed navigation, once
+   the new container is settled and the old one removed).
+2. Be **idempotent** — guard with a `dataset` flag or equivalent so running
+   twice on the same node is harmless.
+3. Scope its queries to `event.detail.container` rather than `document`
+   where possible.
+4. Tear down document/window listeners, observers, and timers on
+   `bd:before-nav` (dispatched before the leave animation, with the
+   departing container in `event.detail.container`).
+
+Scripts placed *inside* the container are re-executed on every arrival
+automatically; scripts matching the library patterns (`/vendor/`, common
+CDNs) load once and are skipped after.
+
+### Scenario contract
+
+The resolver reads `data-level` (1 = section index, 2 = doc page),
+`data-section`, and `data-order` from the container — all emitted by the
+generator. Pages without `data-level` (e.g. custom markup) resolve to the
+`fade` scenario by design. Motion timing comes from the design system's
+`--motion-page-*` tokens, with working fallbacks when they are absent.
+
+### Options
+
+For site-specific behavior, set `window.bdBarbaOptions` in any script loaded
+before the router — anything in `extraScripts`, or inline HTML in
+`extraBodyEndHtml` (an *external* script added there loads too late; use
+`extraScripts` for files). All keys optional:
+`preventPaths` (RegExp[] the router must not intercept), `preventWhen`
+(predicate), `libraryPatterns` (RegExp[], appended), `metaSelectors`
+(string[], appended), `transitionMap` (per-scenario animation overrides),
+`onBeforeLeave(data)`, `onAfterNav(container)`, `onNextDocument(doc)`,
+`timeout` (ms, default 5000), `cacheIgnore` (default `false` — set `true`
+if your pages vary per request), `prefetchIgnore` (default `true`).
+
+### Enabling it later
+
+A site built without transitions upgrades cleanly: add
+`pageTransitions: true` to `docs.config.js`, rerun the build, and audit
+every page script against the contract above. The markup is generated, so
+nothing else changes by hand. To back out, remove the key and rebuild.
+
+No verification tool ships with the kit — after enabling, click through a
+section index, a doc page, sibling pages in both directions, and any page
+with custom scripts, and check the console on each navigation.
 
 ## Versioning
 

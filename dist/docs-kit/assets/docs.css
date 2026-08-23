@@ -25,7 +25,7 @@
  *  1A. Toolbar           — page variant of the control bar used by the tools
  *   2. Copy Button        — affordance for copying tokens / snippets
  *   3. Token Copy         — inline copy chips inside generated token tables
- *   4. (vacated)          — the book family moved to design-system.css §37
+ *   4. A–Z Index          — jump-to-letter rail (behaviour: assets/js/az-index.js)
  *   5. Asset Card         — brand-asset showcase pattern
  *   6. Don't Card         — "do/don't" rule cards used in brand docs
  *      (cross-page transition styles ship separately with the site)
@@ -49,7 +49,7 @@
  *   23. Code blocks          — markdown pre/code wrapper
  *   24. Docs cards           — index/landing layout
  *   25. Responsive           — media queries for the docs shell
- *   26. Auth                 — login overlay, role-gated visibility, account
+ *   26. Auth                 — user-info chip, login overlay, login page chrome
  * ===================================================================== */
 
 
@@ -241,6 +241,129 @@
 
 /* NOTE: the book family (.book-shelf, .book-cover, .book-contents) moved to
  * design-system.css section 37 — see CLAUDE.md §17 (Layer Discipline) */
+
+
+/* ------ 4. A–Z INDEX ------
+ * The phone-book jump rail: one square per letter, letters with no entries
+ * held in place as disabled spans so the alphabet never reflows as filters
+ * change. Behaviour lives in assets/js/az-index.js (ported from the glossary
+ * repo); only presentation is here. One consumer today — the glossary page —
+ * which is what keeps this docs-site rather than core (CLAUDE.md §17 Rule 7).
+ */
+
+:root {
+  /* Starting value only. az-index.js measures the rail and overwrites this on
+     :root as it rewraps — one row of letters at desktop width, up to three on
+     a phone. Nothing should rely on the number here; it exists so the jump
+     offset below is sane between first paint and the rail being built. */
+  --az-index-height: 3rem;
+}
+
+.az-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+
+  /* Docks under whatever the page already docks — header, plus the sticky
+     bar when one is present. --scroll-offset (section 11 below) carries that
+     sum plus one --space-xl of breathing room for anchor targets; the rail
+     wants the dock line itself, so the breathing room comes back off. */
+  position: sticky;
+  top: calc(var(--scroll-offset) - var(--space-xl));
+  z-index: 1;
+
+  padding-block: var(--space-s);
+  background-color: var(--background-primary);
+}
+
+.az-index-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Fixed square so the rail does not reflow between narrow letters (I) and
+     wide ones (W) as the active state changes. */
+  min-width: 2rem;
+  min-height: 2rem;
+
+  font-size: var(--font-s);
+  font-family: var(--font-primary);
+  text-transform: uppercase;
+  text-decoration: none;
+
+  color: var(--text-secondary);
+  background-color: var(--bg-faded-5);
+  border-radius: var(--radius-xs);
+
+  transition:
+    background-color var(--duration-xs) var(--ease-out),
+    color var(--duration-xs) var(--ease-out);
+}
+
+/* One step up the faded ladder, not a cross to --background-faded — that
+   token resolves to the same 5% as the rest state in light mode, which
+   would leave the hover animating nothing. */
+.az-index-letter:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-faded-10);
+}
+
+.az-index-letter:focus-visible {
+  outline: 2px solid var(--input-focus);
+  outline-offset: 2px;
+}
+
+.az-index-letter.is-active {
+  color: var(--background-primary);
+  background-color: var(--text-primary);
+}
+
+/* Letters with no entries stay in place rather than being removed, so the
+   alphabet does not shift under the cursor as filters change. */
+.az-index-letter.is-disabled {
+  color: var(--text-faded);
+  background-color: transparent;
+  pointer-events: none;
+}
+
+/* -- Glossary page tuning --
+ * The interactive term list on /glossary.html: search field, letter rail,
+ * letter-grouped book-contents lists of details rows (design-system.css §37).
+ * Structure is authored in cms/glossary.md; behaviour is assets/js/glossary.js.
+ */
+
+/* A lookup box rather than a form control in a column of controls, so it
+   reads a step up from body size. Everything else comes from the design
+   system's input[type="search"] rules — and the element selector is what
+   makes this win: those rules are input[type="search"] at (0,1,1), so a bare
+   .glossary-search at (0,1,0) loses on specificity and the size never lands.
+   input.glossary-search ties at (0,1,1) and wins on source order. */
+input.glossary-search {
+  font-size: var(--font-l);
+}
+
+/* Jumping to a letter has to clear the header, any docked bar, AND the sticky
+   rail itself. --scroll-offset covers the first two plus breathing room; the
+   rail's measured height is added on top.
+
+   The [id] is load-bearing, not decoration: design-system.css §39B sets
+   scroll-margin-top on `section[id]` at (0,1,1), and a letter group is a
+   <section> with an id, so a bare .az-group at (0,1,0) would silently lose
+   and the heading would land under the rail. [id] takes this to (0,2,0).
+   Same trap the glossary repo documents in its own stylesheet — do not
+   simplify it back. */
+.az-group[id],
+.glossary-terms details[id] {
+  scroll-margin-top: calc(var(--scroll-offset) + var(--az-index-height));
+}
+
+/* Density re-point for a 13-row page: the shipped --font-4xl title is
+   index-page scale. Token re-point on the declaring element, scoped to this
+   page's wrapper so the variant keeps its shipped size everywhere else. */
+.glossary-terms .book-contents-item {
+  --book-contents-item-title-size: var(--font-2xl);
+}
 
 
 /* ------ 5. ASSET CARD ------
@@ -694,9 +817,14 @@ body:has(.bar[data-sticky="true"]:not([data-density="regular"])) {
 }
 
 
-/* Smooth scroll for same-page anchor links */
-html {
-  scroll-behavior: smooth;
+/* Smooth scroll for same-page anchor links. Guarded because the glossary's
+   A–Z rail makes animated jumps a page's primary navigation, not an
+   occasional TOC click — readers who asked for reduced motion get an
+   instant jump instead. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 /* -- Layout grid (mirrors studio/assets/css/studio.css) --
@@ -732,7 +860,21 @@ body.no-sidebar .docs-layout {
     "main";
 }
 
-/* Main content area — now a grid cell, no margin offsets needed */
+/* Main content area — now a grid cell, no margin offsets needed.
+ *
+ * Also the query container for everything inside it: this track's width is
+ * the real space content has to work with (viewport minus 280px open /
+ * 64px collapsed / 0 no-sidebar), so content-level breakpoints query it
+ * with `@container main-content (…)` instead of the viewport. One set of
+ * rules covers every sidebar state. Container name matches studio.css —
+ * deliberate mirror.
+ *
+ * Two consequences of container-type worth knowing: this element is now a
+ * stacking context and the containing block for position:fixed
+ * descendants — fixed chrome and high-z overlays (toasts, back-to-top)
+ * must stay OUTSIDE .docs-main-area, which they already do. Browsers
+ * without @container (only Safari 15.4–15.6 also has the :has() these
+ * rules lean on) keep a permanent two-column TOC; accepted, no fallback. */
 .docs-main-area {
   grid-area: main;
   display: flex;
@@ -740,6 +882,8 @@ body.no-sidebar .docs-layout {
   min-height: calc(100vh - var(--top-nav-height));
   position: relative;
   background-color: var(--background-primary);
+  container-type: inline-size;
+  container-name: main-content;
 }
 
 .docs-content-grid {
@@ -1338,7 +1482,13 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
 .docs-main {
   width: 100%;
   padding: var(--space-m) 0 var(--space-5xl) 0;
-  overflow: hidden;
+  /* clip, not hidden: both cut off horizontal blowout, but hidden makes this
+     element the scroll container for every sticky descendant — and since
+     .docs-main itself never scrolls, position: sticky inside it silently
+     never sticks. The A–Z rail on the glossary page docks only under clip.
+     (The docs TOC never hit this because it is a grid sibling, not a
+     descendant.) No JS reads this element's scroll state. */
+  overflow: clip;
 }
 
 /* Anchor offset is design-system.css §39B now, driven by --scroll-offset
@@ -1399,6 +1549,26 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   padding: var(--space-l);
 }
 
+/* Narrow-state TOC — the disclosure the generator emits at the top of
+   .docs-main, under the sticky breadcrumb bar. Hidden here; §8 shows it
+   (and hides the aside) when the content area drops below 860px. Inherits
+   the core <details> disclosure and the .toc-* list styles. */
+.docs-toc-dropdown {
+  display: none;
+  margin-bottom: var(--space-l);
+  border: var(--border-s) solid var(--border-faded);
+  border-radius: var(--radius-s);
+  padding: var(--space-s) var(--space-l);
+  background-color: var(--background-primary);
+}
+
+/* The wrapper's own padding plus the core disclosure indent plus each
+   .toc-link's padding-left stacks to ~70px of inset on a phone column —
+   drop the middle layer; the links keep their own. */
+.docs-toc-dropdown .disclosure-content {
+  padding-inline: 0;
+}
+
 .toc-header {
   display: block;
   font-size: var(--font-xs);
@@ -1439,10 +1609,6 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   border-left-color: var(--toc-border-active);
 }
 
-.toc-empty {
-  color: var(--text-faded);
-  font-size: var(--font-s);
-}
 
 
 /* ------ 5. DEMO PREVIEW ------ */
@@ -1649,18 +1815,55 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   color: var(--text-plain);
 }
 
-/* ------ 8. RESPONSIVE ------ */
+/* ------ 8. RESPONSIVE ------
+ * The split, ported from studio.css: `@media` is only for chrome anchored
+ * to the viewport (sidebar, drawer, top bar); `@container main-content`
+ * is for everything inside the content area, so rules see the width the
+ * content actually has — already minus the sidebar in whatever state it
+ * is in. Future content breakpoints go in container queries, never
+ * viewport media queries. The container is .docs-main-area (§1A). */
 
-/* ---- Tablet: TOC below content ---- */
-@media (max-width: 1024px) {
+/* ---- Narrow content: TOC column becomes the dropdown ---- */
+/* One breakpoint, owner-approved 2026-08-21: below 860px of content the
+   220px column can't share the row, so the aside hides and the disclosure
+   at the top of .docs-main takes over — at every narrower width, phones
+   included. 859.98 not 860: with the 64px collapsed sidebar a 924px
+   viewport lands exactly on 860 of content and both rules would fire
+   (same epsilon convention as studio.css). Selector repeats
+   :has(.docs-toc) to outrank the base two-column rule's specificity.
+   The 720px cap keeps body text readable once the column's 300px of
+   TOC + gap + padding is no longer holding it in. */
+@container main-content (max-width: 859.98px) {
 
-  .docs-content-grid {
-    grid-template-columns: minmax(0, 1fr); /* TOC below content on tablet */
+  .docs-content-grid:has(.docs-toc) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .docs-content-grid:has(.docs-toc) .docs-main {
+    width: 100%;
+    max-width: 720px;
+    margin-inline: auto;
   }
 
   .docs-toc {
-    position: static;
-    max-height: none;
+    display: none;
+  }
+
+  .docs-toc-dropdown {
+    display: block;
+  }
+}
+
+/* ---- Cramped content: tighter page padding ---- */
+/* Fires on phones (drawer sidebar, container = viewport) and equally in a
+   narrow desktop window with the sidebar open. */
+@container main-content (max-width: 767.98px) {
+
+  .docs-content-grid {
+    display: block;
+    padding-left: var(--space-l);
+    padding-right: var(--space-l);
+    padding-top: 0;
   }
 }
 
@@ -1783,18 +1986,9 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
     display: none;
   }
 
-  .docs-content-grid {
-    display: block;
-    padding-left: var(--space-l);
-    padding-right: var(--space-l);
-    padding-top: 0;
-  }
-
-  .docs-toc {
-    position: static;
-    max-height: none;
-    display: none;
-  }
+  /* Content-grid and TOC rules moved to the @container main-content
+     blocks in §8 — content layout queries the content area, not the
+     viewport. Only viewport-anchored chrome stays in this block. */
 
   /* Mobile: Home link and root-link separators */
   .sidebar-nav-home,
@@ -1968,141 +2162,10 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   display: flex;
 }
 
-.login-card {
-  width: 100%;
-  max-width: 380px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.login-logo {
-  height: 88px;
-  margin-bottom: var(--space-l);
-  color: var(--text-primary);
-}
-
-.login-logo svg {
-  height: 100%;
-  width: auto;
-}
-
-.login-title {
-  font-size: var(--font-xl);
-  font-weight: var(--font-weight-semi-bold);
-  color: var(--text-primary);
-  margin-bottom: var(--space-l);
-  text-align: center;
-}
-
-.login-subtitle {
-  font-size: var(--font-m);
-  color: var(--text-secondary);
-  margin-bottom: var(--space-l);
-  text-align: center;
-}
-
-/* Collapsed on the main login screen (empty by default); shown only when the
-   invite / reset flows populate it with instructions. */
-.login-subtitle:empty {
-  display: none;
-}
-
-.login-form {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-s);
-}
-
-.login-form .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-}
-
-.login-form label {
-  color: var(--text-secondary);
-}
-
-.login-submit-btn {
-  width: 100%;
-  margin-top: var(--space-2xs);
-}
-
-.login-error {
-  display: none;
-  font-size: var(--font-s);
-  color: var(--status-danger);
-  text-align: center;
-}
-
-.login-success {
-  display: none;
-  font-size: var(--font-s);
-  color: var(--status-success);
-  text-align: center;
-}
-
-/* --- Social sign-in (divider + Google) --- */
-
-.login-divider {
-  display: flex;
-  align-items: center;
-  gap: var(--space-s);
-  color: var(--text-secondary);
-}
-
-.login-divider-line {
-  flex: 1;
-  height: 1px;
-  background: var(--divider-color);
-}
-
-.login-divider-text {
-  font-size: var(--font-s);
-  color: var(--text-secondary);
-}
-
-.login-google-btn {
-  width: 100%;
-}
-
-.login-forgot-btn {
-  background: none;
-  border: none;
-  padding: var(--space-s) 0;
-  margin-top: var(--space-2xs);
-  /* font-size: var(--font-xs); */
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-family: inherit;
-  min-height: 44px;
-  transition: color 0.2s;
-}
-
-.login-forgot-btn:hover {
-  color: var(--text-link);
-}
-
-/* --- Password Field (input + show/hide toggle) --- */
-
-.login-reset-form {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-s);
-}
-
-.login-reset-form .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-}
-
-.login-reset-form label {
-  color: var(--text-secondary);
-}
+/* The login screens themselves (card, panes, status regions, social buttons)
+   are the .login component in design-system.css §46 — the hand-rolled
+   .login-* rules that lived here were retired when auth/login.html and
+   auth/account.html moved onto it. Only page chrome remains below. */
 
 /* --- Login Page (standalone /auth/login.html) --- */
 
@@ -2117,46 +2180,6 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   min-height: calc(100vh - var(--top-nav-height));
   padding: var(--space-l);
   background: var(--background-primary);
-}
-
-/* --- Set Password Form --- */
-
-.login-set-password-form {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-s);
-}
-
-.login-set-password-form .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-}
-
-.login-set-password-form label {
-  color: var(--text-secondary);
-}
-
-/* --- Account Page --- */
-
-.account-section {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-s);
-  padding-top: var(--space-m);
-  border-top: var(--border-s) solid var(--border-faded);
-}
-
-.account-section .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-}
-
-.account-section label {
-  color: var(--text-secondary);
 }
 
 /* --- Access Denied Page --- */

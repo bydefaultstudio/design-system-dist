@@ -1,16 +1,16 @@
-<!-- @bydefaultstudio/design-system v4.0.0 -->
+<!-- @bydefaultstudio/design-system v4.2.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 4.0.0 (package)**
+**Version: 4.2.0 (package)**
 
 ## Getting the System
 
 The system ships as one CSS file plus an icon sprite, distributed through the public artefact repo:
 
 ```bash
-npm install github:bydefaultstudio/design-system-dist#semver:^3.0.0
+npm install github:bydefaultstudio/design-system-dist#semver:^4.2.0
 ```
 
 - Link `design-system.css` before any site or theme CSS.
@@ -1190,6 +1190,34 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--nav-link-color` | `var(--text-primary)` |  |
 | `--nav-link-color-hover` | `var(--text-plain)` |  |
 | `--nav-link-color-current` | `var(--text-plain)` |  |
+
+### 46. LOGIN ------
+   An authentication stack: header, one or more form panes, trailing text
+   actions. Thin by design — it composes .card, .form-group, .password-field
+   and .button rather than restyling them. Page centering belongs to the
+   consuming layout, not the component. Pane switching (sign in vs reset vs
+   one-time code) is consumer JavaScript toggling .is-hidden; the component
+   ships no script of its own. Password reveal is password-toggle.js.
+
+| Token | Value | Note |
+| --- | --- | --- |
+| `--login-max-width` | `380px` | one-column form measure |
+| `--login-logo-height` | `88px` | header logo slot |
+
+### 47. CELL INPUT
+
+| Token | Value | Note |
+| --- | --- | --- |
+| **Component tokens (re-point these to re-skin; never override the rules)** | | |
+| `--cell-input-width` | `2rem` |  |
+| `--cell-input-height` | `2.5rem` |  |
+| `--cell-input-background` | `var(--input-background)` |  |
+| `--cell-input-border-color` | `var(--input-border)` |  |
+| `--cell-input-radius` | `var(--radius-s)` |  |
+| `--cell-input-separator-width` | `1.25rem` |  |
+| **Letter gap smaller than word gap, so words read as units.** | | |
+| `--cell-input-gap` | `var(--space-xs)` |  |
+| `--cell-input-word-gap` | `var(--space-s)` |  |
 
 ### DARK MODE OVERRIDES
 
@@ -2769,6 +2797,9 @@ Every interactive component must include:
 | Avatar | `.avatar` | No | `avatar.md` |
 | Bar | `.bar`, `.bar-container`, `.bar-content`, `.bar-group`, `.bar-actions`, `.bar-overflow`, `.bar-close` | Yes — `bar.js` (overflow) | `bar.md` |
 | Page Header | `.page-header`, `.page-header-media`, `.page-header-container`, `.page-header-title`, `.page-header-subtitle`, `.page-header-actions` | No | `page-header.md` |
+| Section Header | `.section-header`, `.section-header-title`, `.section-header-actions` | No | `section-header.md` |
+| Login | `.login`, `.login-header`, `.login-logo`, `.login-title`, `.login-subtitle`, `.login-form`, `.login-meta`, `.login-status`, `.login-footer` | No | `login.md` |
+| Cell Input | `.cell-input`, `.cell-input-cells`, `.cell-input-word`, `.cell-input-cell` | Yes — `cell-input.js` (cell build + paint) | `cell-input.md` |
 | Mark / Abbr / Figure | `mark`, `abbr`, `figure` | No | `mark.md` |
 
 > Asset Card, Book Cover and Don't Card are documented separately as **docs-site components**. They only exist to power this BrandOS docs site and are not part of the portable design system. See [Layer Discipline](/docs/setup.html) and CLAUDE.md §17.
@@ -4618,6 +4649,10 @@ Two components complete the model and live in their own docs: moving sideways be
       .book-contents-item-meta           ← metadata, under the description
         .book-contents-item-byline       ← "by X", inside meta
     .book-contents-item-trailing         ← icon, hints at what clicking does
+
+details.book-contents-item               ← the same row, opening in place
+  summary                                ← the visible row: title + trailing
+  .book-contents-item-panel              ← revealed: description + meta
 ```
 
 Slots are named on **two different principles**, because they hold two different kinds of thing:
@@ -4953,10 +4988,68 @@ Both settings collapse to a single column at 768px. The breakpoint belongs to th
 
 ---
 
+## Contents as disclosures
+
+A contents row navigates. When the row's content is short enough to live in place — a glossary definition, a spec, a one-paragraph answer — opening beats navigating, and the row becomes a `<details>` wearing the same class. The summary is the row; the panel is what opening reveals.
+
+**The title element depends on what the list is.** A row title is a `<span>` when the list is navigation — a contents index the reader scans to choose a destination, where flooding the outline with row titles helps nobody. It becomes an `<h3>` when the list *is* the page's content: every row carries an anchor id, the rows are the thing the reader came for, and the page type emits no TOC. The glossary is the reference case. `.book-contents-item-title` overrides margin, size, line-height and weight either way; the heading's slightly tighter letter-spacing is the one visible difference, and it matches the anchor rows, which have always used `<h3>`.
+
+**Panels with more than one paragraph** may section themselves with `<h4 class="label">` subtitles — real sub-sections only, in entries long enough to need them. The closing examples line is not one of those sections: it is a fixed field, so its label is a `.label` span inside the meta slot, not a heading.
+
+```html
+<span class="book-contents-item-meta"><span class="label">Examples</span> the newsletter · a Reel</span>
+```
+
+</summary>
+      <div class="book-contents-item-panel">
+        <p class="book-contents-item-description">A channel is any place where the brand meets an audience directly.</p>
+        <span class="book-contents-item-meta"><span class="label">Examples</span> the newsletter · the Instagram account · the website</span>
+      </div>
+    </details>
+    <details class="book-contents-item">
+      <summary>
+        <span class="book-contents-item-title">Format</span>
+        <div class="book-contents-item-trailing">{{icon:chevron-down}}</div>
+      </summary>
+      <div class="book-contents-item-panel">
+        <p class="book-contents-item-description">A format is the unit a channel accepts; regulations are scoped here.</p>
+        <span class="book-contents-item-meta"><span class="label">Examples</span> a Reel · a carousel · an issue · a deck</span>
+      </div>
+    </details>
+  </div>
+</div>
+
+```html
+<div class="book-contents">
+  <details class="book-contents-item" name="glossary-term" id="term-channel">
+    <summary>
+      <h3 class="book-contents-item-title">Channel</h3>
+      <div class="book-contents-item-trailing">
+        <div class="svg-icn" data-icon="chevron-down"><!-- inline svg --></div>
+      </div>
+    </summary>
+    <div class="book-contents-item-panel">
+      <p class="book-contents-item-description">A channel is any place where the brand meets an audience directly.</p>
+      <span class="book-contents-item-meta"><span class="label">Examples</span> the newsletter · the Instagram account</span>
+    </div>
+  </details>
+</div>
+```
+
+The code sample shows the reference-list form: `<h3>` title, anchor id, labelled examples. On a navigation list the title is a `<span>` and the id is optional — see the title rule above.
+
+**Single-open or multi-open.** The same `name` value across a list gives native single-open — opening one row closes the rest, no JavaScript. Omit `name` and each row toggles independently. Older browsers without `name` support fall back to multi-open, which degrades gracefully. Never author `open` on more than one row in a `name` group — it is invalid, and browsers resolve it by closing all but one unpredictably.
+
+**The trailing icon is visible at rest**, unlike the anchor row's hover-revealed arrow: a constant chevron says "opens in place" where the appearing arrow says "navigates". It rotates on open; under reduced motion the rotation is instant — the state change itself is the feedback.
+
+**No ARIA is needed.** `<details>`/`<summary>` announce the disclosure role and the expanded state natively; adding `aria-expanded` double-announces in some screen readers. The chevron is decorative and already carries `aria-hidden` through the `.svg-icn` wrapper. Interactive content remains forbidden in every slot — the summary is already the control.
+
+---
+
 ## Accessibility
 
-- **Use `<a>`, never a `<div>` with a click handler.** Every cover and contents item is a navigation link. The whole card is the link, so the accessible name is its full text content — title, description, and author together.
-- **Keep `meta` short.** Anything in `.book-cover-meta` or `.book-contents-item-meta` joins the link's accessible name. A date or a one-word status is fine; a sentence makes every card announce as a paragraph.
+- **Use `<a>`, never a `<div>` with a click handler.** Every cover and contents item that navigates is a link; the whole card is the link, so the accessible name is its full text content — title, description, and author together. A row that opens in place is a `<details>` instead — see "Contents as disclosures" — never a scripted div either way.
+- **Keep `meta` short on link rows.** Anything in `.book-cover-meta` or `.book-contents-item-meta` inside an `<a>` joins the link's accessible name. A date or a one-word status is fine; a sentence makes every card announce as a paragraph. The ceiling does not apply to a disclosure row — there the meta sits in the revealed panel and joins no accessible name.
 - **The trailing icon is decorative** and must carry `aria-hidden="true"`. It repeats what the link already says. Icons rendered through the design system's `.svg-icn` wrapper already do this.
 - **A leading icon needs a decision.** If it duplicates the title, hide it with `aria-hidden="true"`; if it carries information the title does not, give it an accessible name.
 - **Never nest interactive content in a slot.** The card is already a link — a button or second link inside it is invalid HTML and unreachable in several screen-reader modes. A card needing a second action should be restructured so the action is a sibling of the link, not a child.
@@ -5011,7 +5104,7 @@ This section documents how the component is built. For usage, see the sections a
 | `--book-cover-shadow-hover` | `0 7px 1px -3px var(--black-alpha-10)` | Hover shadow |
 | `--book-contents-border` | `var(--border-s) solid var(--border-faded)` | Contents list outer border |
 | `--book-contents-item-padding` | `var(--space-xl)` | Row height |
-| `--book-contents-item-gap` | `var(--space-l)` | Space between a row's slots |
+| `--book-contents-item-gap` | `var(--space-xl)` | Space between a row's slots |
 | `--book-contents-item-title-size` | `var(--font-4xl)` | Row title; steps down at 960px |
 | `--book-contents-item-background-hover` | `var(--background-faded)` | Row fill on hover |
 
@@ -5034,6 +5127,9 @@ This section documents how the component is built. For usage, see the sections a
 | `.book-contents` | L1 table of contents; draws the outer border |
 | `.book-contents-title` | Group heading above a contents list |
 | `.book-contents-item` | One line in the contents |
+| `details.book-contents-item` | The same row as a disclosure — opens in place instead of navigating |
+| `details.book-contents-item > summary` | The visible row line; carries the row layout, hover, and focus ring |
+| `.book-contents-item-panel` | Revealed content: description and meta |
 | `.book-contents-item-leading` | Leading icon; varies per row |
 | `.book-contents-item-body` | Title and description column; grows to fill |
 | `.book-contents-item-title` / `.book-contents-item-description` | Row text |
@@ -5856,6 +5952,227 @@ This section documents how the component is built. For usage, see the sections a
 | `.card-description` | Card body text, secondary text colour |
 | `.card-image` | Full-bleed image with top border-radius |
 
+### Cell Input
+
+A cell input renders a fixed-shape entry — a verification code, a PIN, a date, a sort code, a quiz answer — as one cell per character, so the reader sees the shape before typing a character. One real `<input>` carries focus, value and the accessible name; the cells are decoration that mirrors it, and `cell-input.js` builds and paints them from the `data-format` you declare. The `.cell-input` class is required; `data-format` declares the shape.
+
+On a phone this matters: the single input keeps the OS caret, the soft keyboard and SMS autofill working where the reader is looking. Do not split it into one input per cell.
+
+---
+
+## Anatomy
+
+```html
+<div class="cell-input" data-format="6" data-mode="digits">
+  <label class="cell-input-cells" for="code" aria-hidden="true"></label>
+  <input type="text" id="code" aria-label="Verification code: 6 digits"
+         autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false">
+</div>
+```
+
+- `.cell-input` — the block. Declares `data-format` and the optional axes below.
+- `.cell-input-cells` — a `<label>` for the input, `aria-hidden="true"`. The script builds `.cell-input-word` groups of `.cell-input-cell` spans into it: `data-cell="letter"` cells take typed characters, `data-cell="separator"` cells show pre-revealed punctuation. Tapping any cell focuses the input through the label.
+- The `<input>` — the only focusable, accessible control. It sits invisibly over the block, and its value is always the clean, clamped entry.
+
+| Attribute | On | Values | What it does |
+|---|---|---|---|
+| `data-format` | block | `"6"`, `"3 4"`, `"2-2-2"`, `"2/2/4"` | Cell structure — see Format |
+| `data-mode` | block | `letters`, `digits`, `any` (default) | Filters input; `digits` sets the numeric keypad |
+| `data-mask` | block | boolean | Cells render dots instead of characters |
+| `data-size` | block | `small` | Compact cells for long formats |
+| `data-type` | block | `success`, `danger` | Verdict colouring — see Verdicts |
+| `data-static` | block | boolean | Display-only cells, no input, no JS |
+
+The component owns `--cell-input-*` geometry and colour tokens; override those rather than the selectors.
+
+## Basic usage
+
+```html
+<div class="cell-input" data-format="6" data-mode="digits">
+  <label class="cell-input-cells" for="code" aria-hidden="true"></label>
+  <input type="text" id="code" aria-label="Verification code: 6 digits"
+         autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false">
+</div>
+```
+
+Typing fills the cells left to right. While the input has focus, the next empty cell carries a 2px accent border — it is both the caret and the focus indicator, the same pattern platform code inputs use. Paste works and keeps every legal character: pasting `20-41-53` into a sort code drops the hyphens and lands six digits. On a 6-digit code, `autocomplete="one-time-code"` lets iOS offer the SMS code above the keyboard — a single real input makes that work; one input per cell breaks it.
+
+## Format
+
+`data-format` describes the shape. Digits declare a run of typeable cells; everything else is structure:
+
+| Character | Meaning |
+|---|---|
+| `6`, `12`, … | That many typeable cells |
+| space | Word break — words wrap as units |
+| `-` or `/` | A shown separator cell, plus a wrap point |
+| anything else (`'`, `.`) | A shown separator inside the word |
+
+Separators are pre-revealed punctuation: they are displayed, never typed, and the filter skips them on paste.
+
+A two-word answer — the quiz's original use:
+
+```html
+<div class="cell-input" data-format="6 4" data-mode="letters">…</div>
+```
+
+A date, day / month / year:
+
+```html
+<div class="cell-input" data-format="2/2/4" data-mode="digits">…</div>
+```
+
+A bank sort code:
+
+```html
+<div class="cell-input" data-format="2-2-2" data-mode="digits">…</div>
+```
+
+A licence key — long formats take `data-size="small"`:
+
+```html
+<div class="cell-input" data-format="4-4-4" data-size="small">…</div>
+```
+
+Cells uppercase their display with CSS; the stored value keeps the case that was typed. Say so near the field if the code is case-sensitive.
+
+## Masking
+
+`data-mask` renders filled cells as dots. The masking is visual only — the real value stays in the input, and a screen reader echoes the real characters as they are typed. For a genuine secret, make the input `type="password"`: the cells still paint, and assistive tech treats the value as protected. Reserve `data-mask` alone for shoulder-surfing theatre — a quiz answer, not a bank PIN.
+
+```html
+<div class="cell-input" data-format="4" data-mode="digits" data-mask>
+  <label class="cell-input-cells" for="pin" aria-hidden="true"></label>
+  <input type="password" id="pin" aria-label="PIN: 4 digits" autocomplete="off" spellcheck="false">
+</div>
+```
+
+## Verdicts
+
+After judging an entry, set `data-type="success"` or `data-type="danger"` on the block — letter cells take the status colours, separators stay quiet. `.is-error` on the block paints the danger state for live validation.
+
+Colour is never the whole message. A verdict ships with a visible text outcome in a `role="status"` region, and danger sets `aria-invalid="true"` on the input — without those, the state change is invisible to a screen reader and ambiguous to colour-blind readers.
+
+<p role="status">Correct — that's the answer.</p>
+    <div class="cell-input" data-type="danger" data-static>
+      <span class="cell-input-cells"><span class="cell-input-word"><span class="cell-input-cell" data-cell="letter">d</span><span class="cell-input-cell" data-cell="letter">o</span><span class="cell-input-cell" data-cell="letter">n</span><span class="cell-input-cell" data-cell="separator">'</span><span class="cell-input-cell" data-cell="letter">t</span></span></span>
+    </div>
+    <p role="status">Not this time — check the spelling and try again.</p>
+  </div>
+</div>
+
+```html
+<div class="cell-input" data-format="6" data-mode="digits" data-type="danger">
+  <label class="cell-input-cells" for="code" aria-hidden="true"></label>
+  <input type="text" id="code" aria-label="Verification code: 6 digits" aria-invalid="true">
+</div>
+<p role="status">That code has expired — a new one is on its way.</p>
+```
+
+## Static display
+
+Cells with no input and no script — for showing a code rather than collecting one: a booking reference on a confirmation page, an example in documentation. Hand-author the cells with their characters, add `data-static`, and leave `aria-hidden` off so the code stays readable to everyone.
+
+```html
+<div class="cell-input" data-static>
+  <span class="cell-input-cells"><span class="cell-input-word"><span class="cell-input-cell" data-cell="letter">b</span><span class="cell-input-cell" data-cell="letter">d</span><span class="cell-input-cell" data-cell="separator">-</span></span><span class="cell-input-word"><span class="cell-input-cell" data-cell="letter">7</span><span class="cell-input-cell" data-cell="letter">7</span><span class="cell-input-cell" data-cell="letter">2</span><span class="cell-input-cell" data-cell="letter">4</span></span></span>
+</div>
+```
+
+This variant is HTML and CSS only — it works without `cell-input.js`.
+
+## JavaScript
+
+Include `assets/js/cell-input.js`. It binds every `.cell-input[data-format]` that contains an input and a `.cell-input-cells` element, on page load and again after every Barba navigation; a `data-cell-input-bound` guard makes re-runs harmless. No GSAP, no dependencies.
+
+The script builds the cells, enforces `aria-hidden` on the cells row, filters and clamps the value on every input event (accents folded, illegal characters dropped, pasted separators skipped), and dispatches two bubbling events on the block:
+
+| Event | detail | When |
+|---|---|---|
+| `cell-input:change` | `{ value, complete }` | The clean value changed |
+| `cell-input:complete` | `{ value }` | The final cell filled |
+
+```js
+document.getElementById('otp-block').addEventListener('cell-input:complete', function (event) {
+  submitCode(event.detail.value);
+});
+```
+
+Two contracts worth knowing:
+
+- Format and wiring are read once at bind time. To change `data-format` or swap the input afterwards, clear `data-cell-input-bound` and call `window.initCellInput(block.parentNode)`.
+- Setting `input.value` from script fires no event; dispatch an `input` or `change` event after it and the cells repaint.
+
+A `data-format` with no typeable cells is an authoring error: the script leaves the block inert and names it in a console warning.
+
+## Accessibility
+
+- The input must carry the accessible name. Write an `aria-label` (or `aria-labelledby`) that names the purpose and the shape: "Verification code: 6 digits". The generated fallback describes shape only — do not ship it.
+- Keep the cells row `aria-hidden="true"` whenever the block contains an input — the script enforces it. The cells are decoration; the input is the control.
+- Put a visible label or instruction above the block. The invisible name is for assistive tech, not a substitute for telling everyone what goes here.
+- Verdict states must pair colour with a visible text outcome in a `role="status"` region, and danger must set `aria-invalid="true"` on the input.
+- Real secrets must use `type="password"`; `data-mask` alone leaves the value exposed to character echo and password managers.
+- Static displays must not be `aria-hidden` — the characters are the content.
+- Disabling means both `disabled` on the input and `.is-disabled` on the block.
+- Keep the caret affordance — the 2px accent border on the next empty cell is the focus indicator. Override it and a keyboard user cannot see focus at all, because the input itself is invisible.
+
+## Usage rules
+
+**Do:**
+
+- Use it when the entry has a fixed, known shape — codes, PINs, dates, sort codes, quiz answers
+- Match `data-format` to the shape the reader already knows — a sort code is `2-2-2`, never `6`
+- Wire `cell-input:complete` for auto-advance flows instead of watching keystrokes
+- Use `data-size="small"` when a format runs past roughly 16 cells
+
+**Don't:**
+
+- Use it for free-form text — a name or an email is a plain input
+- Build one input per cell — focus juggling breaks paste, autofill and screen readers
+- Reveal a secret's length when the length itself is sensitive; use a plain `type="password"` input instead
+- Apply `data-type` without a text verdict alongside
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | What it controls |
+|---|---|---|
+| `--cell-input-width` | `2rem` | Letter cell width |
+| `--cell-input-height` | `2.5rem` | Cell height |
+| `--cell-input-separator-width` | `1.25rem` | Separator cell width |
+| `--cell-input-gap` | `var(--space-xs)` | Gap between cells in a word |
+| `--cell-input-word-gap` | `var(--space-s)` | Gap between words |
+| `--cell-input-background` | `var(--input-background)` | Cell fill |
+| `--cell-input-border-color` | `var(--input-border)` | Cell border |
+| `--cell-input-radius` | `var(--radius-s)` | Cell and ring radius |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.cell-input` | Block: positioning context for the overlaid input |
+| `.cell-input input` | The real control, stretched invisibly over the cells |
+| `.cell-input-cells` | The label row; tapping it focuses the input |
+| `.cell-input-word` | A word group; wraps as a unit |
+| `.cell-input-cell` | One cell; `data-cell="letter"` or `data-cell="separator"` |
+| `.cell-input-cell.is-active` | The caret cell — the focus indicator, visible only while focused |
+| `.cell-input-cell.is-filled` | A cell holding a character (JS hook, unstyled) |
+| `.cell-input[data-size="small"]` | Re-points the geometry tokens to compact values |
+| `.cell-input[data-type="success"]` / `[data-type="danger"]` | Verdict colours on letter cells |
+| `.cell-input.is-error` | Paints the danger state |
+| `.cell-input.is-disabled` | Disabled surface; pair with `disabled` on the input |
+| `.cell-input[data-static]` | Display-only: default cursor, hand-authored cells |
+
+### Key rules
+
+Overlay: the input is `position: absolute; inset: 0; opacity: 0; pointer-events: none` — the OS caret geometry lands on the cells, and the label forwards taps to the input.
+Focus: the caret cell is the focus indicator — `border-color: var(--input-focus)` plus a 1px inset shadow for 2px of visual weight, gated on `:focus-within`. No ring on the group: the caret says "focused, and here". A `forced-colors` block outlines the row instead, since high-contrast mode erases the caret's colour.
+Wrapping: row and word are both `flex-wrap: wrap` — words wrap as units, an over-long word wraps within itself.
+Motion: cell border and background transition on `--duration-xs` / `--ease-out`, removed under `prefers-reduced-motion: reduce`.
+
 ### Code
 
 The design system styles three code-related elements: inline `code`, block-level `pre`, and keyboard shortcuts `kbd`. All use the mono font (`var(--font-quaternary)`).
@@ -6554,11 +6871,27 @@ Use `.divider--vertical` inside a flex row to separate inline content.
 
 ---
 
+## Labelled divider
+
+A rule with a word in it, most often "or" between alternative actions — an email form above, social sign-in below. The label is real content, so this variant rides a `<div>` rather than an `<hr>`; the lines either side are pseudo-elements drawn from the same divider tokens.
+
+<p>Continue with a provider.</p>
+</div>
+
+```html
+<div class="divider divider--labelled">or</div>
+```
+
+It inherits all three divider tokens; `--divider-spacing` still supplies the block margin. In a tight stack whose gap already owns the rhythm, re-point the token rather than overriding the rule — `.login-form .divider { --divider-spacing: var(--space-2xs); }` is the pattern.
+
+---
+
 ## Accessibility notes
 
 - Use `<hr>` for semantic section breaks that screen readers should announce
 - For purely decorative dividers, add `role="presentation"` or use a `<div class="divider">` instead
 - Vertical dividers should use `role="separator"` when they represent meaningful boundaries
+- Labelled dividers take no `role="separator"` — the label is meaningful text and should be read as such
 
 ---
 
@@ -8455,6 +8788,461 @@ When an aspect ratio is applied, the image may not match its natural proportions
 - Do not hardcode `width` and `height` attributes when using `.img`. The class manages sizing
 - Do not combine multiple aspect-ratio classes on one element
 
+### Login
+
+A login is the authentication stack: a header with logo and title, one or more form panes, and trailing text actions. The `.login` class is thin by design — it composes [Card](/website/card.html), the [form primitives](/website/form.html), [Password Toggle](/website/password-toggle.html) and [Button](/website/button.html) rather than restyling them. It ships no JavaScript of its own: switching between panes (sign in, reset, one-time code) is consumer JS toggling `.is-hidden`, and password reveal is `password-toggle.js`.
+
+Centering on the page belongs to the consuming layout, not the component. `.login` caps its own width and stacks its children; where it sits is the page's decision.
+
+---
+
+## Anatomy
+
+| Class | Role |
+|---|---|
+| `.login` | Root column — width cap, gap-based stack |
+| `.login-header` | Logo, title and subtitle, centered |
+| `.login-logo` | Logo slot; inherits `currentColor` |
+| `.login-title` | The heading |
+| `.login-subtitle` | Supporting line; collapses when empty |
+| `.login-form` | One form pane — a page may hold several, one visible at a time |
+| `.login-meta` | Row between fields and submit: remember-me against forgot-password |
+| `.login-status` | Form-level live region for error or success messages |
+| `.login-footer` | Trailing text actions below a pane |
+
+---
+
+## Basic usage
+
+Sign in with email and password. The pane's own gap owns the spacing between groups; inside a group, the label-to-input rhythm is tighter. Wrap the stack in a `.card` when the page wants a panel.
+
+<h2 class="login-title">Welcome back</h2>
+      <p class="login-subtitle">Sign in to your account</p>
+    </div>
+    <form class="login-form" autocomplete="on" novalidate>
+      <div class="form-group">
+        <label for="demo-signin-email">Email</label>
+        <input type="email" id="demo-signin-email" name="email" autocomplete="username" autocapitalize="none" spellcheck="false" required aria-required="true" placeholder="you@company.com">
+      </div>
+      <div class="form-group">
+        <label for="demo-signin-password">Password</label>
+        <div class="password-field">
+          <input type="password" id="demo-signin-password" name="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" required aria-required="true">
+          <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+            <div class="svg-icn" data-icon="eye-off"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M16.1 13.3L14.65 11.85C14.8 11.07 14.57 10.33 13.97 9.65C13.38 8.97 12.6 8.7 11.65 8.85L10.2 7.4C10.48 7.27 10.77 7.17 11.06 7.1C11.35 7.03 11.67 7 12 7C13.25 7 14.31 7.44 15.19 8.31C16.06 9.19 16.5 10.25 16.5 11.5C16.5 11.83 16.47 12.15 16.4 12.44C16.33 12.73 16.23 13.02 16.1 13.3ZM19.3 16.45L17.85 15.05C18.48 14.57 19.05 14.04 19.54 13.46C19.83 13.12 20.1 12.75 20.34 12.36C20.66 11.83 20.65 11.17 20.33 10.65C19.54 9.36 18.5 8.31 17.21 7.49C15.65 6.5 13.92 6 12 6C11.52 6 11.04 6.03 10.57 6.1C10.11 6.17 9.65 6.27 9.2 6.4L7.65 4.85C8.33 4.57 9.03 4.35 9.75 4.21C10.47 4.07 11.22 4 12 4C14.52 4 16.76 4.7 18.73 6.09C20.69 7.48 22.12 9.28 23 11.5C22.62 12.48 22.11 13.4 21.49 14.24C20.86 15.08 20.13 15.82 19.3 16.45ZM19.8 22.6L15.6 18.45C15.02 18.63 14.43 18.77 13.84 18.86C13.25 18.95 12.63 19 12 19C9.48 19 7.24 18.3 5.28 16.91C3.31 15.52 1.88 13.72 1 11.5C1.35 10.62 1.79 9.8 2.33 9.04C2.86 8.28 3.47 7.6 4.15 7L1.4 4.2L2.8 2.8L21.2 21.2L19.8 22.6ZM6.22 9.05C5.84 8.69 5.24 8.67 4.88 9.05C4.65 9.3 4.43 9.56 4.22 9.82C4.02 10.09 3.83 10.36 3.66 10.65C3.34 11.17 3.35 11.83 3.67 12.35C4.46 13.64 5.5 14.69 6.79 15.51C8.35 16.5 10.08 17 12 17C12.33 17 12.66 16.98 12.97 16.94C13.39 16.88 13.56 16.39 13.27 16.09L13.05 15.85C12.87 15.9 12.69 15.94 12.53 15.96C12.36 15.99 12.18 16 12 16C10.75 16 9.69 15.56 8.81 14.69C7.94 13.81 7.5 12.75 7.5 11.5C7.5 11.32 7.51 11.14 7.54 10.97C7.56 10.81 7.6 10.63 7.65 10.45L6.22 9.05Z" fill="currentColor"/></svg></div>
+            <div class="svg-icn" data-icon="eye"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M15.19 14.69C16.06 13.81 16.5 12.75 16.5 11.5C16.5 10.25 16.06 9.19 15.19 8.31C14.31 7.44 13.25 7 12 7C10.75 7 9.69 7.44 8.81 8.31C7.94 9.19 7.5 10.25 7.5 11.5C7.5 12.75 7.94 13.81 8.81 14.69C9.69 15.56 10.75 16 12 16C13.25 16 14.31 15.56 15.19 14.69ZM10.09 13.41C9.56 12.89 9.3 12.25 9.3 11.5C9.3 10.75 9.56 10.11 10.09 9.59C10.61 9.06 11.25 8.8 12 8.8C12.75 8.8 13.39 9.06 13.91 9.59C14.44 10.11 14.7 10.75 14.7 11.5C14.7 12.25 14.44 12.89 13.91 13.41C13.39 13.94 12.75 14.2 12 14.2C11.25 14.2 10.61 13.94 10.09 13.41ZM5.35 16.96C3.35 15.6 1.9 13.78 1 11.5C1.9 9.22 3.35 7.4 5.35 6.04C7.35 4.68 9.57 4 12 4C14.43 4 16.65 4.68 18.65 6.04C20.65 7.4 22.1 9.22 23 11.5C22.1 13.78 20.65 15.6 18.65 16.96C16.65 18.32 14.43 19 12 19C9.57 19 7.35 18.32 5.35 16.96ZM17.19 15.51C18.34 14.79 19.29 13.88 20.05 12.78C20.58 12.01 20.58 10.99 20.05 10.22C19.29 9.12 18.34 8.21 17.19 7.49C15.61 6.5 13.88 6 12 6C10.12 6 8.39 6.5 6.81 7.49C5.66 8.21 4.71 9.12 3.95 10.22C3.42 10.99 3.42 12.01 3.95 12.78C4.71 13.88 5.66 14.79 6.81 15.51C8.39 16.5 10.12 17 12 17C13.88 17 15.61 16.5 17.19 15.51Z" fill="currentColor"/></svg></div>
+          </button>
+        </div>
+      </div>
+      <div class="login-meta">
+        <div class="form-check">
+          <input type="checkbox" id="demo-signin-remember" name="remember">
+          <label for="demo-signin-remember">Remember me</label>
+        </div>
+        <button type="button" class="button" data-variant="text">Forgot password?</button>
+      </div>
+      <p class="login-status" id="demo-signin-status" data-type="danger" role="alert" aria-live="assertive"></p>
+      <button type="submit" class="button" data-full-width>Sign in</button>
+    </form>
+  </div>
+</div>
+
+```html
+<div class="card login">
+  <div class="login-header">
+    <div class="login-logo" role="img" aria-label="By Default logo">
+      <!-- inline logo SVG -->
+    </div>
+    <h1 class="login-title">Welcome back</h1>
+    <p class="login-subtitle">Sign in to your account</p>
+  </div>
+  <form class="login-form" autocomplete="on" novalidate>
+    <div class="form-group">
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" name="email"
+             autocomplete="username" autocapitalize="none" spellcheck="false" required aria-required="true">
+    </div>
+    <div class="form-group">
+      <label for="login-password">Password</label>
+      <div class="password-field">
+        <input type="password" id="login-password" name="password"
+               autocomplete="current-password" autocapitalize="none" spellcheck="false" required aria-required="true">
+        <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+          <div class="svg-icn" data-icon="eye-off"><!-- inline eye-off SVG --></div>
+          <div class="svg-icn" data-icon="eye"><!-- inline eye SVG --></div>
+        </button>
+      </div>
+    </div>
+    <div class="login-meta">
+      <div class="form-check">
+        <input type="checkbox" id="login-remember" name="remember">
+        <label for="login-remember">Remember me</label>
+      </div>
+      <button type="button" class="button" data-variant="text">Forgot password?</button>
+    </div>
+    <p class="login-status" id="login-status" data-type="danger" role="alert" aria-live="assertive"></p>
+    <button type="submit" class="button" data-full-width>Sign in</button>
+  </form>
+</div>
+```
+
+On the page the demo heading is an `h2`; in an application the login title is usually the page's `h1`. The subtitle collapses when empty, so flow JS can fill it only when there is something to say — an invite instruction, a recovery notice.
+
+---
+
+## Create account
+
+Sign-up swaps the field set: name, email, a new password with a hint. The footer points existing users back to sign in.
+
+<form class="login-form" autocomplete="on" novalidate>
+      <div class="form-group">
+        <label for="demo-signup-name">Full name</label>
+        <input type="text" id="demo-signup-name" name="name" autocomplete="name" required aria-required="true">
+      </div>
+      <div class="form-group">
+        <label for="demo-signup-email">Email</label>
+        <input type="email" id="demo-signup-email" name="email" autocomplete="username" autocapitalize="none" spellcheck="false" required aria-required="true" placeholder="you@company.com">
+      </div>
+      <div class="form-group">
+        <label for="demo-signup-password">Password</label>
+        <div class="password-field">
+          <input type="password" id="demo-signup-password" name="password" autocomplete="new-password" autocapitalize="none" spellcheck="false" required aria-required="true" minlength="8" aria-describedby="demo-signup-hint">
+          <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+            <div class="svg-icn" data-icon="eye-off"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M16.1 13.3L14.65 11.85C14.8 11.07 14.57 10.33 13.97 9.65C13.38 8.97 12.6 8.7 11.65 8.85L10.2 7.4C10.48 7.27 10.77 7.17 11.06 7.1C11.35 7.03 11.67 7 12 7C13.25 7 14.31 7.44 15.19 8.31C16.06 9.19 16.5 10.25 16.5 11.5C16.5 11.83 16.47 12.15 16.4 12.44C16.33 12.73 16.23 13.02 16.1 13.3ZM19.3 16.45L17.85 15.05C18.48 14.57 19.05 14.04 19.54 13.46C19.83 13.12 20.1 12.75 20.34 12.36C20.66 11.83 20.65 11.17 20.33 10.65C19.54 9.36 18.5 8.31 17.21 7.49C15.65 6.5 13.92 6 12 6C11.52 6 11.04 6.03 10.57 6.1C10.11 6.17 9.65 6.27 9.2 6.4L7.65 4.85C8.33 4.57 9.03 4.35 9.75 4.21C10.47 4.07 11.22 4 12 4C14.52 4 16.76 4.7 18.73 6.09C20.69 7.48 22.12 9.28 23 11.5C22.62 12.48 22.11 13.4 21.49 14.24C20.86 15.08 20.13 15.82 19.3 16.45ZM19.8 22.6L15.6 18.45C15.02 18.63 14.43 18.77 13.84 18.86C13.25 18.95 12.63 19 12 19C9.48 19 7.24 18.3 5.28 16.91C3.31 15.52 1.88 13.72 1 11.5C1.35 10.62 1.79 9.8 2.33 9.04C2.86 8.28 3.47 7.6 4.15 7L1.4 4.2L2.8 2.8L21.2 21.2L19.8 22.6ZM6.22 9.05C5.84 8.69 5.24 8.67 4.88 9.05C4.65 9.3 4.43 9.56 4.22 9.82C4.02 10.09 3.83 10.36 3.66 10.65C3.34 11.17 3.35 11.83 3.67 12.35C4.46 13.64 5.5 14.69 6.79 15.51C8.35 16.5 10.08 17 12 17C12.33 17 12.66 16.98 12.97 16.94C13.39 16.88 13.56 16.39 13.27 16.09L13.05 15.85C12.87 15.9 12.69 15.94 12.53 15.96C12.36 15.99 12.18 16 12 16C10.75 16 9.69 15.56 8.81 14.69C7.94 13.81 7.5 12.75 7.5 11.5C7.5 11.32 7.51 11.14 7.54 10.97C7.56 10.81 7.6 10.63 7.65 10.45L6.22 9.05Z" fill="currentColor"/></svg></div>
+            <div class="svg-icn" data-icon="eye"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M15.19 14.69C16.06 13.81 16.5 12.75 16.5 11.5C16.5 10.25 16.06 9.19 15.19 8.31C14.31 7.44 13.25 7 12 7C10.75 7 9.69 7.44 8.81 8.31C7.94 9.19 7.5 10.25 7.5 11.5C7.5 12.75 7.94 13.81 8.81 14.69C9.69 15.56 10.75 16 12 16C13.25 16 14.31 15.56 15.19 14.69ZM10.09 13.41C9.56 12.89 9.3 12.25 9.3 11.5C9.3 10.75 9.56 10.11 10.09 9.59C10.61 9.06 11.25 8.8 12 8.8C12.75 8.8 13.39 9.06 13.91 9.59C14.44 10.11 14.7 10.75 14.7 11.5C14.7 12.25 14.44 12.89 13.91 13.41C13.39 13.94 12.75 14.2 12 14.2C11.25 14.2 10.61 13.94 10.09 13.41ZM5.35 16.96C3.35 15.6 1.9 13.78 1 11.5C1.9 9.22 3.35 7.4 5.35 6.04C7.35 4.68 9.57 4 12 4C14.43 4 16.65 4.68 18.65 6.04C20.65 7.4 22.1 9.22 23 11.5C22.1 13.78 20.65 15.6 18.65 16.96C16.65 18.32 14.43 19 12 19C9.57 19 7.35 18.32 5.35 16.96ZM17.19 15.51C18.34 14.79 19.29 13.88 20.05 12.78C20.58 12.01 20.58 10.99 20.05 10.22C19.29 9.12 18.34 8.21 17.19 7.49C15.61 6.5 13.88 6 12 6C10.12 6 8.39 6.5 6.81 7.49C5.66 8.21 4.71 9.12 3.95 10.22C3.42 10.99 3.42 12.01 3.95 12.78C4.71 13.88 5.66 14.79 6.81 15.51C8.39 16.5 10.12 17 12 17C13.88 17 15.61 16.5 17.19 15.51Z" fill="currentColor"/></svg></div>
+          </button>
+        </div>
+        <p class="form-hint" id="demo-signup-hint">At least 8 characters.</p>
+      </div>
+      <p class="login-status" id="demo-signup-status" data-type="danger" role="alert" aria-live="assertive"></p>
+      <button type="submit" class="button" data-full-width>Create account</button>
+    </form>
+    <div class="login-footer">
+      <button type="button" class="button" data-variant="text">Already have an account? Sign in</button>
+    </div>
+  </div>
+</div>
+
+```html
+<div class="form-group">
+  <label for="signup-password">Password</label>
+  <div class="password-field">
+    <input type="password" id="signup-password" name="password"
+           autocomplete="new-password" autocapitalize="none" spellcheck="false" required aria-required="true"
+           minlength="8" aria-describedby="signup-hint">
+    <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+      <div class="svg-icn" data-icon="eye-off"><!-- inline eye-off SVG --></div>
+      <div class="svg-icn" data-icon="eye"><!-- inline eye SVG --></div>
+    </button>
+  </div>
+  <p class="form-hint" id="signup-hint">At least 8 characters.</p>
+</div>
+```
+
+Every password field gets the reveal toggle — creating a password is where seeing what was typed matters most.
+
+---
+
+## Forgot and reset password
+
+Two panes. The request pane asks for an email and sends a link; the set pane takes the new password twice. On one page they sit as sibling `.login-form` panes and consumer JS switches them with `.is-hidden`.
+
+<form class="login-form" autocomplete="on" novalidate>
+      <div class="form-group">
+        <label for="demo-reset-email">Email</label>
+        <input type="email" id="demo-reset-email" name="email" autocomplete="username" autocapitalize="none" spellcheck="false" required aria-required="true" placeholder="you@company.com">
+      </div>
+      <p class="login-status" id="demo-reset-status" data-type="danger" role="alert" aria-live="assertive"></p>
+      <button type="submit" class="button" data-full-width>Send reset link</button>
+    </form>
+    <div class="login-footer">
+      <button type="button" class="button" data-variant="text">Back to sign in</button>
+    </div>
+  </div>
+</div>
+
+The set pane pairs two `new-password` fields, and carries a hidden `autocomplete="username"` input that consumer JS fills with the account email from the reset token — that is what lets password managers save the new credential against the right account. With the reveal toggle present the confirm field is optional — a user who can see what they typed doesn't need to type it twice — so a product may drop it and keep only the first field. The example below also shows the error state: `.is-error` and `aria-invalid="true"` on the input together, with a `.form-error` message wired in through `aria-describedby`.
+
+<form class="login-form" autocomplete="on" novalidate>
+      <!-- Filled by consumer JS; pairs the new password with the account for password managers -->
+      <input type="email" name="email" autocomplete="username" hidden tabindex="-1">
+      <div class="form-group">
+        <label for="demo-setpw-new">New password</label>
+        <div class="password-field">
+          <input type="password" id="demo-setpw-new" name="new-password" autocomplete="new-password" autocapitalize="none" spellcheck="false" required aria-required="true" minlength="8">
+          <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+            <div class="svg-icn" data-icon="eye-off"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M16.1 13.3L14.65 11.85C14.8 11.07 14.57 10.33 13.97 9.65C13.38 8.97 12.6 8.7 11.65 8.85L10.2 7.4C10.48 7.27 10.77 7.17 11.06 7.1C11.35 7.03 11.67 7 12 7C13.25 7 14.31 7.44 15.19 8.31C16.06 9.19 16.5 10.25 16.5 11.5C16.5 11.83 16.47 12.15 16.4 12.44C16.33 12.73 16.23 13.02 16.1 13.3ZM19.3 16.45L17.85 15.05C18.48 14.57 19.05 14.04 19.54 13.46C19.83 13.12 20.1 12.75 20.34 12.36C20.66 11.83 20.65 11.17 20.33 10.65C19.54 9.36 18.5 8.31 17.21 7.49C15.65 6.5 13.92 6 12 6C11.52 6 11.04 6.03 10.57 6.1C10.11 6.17 9.65 6.27 9.2 6.4L7.65 4.85C8.33 4.57 9.03 4.35 9.75 4.21C10.47 4.07 11.22 4 12 4C14.52 4 16.76 4.7 18.73 6.09C20.69 7.48 22.12 9.28 23 11.5C22.62 12.48 22.11 13.4 21.49 14.24C20.86 15.08 20.13 15.82 19.3 16.45ZM19.8 22.6L15.6 18.45C15.02 18.63 14.43 18.77 13.84 18.86C13.25 18.95 12.63 19 12 19C9.48 19 7.24 18.3 5.28 16.91C3.31 15.52 1.88 13.72 1 11.5C1.35 10.62 1.79 9.8 2.33 9.04C2.86 8.28 3.47 7.6 4.15 7L1.4 4.2L2.8 2.8L21.2 21.2L19.8 22.6ZM6.22 9.05C5.84 8.69 5.24 8.67 4.88 9.05C4.65 9.3 4.43 9.56 4.22 9.82C4.02 10.09 3.83 10.36 3.66 10.65C3.34 11.17 3.35 11.83 3.67 12.35C4.46 13.64 5.5 14.69 6.79 15.51C8.35 16.5 10.08 17 12 17C12.33 17 12.66 16.98 12.97 16.94C13.39 16.88 13.56 16.39 13.27 16.09L13.05 15.85C12.87 15.9 12.69 15.94 12.53 15.96C12.36 15.99 12.18 16 12 16C10.75 16 9.69 15.56 8.81 14.69C7.94 13.81 7.5 12.75 7.5 11.5C7.5 11.32 7.51 11.14 7.54 10.97C7.56 10.81 7.6 10.63 7.65 10.45L6.22 9.05Z" fill="currentColor"/></svg></div>
+            <div class="svg-icn" data-icon="eye"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M15.19 14.69C16.06 13.81 16.5 12.75 16.5 11.5C16.5 10.25 16.06 9.19 15.19 8.31C14.31 7.44 13.25 7 12 7C10.75 7 9.69 7.44 8.81 8.31C7.94 9.19 7.5 10.25 7.5 11.5C7.5 12.75 7.94 13.81 8.81 14.69C9.69 15.56 10.75 16 12 16C13.25 16 14.31 15.56 15.19 14.69ZM10.09 13.41C9.56 12.89 9.3 12.25 9.3 11.5C9.3 10.75 9.56 10.11 10.09 9.59C10.61 9.06 11.25 8.8 12 8.8C12.75 8.8 13.39 9.06 13.91 9.59C14.44 10.11 14.7 10.75 14.7 11.5C14.7 12.25 14.44 12.89 13.91 13.41C13.39 13.94 12.75 14.2 12 14.2C11.25 14.2 10.61 13.94 10.09 13.41ZM5.35 16.96C3.35 15.6 1.9 13.78 1 11.5C1.9 9.22 3.35 7.4 5.35 6.04C7.35 4.68 9.57 4 12 4C14.43 4 16.65 4.68 18.65 6.04C20.65 7.4 22.1 9.22 23 11.5C22.1 13.78 20.65 15.6 18.65 16.96C16.65 18.32 14.43 19 12 19C9.57 19 7.35 18.32 5.35 16.96ZM17.19 15.51C18.34 14.79 19.29 13.88 20.05 12.78C20.58 12.01 20.58 10.99 20.05 10.22C19.29 9.12 18.34 8.21 17.19 7.49C15.61 6.5 13.88 6 12 6C10.12 6 8.39 6.5 6.81 7.49C5.66 8.21 4.71 9.12 3.95 10.22C3.42 10.99 3.42 12.01 3.95 12.78C4.71 13.88 5.66 14.79 6.81 15.51C8.39 16.5 10.12 17 12 17C13.88 17 15.61 16.5 17.19 15.51Z" fill="currentColor"/></svg></div>
+          </button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="demo-setpw-confirm">Confirm password</label>
+        <div class="password-field">
+          <input type="password" id="demo-setpw-confirm" name="confirm-password" autocomplete="new-password" autocapitalize="none" spellcheck="false" required aria-required="true" minlength="8" class="is-error" aria-invalid="true" aria-describedby="demo-setpw-confirm-error">
+          <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+            <div class="svg-icn" data-icon="eye-off"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M16.1 13.3L14.65 11.85C14.8 11.07 14.57 10.33 13.97 9.65C13.38 8.97 12.6 8.7 11.65 8.85L10.2 7.4C10.48 7.27 10.77 7.17 11.06 7.1C11.35 7.03 11.67 7 12 7C13.25 7 14.31 7.44 15.19 8.31C16.06 9.19 16.5 10.25 16.5 11.5C16.5 11.83 16.47 12.15 16.4 12.44C16.33 12.73 16.23 13.02 16.1 13.3ZM19.3 16.45L17.85 15.05C18.48 14.57 19.05 14.04 19.54 13.46C19.83 13.12 20.1 12.75 20.34 12.36C20.66 11.83 20.65 11.17 20.33 10.65C19.54 9.36 18.5 8.31 17.21 7.49C15.65 6.5 13.92 6 12 6C11.52 6 11.04 6.03 10.57 6.1C10.11 6.17 9.65 6.27 9.2 6.4L7.65 4.85C8.33 4.57 9.03 4.35 9.75 4.21C10.47 4.07 11.22 4 12 4C14.52 4 16.76 4.7 18.73 6.09C20.69 7.48 22.12 9.28 23 11.5C22.62 12.48 22.11 13.4 21.49 14.24C20.86 15.08 20.13 15.82 19.3 16.45ZM19.8 22.6L15.6 18.45C15.02 18.63 14.43 18.77 13.84 18.86C13.25 18.95 12.63 19 12 19C9.48 19 7.24 18.3 5.28 16.91C3.31 15.52 1.88 13.72 1 11.5C1.35 10.62 1.79 9.8 2.33 9.04C2.86 8.28 3.47 7.6 4.15 7L1.4 4.2L2.8 2.8L21.2 21.2L19.8 22.6ZM6.22 9.05C5.84 8.69 5.24 8.67 4.88 9.05C4.65 9.3 4.43 9.56 4.22 9.82C4.02 10.09 3.83 10.36 3.66 10.65C3.34 11.17 3.35 11.83 3.67 12.35C4.46 13.64 5.5 14.69 6.79 15.51C8.35 16.5 10.08 17 12 17C12.33 17 12.66 16.98 12.97 16.94C13.39 16.88 13.56 16.39 13.27 16.09L13.05 15.85C12.87 15.9 12.69 15.94 12.53 15.96C12.36 15.99 12.18 16 12 16C10.75 16 9.69 15.56 8.81 14.69C7.94 13.81 7.5 12.75 7.5 11.5C7.5 11.32 7.51 11.14 7.54 10.97C7.56 10.81 7.6 10.63 7.65 10.45L6.22 9.05Z" fill="currentColor"/></svg></div>
+            <div class="svg-icn" data-icon="eye"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M15.19 14.69C16.06 13.81 16.5 12.75 16.5 11.5C16.5 10.25 16.06 9.19 15.19 8.31C14.31 7.44 13.25 7 12 7C10.75 7 9.69 7.44 8.81 8.31C7.94 9.19 7.5 10.25 7.5 11.5C7.5 12.75 7.94 13.81 8.81 14.69C9.69 15.56 10.75 16 12 16C13.25 16 14.31 15.56 15.19 14.69ZM10.09 13.41C9.56 12.89 9.3 12.25 9.3 11.5C9.3 10.75 9.56 10.11 10.09 9.59C10.61 9.06 11.25 8.8 12 8.8C12.75 8.8 13.39 9.06 13.91 9.59C14.44 10.11 14.7 10.75 14.7 11.5C14.7 12.25 14.44 12.89 13.91 13.41C13.39 13.94 12.75 14.2 12 14.2C11.25 14.2 10.61 13.94 10.09 13.41ZM5.35 16.96C3.35 15.6 1.9 13.78 1 11.5C1.9 9.22 3.35 7.4 5.35 6.04C7.35 4.68 9.57 4 12 4C14.43 4 16.65 4.68 18.65 6.04C20.65 7.4 22.1 9.22 23 11.5C22.1 13.78 20.65 15.6 18.65 16.96C16.65 18.32 14.43 19 12 19C9.57 19 7.35 18.32 5.35 16.96ZM17.19 15.51C18.34 14.79 19.29 13.88 20.05 12.78C20.58 12.01 20.58 10.99 20.05 10.22C19.29 9.12 18.34 8.21 17.19 7.49C15.61 6.5 13.88 6 12 6C10.12 6 8.39 6.5 6.81 7.49C5.66 8.21 4.71 9.12 3.95 10.22C3.42 10.99 3.42 12.01 3.95 12.78C4.71 13.88 5.66 14.79 6.81 15.51C8.39 16.5 10.12 17 12 17C13.88 17 15.61 16.5 17.19 15.51Z" fill="currentColor"/></svg></div>
+          </button>
+        </div>
+        <p class="form-error" id="demo-setpw-confirm-error">Passwords do not match.</p>
+      </div>
+      <p class="login-status" id="demo-setpw-status" data-type="danger" role="alert" aria-live="assertive"></p>
+      <button type="submit" class="button" data-full-width>Set password</button>
+    </form>
+  </div>
+</div>
+
+```html
+<div class="form-group">
+  <label for="setpw-confirm">Confirm password</label>
+  <div class="password-field">
+    <input type="password" id="setpw-confirm" name="confirm-password"
+           autocomplete="new-password" autocapitalize="none" spellcheck="false" required aria-required="true" minlength="8"
+           class="is-error" aria-invalid="true" aria-describedby="setpw-confirm-error">
+    <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+      <div class="svg-icn" data-icon="eye-off"><!-- inline eye-off SVG --></div>
+      <div class="svg-icn" data-icon="eye"><!-- inline eye SVG --></div>
+    </button>
+  </div>
+  <p class="form-error" id="setpw-confirm-error">Passwords do not match.</p>
+</div>
+```
+
+---
+
+## Magic link
+
+Passwordless entry: one email field, one action. Pair it with the one-time code pane below when the flow confirms with a code rather than a link.
+
+<form class="login-form" autocomplete="on" novalidate>
+      <div class="form-group">
+        <label for="demo-magic-email">Email</label>
+        <input type="email" id="demo-magic-email" name="email" autocomplete="username" autocapitalize="none" spellcheck="false" required aria-required="true" placeholder="you@company.com">
+      </div>
+      <p class="login-status" id="demo-magic-status" data-type="danger" role="alert" aria-live="assertive"></p>
+      <button type="submit" class="button" data-full-width>Email me a link</button>
+    </form>
+  </div>
+</div>
+
+```html
+<form class="login-form" autocomplete="on" novalidate>
+  <div class="form-group">
+    <label for="magic-email">Email</label>
+    <input type="email" id="magic-email" name="email"
+           autocomplete="username" autocapitalize="none" spellcheck="false" required aria-required="true">
+  </div>
+  <p class="login-status" id="magic-status" data-type="danger" role="alert" aria-live="assertive"></p>
+  <button type="submit" class="button" data-full-width>Email me a link</button>
+</form>
+```
+
+---
+
+## One-time code
+
+The code field is a plain text input tuned for the moment: `inputmode="numeric"` raises the number pad on touch keyboards, `autocomplete="one-time-code"` lets the browser offer the code straight from the message that delivered it, and `spellcheck="false"` stops the squiggle under a string that was never a word.
+
+<form class="login-form" autocomplete="on" novalidate>
+      <div class="form-group">
+        <label for="demo-otp-code">One-time code</label>
+        <input type="text" id="demo-otp-code" name="code" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" pattern="[0-9]*" maxlength="6" required aria-required="true">
+      </div>
+      <p class="login-status" id="demo-otp-status" data-type="danger" role="alert" aria-live="assertive"></p>
+      <button type="submit" class="button" data-full-width>Verify</button>
+    </form>
+    <div class="login-footer">
+      <button type="button" class="button" data-variant="text">Resend code</button>
+    </div>
+  </div>
+</div>
+
+```html
+<div class="form-group">
+  <label for="otp-code">One-time code</label>
+  <input type="text" id="otp-code" name="code"
+         inputmode="numeric" autocomplete="one-time-code" spellcheck="false"
+         pattern="[0-9]*" maxlength="6" required aria-required="true">
+</div>
+```
+
+---
+
+## Social sign-in
+
+Provider buttons are plain buttons: `data-variant="outline"` with `data-full-width`, a brand mark in the standard `.svg-icn` wrapper, stacked below a labelled [Divider](/website/divider.html). No role class, no token overrides.
+
+<form class="login-form" autocomplete="on" novalidate>
+      <div class="form-group">
+        <label for="demo-social-email">Email</label>
+        <input type="email" id="demo-social-email" name="email" autocomplete="username" autocapitalize="none" spellcheck="false" required aria-required="true" placeholder="you@company.com">
+      </div>
+      <button type="submit" class="button" data-full-width>Continue</button>
+      <div class="divider divider--labelled">or</div>
+      <button type="button" class="button" data-variant="outline" data-full-width>
+        <div class="svg-icn" data-icon="google"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M22.56 12.25C22.56 11.47 22.49 10.72 22.36 10H12V14.26H17.92C17.66 15.63 16.88 16.79 15.71 17.57V20.34H19.28C21.36 18.42 22.56 15.6 22.56 12.25Z" fill="currentColor"/><path d="M12 23C14.97 23 17.46 22.02 19.28 20.34L15.71 17.57C14.73 18.23 13.48 18.63 12 18.63C9.13996 18.63 6.70996 16.7 5.83996 14.1H2.17996V16.94C3.98996 20.53 7.69996 23 12 23Z" fill="currentColor"/><path d="M5.84 14.09C5.62 13.43 5.49 12.73 5.49 12C5.49 11.27 5.62 10.57 5.84 9.91V7.07H2.18C1.43 8.55 1 10.22 1 12C1 13.78 1.43 15.45 2.18 16.93L5.03 14.71L5.84 14.09Z" fill="currentColor"/><path d="M12 5.38C13.62 5.38 15.06 5.94 16.21 7.02L19.36 3.87C17.45 2.09 14.97 1 12 1C7.69996 1 3.98996 3.47 2.17996 7.07L5.83996 9.91C6.70996 7.31 9.13996 5.38 12 5.38Z" fill="currentColor"/></svg></div>
+        Continue with Google
+      </button>
+      <button type="button" class="button" data-variant="outline" data-full-width>
+        <div class="svg-icn" data-icon="apple"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M12.152 6.896C11.204 6.896 9.737 5.818 8.192 5.856C6.152 5.883 4.282 7.039 3.231 8.87C1.114 12.545 2.685 17.973 4.75 20.96C5.763 22.414 6.958 24.05 8.542 23.99C10.062 23.925 10.632 23.003 12.477 23.003C14.308 23.003 14.827 23.99 16.437 23.951C18.074 23.925 19.113 22.471 20.113 21.003C21.269 19.315 21.749 17.678 21.775 17.588C21.736 17.575 18.593 16.367 18.555 12.731C18.529 9.691 21.035 8.237 21.152 8.172C19.723 6.082 17.529 5.848 16.762 5.796C14.762 5.64 13.087 6.886 12.152 6.886V6.896ZM15.53 3.83C16.373 2.818 16.93 1.403 16.775 0C15.568 0.052 14.113 0.805 13.243 1.818C12.463 2.714 11.789 4.156 11.97 5.532C13.308 5.636 14.685 4.844 15.529 3.831" fill="currentColor"/></svg></div>
+        Continue with Apple
+      </button>
+    </form>
+  </div>
+</div>
+
+```html
+<div class="divider divider--labelled">or</div>
+<button type="button" class="button" data-variant="outline" data-full-width>
+  <div class="svg-icn" data-icon="google"><!-- inline Google mark --></div>
+  Continue with Google
+</button>
+<button type="button" class="button" data-variant="outline" data-full-width>
+  <div class="svg-icn" data-icon="apple"><!-- inline Apple mark --></div>
+  Continue with Apple
+</button>
+```
+
+The Google and Apple marks are **site-local icons** — they live at `assets/icons/local/`, deliberately outside the shared icon registry, because third-party brand marks are a per-product licensing decision, not a system asset. Consumers copy them from this page's code or author their own. Both ship as monochrome `currentColor` paths so they follow the theme; a product bound by Google's full sign-in branding rules may substitute the official multicolour G inline — fixed fills work, they will not theme.
+
+---
+
+## JavaScript
+
+The component ships no script of its own. Wiring a login page in a new product takes the stylesheet install (see the appendix below), one shipped module, and three small pieces of your own JavaScript — in the order they come up.
+
+**1. Include the password reveal module** once per page. The toggle markup carries both state icons; the contract is in [Password Toggle](/website/password-toggle.html).
+
+```html
+<script src="/assets/js/password-toggle.js" defer></script>
+```
+
+**2. Intercept every submit.** Each submitting pane is a real `<form>`, and the handler prevents the default — a form that falls through to a native submit navigates with the typed values, credentials included, in the URL. Keep the button enabled and mark it `.is-loading` while the request runs; write the outcome into the pane's `.login-status`. The status element is already in the DOM and stays in the accessibility tree while empty, so filling it with text is all a reliable announcement needs.
+
+```js
+const form = document.querySelector('#sign-in-form');
+const status = form.querySelector('.login-status');
+const submit = form.querySelector('[type="submit"]');
+
+async function handleSignIn(event) {
+  event.preventDefault();
+  status.textContent = '';
+  submit.classList.add('is-loading');
+  try {
+    await signIn(new FormData(form)); // your auth call
+  } catch (error) {
+    status.textContent = 'That email and password did not match. Try again.';
+  } finally {
+    submit.classList.remove('is-loading');
+  }
+}
+
+form.addEventListener('submit', handleSignIn);
+```
+
+**3. Switch panes with `.is-hidden` and move focus.** Render each flow as a sibling `.login-form`, keep one visible at a time, and land focus where the flow continues.
+
+```js
+function showPane(next) {
+  document.querySelectorAll('.login-form').forEach(function (pane) {
+    pane.classList.toggle('is-hidden', pane !== next);
+  });
+  const field = next.querySelector('input:not([hidden])');
+  if (field) field.focus();
+}
+```
+
+**4. Fill what the flow knows.** On the set-new-password pane, write the account email from the reset token into the hidden `autocomplete="username"` input — that is what lets password managers pair the new credential with the account. Write flow instructions into `.login-subtitle`; it collapses when empty, so it costs nothing on panes with nothing to say.
+
+The social sign-in buttons and their brand marks are in [Social sign-in](#social-sign-in) — the marks are site-local by design and deliberately not shipped with the system, so copy them from that section's code into your own assets.
+
+---
+
+## Accessibility
+
+- Every input carries the `autocomplete` value for its moment — this is what makes password managers and OS keychains work:
+
+| Field | `autocomplete` |
+|---|---|
+| Email as sign-in identifier (sign in, sign up, reset, magic link) | `username` |
+| Email as a contact detail only | `email` |
+| Full name | `name` |
+| Current password (sign in) | `current-password` |
+| New password (sign up, reset) | `new-password` |
+| One-time code | `one-time-code` |
+
+On sign-up the email is the future identifier, so it takes `username` — that is what lets password managers pair it with the adjacent `new-password` field and save the credential.
+
+- Set `.is-error` and `aria-invalid="true"` together, always — the class paints the border and the danger focus ring, the attribute tells assistive technology. One without the other is a half-reported error.
+- Per-field messages use `.form-error` with an `id`, wired to the input through `aria-describedby`.
+- The form-level `.login-status` is a live region: `role="alert"` with `aria-live="assertive"` for errors, or `role="status"` with `aria-live="polite"` for confirmations. A pane that needs both keeps two elements. Keep the element in the DOM and rendered from first render and fill it with text — a region inserted or revealed from `display: none` at announce time is not reliably announced, which is why the empty state collapses by height rather than by `display`. Don't also point fields at it with `aria-describedby` — the live region announces on its own, and a form-level message is not a field description.
+- The one-time code field pairs `inputmode="numeric"` with a visible label; never replace the label with a placeholder.
+- Labels are always visible `<label for>` elements. The password toggle keeps its `aria-label`/`aria-pressed` contract from [Password Toggle](/website/password-toggle.html).
+- Identifier fields (email as username, one-time code) carry `autocapitalize="none"` and `spellcheck="false"` — mobile keyboards otherwise capitalise the first letter and spellcheck marks the address, both of which cause failed sign-ins that look like wrong passwords.
+- Password fields carry the same pair. The reveal toggle flips them to plain text inputs, and at that moment autocapitalize can mangle further typing while browser spellcheck can send the revealed value to a spellcheck service.
+- A pane that sets a password without showing the email — the set-new-password flow — includes a hidden `autocomplete="username"` input, filled by consumer JS, so password managers know which account the new credential belongs to.
+- When consumer JS switches panes, move focus to the revealed pane's first field or heading — keyboard and screen-reader users otherwise stay on a control that just disappeared.
+
+---
+
+## Usage rules
+
+**Do:**
+- Compose with `.card` when the page wants the form on a panel
+- Let the page layout own the centering — `.login` only caps its own width
+- Keep one pane visible at a time; switch siblings with `.is-hidden`
+- Put trailing text actions ("Back to sign in", "Resend code") in a `.login-footer` as `.button` with `data-variant="text"`
+- Give every password field the reveal toggle, including sign-up — creating a password is where seeing it matters most
+- While a submit is in flight, keep the button enabled and mark it `.is-loading` — a disabled button drops keyboard focus and goes silent for screen readers
+- Answer a reset request the same way whether or not the account exists — "If an account exists for that address, we've sent a link" — so the form never confirms which emails are registered
+- Write error text that states the fix, not just the failure — "Passwords need at least 8 characters", matching the field's `minlength`, beats "Invalid password"
+
+**Don't:**
+- Don't nest a login inside a login, or stack two visible panes
+- Don't add margins inside the stack — the gaps own the spacing
+- Don't invent provider button styles — a social button is `.button` with `data-variant="outline"`, `data-full-width` and a mark
+- Don't put brand marks in the shared icon registry — they are site-local by design
+- Don't block paste in password fields — pasting from a password manager is the desired path, not an abuse case
+- Don't cap password `maxlength` short or restrict characters — length is the strength that costs users nothing; keep `minlength` in step with the backend policy so the browser and the server reject the same inputs
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | Purpose |
+|---|---|---|
+| `--login-max-width` | `380px` | Width cap of the root column — the one-column form measure |
+| `--login-logo-height` | `88px` | Height of the header logo slot |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.login` | Root column: full width up to the cap, flex column, `--space-l` gap, centered items |
+| `.login-header` | Centered logo/title/subtitle stack with `--space-s` gap |
+| `.login-logo` | Logo slot at token height; inner `svg` scales to it and inherits `currentColor` |
+| `.login-title` | Heading at `--font-3xl`, weight from the heading element, document-flow margins removed |
+| `.login-subtitle` | Supporting line at `--font-m` in `--text-secondary`; `:empty` collapses it |
+| `.login-form` | Full-width pane, flex column with `--space-s` gap |
+| `.login-form .form-group` | Scoped tightening: `--space-2xs` label-to-input gap, `margin-bottom` zeroed — the pane gap owns inter-group spacing |
+| `.login-form label` | `--text-secondary` |
+| `.login-form .divider` | Re-points `--divider-spacing` to `--space-2xs` — the pane gap already separates it |
+| `.login-meta` | Wrapping space-between row for remember-me and the forgot link |
+| `.login-status` | Form-level live region at `--font-s`, centered; `:empty` collapses it to zero height while it stays in the accessibility tree; `data-type="danger"`/`"success"` pick the status colour |
+| `.login-footer` | Centered column for trailing text actions |
+
+### Key rules
+
+- Spacing is gap-only throughout — no margins inside the stack, per the layout rules
+- `.login-form` tightens `.form-group` by scope rather than introducing a new field class, so the form primitives stay untouched everywhere else
+- `data-type` on `.login-status` uses the shared feedback axis values (`danger`, `success`) resolving to `--status-*` tokens
+- The component carries no dark-mode CSS — every colour is a semantic token
+
 ### Mark, Abbr & Figure
 
 The design system styles three semantic HTML elements for inline and block-level content enrichment.
@@ -9304,6 +10092,8 @@ This section documents how the component is built. For usage, see the sections a
 
 The password toggle adds a show/hide button to a password input, letting a user reveal what they typed without a second confirmation field. It requires the `.password-field` wrapper around the input and toggle button, and the toggle button itself uses the `.password-toggle` class. The component requires JavaScript (`assets/js/password-toggle.js`).
 
+The button carries both state icons — `eye-off` while the password is hidden, `eye` once revealed. CSS swaps them off the button's `aria-pressed` attribute, so the script never touches the icon.
+
 ---
 
 ## Basic usage
@@ -9316,7 +10106,10 @@ Include the script on any page that uses password toggles:
 
 The script binds one delegated click listener to the document. No manual setup is needed, and it does not matter when the markup arrives.
 
-</button>
+<div class="svg-icn" data-icon="eye">
+        <svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M15.19 14.69C16.06 13.81 16.5 12.75 16.5 11.5C16.5 10.25 16.06 9.19 15.19 8.31C14.31 7.44 13.25 7 12 7C10.75 7 9.69 7.44 8.81 8.31C7.94 9.19 7.5 10.25 7.5 11.5C7.5 12.75 7.94 13.81 8.81 14.69C9.69 15.56 10.75 16 12 16C13.25 16 14.31 15.56 15.19 14.69ZM10.09 13.41C9.56 12.89 9.3 12.25 9.3 11.5C9.3 10.75 9.56 10.11 10.09 9.59C10.61 9.06 11.25 8.8 12 8.8C12.75 8.8 13.39 9.06 13.91 9.59C14.44 10.11 14.7 10.75 14.7 11.5C14.7 12.25 14.44 12.89 13.91 13.41C13.39 13.94 12.75 14.2 12 14.2C11.25 14.2 10.61 13.94 10.09 13.41ZM5.35 16.96C3.35 15.6 1.9 13.78 1 11.5C1.9 9.22 3.35 7.4 5.35 6.04C7.35 4.68 9.57 4 12 4C14.43 4 16.65 4.68 18.65 6.04C20.65 7.4 22.1 9.22 23 11.5C22.1 13.78 20.65 15.6 18.65 16.96C16.65 18.32 14.43 19 12 19C9.57 19 7.35 18.32 5.35 16.96ZM17.19 15.51C18.34 14.79 19.29 13.88 20.05 12.78C20.58 12.01 20.58 10.99 20.05 10.22C19.29 9.12 18.34 8.21 17.19 7.49C15.61 6.5 13.88 6 12 6C10.12 6 8.39 6.5 6.81 7.49C5.66 8.21 4.71 9.12 3.95 10.22C3.42 10.99 3.42 12.01 3.95 12.78C4.71 13.88 5.66 14.79 6.81 15.51C8.39 16.5 10.12 17 12 17C13.88 17 15.61 16.5 17.19 15.51Z" fill="currentColor"/></svg>
+      </div>
+    </button>
   </div>
 </div>
 
@@ -9324,12 +10117,17 @@ The script binds one delegated click listener to the document. No manual setup i
 <div class="password-field">
   <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Enter your password">
   <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+    <div class="svg-icn" data-icon="eye-off">
+      <!-- inline eye-off SVG -->
+    </div>
     <div class="svg-icn" data-icon="eye">
-      <!-- SVG -->
+      <!-- inline eye SVG -->
     </div>
   </button>
 </div>
 ```
+
+Put `eye-off` first: it is the icon for the initial hidden state. Both drawings come from the icon registry (`eye`, `eye-off`).
 
 ---
 
@@ -9345,7 +10143,7 @@ On click, the toggle:
 - Sets `aria-pressed` to `"true"` when the password is now visible, `"false"` when it's hidden again
 - Sets `aria-label` to `"Hide password"` when visible, `"Show password"` when hidden
 
-The script does not change the icon itself — the same icon is shown in both states. State is communicated only through `aria-pressed`, `aria-label`, and the revealed text.
+The script never touches the icon. The visual swap — `eye-off` while hidden, `eye` while revealed — is pure CSS keyed on `aria-pressed`, which is why the markup carries both icons. Legacy markup with a single icon still works: the CSS scopes the swap to buttons that contain an `eye-off` icon, so a lone `eye` stays static rather than disappearing. Accessible state lives in `aria-pressed`, `aria-label`, and the revealed text either way.
 
 ### Late-arriving markup needs nothing
 
@@ -9362,7 +10160,7 @@ This replaced a version that queried every `.password-toggle` at load and bound 
 - The button must sit inside a `.password-field` wrapper alongside its `input` — the script locates the input via `closest('.password-field')` then `querySelector('input')`, and does nothing if either lookup fails
 - Set the initial `aria-label="Show password"` and `aria-pressed="false"` in markup — the script never sets them, it only updates them after a click
 - Use a `<button type="button">`, never a bare `<div>` or `<a>` — this gives native keyboard support (Enter/Space) and stops the button from submitting the form
-- Mark the icon `aria-hidden="true"` — it's decorative and doesn't change between states, so it carries no information of its own
+- Mark both icons `aria-hidden="true"` — they're decorative; the state information lives in `aria-pressed` and `aria-label`, and the icon swap only reinforces it visually
 - `autocomplete` on the input should still reflect its purpose (`current-password`, `new-password`) — the toggle changes the input's `type`, not its autofill behaviour
 
 ---
@@ -9374,10 +10172,11 @@ This replaced a version that queried every `.password-toggle` at load and bound 
 - Give every password field its own `.password-field` wrapper — each toggle manages exactly one input independently
 - Keep the input's initial `type="password"` in markup; the script only flips it to `text` in response to a click
 - Set the toggle's starting `aria-label`/`aria-pressed` in the markup, since the script doesn't initialise them
+- Include both icons, `eye-off` before `eye` — the swap needs both present, and putting the initial-state icon first keeps the fallback sensible where the CSS doesn't load
 
 **Don't:**
 - Don't place a `.password-toggle` outside a `.password-field` wrapper — the click handler can't locate the input and silently does nothing
-- Don't expect the icon to swap or animate between states — it doesn't; accessible state lives in `aria-pressed`/`aria-label`, not the icon
+- Don't swap the icon from JavaScript — the CSS already does it off `aria-pressed`; a script that also edits the icon fights the stylesheet
 - Don't add a second handler that also flips `input.type` — the delegated listener already does it, and the two would cancel each other out. Handlers that do something else on the same click (analytics, validation) are fine
 
 ---
@@ -9405,6 +10204,8 @@ This section documents how the component is built. For usage, see the sections a
 | `.password-toggle` | The show/hide button |
 | `.password-toggle:hover` | Hover colour state |
 | `.password-toggle .svg-icn` | Icon sizing |
+| `.password-toggle:has(.svg-icn[data-icon="eye-off"]):not([aria-pressed="true"]) .svg-icn[data-icon="eye"]` | Hides the `eye` icon while the password is hidden — scoped by `:has()` to dual-icon toggles so legacy single-icon markup keeps its static icon |
+| `.password-toggle[aria-pressed="true"] .svg-icn[data-icon="eye-off"]` | Hides the `eye-off` icon once the password is revealed |
 
 > These rules live in `design-system.css` (section 12, Forms), so a product installing `password-toggle.js` from the package gets a working control — behaviour and styling together.
 
@@ -9719,6 +10520,150 @@ document.querySelector('.rating').addEventListener('rating-change', function (e)
 **Don't:**
 - Don't use ratings for binary yes/no feedback. Use a toggle or buttons
 - Don't use more than 5 stars
+
+### Section Header
+
+A section header opens a region of content. It draws a top border, pads itself above and below, and holds a heading on the left — with room for an action on the right, most often a learn-more link. The header owns the seam between one region and the next, so the content below it starts flush. The `.section-header` class is required; `.section-header-title` and the optional `.section-header-actions` are its two slots.
+
+It is not a [Page Header](/website/page-header.html), which names the whole page once, and not a [Bar](/website/bar.html), which is persistent chrome. A section header is content: it repeats down a page, one per region.
+
+---
+
+## Basic usage
+
+Wrap the row in a `<header>` inside its section. The heading takes `.section-header-title`, which removes the element's document-flow margins — the row's padding owns that rhythm.
+
+</header>
+</div>
+
+```html
+<header class="section-header">
+  <h2 class="section-header-title">Recent work</h2>
+  <div class="section-header-actions">
+    <a class="button" data-variant="text" href="#">Learn more</a>
+  </div>
+</header>
+```
+
+The actions slot is optional. Without it, the title sits flush left and the row keeps its border and padding.
+
+```html
+<header class="section-header">
+  <h2 class="section-header-title">Design tokens</h2>
+</header>
+```
+
+---
+
+## Heading levels
+
+The heading element sets the size. Choose `h2`, `h3` or `h4` for the document outline — the type scale follows the element, so the level is a structural decision, never a styling one.
+
+</header>
+  <header class="section-header">
+    <h3 class="section-header-title">Display advertising</h3>
+    <div class="section-header-actions">
+      <a class="button" data-variant="text" href="#">Learn more</a>
+    </div>
+  </header>
+  <header class="section-header">
+    <h4 class="section-header-title">Specifications</h4>
+    <div class="section-header-actions">
+      <a class="button" data-variant="text" href="#">Learn more</a>
+    </div>
+  </header>
+</div>
+
+```html
+<header class="section-header">
+  <h2 class="section-header-title">Case studies</h2>
+  ...
+</header>
+
+<header class="section-header">
+  <h3 class="section-header-title">Display advertising</h3>
+  ...
+</header>
+
+<header class="section-header">
+  <h4 class="section-header-title">Specifications</h4>
+  ...
+</header>
+```
+
+---
+
+## Actions
+
+The right-hand slot takes any component. A learn-more link is the common case; a filled button, a pair of buttons, or another compact component all sit the same way. Use an `<a>` for navigation and a `<button>` for in-page actions.
+
+</header>
+</div>
+
+```html
+<header class="section-header">
+  <h3 class="section-header-title">Brand assets</h3>
+  <div class="section-header-actions">
+    <button class="button" data-variant="outline" data-size="small">Request access</button>
+    <button class="button" data-size="small">Download all</button>
+  </div>
+</header>
+```
+
+On narrow viewports a long title and its actions wrap, keeping `--section-header-gap` between them; wrapped actions stay right-aligned on their own line, which is intended — the slot holds trailing controls. Keep actions compact — one or two controls. A row that needs more chrome than that is a [Bar](/website/bar.html).
+
+---
+
+## Accessibility
+
+- Pick the heading level from the document outline — one `h1` per page, then descend without skipping levels
+- Use `<a>` for actions that navigate and `<button class="button">` for actions that do something on the page
+- When several generic links ("Learn more") appear on one page, give each an `aria-label` naming its destination, e.g. `aria-label="Learn more about case studies"` — screen-reader users browse links out of context
+- The `<header>` element is optional semantics; a `<div>` is acceptable when the row is not the header of a sectioning element. Inside `main` or a `section`, `<header>` carries no landmark role — but directly under `body` it becomes a second `banner` landmark, so never place a section header at body level
+
+---
+
+## Usage rules
+
+**Do:**
+- Use one section header per region of content, inside the section's normal layout hierarchy — section → padding-global → container → the header, with the region's block below it
+- Let the heading element (`h2`/`h3`/`h4`) set the size
+- Keep the actions slot to one or two compact controls
+
+**Don't:**
+- Don't use a section header as the page's own title — that is the [Page Header](/website/page-header.html)
+- Don't add margins to the title or actions — the row's padding and gap own the spacing
+- Don't fill the actions slot with dense chrome (filters, search, toggles) — that is a [Bar](/website/bar.html)
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | Purpose |
+|---|---|---|
+| `--section-header-border` | `var(--border-s) solid var(--border-faded)` | The boundary line above the row |
+| `--section-header-padding-block` | `var(--space-l)` | Block padding above and below the row content |
+| `--section-header-gap` | `var(--space-m)` | Minimum gap between title and actions, and between wrapped lines |
+| `--section-header-actions-gap` | `var(--space-s)` | Space between controls inside the actions slot |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.section-header` | Base container: flex row, wrapping, top border, block padding |
+| `.section-header-title` | The heading; removes the element's document-flow margins |
+| `.section-header-actions` | Optional right-hand slot; flex row pushed right with an auto margin |
+
+### Key rules
+
+- The title's size comes from the heading element itself — the class only zeroes the margins, so `h2`/`h3`/`h4` each render at their own scale
+- Actions align right via `margin-inline-start: auto` on `.section-header-actions`, not `justify-content: space-between` — with no actions present, the title stays flush left with no stray justification behaviour
+- `flex-wrap: wrap` lets title and actions stack on narrow viewports, separated by `--section-header-gap`; the actions slot also wraps internally so paired buttons never force horizontal scroll
+- The title takes `min-width: 0` and `overflow-wrap: anywhere`, so one long unbroken word wraps inside the row instead of overflowing it
 
 ### Site Header
 
@@ -11032,6 +11977,8 @@ The `local` key points at directories of icons the project owns but the design s
 - **No collisions with design system names.** A local icon named `close` would shadow the shared `close` symbol depending on load order — invisible until the wrong icon renders somewhere. The build hard-fails on any collision rather than silently picking a winner.
 
 Both checks are fail-fast by design: a build that quietly resolved the conflict would ship the wrong icon with nothing to chase.
+
+**Third-party brand marks are the canonical site-local case.** The Google and Apple sign-in marks live at `assets/icons/local/` in this repo — deliberately outside the shared registry, because a brand mark is a per-product licensing decision, not a system asset. They follow the same authoring rules as registry icons (24×24, monochrome `currentColor` paths, cleaned with `npx svg-cleaner`) and are inlined where used; the `{{icon:name}}` shorthand reads the shared registry only and will not resolve them. See [Login → Social sign-in](/website/login.html#social-sign-in) for usage.
 
 ### Renamed Icons
 

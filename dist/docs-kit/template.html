@@ -32,6 +32,14 @@
 </head>
 <body{{BODY_ATTRS}}>
 
+    <!-- Pre-paint sidebar-state guard: nav.js restores the collapsed state
+         from localStorage only after it loads, so without this a collapsed
+         sidebar paints open first and the content area (a query container)
+         reflows visibly. Runs before first paint; key matches SIDEBAR_KEY
+         in assets/js/nav.js. The per-page data-sidebar-default case stays
+         with nav.js. Same pattern as the studio repo's chrome template. -->
+    <script>try{if(localStorage.getItem('docs-sidebar-collapsed')==='true')document.body.classList.add('sidebar-collapsed');}catch(e){}</script>
+
     <!-- Design system missing banner (shown by JS if CSS variables fail to load) -->
     <div id="ds-missing-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#fffbea;border-bottom:1px solid #f0c040;padding:12px 20px;font-family:sans-serif;font-size:14px;color:#7a5c00;align-items:center;gap:12px;">
         <span>⚠️</span>
@@ -182,6 +190,31 @@
                 };
                 window.addEventListener('scroll', tocScrollHandler);
             };
+
+            // Close the narrow-state TOC dropdown after a jump — a
+            // disclosure left open above the target heading pushes it out
+            // of view. One document-level listener, attached once; it
+            // survives Barba container swaps. Closing hides the clicked
+            // link, which would silently drop keyboard focus to <body>, so
+            // focus is handed to the target heading (skip-link pattern);
+            // preventScroll leaves the scrolling to the default fragment
+            // navigation so scroll-margin-top still positions the landing.
+            document.addEventListener('click', function(event) {
+                // Modified clicks open a new tab — the current page's
+                // dropdown and focus must stay untouched.
+                if (event.defaultPrevented || event.button !== 0 ||
+                    event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                var link = event.target.closest('.docs-toc-dropdown .toc-link');
+                if (!link) return;
+                var details = link.closest('details');
+                if (details) details.removeAttribute('open');
+                var id = decodeURIComponent(link.hash.slice(1));
+                var target = id && document.getElementById(id);
+                if (target) {
+                    target.setAttribute('tabindex', '-1');
+                    target.focus({ preventScroll: true });
+                }
+            });
 
             function init() {
                 window.bdInitHighlight();

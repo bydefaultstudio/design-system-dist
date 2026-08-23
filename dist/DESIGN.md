@@ -76,7 +76,7 @@ rounded:
   xl: '24px'
   pill: '999px'
 ---
-<!-- @bydefaultstudio/design-system v4.0.0 -->
+<!-- @bydefaultstudio/design-system v4.2.0 -->
 
 # By Default Design System
 

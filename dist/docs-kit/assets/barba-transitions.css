@@ -1,0 +1,82 @@
+/* ==========================================================================
+   Barba.js page transitions — docs-kit stylesheet
+   ==========================================================================
+
+   The CSS half of the docs-kit's optional page-transition feature
+   (pageTransitions: true in docs.config.js). Emitted into the output and
+   linked automatically when the flag is on.
+
+   Sibling file: the BrandOS site keeps its own copy at
+   assets/css/barba-transitions.css — a fix made here may need mirroring
+   there and vice versa. The kit copy differs only in its token fallbacks:
+   --top-nav-height and --background-primary may not exist in a consumer's
+   CSS, and an undefined var() inside calc() invalidates the whole
+   declaration silently.
+*/
+
+/*
+ * Positioning model:
+ *
+ * During normal display, both wrapper and container are position: relative
+ * and participate in the regular document flow.
+ *
+ * During a transition (body.is-animating), both Barba containers switch to
+ * position: absolute so they overlay each other at the same origin. The JS
+ * snaps window.scrollTo(0,0) in leave() and applies a negative translateY
+ * offset on the leaving container so it visually stays put. Enter animations
+ * use natural positions (translateY(0) at rest).
+ *
+ * Z-index layering is controlled by data-bd-role (leave|enter) and
+ * data-bd-scenario (open|close|swap|swap-back|fade) attributes set by
+ * barba-docs.js on both containers before the animation starts.
+ */
+
+/* Barba wrapper: relative anchor for absolute children during animation.
+   min-height prevents the layout row from collapsing when both containers
+   switch to position:absolute during a transition — without it the sidebar
+   jumps and the slide animation has no containing block height. */
+[data-barba="wrapper"] {
+  position: relative;
+  min-height: calc(100vh - var(--top-nav-height, 0px));
+}
+
+/* Containers need min-height so translateY(100%) produces a full-viewport
+   slide even on short pages (100% is the element's own height). */
+[data-barba="container"] {
+  position: relative;
+  min-height: calc(100vh - var(--top-nav-height, 0px));
+  background: var(--background-primary, #fff);
+}
+
+/* Lock interaction + clip overflow during animation */
+body.is-animating [data-barba="wrapper"] {
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Pull both containers out of flow so they overlay at the same origin */
+body.is-animating [data-barba="container"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  background: var(--background-primary, #fff);
+}
+
+/* -- Z-index per scenario -- */
+
+/* open: entering page covers leaving */
+body.is-animating [data-bd-role="leave"][data-bd-scenario="open"]  { z-index: 1; }
+body.is-animating [data-bd-role="enter"][data-bd-scenario="open"]  { z-index: 2; }
+
+/* close: leaving page falls away in front */
+body.is-animating [data-bd-role="leave"][data-bd-scenario="close"] { z-index: 2; }
+body.is-animating [data-bd-role="enter"][data-bd-scenario="close"] { z-index: 1; }
+
+/* swap / swap-back: both elevated (mirrored conveyor, same layering) */
+body.is-animating [data-bd-scenario="swap"],
+body.is-animating [data-bd-scenario="swap-back"] { z-index: 2; }
+
+/* fade: equal layer */
+body.is-animating [data-bd-scenario="fade"] { z-index: 1; }
