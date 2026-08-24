@@ -76,7 +76,7 @@ rounded:
   xl: '24px'
   pill: '999px'
 ---
-<!-- @bydefaultstudio/design-system v4.4.0 -->
+<!-- @bydefaultstudio/design-system v4.3.0 -->
 
 # By Default Design System
 
@@ -173,7 +173,7 @@ Corner radius comes from a seven-step token scale, `--radius-2xs` ({rounded.2xs}
 
 ## Components
 
-Use existing components and utilities first: `.button`, `.card`, `.callout`, `.badge`, `.table`, the disclosure/accordion, tabs, dialog, dropdown, form controls, and `.app-nav` for an app shell's primary navigation. New CSS is the last resort, only when the system cannot express the requirement.
+Use existing components and utilities first: `.button`, `.card`, `.callout`, `.badge`, `.table`, the disclosure/accordion, tabs, dialog, dropdown, form controls. New CSS is the last resort, only when the system cannot express the requirement.
 
 Conventions shared by every component:
 

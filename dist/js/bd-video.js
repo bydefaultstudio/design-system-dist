@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.4.0 */
+/* @bydefaultstudio/design-system v4.3.0 */
 /**
  * Script Purpose: Configurable video player — play/pause, scrubber, mute, fullscreen, keyboard shortcuts, timed cues
  * Author: By Default

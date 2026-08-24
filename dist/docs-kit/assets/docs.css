@@ -1641,8 +1641,7 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
    anything inside a .demo-scroll below keeps its sticky behaviour, which is
    the point of that container. */
 .demo-preview > .site-header,
-.demo-preview > .bar,
-.demo-preview > .app-nav {
+.demo-preview > .bar {
   position: relative;
 }
 
@@ -1651,8 +1650,7 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
    scrolls past it. Safe inside .demo-scroll too — that container's overflow
    clips its own sticky child. */
 .demo-preview .site-header,
-.demo-preview .bar,
-.demo-preview .app-nav {
+.demo-preview .bar {
   z-index: auto;
 }
 
