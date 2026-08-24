@@ -971,10 +971,24 @@ body.no-sidebar .docs-layout {
  * fragile thing here: it undoes §30's *closed* state (opacity, translate,
  * insets, size, padding, gap, shadow, transition). Add a property to
  * `.drawer`'s closed state and this block must learn about it, or the desktop
- * sidebar breaks with no error. The selector is deliberately
- * `dialog.site-sidebar.drawer:not([open])` at (0,4,1) — §30's widest placement
- * rule is `.drawer:not([data-placement=...]):not(...):not(...)` at (0,4,0), so
- * it wins by exactly one. A plain `.site-sidebar` (0,1,0) loses outright.
+ * sidebar breaks with no error.
+ *
+ * Specificity ledger, corrected 2026-08-24 (the old note miscounted itself):
+ * the reset `dialog.site-sidebar.drawer:not([open])` is (0,3,1), NOT (0,4,1).
+ * §30's widest placement rule — `.drawer:not(...):not(...):not(...)` at
+ * (0,4,0) — would BEAT it in the class column; the reset survives only
+ * because that rule requires no data-placement="start" and this sidebar
+ * carries exactly that. The margin is the attribute value, not the number.
+ *
+ * §30's drag handle (added 2026-08-24) raises the stakes: `.drawer-handle`
+ * puts conditional padding on the closed state via :has(), and the
+ * default-placement variant reaches (0,5,0) — the first §30 selector that
+ * beats this reset outright, unmatchable here only while the sidebar stays
+ * data-placement="start". The rule, stated plainly: THE DUAL-MODE SIDEBAR
+ * MUST NEVER CARRY A .drawer-handle. If it ever does, this block needs
+ * `display: none` on the handle plus a padding reset at (0,3,1) or higher —
+ * otherwise the desktop sidebar gets a 44px touch-action strip over its own
+ * scrollbar edge.
  */
 
 .site-sidebar {
@@ -1641,7 +1655,8 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
    anything inside a .demo-scroll below keeps its sticky behaviour, which is
    the point of that container. */
 .demo-preview > .site-header,
-.demo-preview > .bar {
+.demo-preview > .bar,
+.demo-preview > .app-nav {
   position: relative;
 }
 
@@ -1650,7 +1665,8 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
    scrolls past it. Safe inside .demo-scroll too — that container's overflow
    clips its own sticky child. */
 .demo-preview .site-header,
-.demo-preview .bar {
+.demo-preview .bar,
+.demo-preview .app-nav {
   z-index: auto;
 }
 

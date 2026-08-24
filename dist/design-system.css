@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.3.0 */
+/* @bydefaultstudio/design-system v4.5.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -3372,8 +3372,12 @@ a[data-tooltip],
 /* ------ 22. TOAST ------ */
 
 .toast-container {
+  /* An app shell running a bottom .app-nav (section 48) re-points this so
+     toasts stack above the tab bar instead of covering it. */
+  --toast-offset-bottom: var(--space-xl);
+
   position: fixed;
-  bottom: var(--space-xl);
+  bottom: var(--toast-offset-bottom);
   right: var(--space-xl);
   z-index: 900;
   display: flex;
@@ -4344,6 +4348,26 @@ hr.xl {
      One token covers both because only one axis is ever free. */
   --drawer-size: 25rem;
 
+  /* -- Drag handle --
+     Declared here rather than on .drawer-handle itself: a custom property set
+     on the element that consumes it shadows every inherited value whatever the
+     ancestor's specificity, so a brand's theme.css (which only ever opens
+     :root) and the per-instance style="--drawer-size: …" idiom would both
+     silently fail to re-point them. */
+  /* --text-faded, not a border token: a handle is a control, so non-text
+     contrast (WCAG 1.4.11) applies, and both --border-secondary steps land
+     under 3:1 against the panel they sit on — #ffffff light, and
+     --background-secondary #222222 dark, which is where --drawer-background
+     re-points in dark mode. */
+  --drawer-handle-color: var(--text-faded);
+  --drawer-handle-length: 2.25rem; /* 36px */
+  --drawer-handle-thickness: 0.25rem; /* 4px */
+  /* Grab-strip thickness AND the padding the drawer reserves for it — one
+     token so the two can never disagree, because the moment they do the strip
+     overlays content. --target-min is a floor, not a suggestion: below it the
+     strip stops clearing the hit-area rule (section 3). */
+  --drawer-handle-target: var(--target-min);
+
   /* -- Motion -- */
   /* Faster than a dialog in both directions: a drawer travels the full width of
      its own box, so the same duration would read as sluggish. */
@@ -4516,6 +4540,136 @@ body:has(.drawer[open]) {
   overflow: hidden;
 }
 
+/* -- Drag to dismiss --
+   A drawer that contains a .drawer-handle can be dragged off its own edge.
+   The handle's presence IS the opt-in: there is no attribute, for the same
+   reason .drawer-header has none — the affordance is markup you write, so a
+   drawer can never advertise a gesture it does not have, nor hide one it
+   does. Pointer tracking lives in dialog.js.
+
+   The handle docks to the drawer's FREE edge — the one facing the page,
+   opposite the edge it is docked to — because that is the edge the gesture
+   pulls away from. One rule, all four placements.
+
+   The strip is --target-min thick so the grab area clears the hit-area floor
+   (section 3) while the visible pill stays slim, and the drawer reserves that
+   thickness as extra padding on the same side rather than letting the strip
+   overlay content: an invisible 44px band swallowing clicks on the panel's
+   inner edge is exactly the kind of bug nobody attributes to the handle. */
+
+/* Tokens live on .drawer (see the block above). Every use carries the same
+   fallback shape --drawer-backdrop already uses, so a missing token falls to
+   its default rather than to nothing. (A handle outside a drawer still
+   collapses — all its geometry is scoped under .drawer — the fallbacks only
+   guarantee the values, not the placement.) */
+.drawer-handle {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+
+.drawer-handle::before {
+  content: "";
+  display: block;
+  border-radius: var(--radius-pill);
+  background-color: var(--drawer-handle-color, var(--text-faded));
+}
+
+/* Block placements: the strip spans the inline axis, the pill lies along it.
+   touch-action gives the browser back the axis the gesture does NOT use. A
+   blanket `none` would make the reserved strip a dead zone the user cannot
+   see — a finger planted in what looks like ordinary panel padding would
+   refuse to scroll, with no feedback and no visible cause. Surrendering the
+   cross axis also routes browser-claimed diagonal swipes through
+   pointercancel, which dialog.js already resolves by returning the drawer
+   home rather than half-committing. */
+.drawer[data-placement="top"] .drawer-handle,
+.drawer[data-placement="bottom"] .drawer-handle {
+  inset-inline: 0;
+  block-size: var(--drawer-handle-target, var(--target-min));
+  touch-action: pan-x;
+}
+
+.drawer[data-placement="top"] .drawer-handle::before,
+.drawer[data-placement="bottom"] .drawer-handle::before {
+  inline-size: var(--drawer-handle-length, 2.25rem);
+  block-size: var(--drawer-handle-thickness, 0.25rem);
+}
+
+/* A top-docked drawer's free edge is the bottom, and the reverse. */
+.drawer[data-placement="top"] .drawer-handle { inset-block-end: 0; }
+.drawer[data-placement="bottom"] .drawer-handle { inset-block-start: 0; }
+
+.drawer[data-placement="top"]:has(.drawer-handle) {
+  padding-block-end: calc(var(--drawer-padding) + var(--drawer-handle-target, var(--target-min)));
+}
+
+.drawer[data-placement="bottom"]:has(.drawer-handle) {
+  padding-block-start: calc(var(--drawer-padding) + var(--drawer-handle-target, var(--target-min)));
+}
+
+/* Inline placements: the strip spans the block axis, the pill stands upright.
+   Written as negations of the block-edge values for the same reason the
+   placement rules are — an unrecognised data-placement degrades to a working
+   end-docked drawer, handle included, rather than to no handle rule at all.
+
+   On an inline drawer the strip runs the full height beside the header, where
+   the close button also sits. They are adjacent rather than overlapping only
+   because the padding reservation below insets the header by the strip's own
+   width — re-point --drawer-padding toward zero and that clearance narrows. */
+.drawer:not([data-placement="top"]):not([data-placement="bottom"]) .drawer-handle {
+  inset-block: 0;
+  inline-size: var(--drawer-handle-target, var(--target-min));
+  touch-action: pan-y;
+}
+
+.drawer:not([data-placement="top"]):not([data-placement="bottom"]) .drawer-handle::before {
+  inline-size: var(--drawer-handle-thickness, 0.25rem);
+  block-size: var(--drawer-handle-length, 2.25rem);
+}
+
+.drawer[data-placement="start"] .drawer-handle { inset-inline-end: 0; }
+
+.drawer[data-placement="start"]:has(.drawer-handle) {
+  padding-inline-end: calc(var(--drawer-padding) + var(--drawer-handle-target, var(--target-min)));
+}
+
+.drawer:not([data-placement="start"]):not([data-placement="top"]):not([data-placement="bottom"]) .drawer-handle {
+  inset-inline-start: 0;
+}
+
+.drawer:not([data-placement="start"]):not([data-placement="top"]):not([data-placement="bottom"]):has(.drawer-handle) {
+  padding-inline-start: calc(var(--drawer-padding) + var(--drawer-handle-target, var(--target-min)));
+}
+
+/* While the finger is down the drawer must track it exactly, so the entrance
+   transition is suspended for the duration of the gesture. dialog.js clears
+   the inline translate on release and the stylesheet takes the drawer home
+   again — or off its edge — on the tokens above. */
+.drawer.is-dragging {
+  transition: none;
+}
+
+.drawer.is-dragging .drawer-handle {
+  cursor: grabbing;
+}
+
+/* The pill is a filled shape, which forced-colors would repaint with the
+   system background — an invisible handle on the one surface where the
+   gesture is least discoverable. Repaint the fill in the system text colour
+   and opt out of further forcing; a system keyword (never a literal hex) is
+   what keeps it appropriate to whatever palette the user chose. Same pattern
+   as the segmented control's active state (section 12). */
+@media (forced-colors: active) {
+  .drawer-handle::before {
+    background-color: CanvasText;
+    forced-color-adjust: none;
+  }
+}
+
 /* -- Blocked-close feedback --
    A cancelled close (see drawer-hide / dialog-hide in dialog.js) leaves the
    surface open with nothing to show for the click. The pulse says "heard you,
@@ -4541,12 +4695,36 @@ body:has(.drawer[open]) {
    pulse becomes a backdrop flash: scale is exactly the kind of motion the
    preference asks us to drop, but silent failure is worse than no feedback. */
 @media (prefers-reduced-motion: reduce) {
+  /* Drag to dismiss is deliberately NOT disabled here. The drawer following a
+     finger is direct manipulation, not the decorative motion the preference
+     asks us to drop, and removing it would take away a dismissal route rather
+     than calm one down. Only the release animation changes. */
   .drawer {
     /* Zeroing the magnitude is what actually drops the travel — the placement
        rules only carry direction, so they cannot override this. */
     --drawer-travel: 0%;
     --drawer-enter-duration: var(--duration-2xs);
     --drawer-exit-duration: var(--duration-2xs);
+
+    /* A drag leaves an inline translate of at least half the drawer's extent.
+       With travel zeroed, keeping translate in the exit would tween the
+       drawer all the way back toward its edge while it fades — a large, fast
+       slide opposite the gesture, delivered to exactly the users who asked
+       for less motion. Take position out of the exit: dialog.js clears the
+       inline translate on release, so the position CUTS home in a single
+       frame — a cut, not motion — and the drawer fades out from there.
+
+       The whole shorthand is re-declared, never just transition-property:
+       the base rule's behavior list is positionally bound to its four
+       properties, so shortening the property list alone would move
+       allow-discrete off `display` and strand the drawer mid-exit — the
+       failure the section 29 comments exist to prevent. The [open] entrance
+       rule still carries translate at higher specificity, so a CANCELLED
+       drag still visibly returns home; that is feedback, not decoration. */
+    transition:
+      opacity var(--drawer-exit-duration) var(--drawer-exit-easing),
+      display var(--drawer-exit-duration) allow-discrete,
+      overlay var(--drawer-exit-duration) allow-discrete;
   }
 
   .dialog.is-pulsing,
@@ -5741,6 +5919,7 @@ details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn
   --scroll-offset: 0px;
 
   --z-bar: 40;
+  --z-app-nav: 90; /* app chrome: above bars, below the site header */
   --z-site-header: 100;
 }
 
@@ -7533,6 +7712,197 @@ section[id] {
 }
 
 
+/* ------ 48. APP NAVIGATION ------
+ * The app's primary navigation: one component, two layouts. Below 960px it
+ * is a bottom tab bar; from 960px it is a left icon rail. data-layout pins
+ * one layout at every width for a product that wants no switch.
+ *
+ * Links, not buttons: each destination is an <a class="app-nav-link">, and
+ * the current one is declared with aria-current="page" — accessible state
+ * and visible state come from the same attribute, so they cannot drift
+ * (the same rule as .nav, section 39).
+ *
+ * Positioning is fixed and the geometry composes the safe-area insets
+ * (section 3): on an installed app the bar clears the home indicator and
+ * the rail clears a landscape cutout. Content clearance is the app
+ * shell's job — pad the scrolling column by --app-nav-height (bar tier)
+ * or --app-nav-rail-width (rail tier), because the component cannot know
+ * which container scrolls. Full-screen flows hide it with the shared
+ * .is-hidden state.
+ *
+ * The current-state switch has no dedicated animation — platform tab bars
+ * snap — but hover feedback transitions on the primitives, the same as
+ * .nav-link (section 39). No element-scope semantic motion token exists
+ * yet; never hardcode a duration here instead.
+ */
+
+:root {
+  --app-nav-height: 56px;
+  --app-nav-rail-width: 72px;
+  --app-nav-z: var(--z-app-nav);
+  /* Where the rail's top edge docks. 0 suits an app shell that owns the
+     whole viewport; a product with a site header re-points this to the
+     header's height instead of fighting the rail selector inside a media
+     query (§17 Rule 3 — the same knob-over-override reasoning as
+     --bar-top). */
+  --app-nav-inset-block-start: 0px;
+  --app-nav-gap: var(--space-m);
+  --app-nav-link-gap: var(--space-s);
+  --app-nav-rail-padding-block: var(--space-l);
+  --app-nav-background: var(--background-primary);
+  --app-nav-border: var(--border-primary);
+  --app-nav-color: var(--text-faded);
+  --app-nav-color-hover: var(--text-primary);
+  --app-nav-color-current: var(--text-accent);
+  --app-nav-icon-size: 1.5rem; /* 24px */
+  /* --label-size steps 12px → 14px below 960px, so the touch bar gets the
+     tap-adjacent label floor and the desktop rail keeps 12px. */
+  --app-nav-label-size: var(--label-size);
+  --app-nav-badge-size: 1.125rem; /* 18px — holds one digit round, two snug */
+  --app-nav-badge-font-size: var(--font-3xs);
+  --app-nav-badge-background: var(--status-danger);
+  --app-nav-badge-color: var(--text-inverted);
+}
+
+/* Bar is the base layout: bottom-docked, links share the width equally. */
+.app-nav {
+  position: fixed;
+  z-index: var(--app-nav-z);
+  inset-inline: 0;
+  inset-block-end: 0;
+  display: flex;
+  align-items: stretch;
+  block-size: calc(var(--app-nav-height) + var(--safe-area-bottom));
+  padding-block-end: var(--safe-area-bottom);
+  background-color: var(--app-nav-background);
+  border-block-start: var(--border-s) solid var(--app-nav-border);
+}
+
+.app-nav-link {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--app-nav-link-gap);
+  min-inline-size: var(--target-min);
+  min-block-size: var(--target-min);
+  color: var(--app-nav-color);
+  text-decoration: none;
+  transition: color var(--duration-2xs) var(--ease-out);
+}
+
+.app-nav-link:hover {
+  color: var(--app-nav-color-hover);
+}
+
+.app-nav-link[aria-current="page"] {
+  color: var(--app-nav-color-current);
+}
+
+.app-nav-link[aria-current="page"] .app-nav-label {
+  font-weight: var(--font-weight-semi-bold);
+}
+
+/* The icon wrapper sizes the glyph and anchors the badge. */
+.app-nav-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.app-nav-icon .svg-icn {
+  width: var(--app-nav-icon-size);
+  height: var(--app-nav-icon-size);
+}
+
+.app-nav-label {
+  font-size: var(--app-nav-label-size);
+  line-height: var(--line-height-s);
+}
+
+/* Count bubble over the icon's top-outside corner. Presentational — the
+   count it shows must also be in the link's accessible name (see
+   cms/app-nav.md), so the bubble itself is aria-hidden. */
+.app-nav-badge {
+  position: absolute;
+  inset-block-start: calc(var(--space-xs) * -1.4);
+  inset-inline-end: calc(var(--space-s) * -1.5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--app-nav-badge-size);
+  block-size: var(--app-nav-badge-size);
+  padding-inline: var(--space-2xs);
+  border-radius: var(--radius-pill);
+  background-color: var(--app-nav-badge-background);
+  color: var(--app-nav-badge-color);
+  font-size: var(--app-nav-badge-font-size);
+  font-weight: var(--font-weight-semi-bold);
+  line-height: 1;
+}
+
+/* Rail geometry: left-docked column, links full-width. Reached two ways —
+   pinned via the attribute, or automatically at the desktop tier. The two
+   blocks repeat the same declarations because a media query cannot join a
+   selector list; change both together. */
+.app-nav[data-layout="rail"] {
+  inset-inline: auto;
+  inset-inline-start: 0;
+  inset-block: var(--app-nav-inset-block-start) 0;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: var(--app-nav-gap);
+  block-size: auto;
+  inline-size: calc(var(--app-nav-rail-width) + var(--safe-area-left));
+  padding-block: var(--app-nav-rail-padding-block);
+  padding-inline-start: var(--safe-area-left);
+  border-block-start: 0;
+  border-inline-end: var(--border-s) solid var(--app-nav-border);
+}
+
+.app-nav[data-layout="rail"] .app-nav-link {
+  flex: 0 0 auto;
+}
+
+@media (min-width: 960px) {
+  .app-nav:not([data-layout="bar"]) {
+    inset-inline: auto;
+    inset-inline-start: 0;
+    inset-block: var(--app-nav-inset-block-start) 0;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: var(--app-nav-gap);
+    block-size: auto;
+    inline-size: calc(var(--app-nav-rail-width) + var(--safe-area-left));
+    padding-block: var(--app-nav-rail-padding-block);
+    padding-inline-start: var(--safe-area-left);
+    border-block-start: 0;
+    border-inline-end: var(--border-s) solid var(--app-nav-border);
+  }
+
+  .app-nav:not([data-layout="bar"]) .app-nav-link {
+    flex: 0 0 auto;
+  }
+}
+
+/* High-contrast modes erase the colour difference; underline the current
+   label so the state survives, and give the badge back the outline its
+   forced background erased. */
+@media (forced-colors: active) {
+  .app-nav-link[aria-current="page"] .app-nav-label {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .app-nav-badge {
+    border: 1px solid CanvasText;
+  }
+}
+
+
 /* ------ 15. COMPONENTS IN PROGRESS ------ */
 /*
  * The following components are actively being built.
@@ -7576,5 +7946,6 @@ section[id] {
  * - [x] Section Header (.section-header)
  * - [x] Login (.login)
  * - [x] Cell Input (.cell-input)
+ * - [x] App Navigation (.app-nav)
  */
 

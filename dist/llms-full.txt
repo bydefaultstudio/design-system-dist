@@ -1,16 +1,16 @@
-<!-- @bydefaultstudio/design-system v4.3.0 -->
+<!-- @bydefaultstudio/design-system v4.5.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 4.3.0 (package)**
+**Version: 4.5.0 (package)**
 
 ## Getting the System
 
 The system ships as one CSS file plus an icon sprite, distributed through the public artefact repo:
 
 ```bash
-npm install github:bydefaultstudio/design-system-dist#semver:^4.3.0
+npm install github:bydefaultstudio/design-system-dist#semver:^4.5.0
 ```
 
 - Link `design-system.css` before any site or theme CSS.
@@ -2873,6 +2873,7 @@ Every interactive component must include:
 | Section Header | `.section-header`, `.section-header-title`, `.section-header-actions` | No | `section-header.md` |
 | Login | `.login`, `.login-header`, `.login-logo`, `.login-title`, `.login-subtitle`, `.login-form`, `.login-meta`, `.login-status`, `.login-footer` | No | `login.md` |
 | Cell Input | `.cell-input`, `.cell-input-cells`, `.cell-input-word`, `.cell-input-cell` | Yes — `cell-input.js` (cell build + paint) | `cell-input.md` |
+| App Navigation | `.app-nav`, `.app-nav-link`, `.app-nav-icon`, `.app-nav-label`, `.app-nav-badge` | No | `app-nav.md` |
 | Mark / Abbr / Figure | `mark`, `abbr`, `figure` | No | `mark.md` |
 
 > Asset Card, Book Cover and Don't Card are documented separately as **docs-site components**. They only exist to power this BrandOS docs site and are not part of the portable design system. See [Layer Discipline](/docs/setup.html) and CLAUDE.md §17.
@@ -3306,6 +3307,285 @@ Use **disclosure** (`<details>`/`<summary>`) for standalone collapsible sections
 - Don't put critical content that all users need inside a collapsed panel
 - Don't use when a simple list or visible layout would serve better
 - Don't put padding or margin on `.accordion-inner`. It will bleed through when collapsed
+
+### App Navigation
+
+App Navigation is the persistent way around an app: three to five top-level
+destinations, always visible, one always current. The `.app-nav` class is
+required on a `<nav>` element. Each destination is a link (`.app-nav-link`)
+carrying an icon, an always-visible label and an optional count badge. The
+same markup renders two layouts — a bottom tab bar on small screens, a left
+icon rail on large ones — set out under Layouts below.
+
+## Anatomy
+
+| Part | Class | Notes |
+|---|---|---|
+| Container | `.app-nav` | `<nav>` with an `aria-label`; owns position, background, border |
+| Destination | `.app-nav-link` | `<a href>`; the current one carries `aria-current="page"` |
+| Icon | `.app-nav-icon` | Sizes the glyph and anchors the badge |
+| Label | `.app-nav-label` | Always visible — never icon-only |
+| Badge | `.app-nav-badge` | Optional count bubble, `aria-hidden="true"` |
+
+| Attribute | On | Values | What it does |
+|---|---|---|---|
+| `data-layout` | container | `bar`, `rail` | Pins one layout at every width; omit for the responsive default |
+| `aria-current` | link | `page` | Declares and styles the current destination |
+
+## Basic usage
+
+The demo pins `data-layout="bar"` and sits in the flow, so it stays inside
+this box at any window size. A real instance carries neither constraint: the
+component picks its layout from the viewport and fixes itself to the edge.
+
+<span class="app-nav-label">Home</span>
+    </a>
+    <a class="app-nav-link" href="#">
+      <div class="app-nav-icon">{{icon:search}}</div>
+      <span class="app-nav-label">Search</span>
+    </a>
+    <a class="app-nav-link" href="#" aria-label="Saved, 3 new">
+      <div class="app-nav-icon">{{icon:bookmark}}<span class="app-nav-badge" aria-hidden="true">3</span></div>
+      <span class="app-nav-label">Saved</span>
+    </a>
+    <a class="app-nav-link" href="#">
+      <div class="app-nav-icon">{{icon:user}}</div>
+      <span class="app-nav-label">Profile</span>
+    </a>
+  </nav>
+</div>
+
+```html
+<nav class="app-nav" aria-label="Primary">
+  <a class="app-nav-link" href="/" aria-current="page">
+    <div class="app-nav-icon">
+      <div class="svg-icn" data-icon="home">…</div>
+    </div>
+    <span class="app-nav-label">Home</span>
+  </a>
+  <a class="app-nav-link" href="/search">
+    <div class="app-nav-icon">
+      <div class="svg-icn" data-icon="search">…</div>
+    </div>
+    <span class="app-nav-label">Search</span>
+  </a>
+  <a class="app-nav-link" href="/saved">
+    <div class="app-nav-icon">
+      <div class="svg-icn" data-icon="bookmark">…</div>
+    </div>
+    <span class="app-nav-label">Saved</span>
+  </a>
+  <a class="app-nav-link" href="/profile">
+    <div class="app-nav-icon">
+      <div class="svg-icn" data-icon="user">…</div>
+    </div>
+    <span class="app-nav-label">Profile</span>
+  </a>
+</nav>
+```
+
+## Layouts
+
+The component is responsive by default: the bar below 960px, the rail from
+960px — the same boundary the rest of the system treats as the desktop tier.
+`data-layout` pins one layout at every width:
+
+```html
+<nav class="app-nav" data-layout="bar" aria-label="Primary">…</nav>
+<nav class="app-nav" data-layout="rail" aria-label="Primary">…</nav>
+```
+
+Pinning `rail` forfeits the responsive collapse: at 320px effective width —
+a phone, or 400% zoom — a 72px rail plus its matching content padding claims
+almost half the viewport. Test at that width before pinning; the responsive
+default already switches to the bar there and is safe.
+
+The rail demo pins its layout and shows the same four destinations as the
+bar above — only the layout changes:
+
+<span class="app-nav-label">Home</span>
+    </a>
+    <a class="app-nav-link" href="#">
+      <div class="app-nav-icon">{{icon:search}}</div>
+      <span class="app-nav-label">Search</span>
+    </a>
+    <a class="app-nav-link" href="#" aria-label="Saved, 3 new">
+      <div class="app-nav-icon">{{icon:bookmark}}<span class="app-nav-badge" aria-hidden="true">3</span></div>
+      <span class="app-nav-label">Saved</span>
+    </a>
+    <a class="app-nav-link" href="#">
+      <div class="app-nav-icon">{{icon:user}}</div>
+      <span class="app-nav-label">Profile</span>
+    </a>
+  </nav>
+</div>
+
+A product with a site header docks the rail below it by re-pointing the
+offset knob — never by overriding the rail selector:
+
+```css
+:root {
+  --app-nav-inset-block-start: var(--site-header-height);
+}
+```
+
+## Content clearance
+
+The app shell pads for the navigation — the component cannot. It is
+`position: fixed` and has no way to know which container scrolls, so content
+runs underneath it until the scrolling column reserves the space. Compose
+the safe-area token in the same calc so the padding follows on installed
+apps:
+
+```css
+.app-shell {
+  padding-bottom: calc(var(--app-nav-height) + var(--safe-area-bottom));
+}
+
+@media (min-width: 960px) {
+  .app-shell {
+    padding-bottom: 0;
+    padding-inline-start: calc(var(--app-nav-rail-width) + var(--safe-area-left));
+  }
+}
+```
+
+Toasts share the bottom edge with the bar. An app shell running one
+re-points the [Toast](/website/toast.html) offset so notifications stack
+above the tab bar instead of covering it:
+
+```css
+.toast-container {
+  --toast-offset-bottom: calc(var(--app-nav-height) + var(--safe-area-bottom) + var(--space-m));
+}
+```
+
+## Badge
+
+The badge is a count bubble anchored to the icon's corner — it says
+"something new is here", and the number it shows must also reach assistive
+technology. The bubble is presentational: put the real count in the link's
+`aria-label`, and mark the bubble `aria-hidden="true"` so the number is not
+read twice.
+
+```html
+<a class="app-nav-link" href="/saved" aria-label="Saved, 3 new">
+  <div class="app-nav-icon">
+    <div class="svg-icn" data-icon="bookmark">…</div>
+    <span class="app-nav-badge" aria-hidden="true">3</span>
+  </div>
+  <span class="app-nav-label">Saved</span>
+</a>
+```
+
+Start the `aria-label` with the visible label text, exactly as written —
+that is what keeps voice control working. And when the count is dynamic,
+the script that updates the bubble updates the `aria-label` in the same
+breath; a badge saying 5 while the name says 3 is worse than no badge. Keep
+counts to two digits; show `99+` beyond that.
+
+## Accessibility
+
+- The container is a `<nav>` landmark and needs an `aria-label` that is
+  unique among the page's navigation landmarks and never contains the word
+  "navigation" — screen readers append the role, so `Primary` reads as
+  "Primary navigation".
+- The current destination carries `aria-current="page"` — it is both the
+  accessible state and the visible style, so the two cannot drift. Update it
+  on navigation.
+- Labels are always visible. Icon-only navigation trades a word of space for
+  a guess, and the system's [Tooltip](/website/tooltip.html) is not a
+  substitute here.
+- Every destination clears `--target-min` (44px) in both axes; the bar's
+  56px height leaves room around it.
+- Badges are `aria-hidden` with the count folded into the link's
+  `aria-label` (see Badge above).
+- In forced-colors mode the current label is underlined and the badge keeps
+  an outline, because the colours that normally carry both are erased.
+
+## Usage rules
+
+**Do:**
+
+- Keep the set to three to five destinations. The bar splits its width
+  evenly, so a sixth shrinks every label past reading and squeezes targets
+  toward the floor. Beyond five, reach for a
+  [Drawer](/website/drawer.html) or a menu page.
+- Run one `.app-nav` per page. It is the primary navigation, not a toolbar —
+  a control strip that acts on the content below it is a
+  [Bar](/website/bar.html).
+- Give it links. A destination navigates; an action (open a dialog, start a
+  capture) is a `<button>` and belongs on the screen it acts on.
+- Re-skin through the `--app-nav-*` tokens — an override of the selectors
+  survives until the next release, a token re-skin travels with the brand
+  ([Source of Truth](/docs/source-of-truth.html)). Overridden colour pairs
+  must hold 4.5:1: the labels are small text at every size.
+
+**Don't:**
+
+- Place it inside a header, a section or a scroll container — it is fixed
+  viewport chrome and positions itself against the viewport.
+- Leave it visible on a full-screen flow. A player, a capture screen or
+  onboarding hides it with the shared state class:
+  `class="app-nav is-hidden"`.
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the
+sections above.
+
+### Tokens
+
+| Token | Default | What it controls |
+|---|---|---|
+| `--app-nav-height` | `56px` | Bar layout height (safe-area inset added on top) |
+| `--app-nav-rail-width` | `72px` | Rail layout width (safe-area inset added on top) |
+| `--app-nav-z` | `var(--z-app-nav)` | Stacking slot |
+| `--app-nav-inset-block-start` | `0px` | Rail top edge — re-point to dock below a site header |
+| `--app-nav-gap` | `var(--space-m)` | Gap between rail destinations |
+| `--app-nav-link-gap` | `var(--space-s)` | Gap between a destination's icon and label |
+| `--app-nav-rail-padding-block` | `var(--space-l)` | Rail top and bottom padding |
+| `--app-nav-background` | `var(--background-primary)` | Surface colour |
+| `--app-nav-border` | `var(--border-primary)` | Dividing edge — top of the bar, end of the rail |
+| `--app-nav-color` | `var(--text-faded)` | Resting icon and label colour |
+| `--app-nav-color-hover` | `var(--text-primary)` | Hover colour |
+| `--app-nav-color-current` | `var(--text-accent)` | Current destination colour |
+| `--app-nav-icon-size` | `1.5rem` | Icon glyph size |
+| `--app-nav-label-size` | `var(--label-size)` | Label size — steps 14px under 960px, 12px above |
+| `--app-nav-badge-size` | `1.125rem` | Badge bubble size |
+| `--app-nav-badge-font-size` | `var(--font-3xs)` | Badge count size |
+| `--app-nav-badge-background` | `var(--status-danger)` | Badge fill |
+| `--app-nav-badge-color` | `var(--text-inverted)` | Badge count colour |
+
+The stacking slot `--z-app-nav` (90) lives with the sticky-stack scale:
+above bars (40), below the site header (100), and below the overlays that
+must clear everything — tooltip (800), toast (900), dropdown (1000).
+Dialogs and drawers use the native top layer and outrank all of it.
+
+### Selectors
+
+| Selector | Role |
+|---|---|
+| `.app-nav` | Fixed container; bar geometry is the base layout |
+| `.app-nav[data-layout="rail"]` | Rail geometry pinned at every width |
+| `.app-nav:not([data-layout="bar"])` at ≥960px | Rail geometry at the desktop tier |
+| `.app-nav-link` | Destination; equal-width in the bar, full-width in the rail |
+| `.app-nav-link:hover` | Hover colour |
+| `.app-nav-link[aria-current="page"]` | Current destination colour and label weight |
+| `.app-nav-icon` | Glyph sizing and badge anchor |
+| `.app-nav-label` | Always-visible label |
+| `.app-nav-badge` | Count bubble, absolutely positioned off the icon |
+
+### Key rules
+
+- The rail's declarations appear twice — once for the pinned attribute, once
+  inside the desktop media query — because a media query cannot join a
+  selector list. Change both together.
+- The current-state switch has no dedicated animation — platform tab bars
+  snap. Hover transitions on the motion primitives, the same as `.nav-link`.
+- The badge count lives in the link's accessible name; the bubble is
+  presentational, and its geometry re-skins through `--app-nav-badge-size`
+  and `--app-nav-badge-font-size`.
 
 ### Avatar
 
@@ -6991,6 +7271,7 @@ Drawers are modal panels docked to an edge of the viewport, built on the native 
 |---|---|---|
 | Edge | `data-placement` | `data-placement="start"` |
 | Backdrop press | `data-static` | `data-static` |
+| Drag to dismiss | `.drawer-handle` markup | `<div class="drawer-handle">` |
 | Width or height | `--drawer-size` | `--drawer-size: 32rem` |
 
 The drawer defines its own component tokens, all prefixed `--drawer-*`. Re-point those to re-skin it; never override the rules themselves.
@@ -7172,6 +7453,42 @@ Omit `.drawer-header` entirely. There is no attribute for this — the header is
 
 ---
 
+## Drag to dismiss
+
+Add a `.drawer-handle` and the drawer can be pulled off its own edge. There is no attribute for this, for the same reason the header has none: the handle is markup you write, so a drawer can never show a grip it does not respond to, or respond to a gesture it never advertised.
+
+<div class="drawer-header">
+      <h2 class="drawer-title" id="demo-drawer-drag-title">Share</h2>
+      <button class="button close-btn" type="button" data-icon-only data-size="small" data-drawer-close aria-label="Close">
+        <div class="svg-icn" data-icon="close"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.4 19L5 17.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L5 6.4L6.4 5L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L17.6 5L19 6.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L19 17.6L17.6 19L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L6.4 19Z" fill="currentColor"/></svg></div>
+      </button>
+    </div>
+    <div class="drawer-body">
+      <p>Drag the grip downward to dismiss, or flick it. Let go before halfway and the sheet returns to its edge.</p>
+    </div>
+  </dialog>
+</div>
+
+```html
+<dialog class="drawer" data-placement="bottom" aria-labelledby="share-title">
+  <div class="drawer-handle" aria-hidden="true"></div>
+  <div class="drawer-header">…</div>
+  <div class="drawer-body">…</div>
+</dialog>
+```
+
+The handle docks to the drawer's **free edge** — the one facing the page, opposite the edge it is docked to — because that is the edge the gesture pulls away from. A bottom sheet grips at the top, a start drawer at its inline end. The drawer reserves that strip as padding rather than letting it overlay content, so the grab area never swallows a click meant for the panel.
+
+Releasing dismisses the drawer on either of two independent tests: dragged to **at least half its own extent**, or **flicked** fast enough having first travelled a minimum distance, so a jittery tap cannot read as a flick. Anything short of both returns it to its edge. Pulling against the closing direction clamps at zero rather than stretching — a drawer pulled past its own edge has nothing to reveal.
+
+One behaviour to know rather than fix: the grab strip claims the drag axis from the browser, so a touch scroll started *inside the strip* along that axis drags the drawer instead of scrolling the body. The reserved padding keeps content out of the strip, and the cross axis still scrolls — but a consumer will report this as a scrolling bug if nobody tells them it is the gesture.
+
+A dismissal is a close like any other, so it fires `drawer-hide` with `event.detail.source` of `"drag"` and a guard can refuse it. A refused drag slides back and pulses.
+
+The gesture is a redundant pointer shortcut, never the only way out. Mark the handle `aria-hidden="true"`, and keep a close button or a live backdrop — that is the single-pointer, non-dragging alternative WCAG 2.5.7 requires, and Escape covers the keyboard separately. A handle on a `data-static` drawer with no close button leaves pointer users with drag as their only exit; the module warns in the console when it sees that combination.
+
+---
+
 ## Static drawers
 
 Pressing the backdrop closes the drawer by default. Add `data-static` when the drawer holds unsaved work and closing it by accident would lose something.
@@ -7184,13 +7501,15 @@ The attribute is presence-only — there is no `data-static="false"`. A valued o
 
 With `data-static` the backdrop stops responding entirely, so the close button and Escape become the only ways out. One of them must always be present.
 
+`data-static` and the drag handle are orthogonal — it does not suppress the gesture. The attribute guards against an *accidental* backdrop press, and a deliberate drag past half the panel is not accidental. A static drawer that must also refuse a drag guards `drawer-hide` on `source === 'drag'`.
+
 ---
 
 ## Guarding the close
 
 Every user-driven close fires a cancellable `drawer-hide` event before anything happens. Calling `preventDefault()` keeps the drawer open and pulses it, so a blocked close reads as deliberate rather than broken.
 
-`event.detail.source` says what asked to close: `"close-button"`, `"backdrop"` or `"escape"`.
+`event.detail.source` says what asked to close: `"close-button"`, `"backdrop"`, `"escape"` or `"drag"`.
 
 ```js
 const drawer = document.getElementById('edit-drawer');
@@ -7223,6 +7542,7 @@ Every listener is delegated from `document`, so drawers rendered after load work
 | `data-drawer-open="id"` | On a trigger, opens that drawer |
 | `data-drawer-close` | Inside a drawer, closes it |
 | `drawer-hide` | Cancellable event fired before closing, with `detail.source` |
+| `.drawer-handle` | Markup that enables drag to dismiss — no attribute, no init |
 | `window.bdRequestClose(el, source)` | Closes through the guard |
 | `window.bdCloseOpenDialogs()` | Force-closes every open dialog and drawer, skipping guards |
 
@@ -7238,7 +7558,9 @@ A client-side router must call `bdCloseOpenDialogs()` before swapping page conte
 - Icon-only controls in the header must carry `aria-label`, including the close button
 - The page behind a drawer is locked from scrolling while it is open, so a keyboard user cannot lose their place
 - Escape is intercepted so it runs through the same guard as the other close paths. A drawer that blocks Escape must offer a visible close control, or the keyboard user has no way out
-- Reduced motion replaces the slide with a short fade, and replaces the blocked-close pulse with a backdrop flash rather than dropping the feedback entirely
+- Reduced motion replaces the slide with a short fade, and replaces the blocked-close pulse with a backdrop flash rather than dropping the feedback entirely. Drag to dismiss keeps working: a drawer following a finger is direct manipulation, not decorative motion, and removing it would take away a way out rather than calm one down
+- A drag handle is decorative — mark it `aria-hidden="true"`. The gesture is a redundant pointer shortcut: the close button or a live backdrop is its single-pointer non-dragging alternative (WCAG 2.5.7), Escape its keyboard one. It must never be the only way out
+- The handle's own grab area is `--drawer-handle-target` (44px) thick, so the strip clears the hit-area floor even though the visible pill is slim. That claim is scoped to the handle — the header close button is a separate control with its own open target-size entry on the roadmap
 
 ---
 
@@ -7249,12 +7571,14 @@ A client-side router must call `bdCloseOpenDialogs()` before swapping page conte
 - Put it as a direct child of `<body>`, or at least outside `[data-barba="container"]`. A drawer destroyed mid-transition while open leaves the top layer and focus inconsistent
 - Use `start` for navigation and `end` for detail and filter panels, consistently across a product
 - Guard the close when the drawer holds unsaved work
+- Add a handle when the drawer is a mobile sheet — the gesture is what people reach for first there
 
 **Don't:**
 - Don't use a drawer for a confirmation or a short message — that is a [Dialog](/website/dialog.html)
 - Don't open a drawer from inside another drawer; two stacked modals leave no clear way back
 - Don't remove the close button when light dismiss is off
 - Don't set both `.dialog` and `.drawer` on one element — they are alternative treatments of the same base, not composable
+- Don't add a handle to a drawer holding unsaved work without guarding `drawer-hide` — the grip invites exactly the dismissal you are trying to prevent
 
 ---
 
@@ -7278,6 +7602,10 @@ This section documents how the component is built. For usage, see the sections a
 | `--drawer-enter-easing` | `var(--ease-out)` | Entrance easing |
 | `--drawer-exit-duration` | `var(--duration-xs)` | Exit duration |
 | `--drawer-exit-easing` | `var(--ease-in)` | Exit easing |
+| `--drawer-handle-color` | `var(--text-faded)` | Grip fill. A control, so it answers to non-text contrast (WCAG 1.4.11) — it clears 3:1 in both themes (5.7:1 light, 5.0:1 dark against the dark panel's `--background-secondary`), where both `--border-secondary` steps fail |
+| `--drawer-handle-length` | `2.25rem` | Pill length along the free edge |
+| `--drawer-handle-thickness` | `0.25rem` | Pill thickness |
+| `--drawer-handle-target` | `var(--target-min)` | Grab-strip thickness and the padding reserved for it — one token so the two can never disagree. `--target-min` is the floor |
 
 ### Selectors
 
@@ -7296,6 +7624,12 @@ This section documents how the component is built. For usage, see the sections a
 | `@starting-style .drawer[open]` | Pre-open state, required to transition in from the top layer |
 | `html:has(.drawer[open])`, `body:has(.drawer[open])` | Locks page scroll while a drawer is open |
 | `.dialog.is-pulsing`, `.drawer.is-pulsing` | Blocked-close feedback, shared with Dialog |
+| `.drawer-handle` | Drag grip — absolute on the free edge, `--drawer-handle-target` thick |
+| `.drawer[data-placement="top"] .drawer-handle`, `…="bottom"` | Block-edge grip: spans the inline axis, pill lies along it |
+| `.drawer:not(…top):not(…bottom) .drawer-handle` | Inline-edge grip: spans the block axis, pill stands upright — also catches an unrecognised value |
+| `.drawer:has(.drawer-handle)` (per placement) | Reserves the grip strip as padding so it never overlays content |
+| `.drawer.is-dragging` | Suspends the transition for the length of a gesture |
+| `@media (forced-colors: active) .drawer-handle::before` | Redraws the pill, whose fill the mode would otherwise erase |
 | `.drawer-header` | Title row |
 | `.drawer-title` | Heading |
 | `.drawer-header-actions` | Supplementary header controls |
@@ -7315,7 +7649,11 @@ Page scroll is locked on `html` and `body` while a drawer is open. That only rea
 
 Entrance and exit use the same top-layer technique as Dialog — `@starting-style` to transition in, `allow-discrete` plus `overlay` to transition out. Engines missing either feature show and hide the drawer with no animation, which degrades cleanly rather than breaking.
 
-Reduced motion re-points the motion tokens rather than disabling the transition, so the discrete `display` and `overlay` steps still run and the drawer cannot get stuck mid-exit.
+Reduced motion re-points the motion tokens rather than disabling the transition, so the discrete `display` and `overlay` steps still run and the drawer cannot get stuck mid-exit. It leaves drag to dismiss alone — following a finger is direct manipulation, not decorative motion — but takes `translate` out of the exit: with travel zeroed, a dragged dismissal would otherwise tween all the way back toward its edge while fading, a large slide opposite the gesture delivered to exactly the users who asked for less motion. Instead the position cuts home in a single frame — a cut, not motion — and the drawer fades out from there. A *cancelled* drag still visibly returns home — that is feedback, not decoration.
+
+The drag handle is positioned absolutely on the free edge and the drawer reserves that strip as extra padding on the same side. Overlaying it instead would put an invisible `--target-min` band over the panel's inner edge, swallowing clicks that nobody would attribute to the handle.
+
+Pointer tracking lives in `dialog.js`, not in CSS. On release the module clears the inline `translate` it has been writing and hands the drawer back to the stylesheet — still open, it transitions home on the entrance tokens; closing, it continues off its edge on the exit tokens. Those two steps have to stay adjacent in the source: anything that reads layout between them flushes the cleared value and the drawer snaps home before it leaves.
 
 ### Drop Cap
 
