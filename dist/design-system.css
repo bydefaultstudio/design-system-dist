@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.2.0 */
+/* @bydefaultstudio/design-system v4.4.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -663,6 +663,25 @@
   --radius-l: 16px;
   --radius-xl: 24px;
   --radius-pill: 999px;
+
+  /* -- Interaction sizing -- */
+  /* Minimum hit area for standalone pointer targets: WCAG 2.5.5 Target Size
+     (Enhanced, Level AAA) and the Apple HIG target. The AA floor is 2.5.8's
+     24px (WCAG 2.2). Applied as a min size on small controls — the visual
+     size stays, the hit area pads out. Not for dense chrome: bar controls
+     hold their own --bar-control-height and answer 2.5.8 instead. Not a
+     per-theme override surface. */
+  --target-min: 44px;
+
+  /* -- Safe-area insets -- */
+  /* Device cutouts (notch, home indicator) in installed-PWA / standalone
+     contexts. 0px in a normal browser tab, so composing them is always safe:
+     padding-bottom: calc(var(--space-m) + var(--safe-area-bottom)).
+     Non-zero only when the page's viewport meta carries viewport-fit=cover. */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
 }
 
 /* ------ 4. SYSTEM TOKENS - MOTION ------ */
@@ -2088,7 +2107,7 @@ select {
   background-color: var(--input-background);
   border: var(--border-s) solid var(--input-border);
   padding: var(--space-m) var(--space-l);
-  min-height: 44px;
+  min-height: var(--target-min);
   width: 100%;
   display: block;
   transition: border-color 0.2s ease;
@@ -2616,7 +2635,7 @@ input[type="radio"]:disabled:checked {
 
 /* -- Toggle / switch -- */
 .form-toggle {
-  --toggle-width: 44px;
+  --toggle-width: 44px; /* visual width that happens to equal 44 — not --target-min */
   --toggle-height: var(--space-xl);
   --toggle-knob-size: 18px;
   --toggle-knob-offset: 3px;
@@ -2767,6 +2786,8 @@ input[type="radio"]:disabled:checked {
 }
 
 .skeleton-input {
+  /* Tracks the input's rendered box, not the hit-area floor — a skeleton is
+     not a pointer target, so this stays a literal. */
   height: 44px;
   width: 100%;
 }
@@ -2814,8 +2835,8 @@ input[type="radio"]:disabled:checked {
   cursor: pointer;
   color: var(--text-faded);
   padding: var(--space-xs);
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--target-min);
+  min-height: var(--target-min);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3351,8 +3372,12 @@ a[data-tooltip],
 /* ------ 22. TOAST ------ */
 
 .toast-container {
+  /* An app shell running a bottom .app-nav (section 48) re-points this so
+     toasts stack above the tab bar instead of covering it. */
+  --toast-offset-bottom: var(--space-xl);
+
   position: fixed;
-  bottom: var(--space-xl);
+  bottom: var(--toast-offset-bottom);
   right: var(--space-xl);
   z-index: 900;
   display: flex;
@@ -5720,6 +5745,7 @@ details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn
   --scroll-offset: 0px;
 
   --z-bar: 40;
+  --z-app-nav: 90; /* app chrome: above bars, below the site header */
   --z-site-header: 100;
 }
 
@@ -5878,7 +5904,7 @@ section[id] {
   --button-text-size: var(--font-s);
   align-self: stretch;
   flex-shrink: 0;
-  min-block-size: 44px;
+  min-block-size: var(--target-min);
   border-radius: 0;
 }
 
@@ -6315,9 +6341,10 @@ section[id] {
  * the mismatch is what makes a bar look broken however well its groups are
  * spaced.
  *
- * min-height: 0 is load-bearing. The base input rule sets min-height: 44px —
- * the WCAG 2.5.5 AAA touch target, right for a form on a phone — and it beats
- * any padding trim, so trimming padding alone changes nothing. The height here
+ * min-height: 0 is load-bearing. The base input rule sets min-height:
+ * var(--target-min) (44px) — the WCAG 2.5.5 AAA touch target, right for a
+ * form on a phone — and it beats any padding trim, so trimming padding
+ * alone changes nothing. The height here
  * clears 2.5.8 Target Size (Minimum, AA), which asks for 24px.
  *
  * Excluded on purpose: range, checkbox, radio and colour size their own box and
@@ -7511,6 +7538,197 @@ section[id] {
 }
 
 
+/* ------ 48. APP NAVIGATION ------
+ * The app's primary navigation: one component, two layouts. Below 960px it
+ * is a bottom tab bar; from 960px it is a left icon rail. data-layout pins
+ * one layout at every width for a product that wants no switch.
+ *
+ * Links, not buttons: each destination is an <a class="app-nav-link">, and
+ * the current one is declared with aria-current="page" — accessible state
+ * and visible state come from the same attribute, so they cannot drift
+ * (the same rule as .nav, section 39).
+ *
+ * Positioning is fixed and the geometry composes the safe-area insets
+ * (section 3): on an installed app the bar clears the home indicator and
+ * the rail clears a landscape cutout. Content clearance is the app
+ * shell's job — pad the scrolling column by --app-nav-height (bar tier)
+ * or --app-nav-rail-width (rail tier), because the component cannot know
+ * which container scrolls. Full-screen flows hide it with the shared
+ * .is-hidden state.
+ *
+ * The current-state switch has no dedicated animation — platform tab bars
+ * snap — but hover feedback transitions on the primitives, the same as
+ * .nav-link (section 39). No element-scope semantic motion token exists
+ * yet; never hardcode a duration here instead.
+ */
+
+:root {
+  --app-nav-height: 56px;
+  --app-nav-rail-width: 72px;
+  --app-nav-z: var(--z-app-nav);
+  /* Where the rail's top edge docks. 0 suits an app shell that owns the
+     whole viewport; a product with a site header re-points this to the
+     header's height instead of fighting the rail selector inside a media
+     query (§17 Rule 3 — the same knob-over-override reasoning as
+     --bar-top). */
+  --app-nav-inset-block-start: 0px;
+  --app-nav-gap: var(--space-m);
+  --app-nav-link-gap: var(--space-s);
+  --app-nav-rail-padding-block: var(--space-l);
+  --app-nav-background: var(--background-primary);
+  --app-nav-border: var(--border-primary);
+  --app-nav-color: var(--text-faded);
+  --app-nav-color-hover: var(--text-primary);
+  --app-nav-color-current: var(--text-accent);
+  --app-nav-icon-size: 1.5rem; /* 24px */
+  /* --label-size steps 12px → 14px below 960px, so the touch bar gets the
+     tap-adjacent label floor and the desktop rail keeps 12px. */
+  --app-nav-label-size: var(--label-size);
+  --app-nav-badge-size: 1.125rem; /* 18px — holds one digit round, two snug */
+  --app-nav-badge-font-size: var(--font-3xs);
+  --app-nav-badge-background: var(--status-danger);
+  --app-nav-badge-color: var(--text-inverted);
+}
+
+/* Bar is the base layout: bottom-docked, links share the width equally. */
+.app-nav {
+  position: fixed;
+  z-index: var(--app-nav-z);
+  inset-inline: 0;
+  inset-block-end: 0;
+  display: flex;
+  align-items: stretch;
+  block-size: calc(var(--app-nav-height) + var(--safe-area-bottom));
+  padding-block-end: var(--safe-area-bottom);
+  background-color: var(--app-nav-background);
+  border-block-start: var(--border-s) solid var(--app-nav-border);
+}
+
+.app-nav-link {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--app-nav-link-gap);
+  min-inline-size: var(--target-min);
+  min-block-size: var(--target-min);
+  color: var(--app-nav-color);
+  text-decoration: none;
+  transition: color var(--duration-2xs) var(--ease-out);
+}
+
+.app-nav-link:hover {
+  color: var(--app-nav-color-hover);
+}
+
+.app-nav-link[aria-current="page"] {
+  color: var(--app-nav-color-current);
+}
+
+.app-nav-link[aria-current="page"] .app-nav-label {
+  font-weight: var(--font-weight-semi-bold);
+}
+
+/* The icon wrapper sizes the glyph and anchors the badge. */
+.app-nav-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.app-nav-icon .svg-icn {
+  width: var(--app-nav-icon-size);
+  height: var(--app-nav-icon-size);
+}
+
+.app-nav-label {
+  font-size: var(--app-nav-label-size);
+  line-height: var(--line-height-s);
+}
+
+/* Count bubble over the icon's top-outside corner. Presentational — the
+   count it shows must also be in the link's accessible name (see
+   cms/app-nav.md), so the bubble itself is aria-hidden. */
+.app-nav-badge {
+  position: absolute;
+  inset-block-start: calc(var(--space-xs) * -1.4);
+  inset-inline-end: calc(var(--space-s) * -1.5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--app-nav-badge-size);
+  block-size: var(--app-nav-badge-size);
+  padding-inline: var(--space-2xs);
+  border-radius: var(--radius-pill);
+  background-color: var(--app-nav-badge-background);
+  color: var(--app-nav-badge-color);
+  font-size: var(--app-nav-badge-font-size);
+  font-weight: var(--font-weight-semi-bold);
+  line-height: 1;
+}
+
+/* Rail geometry: left-docked column, links full-width. Reached two ways —
+   pinned via the attribute, or automatically at the desktop tier. The two
+   blocks repeat the same declarations because a media query cannot join a
+   selector list; change both together. */
+.app-nav[data-layout="rail"] {
+  inset-inline: auto;
+  inset-inline-start: 0;
+  inset-block: var(--app-nav-inset-block-start) 0;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: var(--app-nav-gap);
+  block-size: auto;
+  inline-size: calc(var(--app-nav-rail-width) + var(--safe-area-left));
+  padding-block: var(--app-nav-rail-padding-block);
+  padding-inline-start: var(--safe-area-left);
+  border-block-start: 0;
+  border-inline-end: var(--border-s) solid var(--app-nav-border);
+}
+
+.app-nav[data-layout="rail"] .app-nav-link {
+  flex: 0 0 auto;
+}
+
+@media (min-width: 960px) {
+  .app-nav:not([data-layout="bar"]) {
+    inset-inline: auto;
+    inset-inline-start: 0;
+    inset-block: var(--app-nav-inset-block-start) 0;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: var(--app-nav-gap);
+    block-size: auto;
+    inline-size: calc(var(--app-nav-rail-width) + var(--safe-area-left));
+    padding-block: var(--app-nav-rail-padding-block);
+    padding-inline-start: var(--safe-area-left);
+    border-block-start: 0;
+    border-inline-end: var(--border-s) solid var(--app-nav-border);
+  }
+
+  .app-nav:not([data-layout="bar"]) .app-nav-link {
+    flex: 0 0 auto;
+  }
+}
+
+/* High-contrast modes erase the colour difference; underline the current
+   label so the state survives, and give the badge back the outline its
+   forced background erased. */
+@media (forced-colors: active) {
+  .app-nav-link[aria-current="page"] .app-nav-label {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .app-nav-badge {
+    border: 1px solid CanvasText;
+  }
+}
+
+
 /* ------ 15. COMPONENTS IN PROGRESS ------ */
 /*
  * The following components are actively being built.
@@ -7554,5 +7772,6 @@ section[id] {
  * - [x] Section Header (.section-header)
  * - [x] Login (.login)
  * - [x] Cell Input (.cell-input)
+ * - [x] App Navigation (.app-nav)
  */
 

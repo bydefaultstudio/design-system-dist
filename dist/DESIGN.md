@@ -76,7 +76,7 @@ rounded:
   xl: '24px'
   pill: '999px'
 ---
-<!-- @bydefaultstudio/design-system v4.2.0 -->
+<!-- @bydefaultstudio/design-system v4.4.0 -->
 
 # By Default Design System
 
@@ -155,13 +155,25 @@ The complete utility vocabulary, generated from the CSS. These are the only lega
 - **Text sizes**: `.text-size-xl`, `.text-size-xlarge`, `.text-size-l`, `.text-size-large`, `.text-size-m`, `.text-size-medium`, `.text-size-s`, `.text-size-small`, `.text-size-xs`, `.text-size-xsmall`
 - **Borders**: `.border`, `.border-top`, `.border-bottom`, `.border-left`, `.border-right`, `.border-s`, `.border-m`, `.border-l`, `.border-solid`, `.border-dashed`, `.border-dotted`, `.border-primary`, `.border-secondary`, `.border-faded`
 
+Two token families sit beside the scale and are not distances:
+
+- `--target-min` (44px) is the minimum hit area for standalone pointer
+  targets (WCAG 2.5.5). Apply as `min-width` / `min-height` on small
+  controls; never re-point it per theme. Controls inside a `.bar` are the
+  documented exception and hold `--bar-control-height` instead.
+- `--safe-area-top` / `--safe-area-right` / `--safe-area-bottom` /
+  `--safe-area-left` wrap `env(safe-area-inset-*, 0px)` for installed-PWA
+  surfaces. Compose with spacing tokens
+  (`padding-bottom: calc(var(--space-m) + var(--safe-area-bottom))`); they
+  resolve to zero except under `viewport-fit=cover`.
+
 ## Shapes
 
 Corner radius comes from a seven-step token scale, `--radius-2xs` ({rounded.2xs}) through `--radius-xl` ({rounded.xl}), plus `--radius-pill` ({rounded.pill}) for fully rounded chips and pills. Interactive surfaces (buttons, inputs) sit in the middle of the scale; cards and dialogs sit higher. Never hardcode a radius.
 
 ## Components
 
-Use existing components and utilities first: `.button`, `.card`, `.callout`, `.badge`, `.table`, the disclosure/accordion, tabs, dialog, dropdown, form controls. New CSS is the last resort, only when the system cannot express the requirement.
+Use existing components and utilities first: `.button`, `.card`, `.callout`, `.badge`, `.table`, the disclosure/accordion, tabs, dialog, dropdown, form controls, and `.app-nav` for an app shell's primary navigation. New CSS is the last resort, only when the system cannot express the requirement.
 
 Conventions shared by every component:
 
