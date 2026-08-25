@@ -1,16 +1,16 @@
-<!-- @bydefaultstudio/design-system v4.5.0 -->
+<!-- @bydefaultstudio/design-system v4.6.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 4.5.0 (package)**
+**Version: 4.6.0 (package)**
 
 ## Getting the System
 
 The system ships as one CSS file plus an icon sprite, distributed through the public artefact repo:
 
 ```bash
-npm install github:bydefaultstudio/design-system-dist#semver:^4.5.0
+npm install github:bydefaultstudio/design-system-dist#semver:^4.6.0
 ```
 
 - Link `design-system.css` before any site or theme CSS.
@@ -1189,6 +1189,31 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--motion-page-fade-easing` | `var(--ease-in-out)` |  |
 
 ### 5. LAYOUT PRIMITIVES
+
+| Token | Value | Note |
+| --- | --- | --- |
+| `--segmented-track-background` | `var(--background-faded)` |  |
+| `--segmented-track-padding` | `3px` | visual inset, same register as --toggle-knob-offset |
+| `--segmented-track-radius` | `var(--radius-m)` |  |
+| `--segmented-selected-background` | `var(--text-primary)` |  |
+| `--segmented-selected-text` | `var(--background-primary)` |  |
+| `--segmented-thumb-border` | `transparent` |  |
+| `--segmented-thumb-radius` | `calc(var(--segmented-track-radius) - var(--segmented-track-padding))` |  |
+| `--segmented-thumb-duration` | `var(--duration-xs)` |  |
+
+### 13. DISCLOSURE (details / summary)
+
+| Token | Value | Note |
+| --- | --- | --- |
+| `--progress-track` | `var(--background-darker)` |  |
+| `--progress-fill` | `var(--text-primary)` |  |
+| `--progress-height` | `var(--space-s)` |  |
+| `--progress-radius` | `0px` |  |
+| `--progress-duration` | `var(--duration-s)` | one knob times both shapes |
+| `--progress-ring-size` | `48px` |  |
+| `--progress-ring-thickness` | `4px` |  |
+
+### 23. CODE
 
 | Token | Value | Note |
 | --- | --- | --- |
@@ -2775,9 +2800,11 @@ All variation across components follows three axes. Each resolves to the same `-
 |---|---|---|---|---|
 | **Colour** | `data-color` | Visual colour, no inherent message meaning | `success`/`green`, `warning`/`yellow`, `danger`/`red`, `info`/`blue`, `accent`/`purple` | button, badge, tag |
 | **Type** | `data-type` | Semantic message meaning, the content IS this type | `success`, `warning`, `danger`, `info`, `accent` | callout, toast |
-| **Variant** | `data-variant` | Visual shape/hierarchy | `outline`, `faded`, `outline-faded`, `transparent`, `text` | button |
+| **Variant** | `data-variant` | Visual shape/hierarchy | `outline`, `faded`, `outline-faded`, `transparent`, `text` (button); `thumb` (segmented control) | button, segmented control |
 
 **The distinction:** Display components (badge, tag, button) use `data-color`. The colour is visual emphasis. Feedback components (callout, toast) use `data-type`. The type describes what the message means. Both use the same value names (`success`, `warning`, `danger`, `info`, `accent`) and resolve to the same `--status-*` tokens. Rebranding is a token change, not an attribute change.
+
+**One recorded exception:** the progress ring's status variants are BEM modifiers (`.progress-ring--success`), not `data-color` — matching `progress.progress-bar--success` on the same doc page. Consistency with its own sibling beats consistency with the axis table; do not copy the pattern to new components.
 
 ---
 
@@ -2852,7 +2879,7 @@ Every interactive component must include:
 |-----------|-----------|----------|-----------|
 | Accordion | `.accordion`, `.accordion-item`, `.accordion-header` | Yes (`accordion.js`) | `accordion.md` |
 | Button | `.button` | No | `button.md` |
-| Form elements | `.form-group`, `.form-check`, `.form-toggle`, `.segmented-control` | No | `form.md` |
+| Form elements | `.form-group`, `.form-check`, `.form-toggle`, `.segmented-control`, `.segmented-control-option` | No | `form.md` |
 | Callout | `.callout` | No | `callout.md` |
 | Disclosure | `details`/`summary` | No | `disclosure.md` |
 | Badge | `.badge` | No | `badge.md` |
@@ -2860,7 +2887,7 @@ Every interactive component must include:
 | Copy Button | `.copy-btn` | Yes (`copy-button.js`) | `copy-button.md` |
 | Breadcrumb | `.breadcrumb` | No | `breadcrumb.md` |
 | Tabs | `.tabs`, `.tab` | Yes (`tabs.js`) | `tabs.md` |
-| Progress | `.progress-bar` | No | `progress.md` |
+| Progress | `.progress-bar`, `.progress-ring` | No | `progress.md` |
 | Tooltip | `[data-tooltip]` | No | `tooltip.md` |
 | Toast | `.toast` | Yes (`toast.js`) | `toast.md` |
 | Code / Pre / Kbd | `code`, `pre`, `kbd` | No | `code.md` |
@@ -2875,6 +2902,7 @@ Every interactive component must include:
 | Cell Input | `.cell-input`, `.cell-input-cells`, `.cell-input-word`, `.cell-input-cell` | Yes — `cell-input.js` (cell build + paint) | `cell-input.md` |
 | App Navigation | `.app-nav`, `.app-nav-link`, `.app-nav-icon`, `.app-nav-label`, `.app-nav-badge` | No | `app-nav.md` |
 | Mark / Abbr / Figure | `mark`, `abbr`, `figure` | No | `mark.md` |
+| Skeleton | `.skeleton-line`, `.skeleton-label`, `.skeleton-input` | No | `skeleton.md` |
 
 > Asset Card, Book Cover and Don't Card are documented separately as **docs-site components**. They only exist to power this BrandOS docs site and are not part of the portable design system. See [Layer Discipline](/docs/setup.html) and CLAUDE.md §17.
 
@@ -8894,7 +8922,7 @@ Use `<fieldset>` and `<legend>` to group related form controls:
 
 `.segmented-control` is a button group that acts like a single-select input — a set of options where seeing all of them at once is the point.
 
-**Nothing is drawn until something is selected.** There is no track, no outer border and no rules between segments; the selected segment is the only filled one, and its fill is the same neutral a segment takes on hover.
+**Nothing is drawn until something is selected.** There is no track, no outer border and no rules between segments; the selected segment is the only filled one, and its fill is the system's selected pair — the inverted neutral.
 
 ```html
 <div class="segmented-control" role="group" aria-label="Options">
@@ -8904,9 +8932,9 @@ Use `<fieldset>` and `<legend>` to group related form controls:
 </div>
 ```
 
-Selection is deliberately **not** an accent colour. A status hue in the middle of a control spends a colour the system reserves for meaning, and the fill already carries the state as a shape appearing where there was none — so contrast requirements are met without it.
+Selection is deliberately **not** an accent colour. A status hue in the middle of a control spends a colour the system reserves for meaning. Instead selection speaks the system's selected grammar — the inverted neutral the toggle's checked track already uses — through the shared `--segmented-selected-background` / `--segmented-selected-text` pair, which clears the 3:1 non-text contrast a state indicator needs in both themes.
 
-Hover and selected therefore look the same. That is the intended trade: a segment you are pointing at previews the state it would take, and away from the pointer exactly one segment is filled. `aria-pressed` carries the state the eye is briefly ambiguous about, which is why it must be kept in step with `.is-active` in script — never set one without the other.
+Hover and selected are distinct: hover previews engagement with the faded wash, selection inverts. (They used to share the same faded fill; it measured 1.13:1 against the page — well under the 3:1 floor — so the wash now belongs to hover alone.) `aria-pressed` still carries the state for assistive technology, which is why it must be kept in step with `.is-active` in script — never set one without the other.
 
 ### Icon variant
 
@@ -8929,18 +8957,54 @@ Hover and selected therefore look the same. That is the intended trade: a segmen
 
 Reach for a segmented control when the options are icons, when there are two of them, or when seeing every choice at once matters. Reach for a [dropdown](dropdown.html) otherwise — three labelled segments cost roughly four times the width of one trigger whose label is the current value.
 
+### Thumb variant
+
+`data-variant="thumb"` draws what the flat form deliberately omits: a track, and a thumb that slides to the selected segment. The flat form's argument — hover previews the selected state — assumes a pointer that can hover. On a touch surface there is no hover, and on a dense app screen an unfilled group reads as unrelated buttons, so the app form trades the ghost group for a visible boundary. The flat form stays the default, and the right choice inside bars and toolbars.
+
+**The markup is different on purpose: native radios inside labels, not buttons.** The browser supplies the radiogroup semantics — arrow keys move the selection, Tab enters and leaves the group as one stop, and the value posts with a form when there is one. No script, no `aria-pressed` to keep in step. Radios group by their shared `name`, so the variant works anywhere in the page — a `<form>` is optional.
+
+```html
+<div class="segmented-control" data-variant="thumb" role="radiogroup" aria-label="Verdict">
+  <label class="segmented-control-option">
+    <input type="radio" name="verdict" value="liked" checked>
+    <span>Liked</span>
+  </label>
+  <label class="segmented-control-option">
+    <input type="radio" name="verdict" value="loved">
+    <span>Loved</span>
+  </label>
+  <label class="segmented-control-option">
+    <input type="radio" name="verdict" value="meh">
+    <span>Meh</span>
+  </label>
+</div>
+```
+
+Two constraints, both deliberate:
+
+- **Segments are equal width.** The thumb is sized by segment count, not measured by script, so the columns share the track evenly. Labels of wildly different lengths want the flat form instead.
+- **Two to five segments.** The position selectors enumerate up to five; a sixth option was a [dropdown](dropdown.html)'s job anyway.
+
+Selection is still not an accent colour: the thumb takes `--segmented-selected-background` (the inverted neutral) and the checked label takes `--segmented-selected-text` — the same shared pair as the flat form's `.is-active`, so both forms re-theme from one place. The thumb clears the 3:1 non-text floor by an order of magnitude in both themes; `--segmented-thumb-border` stays available as a purely aesthetic knob, transparent by default, because the contrast pass lives in the surface where an optional border can never undo it. With nothing checked, no thumb is drawn. Under reduced motion the thumb snaps between segments instead of sliding, and in forced-colors mode the track keeps a drawn border while the checked label takes the system's `Highlight` pair.
+
+Disable an option by disabling its radio — the label takes the standard disabled pair and stops responding, no extra class. Options render about 42px tall: above the 24px AA target floor, and `--target-min` is deliberately not applied — a segment is part of a grouped control, not a standalone target, the same reasoning as the toggle's visual width.
+
+Read the value the same way as any radio group — `input:checked` in script, or the posted form value.
+
 ### Styling
 
 - **Segments:** transparent, `var(--text-faded)`, `var(--radius-s)` corners, no border
-- **Hover and selected:** `var(--background-faded)` fill with `var(--text-primary)`
+- **Hover:** `var(--background-faded)` fill with `var(--text-primary)` — a preview, not the state
+- **Selected:** `var(--segmented-selected-background)` fill with `var(--segmented-selected-text)` — the inverted pair shared with the thumb variant
 - **Focus:** 2px outline with offset
-- **Forced colours:** selection falls back to `Highlight` / `HighlightText`, because the fill that carries it is not painted
+- **Forced colours:** selection falls back to `Highlight` / `HighlightText`, and the focus outline declares `CanvasText`
 
 ### Accessibility
 
 - Add `role="group"` and `aria-label` to the container
 - Use `aria-pressed="true"` on the active segment button
 - Toggle `is-active` and `aria-pressed` via JavaScript on click
+- The thumb variant needs none of the above script: use `role="radiogroup"` with an `aria-label` on the container, and the native radios carry the checked state and the arrow-key behaviour themselves
 
 ---
 
@@ -9050,6 +9114,14 @@ This section documents how the component is built. For usage, see the sections a
 | `--toggle-knob` | `var(--neutral-500)` | Toggle knob (unchecked) |
 | `--toggle-selected` | `var(--text-primary)` | Toggle track (checked) |
 | `--toggle-knob-selected` | `var(--off-white)` | Toggle knob (checked) |
+| `--segmented-track-background` | `var(--background-faded)` | Thumb variant: track fill |
+| `--segmented-track-padding` | `3px` | Thumb variant: inset between track and thumb |
+| `--segmented-track-radius` | `var(--radius-m)` | Thumb variant: track corner radius |
+| `--segmented-selected-background` | `var(--text-primary)` | Selected surface: the thumb, and the flat form's `.is-active` fill |
+| `--segmented-selected-text` | `var(--background-primary)` | Text on the selected surface, both forms |
+| `--segmented-thumb-border` | `transparent` | Optional thumb border — aesthetic only; the contrast pass lives in the surface |
+| `--segmented-thumb-radius` | track radius − track padding | Thumb corner radius, concentric with the track |
+| `--segmented-thumb-duration` | `var(--duration-xs)` | Thumb travel duration |
 | `--select-picker-max-height` | `18rem` | Scroll ceiling for the option list |
 
 The customizable select picker reuses `--dropdown-background`, `--dropdown-border` and `--dropdown-item-hover` rather than defining its own surface, so a native select and a `.dropdown` read as the same object.
@@ -9087,6 +9159,11 @@ The customizable select picker reuses `--dropdown-background`, `--dropdown-borde
 | `.segmented-control-btn` | Segment button: padding, transitions |
 | `.segmented-control-btn.is-active` | Active segment: primary bg, inverted text |
 | `.segmented-control-btn.is-icon` | Icon-only segment variant |
+| `.segmented-control[data-variant="thumb"]` | Thumb variant track: equal-column grid, track fill and radius |
+| `.segmented-control[data-variant="thumb"]::before` | The thumb: sized by segment count, moved by checked index |
+| `.segmented-control-option` | Segment label: metrics, colour transition, checked and focus states via `:has()` — all rules scoped to the variant |
+| `.segmented-control-option input[type="radio"]` | The invisible radio, stretched over its label as the hit area |
+| `.segmented-control-option:has(input:disabled)` | Disabled segment: `--input-disabled-text` at half opacity, not-allowed cursor |
 | `.slider-wrapper` | Labelled slider container |
 | `.number-input` | Stepper wrapper: flex, border |
 | `.number-input-btn` | Increment/decrement button |
@@ -10622,7 +10699,7 @@ This section documents how the component is built. For usage, see the sections a
 
 ### Progress
 
-Progress bars use the native `<progress>` element styled with design system tokens. They indicate completion percentage and support status colour variants.
+Progress comes in two shapes sharing one palette: a bar built on the native `<progress>` element, and an SVG ring for app surfaces. Both indicate completion percentage and support the same status colour variants.
 
 ---
 
@@ -10646,11 +10723,63 @@ The fallback text (`60%`) is shown in browsers that do not support `<progress>`.
 
 ---
 
+## Progress ring
+
+`.progress-ring` is the bar's job in a compact, centre-labelled circle — for app surfaces where a full-width bar has no width to fill: a completion figure beside a heading, a step counter in a sheet. Determinate only, like the bar.
+
+<div class="progress-ring progress-ring--success" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" aria-label="Upload" >
+    <svg viewBox="0 0 48 48" fill="none" width="100%" height="100%" aria-hidden="true">
+      <circle class="progress-ring-track" cx="24" cy="24" r="20" pathLength="100"/>
+      <circle class="progress-ring-fill" cx="24" cy="24" r="20" pathLength="100"/>
+    </svg>
+    <span class="progress-ring-label" aria-hidden="true">100%</span>
+  </div>
+  <div class="progress-ring progress-ring--danger" role="progressbar" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100" aria-label="Storage remaining" >
+    <svg viewBox="0 0 48 48" fill="none" width="100%" height="100%" aria-hidden="true">
+      <circle class="progress-ring-track" cx="24" cy="24" r="20" pathLength="100"/>
+      <circle class="progress-ring-fill" cx="24" cy="24" r="20" pathLength="100"/>
+    </svg>
+    <span class="progress-ring-label" aria-hidden="true">10%</span>
+  </div>
+</div>
+
+```html
+<div class="progress-ring" role="progressbar"
+     aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"
+     aria-label="Profile completeness"
+     >
+  <svg viewBox="0 0 48 48" fill="none" width="100%" height="100%" aria-hidden="true">
+    <circle class="progress-ring-track" cx="24" cy="24" r="20" pathLength="100"/>
+    <circle class="progress-ring-fill" cx="24" cy="24" r="20" pathLength="100"/>
+  </svg>
+  <span class="progress-ring-label" aria-hidden="true">60%</span>
+</div>
+```
+
+**The value is fed twice, and the two must move together**: `--progress-ring-value` (a unitless 0–100 number) draws the arc, `aria-valuenow` announces it — the same pairing rule as `.is-active` and `aria-pressed` on the segmented control. From script:
+
+```js
+ring.style.setProperty('--progress-ring-value', value);
+ring.setAttribute('aria-valuenow', String(value));
+label.textContent = value + '%';
+```
+
+The circles carry `pathLength="100"`, so the dash arithmetic is percentage arithmetic — keep that attribute and the CSS never needs to know the radius. The canonical drawing is `viewBox="0 0 48 48"` with `r="20"`; rendered at `--progress-ring-size` the whole drawing scales together, so a bigger ring is a bigger drawing, not a thinner one.
+
+Status variants use the same grammar as the bar: `.progress-ring--success`, `.progress-ring--warning`, `.progress-ring--danger`.
+
+The centre label is optional; drop the `<span>` for a bare ring. Keep `aria-hidden` on it when present — `aria-valuenow` already announces the number, and without it a screen reader hears the value twice.
+
+---
+
 ## Accessibility
 
 - The native `<progress>` element is announced by screen readers automatically
 - Always include fallback text content inside the element
 - If the progress represents a named process, associate it with a label using `aria-label` or a visible `<label>`
+- The ring is a styled `<div>`, so its semantics are declared: `role="progressbar"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and an `aria-label` naming the process
+- Under reduced motion both shapes still move to the new value — they get there without the sweep
+- In forced-colors mode the ring declares its own pair (`GrayText` track, `Highlight` fill): the mode would flatten the token strokes, and author-declared system colour keywords are honoured where token values are not
 
 ---
 
@@ -10658,11 +10787,14 @@ The fallback text (`60%`) is shown in browsers that do not support `<progress>`.
 
 **Do:**
 - Use status variants to indicate outcome (green for complete, red for critical)
+- Pair a status ring with visible text naming the outcome — the hue adds meaning it must never carry alone
 - Include fallback text inside the `<progress>` element
+- Update `--progress-ring-value` and `aria-valuenow` in the same place, always
 
 **Don't:**
-- Don't use progress bars for indeterminate loading, use a spinner or skeleton instead
+- Don't use progress bars or rings for indeterminate loading, use a [skeleton](skeleton.html) instead
 - Don't animate the value attribute with JS unless the operation is genuinely progressing
+- Don't rebuild the ring at another viewBox — resize it with `--progress-ring-size`
 
 ---
 
@@ -10674,10 +10806,13 @@ This section documents how the component is built. For usage, see the sections a
 
 | Token | Default | Purpose |
 |-------|---------|---------|
-| `var(--progress-track)` | `var(--background-darker)` | Track (unfilled) background |
-| `var(--progress-fill)` | `var(--text-primary)` | Fill (completed) colour |
-| `var(--progress-radius)` | `var(--radius-pill)` | Corner radius |
+| `var(--progress-track)` | `var(--background-darker)` | Track (unfilled) colour, bar and ring |
+| `var(--progress-fill)` | `var(--text-primary)` | Fill (completed) colour, bar and ring |
+| `var(--progress-radius)` | `0px` | Bar corner radius |
 | `var(--progress-height)` | `var(--space-s)` | Bar height |
+| `var(--progress-duration)` | `var(--duration-s)` | Value-change travel, bar and ring — one knob times both shapes |
+| `var(--progress-ring-size)` | `48px` | Ring rendered diameter |
+| `var(--progress-ring-thickness)` | `4px` | Stroke width, in viewBox units — scales with the ring |
 
 ### Selectors
 
@@ -10690,6 +10825,12 @@ This section documents how the component is built. For usage, see the sections a
 | `progress.progress-bar--success` | Success status variant, green fill |
 | `progress.progress-bar--warning` | Warning status variant, yellow fill |
 | `progress.progress-bar--danger` | Danger status variant, red fill |
+| `.progress-ring` | Ring container: size, centre-label grid, `--progress-ring-value` default |
+| `.progress-ring svg` | The drawing, rotated so progress runs from 12 o'clock |
+| `.progress-ring-track` | Track circle |
+| `.progress-ring-fill` | Fill circle: dash arithmetic, rounded cap, sweep transition |
+| `.progress-ring-label` | Centre label |
+| `.progress-ring--success` / `--warning` / `--danger` | Status variants, same grammar as the bar |
 
 ### Radio Group
 
@@ -11371,6 +11512,93 @@ Logical properties throughout (`inset-inline`, `margin-inline`), so RTL works wi
 ### Related
 
 `--scroll-offset` (design-system.css §39B) is the total height of whatever is docked to the top of the viewport. A shell that has a header and a docked bar declares it as the sum of both, and in-page anchors then clear them. Raise `--site-header-height` and anchor landings move with it.
+
+### Skeleton
+
+A skeleton is the shape of content that has not arrived yet: neutral blocks holding the layout so nothing jumps when the real thing lands. `.skeleton-line` is the primitive — a pulsing placeholder block — and the presets shape it to common controls by composing it.
+
+Reach for a skeleton when the incoming content has a known shape (a list, a form, a card). It answers "something is coming, and it will look like this", which is more than a spinner says. For work with a known completion percentage, use [progress](progress.html) instead.
+
+---
+
+## Basic usage
+
+`.skeleton-line` carries the fill, the radius and the pulse. It has no size of its own — the composer sizes it, the way the content it stands in for would be sized.
+
+<div class="skeleton-line" ></div>
+  <div class="skeleton-line" ></div>
+</div>
+
+```html
+<div class="skeleton-line" ></div>
+<div class="skeleton-line" ></div>
+<div class="skeleton-line" ></div>
+```
+
+In production, size skeletons from your own stylesheet rather than inline styles — a skeleton for a card title is part of the card's CSS, sized to the line it replaces.
+
+---
+
+## Form presets
+
+Two presets compose the primitive into form shapes: `.skeleton-label` matches a field label, `.skeleton-input` matches a text input's rendered box. Both go on the same element as `.skeleton-line`.
+
+<div class="skeleton-line skeleton-input"></div>
+</div>
+
+```html
+<div class="skeleton-line skeleton-label"></div>
+<div class="skeleton-line skeleton-input"></div>
+```
+
+`.skeleton-input` is 44px tall because that is the input's rendered box — it tracks the control it stands in for, not the hit-area floor. A skeleton is never a pointer target, so `--target-min` does not apply.
+
+---
+
+## Accessibility
+
+- A skeleton is decoration: give the loading region `aria-busy="true"` and let the skeleton blocks themselves stay unannounced — they contain no text, so screen readers pass over them
+- Do not rely on `aria-busy` alone — support is inconsistent, so a user arriving mid-load can meet silence. Pair it with a visually-hidden "Loading" text node in the region (or a polite live-region announcement when loading starts and ends), removed with the skeletons
+- Remove `aria-busy` and the hidden text when the content lands, so the region reads normally again
+- Under reduced motion the pulse stops and the blocks hold still — a static placeholder still says "loading". The hard requirement behind the pulse is WCAG 2.2.2 (Level A): blinking content lasting longer than five seconds needs a way to stop, which is why skeletons must resolve rather than pulse indefinitely — see the usage rules
+- In forced-colors mode the fill flattens to `Canvas`, so each block keeps a `GrayText` border — the loading shape survives High Contrast
+
+---
+
+## Usage rules
+
+**Do:**
+- Match the skeleton's shape to the content that will replace it — same heights, same widths, same rhythm
+- Set `aria-busy="true"` on the region being loaded
+- Swap the skeleton for real content in place, so nothing reflows
+
+**Don't:**
+- Don't use a skeleton for operations with a known percentage — that is [progress](progress.html)'s job
+- Don't leave skeletons pulsing indefinitely on failure — resolve to an error state that says what happened. This is the WCAG 2.2.2 mechanism, not just courtesy: blinking content that runs past five seconds needs a way to stop
+- Don't stack more than a screenful of skeleton blocks; hold the visible viewport and let the rest arrive unannounced
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | Purpose |
+|-------|---------|---------|
+| `var(--skeleton-background)` | `var(--background-faded)` | Placeholder fill |
+| `var(--skeleton-radius)` | `var(--radius-xs)` | Placeholder corner radius |
+| `var(--skeleton-duration)` | `var(--duration-2xl)` | One pulse cycle |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.skeleton-line` | Base primitive: fill, radius, pulse animation |
+| `.skeleton-label` | Label preset: 14px tall, 30% wide, label margin |
+| `.skeleton-input` | Input preset: input-height block, full width |
+| `@keyframes skeleton-pulse` | The pulse: opacity 1 → 0.4 → 1 |
 
 ### Slider
 

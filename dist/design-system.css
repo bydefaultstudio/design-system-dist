@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.5.0 */
+/* @bydefaultstudio/design-system v4.6.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -2573,18 +2573,21 @@ input[type="radio"]:disabled:checked {
 
 /* -- Segmented control (single-select button group) --
  * Nothing is drawn until something is selected: no track, no outer border, no
- * rules between segments. The selected segment is the only filled one, and the
- * fill is the same neutral the segment takes on hover.
+ * rules between segments.
  *
- * Selection is deliberately NOT an accent colour. A status hue in the middle of
- * a control would spend a colour the system reserves for meaning, and the fill
- * is already a non-colour difference — a shape appears where there was none —
- * so 1.4.1 is satisfied without it.
+ * Selection is deliberately NOT an accent colour. A status hue in the middle
+ * of a control would spend a colour the system reserves for meaning. Instead
+ * it is the system's selected grammar — the inverted neutral the toggle's
+ * checked track uses — via the shared pair --segmented-selected-background /
+ * --segmented-selected-text (declared with the thumb variant tokens below).
  *
- * Hover and selected therefore look the same, which is the intended trade: a
- * segment you are pointing at previews the state it would take. Away from the
- * pointer, exactly one segment is filled. aria-pressed carries the state that
- * the eye is momentarily ambiguous about; keep it in step with .is-active. */
+ * Hover previews engagement with the faded wash; selection inverts. They
+ * used to share the same 5%-black fill, argued as hover-previews-selection —
+ * but that fill measured 1.13:1 against the page, under the 3:1 non-text
+ * minimum a state indicator needs (1.4.11, measured at the 2026-08-25
+ * audit), so the wash now belongs to hover alone and selection is
+ * unmistakable. aria-pressed still carries the state for the accessibility
+ * tree; keep it in step with .is-active. */
 .segmented-control {
   display: inline-flex;
   gap: var(--space-2xs);
@@ -2605,10 +2608,15 @@ input[type="radio"]:disabled:checked {
   font-family: inherit;
 }
 
-.segmented-control-btn:hover,
-.segmented-control-btn.is-active {
+.segmented-control-btn:hover {
   background-color: var(--background-faded);
   color: var(--text-primary);
+}
+
+/* Declared after :hover so a hovered selected segment stays inverted. */
+.segmented-control-btn.is-active {
+  background-color: var(--segmented-selected-background);
+  color: var(--segmented-selected-text);
 }
 
 .segmented-control-btn:focus-visible {
@@ -2624,12 +2632,242 @@ input[type="radio"]:disabled:checked {
 }
 
 /* Backgrounds flatten under forced colours, so the fill that carries selection
-   disappears. The system's own selected pair replaces it. */
+   disappears. The system's own selected pair replaces it. forced-color-adjust:
+   none also stops the mode forcing the focus outline on the selected segment,
+   so its colour is declared explicitly. */
 @media (forced-colors: active) {
   .segmented-control-btn.is-active {
     forced-color-adjust: none;
     background-color: Highlight;
     color: HighlightText;
+  }
+
+  .segmented-control-btn.is-active:focus-visible {
+    outline-color: CanvasText;
+  }
+}
+
+/* -- Segmented control, thumb variant (radio-backed) --
+ * data-variant="thumb" draws what the flat form deliberately omits: a track,
+ * and a thumb that slides to the selected segment. The flat form's argument
+ * — hover previews the selected state — assumes a pointer that can hover.
+ * On a touch surface there is no hover, and on a dense app screen an
+ * unfilled group reads as unrelated buttons, so the app form trades the
+ * ghost group for a visible boundary. The flat form stays the default and
+ * the right choice inside bars and toolbars.
+ *
+ * The markup is different on purpose: native radios inside labels, not
+ * buttons. The browser supplies the radiogroup semantics — arrow keys move
+ * selection, Tab enters and leaves the group as one stop, the value posts
+ * with a form when there is one — so there is no script and no aria-pressed
+ * to keep in step. Segments are equal width (the thumb is sized by count,
+ * not measured), and the position selectors below enumerate up to five
+ * segments — a sixth option was a dropdown's job anyway.
+ *
+ * Selection is still not an accent colour — it is the system's selected
+ * grammar: the inverted neutral the toggle's checked track already uses.
+ * The thumb takes --text-primary, the checked label inverts, and the pair
+ * clears non-text contrast by an order of magnitude in both themes
+ * (13.1:1 light / 11.9:1 dark against the track) with no border and no
+ * dark-mode override — the tokens flip themselves. The selected pair is
+ * shared with the flat form's .is-active above, so both forms re-theme
+ * from one place. The border stays as an aesthetic knob, transparent by
+ * default; the 1.4.11 pass lives in the surface, where re-pointing an
+ * optional border can never undo it. */
+:root {
+  --segmented-track-background: var(--background-faded);
+  --segmented-track-padding: 3px; /* visual inset, same register as --toggle-knob-offset */
+  --segmented-track-radius: var(--radius-m);
+  /* One selected pair for both forms: the thumb variant's thumb + checked
+     label, and the flat form's .is-active fill + text. */
+  --segmented-selected-background: var(--text-primary);
+  --segmented-selected-text: var(--background-primary);
+  --segmented-thumb-border: transparent;
+  /* Inner radius follows the outer one minus the inset, so the thumb's
+     corners stay concentric with the track's when a brand re-points the
+     track radius. */
+  --segmented-thumb-radius: calc(var(--segmented-track-radius) - var(--segmented-track-padding));
+  --segmented-thumb-duration: var(--duration-xs);
+}
+
+.segmented-control[data-variant="thumb"] {
+  --segmented-count: 2;
+  --segmented-index: 0;
+  --segmented-direction: 1;
+
+  position: relative;
+  isolation: isolate;
+  display: inline-grid; /* shrink-to-fit, the same box level as the flat form */
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0; /* the base gap would break the thumb's count arithmetic */
+  padding: var(--segmented-track-padding);
+  background-color: var(--segmented-track-background);
+  border-radius: var(--segmented-track-radius);
+}
+
+/* Every option rule is scoped to the variant: an option dropped into a flat
+   control would render styled segments with no track and no thumb, carrying
+   selection by text colour alone — the 1.4.1 failure the variant exists to
+   avoid. */
+.segmented-control[data-variant="thumb"] .segmented-control-option {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-s) var(--space-m);
+  margin-bottom: 0; /* this is a segment, not a field label — undo the form label margin */
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-regular);
+  color: var(--text-faded);
+  border-radius: var(--segmented-thumb-radius);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--duration-2xs) var(--ease-out);
+}
+
+/* Hover previews engagement on unselected segments only — a hover rule that
+   also matched the checked option would out-rank it on specificity and
+   flip the inverted label back to dark-on-dark. */
+.segmented-control[data-variant="thumb"] .segmented-control-option:hover:not(:has(input:checked)):not(:has(input:disabled)) {
+  color: var(--text-primary);
+}
+
+.segmented-control[data-variant="thumb"] .segmented-control-option:has(input:checked) {
+  color: var(--segmented-selected-text);
+}
+
+/* The radio is the hit area, stretched invisibly over its whole label —
+   not display:none, which would forfeit focus and the arrow keys. */
+.segmented-control[data-variant="thumb"] .segmented-control-option input[type="radio"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: none;
+  border-radius: inherit;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.segmented-control[data-variant="thumb"] .segmented-control-option:has(input[type="radio"]:focus-visible) {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
+/* The radio's own disabled styling is invisible at opacity 0, so the label
+   carries it — the same colour-plus-half-opacity pair the bare radio uses,
+   because --input-disabled-text alone matches the resting label exactly. */
+.segmented-control[data-variant="thumb"] .segmented-control-option:has(input:disabled) {
+  color: var(--input-disabled-text);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Checked AND disabled (a whole group disabled is the natural case): the
+   disabled rule above would win the label back to faded-on-dark — illegible
+   on the thumb. Keep the inverted pairing and dim thumb and label together
+   instead; :has(input:checked:disabled) out-ranks both single-state rules. */
+.segmented-control[data-variant="thumb"] .segmented-control-option:has(input:checked:disabled) {
+  color: var(--segmented-selected-text);
+}
+
+.segmented-control[data-variant="thumb"]:has(input:checked:disabled)::before {
+  opacity: 0.5;
+}
+
+.segmented-control[data-variant="thumb"] .segmented-control-option:has(input:disabled) input[type="radio"] {
+  cursor: not-allowed;
+}
+
+/* The thumb: one element for the whole group, sized by segment count and
+   moved by checked index. Equal columns mean translate needs no measuring,
+   and translate composites without layout. */
+.segmented-control[data-variant="thumb"]::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset-block: var(--segmented-track-padding);
+  inset-inline-start: var(--segmented-track-padding);
+  width: calc((100% - var(--segmented-track-padding) * 2) / var(--segmented-count));
+  background-color: var(--segmented-selected-background);
+  border: var(--border-s) solid var(--segmented-thumb-border);
+  border-radius: var(--segmented-thumb-radius);
+  translate: calc(var(--segmented-index) * 100% * var(--segmented-direction)) 0;
+  transition: translate var(--segmented-thumb-duration) var(--ease-out);
+}
+
+/* Nothing checked yet: no thumb. The flat form's "nothing is drawn until
+   something is selected" survives here, scoped to the selection. */
+.segmented-control[data-variant="thumb"]:not(:has(input:checked))::before {
+  display: none;
+}
+
+/* Segment count — equal columns mean the thumb only needs to know how many. */
+.segmented-control[data-variant="thumb"]:has(> :nth-child(3):last-child) { --segmented-count: 3; }
+.segmented-control[data-variant="thumb"]:has(> :nth-child(4):last-child) { --segmented-count: 4; }
+.segmented-control[data-variant="thumb"]:has(> :nth-child(5):last-child) { --segmented-count: 5; }
+
+/* Past the documented five the enumeration above runs out, which would pin a
+   half-width thumb to the first segment while selection sits elsewhere.
+   Failing safe means failing flat: drop the thumb, and hand the checked
+   label back its resting-surface colour — the selected text would be
+   invisible on the bare track. A sixth option was a dropdown's job anyway. */
+.segmented-control[data-variant="thumb"]:has(> :nth-child(6))::before {
+  display: none;
+}
+
+.segmented-control[data-variant="thumb"]:has(> :nth-child(6)) .segmented-control-option:has(input:checked) {
+  color: var(--text-primary);
+}
+
+/* Checked position. */
+.segmented-control[data-variant="thumb"]:has(> :nth-child(2) input:checked) { --segmented-index: 1; }
+.segmented-control[data-variant="thumb"]:has(> :nth-child(3) input:checked) { --segmented-index: 2; }
+.segmented-control[data-variant="thumb"]:has(> :nth-child(4) input:checked) { --segmented-index: 3; }
+.segmented-control[data-variant="thumb"]:has(> :nth-child(5) input:checked) { --segmented-index: 4; }
+
+/* RTL: the first segment sits at the inline start, so travel flips sign.
+   A browser without :dir() keeps LTR travel — the thumb lands on the wrong
+   segment visually, but selection is never wrong, because the checked label
+   carries its own state. */
+.segmented-control[data-variant="thumb"]:dir(rtl) {
+  --segmented-direction: -1;
+}
+
+/* Re-points the token rather than disabling the transition, matching
+   .form-toggle, .dialog, .drawer and .book-cover. The thumb still lands on
+   the selected segment — it just arrives immediately. */
+@media (prefers-reduced-motion: reduce) {
+  .segmented-control[data-variant="thumb"] {
+    --segmented-thumb-duration: var(--duration-2xs);
+  }
+}
+
+/* Both fills flatten under forced colours: the track keeps a drawn boundary,
+   the thumb is dropped, and the checked label takes the system's selected
+   pair — the same answer as the flat form. forced-color-adjust: none also
+   stops the mode forcing the focus outline, so its colour is declared
+   explicitly. */
+@media (forced-colors: active) {
+  .segmented-control[data-variant="thumb"] {
+    border: 1px solid CanvasText;
+  }
+
+  .segmented-control[data-variant="thumb"]::before {
+    display: none;
+  }
+
+  .segmented-control[data-variant="thumb"] .segmented-control-option:has(input:checked) {
+    forced-color-adjust: none;
+    background-color: Highlight;
+    color: HighlightText;
+  }
+
+  .segmented-control[data-variant="thumb"] .segmented-control-option:has(input[type="radio"]:focus-visible) {
+    outline-color: CanvasText;
   }
 }
 
@@ -2770,31 +3008,6 @@ input[type="radio"]:disabled:checked {
   font-size: var(--font-s);
   color: var(--status-danger);
   margin-top: var(--space-xs);
-}
-
-/* -- Skeleton loading -- */
-.skeleton-line {
-  background-color: var(--background-faded);
-  border-radius: 4px;
-  animation: skeleton-pulse 1.5s ease-in-out infinite;
-}
-
-.skeleton-label {
-  height: 14px;
-  width: 30%;
-  margin-bottom: var(--space-xs);
-}
-
-.skeleton-input {
-  /* Tracks the input's rendered box, not the hit-area floor — a skeleton is
-     not a pointer target, so this stays a literal. */
-  height: 44px;
-  width: 100%;
-}
-
-@keyframes skeleton-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
 }
 
 /* -- Access support form states -- */
@@ -3217,10 +3430,24 @@ a.tab:hover {
 
 /* ------ 20. PROGRESS ------ */
 
+/* Shared palette for both shapes, plus the ring's geometry. The ring's
+   geometry tokens are viewBox units (the canonical viewBox is 0 0 48 48):
+   rendered at --progress-ring-size the whole drawing scales together, so a
+   bigger ring is a bigger drawing, not a thinner one. */
+:root {
+  --progress-track: var(--background-darker);
+  --progress-fill: var(--text-primary);
+  --progress-height: var(--space-s);
+  --progress-radius: 0px;
+  --progress-duration: var(--duration-s); /* one knob times both shapes */
+  --progress-ring-size: 48px;
+  --progress-ring-thickness: 4px;
+}
+
 progress.progress-bar {
   width: 100%;
-  height: var(--space-s);
-  border-radius: 0;
+  height: var(--progress-height);
+  border-radius: var(--progress-radius);
   border: none;
   overflow: hidden;
   -webkit-appearance: none;
@@ -3229,19 +3456,19 @@ progress.progress-bar {
 }
 
 progress.progress-bar::-webkit-progress-bar {
-  background-color: var(--background-darker);
-  border-radius: 0;
+  background-color: var(--progress-track);
+  border-radius: var(--progress-radius);
 }
 
 progress.progress-bar::-webkit-progress-value {
-  background-color: var(--text-primary);
-  border-radius: 0;
-  transition: width 0.3s ease-in-out;
+  background-color: var(--progress-fill);
+  border-radius: var(--progress-radius);
+  transition: width var(--progress-duration) var(--ease-in-out);
 }
 
 progress.progress-bar::-moz-progress-bar {
-  background-color: var(--text-primary);
-  border-radius: 0;
+  background-color: var(--progress-fill);
+  border-radius: var(--progress-radius);
 }
 
 /* -- Progress status variants -- */
@@ -3253,6 +3480,87 @@ progress.progress-bar--warning::-moz-progress-bar { background: var(--status-war
 
 progress.progress-bar--danger::-webkit-progress-value { background: var(--status-danger); }
 progress.progress-bar--danger::-moz-progress-bar { background: var(--status-danger); }
+
+/* -- Progress ring (radial) --
+ * The bar's job in a compact, centre-labelled circle, for app surfaces
+ * where a full-width bar has no width to fill. Determinate only, like the
+ * bar — indeterminate loading is a skeleton's job.
+ *
+ * The circles carry pathLength="100", so the dash arithmetic is percentage
+ * arithmetic: the value arrives as a unitless 0–100 custom property
+ * (--progress-ring-value) set on the element from script, and no
+ * circumference ever enters the CSS. Keep aria-valuenow and the property
+ * in step — the same pairing rule as .is-active and aria-pressed on the
+ * segmented control. */
+.progress-ring {
+  --progress-ring-value: 0;
+
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: var(--progress-ring-size);
+  aspect-ratio: 1;
+}
+
+.progress-ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg); /* progress runs from 12 o'clock */
+}
+
+.progress-ring circle {
+  fill: none;
+  stroke-width: var(--progress-ring-thickness);
+}
+
+.progress-ring-track {
+  stroke: var(--progress-track);
+}
+
+.progress-ring-fill {
+  stroke: var(--progress-fill);
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: calc(100 - var(--progress-ring-value));
+  /* A rounded cap paints a dot even at zero length; gate visibility on the
+     value so an empty ring is empty. Any value above 0 saturates to 1. */
+  opacity: clamp(0, var(--progress-ring-value) * 999, 1);
+  transition: stroke-dashoffset var(--progress-duration) var(--ease-in-out);
+}
+
+.progress-ring-label {
+  position: relative;
+  /* Sized to clear the stroke at the default 48px ring with a three-digit
+     value; a larger ring can re-point it alongside --progress-ring-size. */
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+/* -- Ring status variants, same grammar as the bar -- */
+.progress-ring--success .progress-ring-fill { stroke: var(--status-success); }
+.progress-ring--warning .progress-ring-fill { stroke: var(--status-warning); }
+.progress-ring--danger .progress-ring-fill { stroke: var(--status-danger); }
+
+/* Re-points the shared knob rather than disabling transitions, matching
+   .form-toggle: bar and ring both still move to the new value — they just
+   arrive immediately. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --progress-duration: var(--duration-2xs);
+  }
+}
+
+/* Forced colours would flatten the token strokes, but author-declared system
+   colour keywords are honoured — so declare the pair: track recedes, fill
+   carries the reading. Written at (0,2,0) so the status variants above
+   cannot out-rank it. */
+@media (forced-colors: active) {
+  .progress-ring .progress-ring-track { stroke: GrayText; }
+  .progress-ring .progress-ring-fill { stroke: Highlight; }
+}
 
 /* -- Progress wrapper with tooltip -- */
 .progress-wrapper {
@@ -6526,7 +6834,11 @@ section[id] {
 .bar .button,
 .bar .dropdown-trigger,
 .bar .copy-btn,
-.bar .segmented-control,
+/* The thumb variant is excluded like range and checkbox: its labels plus
+   track padding need more than the bar's 36px, so clamping the container
+   would break the labels out of the track. The flat form is the bar's
+   segmented control (cms/form.md). */
+.bar .segmented-control:not([data-variant="thumb"]),
 .bar .number-input,
 .bar select,
 .bar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]) {
@@ -7903,6 +8215,63 @@ section[id] {
 }
 
 
+/* ------ 49. SKELETON ------
+ * .skeleton-line is the base primitive: a pulsing placeholder block sized by
+ * the composer, holding a layout while content loads. .skeleton-label and
+ * .skeleton-input are presets that compose it
+ * (class="skeleton-line skeleton-label") and shape it to the form controls
+ * in section 12. See cms/skeleton.md.
+ */
+
+:root {
+  --skeleton-background: var(--background-faded);
+  --skeleton-radius: var(--radius-xs);
+  --skeleton-duration: var(--duration-2xl);
+}
+
+.skeleton-line {
+  background-color: var(--skeleton-background);
+  border-radius: var(--skeleton-radius);
+  animation: skeleton-pulse var(--skeleton-duration) var(--ease-in-out) infinite;
+}
+
+.skeleton-label {
+  height: 14px;
+  width: 30%;
+  margin-bottom: var(--space-xs);
+}
+
+.skeleton-input {
+  /* Tracks the input's rendered box, not the hit-area floor — a skeleton is
+     not a pointer target, so this stays a literal. */
+  height: 44px;
+  width: 100%;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* A static placeholder still says "loading"; the pulse is decoration. The
+   hard floor here is 2.2.2 (Level A): blinking content lasting longer than
+   five seconds needs a way to stop, which is why skeletons must resolve —
+   to content or to an error — rather than pulse indefinitely. This guard
+   covers the users who asked the platform for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line {
+    animation: none;
+  }
+}
+
+/* The fill flattens to Canvas under forced colours, which would erase the
+   loading shape entirely — keep a drawn boundary, the badge pattern. */
+@media (forced-colors: active) {
+  .skeleton-line {
+    border: 1px solid GrayText;
+  }
+}
+
 /* ------ 15. COMPONENTS IN PROGRESS ------ */
 /*
  * The following components are actively being built.
@@ -7920,7 +8289,8 @@ section[id] {
  * - [x] Badge (.badge)
  * - [x] Card (.card)
  * - [x] Tabs (.tabs)
- * - [x] Progress (.progress-bar)
+ * - [x] Progress (.progress-bar, .progress-ring)
+ * - [x] Skeleton (.skeleton-line)
  * - [x] Tooltip (data-tooltip)
  * - [x] Toast (.toast)
  * - [x] Breadcrumb (.breadcrumb)

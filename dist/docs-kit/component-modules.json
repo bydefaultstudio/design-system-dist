@@ -1,5 +1,5 @@
 {
-  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^4.5.0",
+  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^4.6.0",
   "modules": [
     "accordion.js",
     "bar.js",
