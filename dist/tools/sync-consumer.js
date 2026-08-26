@@ -10,6 +10,8 @@
  *   icons.svg         -> assets/icons/icons.svg
  *   DESIGN.md         -> DESIGN.md
  *   js modules        -> assets/js/design-system/
+ *   react adapters    -> vendor/design-system-react/ (bundler input, not
+ *                        served assets — they import React by bare specifier)
  *
  * Override any destination with a "bdSync" object in the consumer's
  * package.json: { css, icons, designMd, js, componentCss } — all optional,
@@ -45,6 +47,7 @@ const DEFAULT_DESTS = {
   designMd: 'DESIGN.md',
   js: path.join('assets', 'js', 'design-system'),
   componentCss: path.join('assets', 'css', 'design-system'),
+  react: path.join('vendor', 'design-system-react'),
 };
 
 const USAGE = `bd-sync — pull ${PACKAGE_NAME} artefacts into this project
@@ -302,6 +305,16 @@ function sync({ cwd, local, localPath, rows }) {
   // rather than needing a tool update to pick it up.
   if (fs.existsSync(path.join(distDir, 'css'))) {
     syncDir(rows, path.join(distDir, 'css'), cwd, dests.componentCss, 'css', 'file');
+  }
+
+  // React adapters land in v4.7.0. Most React consumers import them straight
+  // from the package via its "./react" export and never need this copy at
+  // all; the destination exists for projects that vendor everything. It
+  // deliberately sits outside the served-assets tree: the adapters import
+  // React by bare specifier, so they are build input for a bundler, never a
+  // <script> target. Stays quiet on releases that predate them.
+  if (fs.existsSync(path.join(distDir, 'react'))) {
+    syncDir(rows, path.join(distDir, 'react'), cwd, dests.react, 'react', 'adapter');
   }
 
   // Icons: a manifest means the project wants a subset sprite, so build one

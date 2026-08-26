@@ -1806,6 +1806,26 @@ for (const [slug, moduleName] of Object.entries(COMPONENT_MODULES.moduleAliases 
   }
 }
 
+// The React adapter names are advertised as importable on each component
+// page, so an entry naming an export the package does not have would ship a
+// copy-pasteable import that throws. Check against react/index.mjs.
+const REACT_INDEX = require('path').join(__dirname, '..', '..', 'react', 'index.mjs');
+if (require('fs').existsSync(REACT_INDEX)) {
+  const exported = new Set(
+    [...require('fs').readFileSync(REACT_INDEX, 'utf8').matchAll(/^export\s*\{([^}]+)\}/gm)]
+      .flatMap((m) => m[1].split(','))
+      .map((name) => name.trim().split(/\s+as\s+/).pop().trim())
+      .filter(Boolean)
+  );
+  for (const [slug, exportName] of Object.entries(COMPONENT_MODULES.reactAdapters || {})) {
+    if (!exported.has(exportName)) {
+      throw new Error(
+        `component-modules.json: reactAdapters "${slug}" → "${exportName}" is not exported from react/index.mjs`
+      );
+    }
+  }
+}
+
 function buildComponentUsage(file) {
   // Keyed on layer + filename, not section label (see portable.js) — the old
   // section gate would have silently dropped this block from every core page
@@ -1838,6 +1858,21 @@ function buildComponentUsage(file) {
 \`\`\``
     : `${stylesPart} No JavaScript, nothing else to include.`;
 
+  // A React product renders this contract through the packaged adapter
+  // rather than by hand, so name it where the consumer is already standing.
+  const adapterName = (COMPONENT_MODULES.reactAdapters || {})[slug];
+  const reactPart = adapterName
+    ? `
+
+In React, render this contract through the packaged adapter instead of writing the markup by hand:
+
+\`\`\`jsx
+import { ${adapterName} } from '@bydefaultstudio/design-system/react';
+\`\`\`
+
+The adapter renders the contract above and bridges this component's events to props — see [React](/docs/react.html).`
+    : '';
+
   return `
 
 ---
@@ -1850,7 +1885,7 @@ The design system installs once per product:
 ${COMPONENT_MODULES.install}
 \`\`\`
 
-${jsPart}
+${jsPart}${reactPart}
 `;
 }
 

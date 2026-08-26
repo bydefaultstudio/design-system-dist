@@ -1,5 +1,5 @@
 {
-  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^4.6.0",
+  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^4.7.0",
   "modules": [
     "accordion.js",
     "bar.js",
@@ -23,6 +23,16 @@
   "moduleAliases": {
     "drawer": "dialog.js",
     "login": "password-toggle.js"
+  },
+  "reactAdapters": {
+    "dialog": "Dialog",
+    "drawer": "Drawer",
+    "tabs": "Tabs",
+    "form": "SegmentedControl",
+    "dropdown": "Dropdown",
+    "toast": "showToast",
+    "rating": "Rating",
+    "cell-input": "CellInput"
   },
   "headless": [
     "bd-audio.js"

@@ -76,7 +76,7 @@ rounded:
   xl: '24px'
   pill: '999px'
 ---
-<!-- @bydefaultstudio/design-system v4.6.0 -->
+<!-- @bydefaultstudio/design-system v4.7.0 -->
 
 # By Default Design System
 
@@ -85,6 +85,8 @@ rounded:
 This design system is a neutral engine: one framework CSS file (`design-system.css`) plus an icon sprite (`icons.svg`), shipping working defaults on real token names. Brand identity does not live in the engine. Each project loads its own `theme.css` after the framework and overrides the brand primitives there (typefaces, palette); the semantic token layer resolves through those primitives, so a theme never restates component CSS. The token values in this file's front matter are the neutral engine defaults, not a brand. Expect the project's `theme.css` to repaint them, and never edit brand values into the engine file: they are lost on the next upgrade.
 
 Write HTML and CSS against the system's classes and tokens, never against raw values. A page written correctly needs no new CSS at all. Only write new CSS when the system genuinely cannot express the requirement.
+
+React products get the same contracts as components: the package's `./react` export ships thin `'use client'` adapters (`<Dialog>`, `<Sheet>`, `<Tabs>`, `<SegmentedControl>`, `<Dropdown>`, `showToast()`, `<Rating>`, `<CellInput>`) that render the documented markup exactly and bridge the component modules' events to props. Render markup by hand only where no adapter exists, and keep it byte-identical to the documented contract.
 
 ## Colors
 

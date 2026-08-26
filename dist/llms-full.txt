@@ -1,16 +1,16 @@
-<!-- @bydefaultstudio/design-system v4.6.0 -->
+<!-- @bydefaultstudio/design-system v4.7.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 4.6.0 (package)**
+**Version: 4.7.0 (package)**
 
 ## Getting the System
 
 The system ships as one CSS file plus an icon sprite, distributed through the public artefact repo:
 
 ```bash
-npm install github:bydefaultstudio/design-system-dist#semver:^4.6.0
+npm install github:bydefaultstudio/design-system-dist#semver:^4.7.0
 ```
 
 - Link `design-system.css` before any site or theme CSS.
@@ -7559,6 +7559,8 @@ The guard is a safety net, not a lock. Two Escape presses in a row with no inter
 
 Include `assets/js/dialog.js` on any page with a drawer. One script serves both Dialog and Drawer; they are the same machinery, so there is no separate `drawer.js` to add.
 
+React products can render this contract through the packaged adapter, exported as both `<Drawer>` and `<Sheet>` — the second name for the bottom-docked sheet shape, which is what its defaults assume. See [React](/docs/react.html).
+
 ```html
 <script src="/assets/js/dialog.js" defer></script>
 ```
@@ -8926,9 +8928,9 @@ Use `<fieldset>` and `<legend>` to group related form controls:
 
 ```html
 <div class="segmented-control" role="group" aria-label="Options">
-  <button class="segmented-control-btn is-active" aria-pressed="true">Option A</button>
-  <button class="segmented-control-btn" aria-pressed="false">Option B</button>
-  <button class="segmented-control-btn" aria-pressed="false">Option C</button>
+  <button class="segmented-control-btn is-active" type="button" aria-pressed="true">Option A</button>
+  <button class="segmented-control-btn" type="button" aria-pressed="false">Option B</button>
+  <button class="segmented-control-btn" type="button" aria-pressed="false">Option C</button>
 </div>
 ```
 
@@ -8941,17 +8943,17 @@ Hover and selected are distinct: hover previews engagement with the faded wash, 
 `.is-icon` squares the segment for icon-only options. Every one needs an `aria-label`, and the group needs a name of its own.
 
 </button>
-    <button class="segmented-control-btn is-icon" aria-pressed="false" aria-label="Tablet" onclick="this.parentElement.querySelectorAll('.segmented-control-btn').forEach(function(b){b.classList.remove('is-active');b.setAttribute('aria-pressed','false')});this.classList.add('is-active');this.setAttribute('aria-pressed','true')"><div class="svg-icn" data-icon="tablet"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M12 17C12.5523 17 13 17.4477 13 18C13 18.5523 12.5523 19 12 19C11.4477 19 11 18.5523 11 18C11 17.4477 11.4477 17 12 17Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M19 22H5V2H19V22ZM9 4C7.89543 4 7 4.89543 7 6V18C7 19.1046 7.89543 20 9 20H15C16.1046 20 17 19.1046 17 18V6C17 4.89543 16.1046 4 15 4H9Z" fill="currentColor"/></svg></div></button>
-    <button class="segmented-control-btn is-icon" aria-pressed="false" aria-label="Mobile" onclick="this.parentElement.querySelectorAll('.segmented-control-btn').forEach(function(b){b.classList.remove('is-active');b.setAttribute('aria-pressed','false')});this.classList.add('is-active');this.setAttribute('aria-pressed','true')"><div class="svg-icn" data-icon="mobile"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M13 7H11V6H13V7Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M18 21H6V3H18V21ZM10 5C8.89543 5 8 5.89543 8 7V17C8 18.1046 8.89543 19 10 19H14C15.1046 19 16 18.1046 16 17V7C16 5.89543 15.1046 5 14 5H10Z" fill="currentColor"/></svg></div></button>
+    <button class="segmented-control-btn is-icon" type="button" aria-pressed="false" aria-label="Tablet" onclick="this.parentElement.querySelectorAll('.segmented-control-btn').forEach(function(b){b.classList.remove('is-active');b.setAttribute('aria-pressed','false')});this.classList.add('is-active');this.setAttribute('aria-pressed','true')"><div class="svg-icn" data-icon="tablet"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M12 17C12.5523 17 13 17.4477 13 18C13 18.5523 12.5523 19 12 19C11.4477 19 11 18.5523 11 18C11 17.4477 11.4477 17 12 17Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M19 22H5V2H19V22ZM9 4C7.89543 4 7 4.89543 7 6V18C7 19.1046 7.89543 20 9 20H15C16.1046 20 17 19.1046 17 18V6C17 4.89543 16.1046 4 15 4H9Z" fill="currentColor"/></svg></div></button>
+    <button class="segmented-control-btn is-icon" type="button" aria-pressed="false" aria-label="Mobile" onclick="this.parentElement.querySelectorAll('.segmented-control-btn').forEach(function(b){b.classList.remove('is-active');b.setAttribute('aria-pressed','false')});this.classList.add('is-active');this.setAttribute('aria-pressed','true')"><div class="svg-icn" data-icon="mobile"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M13 7H11V6H13V7Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M18 21H6V3H18V21ZM10 5C8.89543 5 8 5.89543 8 7V17C8 18.1046 8.89543 19 10 19H14C15.1046 19 16 18.1046 16 17V7C16 5.89543 15.1046 5 14 5H10Z" fill="currentColor"/></svg></div></button>
   </div>
 </div>
 
 ```html
 <div class="segmented-control" role="group" aria-label="Device">
-  <button class="segmented-control-btn is-icon is-active" aria-pressed="true" aria-label="Desktop">
+  <button class="segmented-control-btn is-icon is-active" type="button" aria-pressed="true" aria-label="Desktop">
     <div class="svg-icn" data-icon="desktop"><!-- SVG --></div>
   </button>
-  <button class="segmented-control-btn is-icon" aria-pressed="false" aria-label="Tablet">…</button>
+  <button class="segmented-control-btn is-icon" type="button" aria-pressed="false" aria-label="Tablet">…</button>
 </div>
 ```
 
@@ -11881,9 +11883,9 @@ Tabs organise content into panels that the user switches between. The component 
 
 ```html
 <div class="tabs" role="tablist" aria-label="Section name">
-  <button class="tab is-active" role="tab" aria-selected="true" aria-controls="panel-1" id="tab-1">Tab One</button>
-  <button class="tab" role="tab" aria-selected="false" aria-controls="panel-2" id="tab-2">Tab Two</button>
-  <button class="tab" role="tab" aria-selected="false" aria-controls="panel-3" id="tab-3">Tab Three</button>
+  <button class="tab is-active" type="button" role="tab" aria-selected="true" aria-controls="panel-1" id="tab-1">Tab One</button>
+  <button class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-2" id="tab-2">Tab Two</button>
+  <button class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-3" id="tab-3">Tab Three</button>
 </div>
 
 <div class="tab-panel" id="panel-1" role="tabpanel" aria-labelledby="tab-1">
