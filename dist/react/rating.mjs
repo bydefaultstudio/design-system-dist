@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v4.7.0 */
+/* @bydefaultstudio/design-system v4.8.0 */
 /**
  * <Rating> — React adapter over the Rating markup contract (cms/rating.md).
  *
@@ -65,7 +65,7 @@ export function Rating(props) {
       // init; the bind guard makes a duplicate call a no-op.
       if (typeof window !== 'undefined') {
         if (typeof window.initRating === 'function') {
-          if (!el.dataset.ratingBound) window.initRating(el.parentNode || undefined);
+          if (!el.dataset.ratingBound) window.initRating(el);
         } else {
           warnOnce(
             'Rating: rating.js is not loaded — the stars will not respond. Load the module (see cms/react.md), or render `readOnly` for a display-only rating.'

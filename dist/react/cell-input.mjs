@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v4.7.0 */
+/* @bydefaultstudio/design-system v4.8.0 */
 /**
  * <CellInput> — React adapter over the Cell Input markup contract
  * (cms/cell-input.md).
@@ -104,7 +104,7 @@ export function CellInput(props) {
       // duplicates.
       if (typeof window !== 'undefined') {
         if (typeof window.initCellInput === 'function') {
-          if (!block.dataset.cellInputBound) window.initCellInput(block.parentNode || undefined);
+          if (!block.dataset.cellInputBound) window.initCellInput(block);
         } else {
           warnOnce(
             'CellInput: cell-input.js is not loaded — the cells will not build. Load the module (see cms/react.md).'

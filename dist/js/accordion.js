@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.7.0 */
+/* @bydefaultstudio/design-system v4.8.0 */
 /**
  * Accordion component
  * Initialises all .accordion containers on the page.
@@ -30,14 +30,25 @@
  *   End       — focus last header
  *   Enter/Space — toggle panel (native button behaviour)
  *
- * @version 1.2.0
+ * @version 1.3.0
  */
 (function () {
-  function initAccordion(scope) {
-    var root = scope || document;
+  function initAccordion(scopeOrEl) {
+    var root = scopeOrEl || document;
     var bound = 0;
 
-    root.querySelectorAll(".accordion").forEach(function (accordion) {
+    // Accepts a scope to search, or the .accordion itself — see tabs.js. The
+    // node handed in JOINS the set rather than replacing it, which matters
+    // most here: nested accordions are a documented pattern, and an inner one
+    // would go inert if handing in the outer replaced the search. The
+    // per-header guard makes the overlap a no-op, and `:scope > .accordion-item`
+    // below keeps each level's items to itself.
+    var accordions = root.querySelectorAll(".accordion");
+    if (root.matches && root.matches(".accordion")) {
+      accordions = [root].concat(Array.from(accordions));
+    }
+
+    accordions.forEach(function (accordion) {
       var mode = accordion.getAttribute("data-accordion") || "multi";
       var items = Array.from(accordion.querySelectorAll(":scope > .accordion-item"));
 
@@ -101,7 +112,7 @@
 
     // Only when something was actually wired. This runs on every arrival and on
     // hard load, and most pages have no accordion at all.
-    if (bound) console.log("[accordion] v1.2.0 — init (" + bound + ")");
+    if (bound) console.log("[accordion] v1.3.0 — init (" + bound + ")");
   }
 
   // Exposed for parity with the other components; the after-nav listener below

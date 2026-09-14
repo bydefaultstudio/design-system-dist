@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.7.0 */
+/* @bydefaultstudio/design-system v4.8.0 */
 /**
  * Rating component — interactive star ratings
  * Initialises all .rating elements that are not .is-readonly.
@@ -6,14 +6,24 @@
  * Click or ArrowLeft/ArrowRight sets the value; hovering previews it.
  * Selecting a value dispatches a bubbling `rating-change` event.
  *
- * @version 1.1.0
+ * @version 1.2.0
  */
 (function () {
-  function initRating(scope) {
-    var root = scope || document;
+  function initRating(scopeOrEl) {
+    var root = scopeOrEl || document;
     var bound = 0;
 
-    root.querySelectorAll('.rating:not(.is-readonly)').forEach(function (rating) {
+    // Accepts a scope to search, or the .rating itself — see tabs.js for why.
+    // A readonly rating handed in directly fails the match, so it is not bound;
+    // its descendants are still searched, which is a skip by fallthrough rather
+    // than by rejection. The contract's readonly markup nests no rating inside
+    // itself, so nothing binds.
+    var ratings = root.querySelectorAll('.rating:not(.is-readonly)');
+    if (root.matches && root.matches('.rating:not(.is-readonly)')) {
+      ratings = [root].concat(Array.from(ratings));
+    }
+
+    ratings.forEach(function (rating) {
       if (rating.dataset.ratingBound) return;
       rating.dataset.ratingBound = 'true';
       bound++;
@@ -50,7 +60,7 @@
 
     // Only when something was actually wired. This runs on every arrival and on
     // hard load, and most pages have no rating at all.
-    if (bound) console.log('[rating] v1.1.0 — init (' + bound + ')');
+    if (bound) console.log('[rating] v1.2.0 — init (' + bound + ')');
   }
 
   // Exposed for parity with the other components; the after-nav listener below

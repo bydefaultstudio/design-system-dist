@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v4.7.0 */
+/* @bydefaultstudio/design-system v4.8.0 */
 /**
  * <Tabs> — React adapter over the Tabs markup contract (cms/tabs.md).
  *
@@ -59,14 +59,14 @@ export function Tabs(props) {
 
   // tabs.js is per-element: it binds what exists when it runs. A tablist
   // mounted later (streamed, conditional) self-registers here through the
-  // module's public init, scoped to its own parent; the bind guard makes
-  // a duplicate call a no-op.
+  // module's public init, handing it this element and nothing else; the bind
+  // guard makes a duplicate call a no-op.
   React.useEffect(function () {
     var el = listRef.current;
     if (!el) return;
     if (typeof window !== 'undefined') {
       if (typeof window.initTabs === 'function') {
-        if (!el.dataset.tabsBound) window.initTabs(el.parentNode || undefined);
+        if (!el.dataset.tabsBound) window.initTabs(el);
       } else {
         warnOnce('Tabs: tabs.js is not loaded — the tabs will not switch. Load the module (see cms/react.md).');
       }

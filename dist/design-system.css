@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.7.0 */
+/* @bydefaultstudio/design-system v4.8.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -34,11 +34,16 @@
 
   /* -- Palette -- */
   --off-white: var(--neutral-50);
-  --warm-white: var(--neutral-100);
-  --warm-black: var(--neutral-950);
   --off-black: var(--neutral-900);
+  /* Brown is the warm palette ramp. It defaults through the neutral scale so a
+     brand that re-points only the neutrals still carries the toast, tooltip and
+     mark surfaces with it; a brand wanting a true brown sets these directly. */
+  --brown-lighter: var(--neutral-100);
+  --brown-light: var(--neutral-300);
+  --brown: var(--neutral-500);
+  --brown-dark: var(--neutral-950);
 
-  /* -- Accent colours (generic, semantically hued) -- */
+  /* -- Accent colours (generic) -- */
   --red-lighter: #FEE2E2;
   --red-light: #FECACA;
   --red: #DC2626;
@@ -59,6 +64,21 @@
   --purple-light: #E9D5FF;
   --purple: #9333EA;
   --purple-dark: #581C87;
+  /* Aqua, pink and peach are the bright accents: their base step sits a shade
+     lighter than the five signal hues above, so they read as a highlight on a
+     light surface rather than as a status colour. */
+  --aqua-lighter: #CCFBF1;
+  --aqua-light: #99F6E4;
+  --aqua: #5EEAD4;
+  --aqua-dark: #134E4A;
+  --pink-lighter: #FCE7F3;
+  --pink-light: #FBCFE8;
+  --pink: #F9A8D4;
+  --pink-dark: #831843;
+  --peach-lighter: #FFEDD5;
+  --peach-light: #FED7AA;
+  --peach: #FDBA74;
+  --peach-dark: #7C2D12;
   /* -- Base font sizes (rem-based, progressive step scale: +2px body, +4px heading, +8px display) -- */
   --font-3xs: 0.625rem;  /* 10px */
   --font-2xs: 0.75rem;   /* 12px */
@@ -326,6 +346,11 @@
   --border-primary: var(--text-primary);
   --border-secondary: var(--neutral-300);
   --border-faded: var(--black-alpha-15);
+  /* The boundary of an interactive control whose surface is transparent — the
+     border is then the only thing saying "this is pressable", so it carries the
+     3:1 that 1.4.11 asks of a control boundary. --border-faded is decorative
+     (1.4:1) and must not be used for one. 4.74:1 on --background-primary. */
+  --border-control: var(--neutral-500);
 
 
   /* -- Status colours (from brand book or defaults) --
@@ -356,8 +381,20 @@
   /* -- Toggle color tokens removed — uses values directly on component -- */
 
   /* -- Selection -- */
+  /* Two neighbours one letter apart, doing different jobs. --selection-* is the
+     browser's text highlight (::selection). --selected-* is the state a chosen
+     control wears: a checked chip, a segmented control's active option. They
+     happen to resolve to the same inverted neutral today; they are separate
+     names because a brand can move one without the other. */
   --selection-text: var(--background-primary);
   --selection-background: var(--text-primary);
+
+  /* The system's selected pair. A wash cannot carry state — the --bg-faded-*
+     scale tops out near 1.4:1 where WCAG wants 3:1 of a state indicator — so
+     selection is an inverted surface, never a tint. Shared by both segmented
+     forms, the chip group and the docs A-Z rail. */
+  --selected-background: var(--text-primary);
+  --selected-text: var(--background-primary);
 
   /* -- Card tokens removed — uses semantic tokens directly -- */
 
@@ -440,6 +477,9 @@
   --border-primary: #e8e6e3;
   --border-secondary: #3a3a3a;
   --border-faded: var(--white-alpha-20);
+  /* Lighter than the light-theme value, not darker — contrast runs the other
+     way against a dark ground. 4.77:1 on --background-primary. */
+  --border-control: var(--neutral-400);
 
   /* -- Status -- */
   --status-info: var(--blue-light);
@@ -447,9 +487,10 @@
   --status-warning: var(--yellow-light);
   --status-danger: var(--red-light);
   /* The pair flips as a pair: light text over the page ground pulled 15%
-     toward the hue. Anchored to --background-primary rather than --warm-black
+     toward the hue. Anchored to --background-primary rather than --brown-dark
      (a toast-local colour), so a rethemed dark ground carries these surfaces
-     with it. Holds every variant above 7.7:1. */
+     with it. Holds every variant above 6.6:1 (danger is the floor, since
+     --red-light carries more chroma than the other three). */
   --status-info-bg: color-mix(in srgb, var(--status-info), var(--background-primary) 85%);
   --status-success-bg: color-mix(in srgb, var(--status-success), var(--background-primary) 85%);
   --status-warning-bg: color-mix(in srgb, var(--status-warning), var(--background-primary) 85%);
@@ -507,6 +548,7 @@
     --border-primary: #e8e6e3;
     --border-secondary: #3a3a3a;
     --border-faded: var(--white-alpha-20);
+    --border-control: var(--neutral-400);
 
     --status-info: var(--blue-light);
     --status-success: var(--green-light);
@@ -544,7 +586,187 @@
   background-color: var(--selection-background);
 }
 
+/* ------ 2d. COLOUR STEPS (data-color + data-step) ------ */
+/*
+ * One attribute picks a colour family, a second picks which of its three
+ * stages becomes the ground. data-color="purple" data-step="shade".
+ *
+ *   tint   the pale stage  — the default, written or omitted
+ *   base   the pure hue    — the only stage that does NOT follow the theme
+ *   shade  the deep stage
+ *
+ * tint and shade swap under [data-theme="dark"], so a tint band stays quiet
+ * against the page and a shade band stays loud, in either theme. base holds
+ * its colour in both, which is what it is for.
+ *
+ * NOTHING HERE PAINTS. These four layers only declare custom properties, so
+ * a stray data-color on a div changes no pixels. Painting happens in the
+ * per-component assignment rules, each next to its own component below.
+ * That is deliberate: .badge[data-color="danger"] and .button[data-color="red"]
+ * keep their status colours, because no rule here selects them and --status-*
+ * is never redefined.
+ */
+
+/* -- 1. Steps. Three stages, named for what they are: tint, base, shade. ---
+   These are ROLE names, not claims about mixing. The house ramps are
+   --<hue>-lighter / --<hue> / --<hue>-dark, and this layer translates them, so
+   the attribute value, the step token and the step all read the same word:
+   data-step="shade" selects --color-shade. Naming the middle --color-base
+   rather than --color-hue matters, because "hue" is already this project's word
+   for the colour family — the thing data-color selects — and one word cannot
+   carry two axes on the same element.
+
+   The house ramp's fourth step, --<hue>-light, has no stage in a three-stage
+   map and nothing ever read it, so it is gone rather than carried unnamed.
+
+   --color-on-base is not a step. It is which of black or white sits ON the base
+   colour. It is never a free choice: take the better of the two and the answer
+   is forced by the hue. Today that is white on blue, purple, green and red, and
+   black on yellow, aqua, pink and peach — every one of them the higher figure,
+   with no compromise anywhere. Section 1 prints the measurement next to each
+   base step rather than asserting it here, so this comment cannot go stale.
+
+   Purple is worth remembering. It was the one exception: on the old --purple
+   (#AA4FE3) white measured 4.25:1 against black's 4.94:1, and white was chosen
+   anyway, knowingly below AA for body copy. The ramp has since moved to
+   #881BDC, where white is 6.49:1 and black only 3.24:1 — so white is now both
+   the chosen ink and the correct one, and the exception is gone. Nothing in the
+   mode changed to achieve that.
+
+   --color-off-base is simply the other one, and it is what gives the base
+   step a raised surface — see section 4. */
+
+[data-color="blue"]   { --color-tint: var(--blue-lighter);   --color-base: var(--blue);   --color-shade: var(--blue-dark);   --color-on-base: var(--white); --color-off-base: var(--black); }
+[data-color="purple"] { --color-tint: var(--purple-lighter); --color-base: var(--purple); --color-shade: var(--purple-dark); --color-on-base: var(--white); --color-off-base: var(--black); }
+[data-color="green"]  { --color-tint: var(--green-lighter);  --color-base: var(--green);  --color-shade: var(--green-dark);  --color-on-base: var(--white); --color-off-base: var(--black); }
+[data-color="yellow"] { --color-tint: var(--yellow-lighter); --color-base: var(--yellow); --color-shade: var(--yellow-dark); --color-on-base: var(--black); --color-off-base: var(--white); }
+[data-color="red"]    { --color-tint: var(--red-lighter);    --color-base: var(--red);    --color-shade: var(--red-dark);    --color-on-base: var(--white); --color-off-base: var(--black); }
+[data-color="aqua"]   { --color-tint: var(--aqua-lighter);   --color-base: var(--aqua);   --color-shade: var(--aqua-dark);   --color-on-base: var(--black); --color-off-base: var(--white); }
+[data-color="pink"]   { --color-tint: var(--pink-lighter);   --color-base: var(--pink);   --color-shade: var(--pink-dark);   --color-on-base: var(--black); --color-off-base: var(--white); }
+[data-color="peach"]  { --color-tint: var(--peach-lighter);  --color-base: var(--peach);  --color-shade: var(--peach-dark);  --color-on-base: var(--black); --color-off-base: var(--white); }
+
+/* -- 2. Roles. Step picks which end of the ramp is the ground. --------- */
+
+[data-color] {
+  --color-background: var(--color-tint);
+  --color-text: var(--color-shade);
+}
+
+[data-color][data-step="shade"] {
+  --color-background: var(--color-shade);
+  --color-text: var(--color-tint);
+}
+
+/* The pure hue, fixed in both themes. */
+[data-color][data-step="base"] {
+  --color-background: var(--color-base);
+  --color-text: var(--color-on-base);
+}
+
+/* -- 3. Dark swaps the two ends. base does not move. ------------------
+   :where() zeroes the theme part of each selector so all three land at the same
+   specificity and source order decides, nearest-written-last. Without it the
+   media form is (0,4,0) and the light form (0,3,0), so on an OS-dark machine
+   with no attribute on <html> a scoped light region would still get the dark
+   mapping. Order is deliberate: media, then light, then dark last — which is
+   the only order that keeps dark-inside-light working, the one direction the
+   system itself supports (there is no [data-theme="light"] block in
+   design-system.css, so light-inside-dark is unsupported there too).
+
+   The tint arm is written as "not shade and not base" rather than by
+   listing :not([data-step]) and ="tint". Enumerating the known values means
+   a typo — data-step="Tint", or an empty value — matches no theme arm at
+   all and silently pins that region to the light mapping in both themes. */
+
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme])) [data-color]:where(:not([data-step="shade"]):not([data-step="base"])) {
+    --color-background: var(--color-shade);
+    --color-text: var(--color-tint);
+  }
+  :where(:root:not([data-theme])) [data-color][data-step="shade"] {
+    --color-background: var(--color-tint);
+    --color-text: var(--color-shade);
+  }
+}
+:where([data-theme="light"]) [data-color]:where(:not([data-step="shade"]):not([data-step="base"])) {
+  --color-background: var(--color-tint);
+  --color-text: var(--color-shade);
+}
+:where([data-theme="light"]) [data-color][data-step="shade"] {
+  --color-background: var(--color-shade);
+  --color-text: var(--color-tint);
+}
+:where([data-theme="dark"]) [data-color]:where(:not([data-step="shade"]):not([data-step="base"])) {
+  --color-background: var(--color-shade);
+  --color-text: var(--color-tint);
+}
+:where([data-theme="dark"]) [data-color][data-step="shade"] {
+  --color-background: var(--color-tint);
+  --color-text: var(--color-shade);
+}
+
+/* -- 4. Two derived roles. ------------------------------------------------
+   raised — a nested surface sitting on the ground. A step will not do the job:
+   in tint the next step along works, but in shade nothing sits between shade
+   and base, and in base nothing sits beside base at all. One mix adapts to
+   all three and to both themes.
+
+   muted — a second, quieter text colour, for a subtitle or a caption.
+
+   On the base step the raise changes DIRECTION, and that is the whole
+   trick. The base step is the tightest ground in the set — white on --red is 4.87:1, the lowest
+   of the eight — so moving the surface toward the text costs contrast it cannot
+   spare, measured 4.33:1 on red at a 10% raise toward the ink.
+   Moving it AWAY instead spends nothing: it widens the gap. Because the ink on the base
+   step is always literally black or white, "away" has an exact name, which
+   is --color-off-base, and mixing 15% of it lands text at 5.9-12.7:1 — better
+   than the header ground manages on its own — with a surface shift of 1.09-1.30
+   against the 1.18-1.31 that tint and shade get.
+
+   So the rule is: raised moves toward the ink where there is room, and away
+   from it where there is not. Two directions, one reason.
+
+   muted has no such escape. It IS the text, so moving it away from the ground
+   is not an option — there is nowhere for it to go that is not the text itself.
+   On base it stays at full strength.
+
+   muted is 90%, not the 80% this started at. 80% was calibrated against five
+   ramps whose text-on-ground sits at 9.5-13.5:1, and it had 4.65:1 of headroom
+   at its tightest. aqua and pink are shallower — 7.03:1 and 7.90:1 — because
+   their dark steps (#15605A, #7F2B56) are lighter than the other five
+   (#001F64, #3A005F, #003E37, #583800, #4E0100). At 80% that put muted at
+   4.37:1 on aqua and muted-on-raised at 3.76:1, both under AA. 90% clears every
+   hue in both themes and costs the deep ramps nothing they need: blue's muted
+   moves 7.59 -> 10.22 against a 13.11 ground, still visibly quieter than the
+   text. The alternative fix is deeper dark steps on the two new ramps, which is
+   a change to theme.css rather than to the mode.
+
+   border-faded — a decorative boundary, not a control boundary. The system's own
+   --border-faded is an alpha wash of black (--black-alpha-15) or, in dark, of
+   white. That polarity is chosen for the page, and a moded region is light
+   inside dark or dark inside light, so the root's choice is wrong for it: black
+   at 15% is invisible on a shade ground. Mixing toward --color-text instead
+   keeps the wash but takes its polarity from the mode. 25% was picked to sit on
+   the system's own band — the root token measures 1.41:1 in light and 1.89:1 in
+   dark, and 25% spans 1.40-2.02 across all thirty hue x step x theme
+   combinations. It is deliberately below the 3:1 of WCAG 1.4.11: this is the
+   decorative border, and 1.4.11 governs control boundaries, which take
+   --border-control. */
+
+[data-color] {
+  --color-raised: color-mix(in srgb, var(--color-text) 10%, var(--color-background));
+  --color-text-muted: color-mix(in srgb, var(--color-text) 90%, var(--color-background));
+  --color-border-faded: color-mix(in srgb, var(--color-text) 25%, var(--color-background));
+  --color-hover-mix: 75%;
+}
+[data-color][data-step="base"] {
+  --color-raised: color-mix(in srgb, var(--color-off-base) 15%, var(--color-background));
+  --color-text-muted: var(--color-text);
+  --color-hover-mix: 95%;
+}
+
 /* ------ 3. SYSTEM TOKENS - SPACING & TYPOGRAPHY ------ */
+
 
 :root {
   /* -- Unit tokens -- */
@@ -646,9 +868,9 @@
   --accordion-padding-y: var(--space-l);
 
   /* -- Border width tokens -- */
-  --border-s: 0.0625rem;  /* 1px */
-  --border-m: 0.125rem;   /* 2px */
-  --border-l: 0.25rem;    /* 4px */
+  --border-s: 0.0625rem;   /* 1px */
+  --border-m: 0.09375rem;  /* 1.5px */
+  --border-l: 0.1875rem;   /* 3px */
 
   /* -- Border composition variables -- */
   --border-width: var(--border-s);
@@ -1351,7 +1573,7 @@ button.button {
 
   /* -- Visual -- */
   background-color: var(--button-bg);
-  border: var(--border-s) solid var(--button-border);
+  border: var(--border-m) solid var(--button-border);
   border-radius: var(--radius-s);
   
 
@@ -1475,9 +1697,15 @@ button.button {
   --button-color: var(--status-danger);
 }
 
+/* Hover lightens toward the ground, matching .button:hover, rather than
+   darkening toward --text-primary as it once did. The status colours take the
+   -dark step, which is near-black; mixing near-black into near-black gave a
+   1.03:1 rest-to-hover step, i.e. no perceptible feedback. Lightening gives
+   1.39:1, in line with the base button's own 1.31:1, and self-corrects in dark
+   mode because --background-primary flips with the theme. */
 .button[data-color="danger"]:hover,
 .button[data-color="red"]:hover {
-  --button-color: color-mix(in srgb, var(--status-danger), var(--text-primary) 15%);
+  --button-color: color-mix(in srgb, var(--status-danger), var(--background-primary) 15%);
 }
 
 .button[data-color="success"],
@@ -1487,7 +1715,7 @@ button.button {
 
 .button[data-color="success"]:hover,
 .button[data-color="green"]:hover {
-  --button-color: color-mix(in srgb, var(--status-success), var(--text-primary) 15%);
+  --button-color: color-mix(in srgb, var(--status-success), var(--background-primary) 15%);
 }
 
 /* -- Role classes -- */
@@ -2678,10 +2906,11 @@ input[type="radio"]:disabled:checked {
   --segmented-track-background: var(--background-faded);
   --segmented-track-padding: 3px; /* visual inset, same register as --toggle-knob-offset */
   --segmented-track-radius: var(--radius-m);
-  /* One selected pair for both forms: the thumb variant's thumb + checked
-     label, and the flat form's .is-active fill + text. */
-  --segmented-selected-background: var(--text-primary);
-  --segmented-selected-text: var(--background-primary);
+  /* Selection now speaks the system-wide pair (see System Tokens). These two
+     names stay as published aliases so a brand that already re-points them
+     keeps working; new components read --selected-* directly. */
+  --segmented-selected-background: var(--selected-background);
+  --segmented-selected-text: var(--selected-text);
   --segmented-thumb-border: transparent;
   /* Inner radius follows the outer one minus the inset, so the thumb's
      corners stay concentric with the track's when a brand re-points the
@@ -3571,7 +3800,7 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
 .progress-tooltip {
   position: absolute;
   bottom: calc(100% + var(--space-xs));
-  background-color: var(--warm-black);
+  background-color: var(--brown-dark);
   color: var(--off-white);
   border-radius: var(--radius-s);
   padding: var(--space-xs) var(--space-s);
@@ -3601,7 +3830,7 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
   bottom: calc(100% + var(--space-xs));
   left: 50%;
   transform: translateX(-50%);
-  background-color: var(--warm-black);
+  background-color: var(--brown-dark);
   color: var(--off-white);
   border-radius: var(--radius-s);
   padding: var(--space-xs) var(--space-s);
@@ -3665,14 +3894,14 @@ a[data-tooltip],
 [data-theme="dark"] [data-tooltip]::before,
 [data-theme="dark"] .progress-tooltip {
   background-color: var(--neutral-100);
-  color: var(--warm-black);
+  color: var(--brown-dark);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) [data-tooltip]::before,
   :root:not([data-theme]) .progress-tooltip {
     background-color: var(--neutral-100);
-    color: var(--warm-black);
+    color: var(--brown-dark);
   }
 }
 
@@ -3697,7 +3926,7 @@ a[data-tooltip],
 .toast {
   --toast-exit-duration: var(--duration-xs);
   pointer-events: all;
-  background-color: var(--warm-black);
+  background-color: var(--brown-dark);
   color: var(--off-white);
   padding: var(--space-m) var(--space-l);
   border: var(--border-s) solid var(--border-faded);
@@ -3776,13 +4005,13 @@ a[data-tooltip],
    warning, danger and info to the same grey the moment dark mode was on. */
 [data-theme="dark"] .toast:not([data-type]) {
   background-color: var(--neutral-100);
-  color: var(--warm-black);
+  color: var(--brown-dark);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) .toast:not([data-type]) {
     background-color: var(--neutral-100);
-    color: var(--warm-black);
+    color: var(--brown-dark);
   }
 }
 
@@ -3838,7 +4067,7 @@ kbd {
 /* -- Highlighted text -- */
 mark {
   background-color: var(--yellow-light);
-  color: var(--warm-black);
+  color: var(--brown-dark);
   padding: 0 var(--space-2xs);
 }
 
@@ -5450,6 +5679,192 @@ input[type="range"]:disabled::-webkit-slider-thumb {
  * — see CLAUDE.md §17 (Layer Discipline) */
 
 
+/* -- 5. Assignment. The only layer that paints. ---------------------------
+   Scoped to the component, so the attribute alone colours nothing — a stray
+   data-color on a div does not repaint the page, and .badge[data-color="danger"]
+   is untouched because --status-* is not in this list.
+
+   TWO groups, and the split is forced by where each token is declared.
+
+   A var() inside a custom property is substituted when THAT property computes,
+   on the element it is declared on. --page-header-background is declared in
+   :root as var(--background-secondary), so it resolved to a literal colour at
+   :root and inherits down already-resolved. Re-pointing --background-secondary
+   here cannot reach it. This is not a quirk of this experiment: it is why
+   design-system.css carries ten component-level dark rules
+   ([data-theme="dark"] .card, .dialog, .drawer, .toast …) rather than relying
+   on the token block alone. Scoped theming has always had this limit.
+
+   So: tokens a component declares on ITS OWN class resolve below this element
+   and follow the semantics for free — .button declares --button-color as
+   var(--text-primary) on .button, so buttons need nothing here, and
+   .button:hover, which derives from --text-primary and --background-primary,
+   re-colours itself in the right hue. Two rules gone from the old build. Its
+   MAGNITUDE still needs a rule though — see the hover note below.
+
+   Tokens declared in :root have to be restated. For the page header that is
+   four lines. */
+
+/* :not(:has(.page-header-media)) because design-system.css:7315-7320 re-points
+   the same three tokens for a header carrying a picture, at the same (0,2,0),
+   and this rule would win on source order — painting the title in --color-text
+   over a 45% black scrim. A photo header already has a colour treatment; this
+   one stands aside rather than fighting it. */
+.page-header[data-color]:not(:has(.page-header-media)) {
+  /* Semantics — reach anything that declares its own tokens below this point. */
+  --background-primary: var(--color-background);
+  --background-secondary: var(--color-background);
+  --background-faded: var(--color-raised);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-muted);
+  --text-inverted: var(--color-background);
+  --border-faded: var(--color-border-faded);
+  /* Prose colours, easy to miss: a { color: var(--text-plain) } renders black
+     inside a shade header without these, and --text-faded is near-invisible on
+     any deep ground. */
+  --text-plain: var(--color-text);
+  --text-link: var(--color-text);
+  --text-faded: var(--color-text-muted);
+
+  /* Declared in :root, so they must be restated. No bottom rule: the component
+     draws one by default (design-system.css:7217/7256) to separate a header
+     whose ground is a 1.1:1 wash from the page behind it. A moded header does
+     not have that problem — the colour is the separation — so the rule is
+     switched off rather than re-coloured. --border-faded above carries the mode's
+     own faded border, so anything INSIDE the header that draws one follows the
+     mode instead of washing out. */
+  --page-header-background: var(--color-background);
+  --page-header-color: var(--color-text);
+  --page-header-color-muted: var(--color-text-muted);
+  --page-header-border: none;
+}
+
+/* Hover has to be restated after all, and on this one point the old build was
+   right to carry a rule. .button:hover mixes 10% of --background-primary into
+   --text-primary, calibrated for a neutral page ground; on a coloured one it
+   lands at 1.18-1.32 against the system's own 1.31 benchmark
+   (design-system.css:1496). 75% is the settled value: worst step 1.55, worst
+   label 4.79, and it has to hold for BOTH mappings, because tint in dark is
+   shade in light — a percentage tuned for one is wrong for the other. 55% was
+   tried first and failed the label at 2.92 on yellow.
+
+   The base step takes 95% — almost no movement — deliberately. The pure hue has no
+   headroom: on green, purple and red NO percentage reaches 1.31 while keeping
+   the label readable, so a weak hover is the accepted outcome rather than a
+   solved problem. 95% is the most movement red can take before its label drops
+   under 4.5; at the inherited 10% it was already failing at 4.18.
+
+   --color-hover-mix is therefore a tuning number, the kind this pass otherwise
+   deleted. It earns its place by being the single value both the real rule and
+   the measurement probe read, which is what stops the two drifting apart. */
+.page-header[data-color] .button:not([data-color]):not([data-variant]):hover {
+  --button-color: color-mix(in srgb, var(--color-text) var(--color-hover-mix), var(--color-background));
+}
+
+/* The book cover, and the two further traps it exposes. Neither is visible
+   from the page header, and both produced silently wrong colour.
+
+   1. `color: inherit` ignores the tokens. .book-cover sets it
+      (design-system.css:5596), and `inherit` takes the PARENT element's
+      colour — it never consults a custom property on this element. Redefining
+      --text-primary here does nothing for anything that inherits, so the title
+      read body-black on every hue while the description and byline, which read
+      var(--text-secondary) directly, followed the mode correctly. `color` has
+      to be set outright.
+
+   2. A dark-mode rule can re-point the component token to a DIFFERENT
+      semantic. --book-cover-background is var(--background-primary) normally,
+      but [data-theme="dark"] .book-cover re-points it to
+      var(--background-secondary) (design-system.css:5735). Redefining only
+      --background-primary left every book at #222 in dark — right hue in
+      light, no hue at all in dark. The mode has to cover every semantic the
+      component can point at, not just the one it points at today.
+
+   Three rules, then, for adopting the mode on a component: restate whatever it
+   keeps in :root, set `color` outright wherever it inherits, and read its
+   dark-mode block for tokens it re-points there. */
+.book-cover[data-color] {
+  color: var(--color-text);
+  --background-primary: var(--color-background);
+  --background-secondary: var(--color-background);
+  --background-faded: var(--color-raised);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-muted);
+  --text-inverted: var(--color-background);
+  --border-faded: var(--color-border-faded);
+  --text-plain: var(--color-text);
+  --text-link: var(--color-text);
+  --text-faded: var(--color-text-muted);
+  --book-cover-background-hover: var(--color-raised);
+}
+
+/* --text-link is not optional on any of these three. Every one of them is an
+   <a>, and a:not(.button):hover sets color: var(--text-link)
+   (design-system.css:1820), which resolves to --text-accent: --blue in light,
+   --yellow in dark. Measured on a purple contents row before the fix: rest
+   #35005D, hover #1A54D6 — the row turned blue under the cursor, and yellow in
+   dark. The book cover escaped it only by accident, because
+   a.book-cover:hover sets color: var(--text-primary) and ties the generic rule
+   on specificity, winning on source order. Fixing the token rather than the
+   hover rule covers all four consumers of --text-link, including the underline
+   colour and any link nested inside the component.
+
+   --text-accent is deliberately NOT redefined. It also drives a checked
+   .form-toggle's background (design-system.css:2974), which is a control state
+   rather than surface text — the same reason --status-* is left alone. The cost
+   is that a .text-accent utility inside a moded card stays blue, which is an
+   explicit author opt-in rather than something the mode applies for you.
+
+   The contents list, and the container question it raises. Its own tokens all
+   sit on its own classes, so nothing has to be restated — but it has
+   `color: inherit` (design-system.css:5817), so `color` must be set outright,
+   the same trap the book cover sprang.
+
+   The list can take the mode at either level, and they are not equivalent:
+   --book-contents-border is declared on .book-contents, the CONTAINER, so a
+   per-item mode leaves the outer frame on the page's --border-faded while the
+   rows inside change. Moding the container brings the frame with it. Both are
+   below so the difference is visible rather than argued. */
+.book-contents[data-color],
+.book-contents-item[data-color] {
+  color: var(--color-text);
+  --background-primary: var(--color-background);
+  --background-secondary: var(--color-background);
+  --background-faded: var(--color-raised);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-muted);
+  --text-inverted: var(--color-background);
+  --border-faded: var(--color-border-faded);
+  --text-plain: var(--color-text);
+  --text-link: var(--color-text);
+  --text-faded: var(--color-text-muted);
+}
+
+/* The row paints its own ground only when the mode is on the row. On the
+   container the ground comes from .book-contents itself, so the rows stay
+   transparent and the divider between them is what carries the hue. */
+.book-contents-item[data-color] { background: var(--color-background); }
+.book-contents[data-color] { background: var(--color-background); }
+
+/* The row-moded ground has to yield on hover. .book-contents-item[data-color]
+   and .book-contents-item:hover are both (0,2,0), and this stylesheet loads
+   after design-system.css, so the flat ground was winning and the row had a
+   1.00 hover shift — no feedback under the cursor at all. Restated one level
+   up so hover outranks it. The container-moded list never had this: its rows
+   are transparent at rest, so the hover wash paints over the container ground
+   normally. */
+.book-contents-item[data-color]:hover {
+  background: var(--book-contents-item-background-hover);
+}
+
+/* Focus rings are fixed --status-info, which is not redefined here on purpose —
+   it is a status token. On a blue shade header in light that is --blue-dark on
+   --blue-dark: a 1.00:1 ring. Buttons already re-point their own outline to
+   --button-text-color, so they are excluded rather than overridden. */
+.page-header[data-color] :focus-visible:not(.button) {
+  outline-color: var(--color-text);
+}
+
 /* ------ 37. BOOK ------
  * The navigation surfaces of a documentation space, modelled as a book:
  *
@@ -6517,7 +6932,10 @@ section[id] {
   --bar-background: var(--background-primary);
   --bar-border: var(--border-s) solid var(--border-faded);
   --bar-gap: var(--space-l);
-  --bar-group-gap: 0;
+  /* Between items in the actions cluster. The close opts out below: the
+     overflow cell and the close share a divider, and a gap there would open
+     the divider off its neighbour. */
+  --bar-group-gap: var(--space-xs);
   --bar-padding-x: var(--space-xl);
   --bar-padding-y: var(--space-s);
   /* The fixed height of data-density="regular" only. Compact builds its height
@@ -6560,19 +6978,36 @@ section[id] {
   z-index: var(--bar-z);
 }
 
-/* Default (compact) height is built up: one control tall plus the bar's own
+/* Default height is built up: one control tall plus the bar's own
    breathing room. Both halves matter — --bar-control-height stops the contents
    disagreeing, and --bar-padding-y keeps them off the bar's edges. An earlier
    toolbar set no vertical padding at all, reasoning that the controls should
    set the height. Right about the cause, wrong about the cure: the controls
    were disagreeing by 27px, and removing the padding only made a bar whose
    contents touched its borders. With the height enforced, padding is a density
-   choice again. */
+   choice again.
+
+   The floor is enforced on the container, not inferred from its contents.
+   Note both density presets re-point --bar-padding-y to a *typed* 0px, not a
+   bare 0, or this calc is invalid under them — see the density block below. The
+   controls carry the 36px, but a control can leave: bar.js moves a group that
+   no longer fits into the overflow panel, at whatever width that happens, and
+   a bar whose every control has gone is left holding only full-height cells
+   (the close, the menu triggers), which stretch to the row but never set it.
+   They cannot: the weld margins subtract exactly 2 * --bar-padding-y from what
+   a cell contributes to the line, so an icon-only cell contributes nothing and
+   the line floors at zero. The row is then the container's own padding, 16px,
+   with the icons overflowing it, and the shell's --scroll-offset sum, which
+   assumes control plus padding, is 36px wrong. min-height, not height:
+   regular's fixed --bar-height must still win, and compact's zeroed padding
+   makes the same calc resolve to one control. Border-box, so the padding sits
+   inside the value and the inner height is exactly the control. */
 .bar-container {
   display: flex;
   align-items: center;
   gap: var(--bar-gap);
   padding: var(--bar-padding-y) var(--bar-padding-x);
+  min-height: calc(var(--bar-control-height) + 2 * var(--bar-padding-y));
 }
 
 /* -- Density --
@@ -6581,9 +7016,16 @@ section[id] {
  * compact: the bar collapses to exactly one control tall, for a full-height
  * app shell where every row given to chrome is a row taken from the canvas.
  * Both re-point the token rather than setting padding-block directly, so the
- * close's padding-derived weld margins below resolve to zero with them. */
+ * close's padding-derived weld margins below resolve to zero with them.
+ *
+ * The zero is typed. A unitless 0 substitutes into calc() as a <number>, and
+ * <length> + <number> is a type error that invalidates the whole declaration
+ * at computed-value time — so the container's min-height silently fell back
+ * to auto on both presets, and the weld margins' calc(-1 * …) with it.
+ * regular hid it behind its explicit height; compact had nothing to hide
+ * behind. */
 .bar[data-density="regular"] {
-  --bar-padding-y: 0;
+  --bar-padding-y: 0px;
 }
 
 .bar[data-density="regular"] .bar-container {
@@ -6591,7 +7033,7 @@ section[id] {
 }
 
 .bar[data-density="compact"] {
-  --bar-padding-y: 0;
+  --bar-padding-y: 0px;
 }
 
 /* -- Content: the leading region --
@@ -6634,6 +7076,22 @@ section[id] {
   color: var(--text-faded);
   font-size: var(--font-xs);
   font-weight: var(--font-weight-regular);
+  white-space: nowrap;
+}
+
+/* Nothing in a bar wraps. The bar is one row by contract (section note), and
+   .bar-label has carried nowrap all along — but a button never did, and
+   nothing caught it because a one-word label ("Reset", "Copy") cannot break.
+   "Export logo" broke the moment a select landed beside it and made the bar
+   two rows tall in the one place the component guarantees it will not be.
+   .bar-actions has flex-shrink: 0, but that protects the cluster, not the
+   text inside it: a flex item's automatic minimum size is its min-content,
+   and for two words that is the longer word. Toggle labels and segments are
+   listed for the same reason — any text in the row can be two words. */
+.bar .button,
+.bar .dropdown-trigger,
+.bar .form-toggle label,
+.bar .segmented-control-btn {
   white-space: nowrap;
 }
 
@@ -6717,9 +7175,19 @@ section[id] {
   gap: var(--space-2xs);
 }
 
+/* Every resident gets the same inline inset, whatever it is. A resident is
+   any direct child of .bar-content that bar.js moved here — usually a
+   .bar-group, but a tool that folds a multi-row settings panel into the
+   overflow (CPM Calculator) sends plain stacked blocks, and their labels sat
+   4px left of the groups' until the inset moved from the group to the slot. */
+.bar-overflow .dropdown-menu [data-bar-demoted] > *,
+.bar-overflow .dropdown-menu [data-bar-spill] > * {
+  padding-inline: var(--space-xs);
+}
+
 .bar-overflow .dropdown-menu .bar-group {
   justify-content: space-between;
-  padding: var(--space-2xs) var(--space-xs);
+  padding-block: var(--space-2xs);
 }
 
 /* The narrow-viewport rule above hides labels to save bar width; in the panel
@@ -6797,6 +7265,10 @@ section[id] {
   align-self: stretch;
   padding: 0 var(--space-l);
   margin-block: calc(-1 * var(--bar-padding-y));
+  /* Same move as margin-block: exactly as large as the gap it undoes, so the
+     close sits flush against whatever precedes it — normally the overflow
+     cell — while every other pair in the cluster keeps --bar-group-gap. */
+  margin-inline-start: calc(-1 * var(--bar-group-gap));
   color: var(--text-primary);
   text-decoration: none;
   border-left: var(--border-s) solid var(--border-faded);
@@ -7186,7 +7658,18 @@ section[id] {
  */
 
 :root {
-  --page-header-background: var(--background-faded);
+  /* Opaque, not --background-faded. The faded token is an alpha wash
+     (rgba(0,0,0,0.05) light, rgba(255,255,255,0.06) dark), so the header ground
+     shifted with whatever sat behind it. --background-secondary is a flat value
+     and holds. It is a trade: separation from the page improves in light
+     (1.26 vs 1.12) and narrows in dark (1.04 vs 1.18), where #222222 sits close
+     to #1f1f1f. In dark the band is then read mostly from the bottom rule
+     rather than the fill — and that rule is itself faint, since --border-faded
+     is also a wash: it lands at 1.40:1 on the header ground in light and
+     1.92:1 in dark, both under the 3:1 of WCAG 1.4.11. Those figures are
+     unchanged by this swap (they were 1.41 and 1.91) and are the same defect
+     already recorded against .callout and .toast borders. */
+  --page-header-background: var(--background-secondary);
   --page-header-border: var(--border-s) solid var(--border-faded);
   --page-header-color: var(--text-primary);
   --page-header-color-muted: var(--text-secondary);
@@ -8272,6 +8755,211 @@ section[id] {
   }
 }
 
+/* ------ 50. CHIP ------
+ *
+ * A one-of-N control whose options wrap. Native radios inside labels, exactly
+ * as the segmented control's thumb variant does it — the browser supplies
+ * radiogroup semantics, roving arrow keys and the label association, so there
+ * is nothing to keep in step and no script required to select.
+ *
+ * The line against .tag: a tag labels, a chip chooses. .tag is a <span> and
+ * cms/tag.md forbids using one as a control. The line against .segmented-
+ * control: that is one unified bar of equal, adjacent, non-wrapping segments,
+ * capped at five. A chip group wraps and takes labels of any length.
+ *
+ * Clearing a chosen answer by re-clicking it is the one thing native radios
+ * cannot do; that is chip.js, and only groups marked [data-clearable] load it.
+ */
+:root {
+  --chip-background: transparent;
+  --chip-border: var(--border-control);
+  --chip-text: var(--text-secondary);
+  --chip-hover-background: var(--background-faded);
+  --chip-hover-text: var(--text-primary);
+  /* Selection is the system's inverted surface, never a wash — see the
+     --selected-* note in System Tokens for why. */
+  --chip-selected-background: var(--selected-background);
+  --chip-selected-text: var(--selected-text);
+  --chip-radius: var(--radius-pill);
+  --chip-padding-x: var(--space-m);
+  --chip-gap: var(--space-xs);
+  /* Narrowest a scale stop may be before the row wraps. Sized so five stops
+     fit two rows on a 375px viewport at --font-s. */
+  --chip-scale-min: 7rem;
+  --chip-duration: var(--duration-2xs);
+}
+
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chip-gap);
+  align-items: center;
+}
+
+/* An ordered scale reads as a ramp rather than ragged text: auto-fit keeps the
+   stops even within a row and still wraps. The final row stretches to fill,
+   which is the accepted trade for wrapping at all. */
+.chip-group[data-layout="scale"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--chip-scale-min), 1fr));
+}
+
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* A chip is a standalone target, not a segment of a grouped control, so it
+     takes the hit-area floor — in the BLOCK axis. There is deliberately no
+     min-width: a chip is as wide as its label, and --chip-gap is only 4px, so
+     the inline axis leans on padding. A one-character label lands near 35px,
+     which clears 2.5.8's 24px but not 44. Size labels accordingly. */
+  min-height: var(--target-min);
+  padding-inline: var(--chip-padding-x);
+  margin-bottom: 0; /* this is a control, not a field label */
+  font-family: var(--font-primary);
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-s);
+  text-align: center;
+  color: var(--chip-text);
+  background-color: var(--chip-background);
+  border: var(--border-s) solid var(--chip-border);
+  border-radius: var(--chip-radius);
+  cursor: pointer;
+  transition: background-color var(--chip-duration) var(--ease-out),
+              color var(--chip-duration) var(--ease-out),
+              border-color var(--chip-duration) var(--ease-out);
+}
+
+/* The radio covers the chip as an invisible hit area. Never display:none —
+   that forfeits focus and the arrow keys, which are the whole reason this is
+   a radio group and not a row of buttons. */
+.chip input[type="radio"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: none;
+  border-radius: inherit;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Excludes checked and disabled explicitly: an equal-specificity hover rule
+   that also matched the checked chip would out-rank it and flip the inverted
+   label back to dark-on-dark. */
+.chip:hover:not(:has(input:checked)):not(:has(input:disabled)) {
+  background-color: var(--chip-hover-background);
+  color: var(--chip-hover-text);
+}
+
+.chip:has(input:checked) {
+  background-color: var(--chip-selected-background);
+  color: var(--chip-selected-text);
+  border-color: var(--chip-selected-background);
+}
+
+/* The radio is transparent, so the ring is drawn on the label around it.
+   The offset is load-bearing, not cosmetic: on a SELECTED chip the ring colour
+   and the fill are both --text-primary, so the page-coloured 2px gap is the
+   only thing that makes the ring visible. Do not tidy it to 0. */
+.chip:has(input[type="radio"]:focus-visible) {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
+/* No opacity here: it would compound onto an already-faded colour, and on a
+   locked-in answer (checked AND disabled) it dragged the label to ~1.9:1 on its
+   own fill. --input-disabled-text alone reads as disabled at 5.74:1. */
+.chip:has(input:disabled) {
+  color: var(--input-disabled-text);
+  border-color: var(--border-faded);
+  cursor: not-allowed;
+}
+
+.chip:has(input:disabled) input[type="radio"] {
+  cursor: not-allowed;
+}
+
+/* Disabled and checked can co-occur, and two :has() rules at equal specificity
+   let source order decide. Name the winner rather than relying on it. */
+.chip:has(input:checked:disabled) {
+  color: var(--chip-selected-text);
+  background-color: var(--chip-selected-background);
+  border-color: var(--chip-selected-background);
+}
+
+/* The unanswered-group state, set by the consumer on a failed submit. Sits on
+   the group rather than each chip, following .cell-input.is-error. */
+.chip-group.is-error .chip {
+  border-color: var(--status-danger);
+}
+
+.chip-group.is-error .chip:has(input:checked) {
+  border-color: var(--chip-selected-background);
+}
+
+/* Disabled outranks the group error. A disabled option is not part of what the
+   user can fix, so painting it as the error misreads the state. Stated rather
+   than left to the cascade: .chip-group.is-error .chip is (0,3,0) against
+   .chip:has(input:disabled)'s (0,2,1), so error would otherwise win on
+   specificity rather than on intent — the same reasoning as the checked rule
+   above, which is why that one is written out too. */
+.chip-group.is-error .chip:has(input:disabled) {
+  border-color: var(--border-faded);
+}
+
+/* No prefers-reduced-motion block, deliberately. The chip transitions colour
+   and nothing else — no transform, no movement — so there is no motion to
+   reduce, and 2.3.3 explicitly excludes colour and opacity changes that do not
+   move anything. The safety comes from "colour only", not from the duration
+   value: a brand re-pointing --chip-duration to 400ms still only slows a fade.
+   The segmented control carries a guard because its thumb translates. */
+
+/* Backgrounds flatten under forced colours, so selection cannot be carried by
+   a fill. Keep the drawn boundary, hand selection to the system Highlight
+   pair, and re-declare the outline colour — forced-color-adjust: none on the
+   selected chip would otherwise take the focus ring down with it. */
+@media (forced-colors: active) {
+  .chip {
+    border: 1px solid CanvasText;
+  }
+
+  .chip:has(input:checked) {
+    forced-color-adjust: none;
+    background-color: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+
+  .chip:has(input[type="radio"]:focus-visible) {
+    outline-color: CanvasText;
+  }
+
+  /* Every border flattens to CanvasText in this mode, so the error border
+     would be identical to the rest border — the state would vanish. Mark is
+     the system's "something is flagged here" colour. */
+  .chip-group.is-error .chip {
+    border-color: Mark;
+  }
+
+  /* opacity is not honoured here, so disabled needs saying outright. */
+  .chip:has(input:disabled) {
+    color: GrayText;
+    border-color: GrayText;
+  }
+
+  /* And it outranks the group error here too, for the same reason and against
+     the same specificity gap. GrayText is the only signal disabled has left
+     once backgrounds flatten, so Mark must not take it. */
+  .chip-group.is-error .chip:has(input:disabled) {
+    color: GrayText;
+    border-color: GrayText;
+  }
+}
+
 /* ------ 15. COMPONENTS IN PROGRESS ------ */
 /*
  * The following components are actively being built.
@@ -8299,6 +8987,7 @@ section[id] {
  * - [x] Divider (.divider)
  * - [x] Dropdown (.dropdown)
  * - [x] Tag (.tag)
+ * - [x] Chip (.chip, .chip-group)
  * - [x] Dialog (.dialog)
  * - [x] Slider (input[type="range"])
  * - [x] Rating (.rating)

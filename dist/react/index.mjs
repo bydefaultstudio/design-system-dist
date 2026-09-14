@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.7.0 */
+/* @bydefaultstudio/design-system v4.8.0 */
 /**
  * @bydefaultstudio/design-system/react — Tier 2 React adapters.
  *
@@ -30,3 +30,4 @@ export {
 export { showToast } from './toast.mjs';
 export { Rating } from './rating.mjs';
 export { CellInput } from './cell-input.mjs';
+export { ChipGroup } from './chip.mjs';

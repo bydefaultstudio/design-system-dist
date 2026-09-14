@@ -1,16 +1,16 @@
-<!-- @bydefaultstudio/design-system v4.7.0 -->
+<!-- @bydefaultstudio/design-system v4.8.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 4.7.0 (package)**
+**Version: 4.8.0 (package)**
 
 ## Getting the System
 
 The system ships as one CSS file plus an icon sprite, distributed through the public artefact repo:
 
 ```bash
-npm install github:bydefaultstudio/design-system-dist#semver:^4.7.0
+npm install github:bydefaultstudio/design-system-dist#semver:^4.8.0
 ```
 
 - Link `design-system.css` before any site or theme CSS.
@@ -700,9 +700,9 @@ The composable border system. Combine one structural class with width, style, an
 
 | Class | Token | Value |
 | --- | --- | --- |
-| `.border-s` | `var(--border-s)` | `1.5px` (default) |
-| `.border-m` | `var(--border-m)` | `2px` |
-| `.border-l` | `var(--border-l)` | `4px` |
+| `.border-s` | `var(--border-s)` | `1px` (default) |
+| `.border-m` | `var(--border-m)` | `1.5px` |
+| `.border-l` | `var(--border-l)` | `3px` |
 
 ### Style
 
@@ -783,10 +783,12 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--font-code` | `var(--font-quaternary)` |  |
 | **Palette** | | |
 | `--off-white` | `var(--neutral-50)` |  |
-| `--warm-white` | `var(--neutral-100)` |  |
-| `--warm-black` | `var(--neutral-950)` |  |
 | `--off-black` | `var(--neutral-900)` |  |
-| **Accent colours (generic, semantically hued)** | | |
+| `--brown-lighter` | `var(--neutral-100)` |  |
+| `--brown-light` | `var(--neutral-300)` |  |
+| `--brown` | `var(--neutral-500)` |  |
+| `--brown-dark` | `var(--neutral-950)` |  |
+| **Accent colours (generic)** | | |
 | `--red-lighter` | `#FEE2E2` |  |
 | `--red-light` | `#FECACA` |  |
 | `--red` | `#DC2626` |  |
@@ -807,6 +809,18 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--purple-light` | `#E9D5FF` |  |
 | `--purple` | `#9333EA` |  |
 | `--purple-dark` | `#581C87` |  |
+| `--aqua-lighter` | `#CCFBF1` |  |
+| `--aqua-light` | `#99F6E4` |  |
+| `--aqua` | `#5EEAD4` |  |
+| `--aqua-dark` | `#134E4A` |  |
+| `--pink-lighter` | `#FCE7F3` |  |
+| `--pink-light` | `#FBCFE8` |  |
+| `--pink` | `#F9A8D4` |  |
+| `--pink-dark` | `#831843` |  |
+| `--peach-lighter` | `#FFEDD5` |  |
+| `--peach-light` | `#FED7AA` |  |
+| `--peach` | `#FDBA74` |  |
+| `--peach-dark` | `#7C2D12` |  |
 | **Base font sizes (rem-based, progressive step scale: +2px body, +4px heading, +8px display)** | | |
 | `--font-3xs` | `0.625rem` | 10px |
 | `--font-2xs` | `0.75rem` | 12px |
@@ -994,6 +1008,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--border-primary` | `var(--text-primary)` |  |
 | `--border-secondary` | `var(--neutral-300)` |  |
 | `--border-faded` | `var(--black-alpha-15)` |  |
+| `--border-control` | `var(--neutral-500)` |  |
 | `--status-info` | `var(--blue-dark)` |  |
 | `--status-info-bg` | `var(--blue-lighter)` |  |
 | `--status-success` | `var(--green-dark)` |  |
@@ -1017,6 +1032,8 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | **Selection** | | |
 | `--selection-text` | `var(--background-primary)` |  |
 | `--selection-background` | `var(--text-primary)` |  |
+| `--selected-background` | `var(--text-primary)` |  |
+| `--selected-text` | `var(--background-primary)` |  |
 | **Divider tokens** | | |
 | `--divider-color` | `var(--border-faded)` |  |
 | `--divider-thickness` | `var(--border-s)` |  |
@@ -1127,8 +1144,8 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--accordion-padding-y` | `var(--space-l)` |  |
 | **Border width tokens** | | |
 | `--border-s` | `0.0625rem` | 1px |
-| `--border-m` | `0.125rem` | 2px |
-| `--border-l` | `0.25rem` | 4px |
+| `--border-m` | `0.09375rem` | 1.5px |
+| `--border-l` | `0.1875rem` | 3px |
 | **Border composition variables** | | |
 | `--border-width` | `var(--border-s)` |  |
 | `--border-style` | `solid` |  |
@@ -1195,8 +1212,8 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--segmented-track-background` | `var(--background-faded)` |  |
 | `--segmented-track-padding` | `3px` | visual inset, same register as --toggle-knob-offset |
 | `--segmented-track-radius` | `var(--radius-m)` |  |
-| `--segmented-selected-background` | `var(--text-primary)` |  |
-| `--segmented-selected-text` | `var(--background-primary)` |  |
+| `--segmented-selected-background` | `var(--selected-background)` |  |
+| `--segmented-selected-text` | `var(--selected-text)` |  |
 | `--segmented-thumb-border` | `transparent` |  |
 | `--segmented-thumb-radius` | `calc(var(--segmented-track-radius) - var(--segmented-track-padding))` |  |
 | `--segmented-thumb-duration` | `var(--duration-xs)` |  |
@@ -1284,6 +1301,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--border-primary` | `#e8e6e3` |  |
 | `--border-secondary` | `#3a3a3a` |  |
 | `--border-faded` | `var(--white-alpha-20)` |  |
+| `--border-control` | `var(--neutral-400)` |  |
 | **Status** | | |
 | `--status-info` | `var(--blue-light)` |  |
 | `--status-success` | `var(--green-light)` |  |
@@ -1322,8 +1340,10 @@ Colors are organised into two layers: **primitive tokens** (raw values) and **se
 
 The core brand colors that define the project identity. The engine ships neutral defaults; each brand sets its own values in `cms/brands/<brand>/assets/theme.css`, and the swatches below render the active brand's values (By Default, instance 0, on this site).
 
-<div class="color-row"  data-token="--warm-white"><span class="color-row-name">warm-white</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
-  <div class="color-row is-text-light"  data-token="--warm-black"><span class="color-row-name">warm-black</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
+<div class="color-row is-text-dark"  data-token="--brown-lighter"><span class="color-row-name">brown-lighter</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
+  <div class="color-row is-text-dark"  data-token="--brown-light"><span class="color-row-name">brown-light</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
+  <div class="color-row is-text-light"  data-token="--brown"><span class="color-row-name">brown</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
+  <div class="color-row is-text-light"  data-token="--brown-dark"><span class="color-row-name">brown-dark</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
   <div class="color-row is-text-light"  data-token="--off-black"><span class="color-row-name">off-black</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
 </div>
 
@@ -1349,6 +1369,18 @@ The core brand colors that define the project identity. The engine ships neutral
   <div class="color-row"  data-token="--purple-light"><span class="color-row-name">purple-light</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
     <div class="color-row is-text-light"  data-token="--purple"><span class="color-row-name">purple</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
     <div class="color-row is-text-light"  data-token="--purple-dark"><span class="color-row-name">purple-dark</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
+  </div>
+  <div class="color-row is-text-dark"  data-token="--aqua-light"><span class="color-row-name">aqua-light</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
+    <div class="color-row is-text-dark"  data-token="--aqua"><span class="color-row-name">aqua</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
+    <div class="color-row is-text-light"  data-token="--aqua-dark"><span class="color-row-name">aqua-dark</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
+  </div>
+  <div class="color-row is-text-dark"  data-token="--pink-light"><span class="color-row-name">pink-light</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
+    <div class="color-row is-text-dark"  data-token="--pink"><span class="color-row-name">pink</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
+    <div class="color-row is-text-light"  data-token="--pink-dark"><span class="color-row-name">pink-dark</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
+  </div>
+  <div class="color-row is-text-dark"  data-token="--peach-light"><span class="color-row-name">peach-light</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
+    <div class="color-row is-text-dark"  data-token="--peach"><span class="color-row-name">peach</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
+    <div class="color-row is-text-light"  data-token="--peach-dark"><span class="color-row-name">peach-dark</span><span class="color-row-actions"><button class="color-copy-btn" data-format="hex" aria-label="Copy hex value">Hex</button><button class="color-copy-btn" data-format="css" aria-label="Copy CSS variable">CSS</button></span></div>
   </div>
 </div>
 
@@ -2406,11 +2438,11 @@ Width classes modify the border thickness. The default is `var(--border-s)`.
 
 <div class="block gap-m">
       <p class="demo-eyebrow">Medium</p>
-      <div class="border border-m padding-l">2px border</div>
+      <div class="border border-m padding-l">1.5px border</div>
     </div>
     <div class="block gap-m">
       <p class="demo-eyebrow">Large</p>
-      <div class="border border-l padding-l">4px border</div>
+      <div class="border border-l padding-l">3px border</div>
     </div>
   </div>
 </div>
@@ -2422,8 +2454,8 @@ Width classes modify the border thickness. The default is `var(--border-s)`.
 | Class | Token | px Equivalent |
 | --- | --- | --- |
 | `.border-s` | `var(--border-s)` | 1px (0.0625rem) |
-| `.border-m` | `var(--border-m)` | 2px (0.125rem) |
-| `.border-l` | `var(--border-l)` | 4px (0.25rem) |
+| `.border-m` | `var(--border-m)` | 1.5px (0.09375rem) |
+| `.border-l` | `var(--border-l)` | 3px (0.1875rem) |
 
 ---
 
@@ -3147,6 +3179,8 @@ if (typeof window.initAccordion === "function") {
 ```
 
 The function is safe to call multiple times. Headers that are already bound are skipped via a `data-accordion-bound` guard.
+
+It takes an optional argument: a container to search, or a single `.accordion` to bind on its own. `initAccordion(el)` binds that accordion and leaves every other one on the page alone.
 
 ### Scoping
 
@@ -4121,6 +4155,7 @@ div.bar                       data-density="regular|compact" data-width="docs|to
       div.bar-group           a labelled cluster        data-priority="pinned|menu"
         span.bar-label        hidden below 768px
         <any control>
+      div                     any other direct child is a resident too when it carries data-priority="menu" — a folded settings panel sends stacked blocks
       hr.divider.divider--vertical
     div.bar-actions           trailing cluster, pushed over with an auto margin
       button.button           pinned actions
@@ -4142,7 +4177,7 @@ Two presets, both re-points of `--bar-padding-y` underneath.
 
 **`data-density="compact"`** collapses the bar to exactly one control tall, for a full-height app shell where every row given to chrome is a row taken from the canvas.
 
-The default (no attribute) is one control tall plus `--bar-padding-y` of breathing room either side — 52px at today's values. This is what the tool control bars use.
+The default (no attribute) is one control tall plus `--bar-padding-y` of breathing room either side — 52px at today's values. This is what the tool control bars use. The container enforces that floor itself, with a `min-height` built from the two tokens, so the height holds when every control has moved into the overflow panel and only the full-height cells remain. Those cells stretch to the row but never set it; without the floor a tool bar whose controls have all spilled collapses to its own padding, 16px, with the icons overflowing it.
 
 </div>
   </div>
@@ -4207,7 +4242,7 @@ The close is safe at any density because the bar is always one row — see Overf
 
 ## Overflow
 
-**The bar is always one row.** It neither wraps nor lets a set of controls scroll out of reach. Items in `.bar-content` that do not fit move into the overflow menu — a [dropdown](dropdown.html) carrying the `.bar-overflow` class in `.bar-actions` — and move back when space returns. `assets/js/bar.js` does the moving; open/close belongs to dropdown.js.
+**The bar is always one row.** It neither wraps nor lets a set of controls scroll out of reach. Nothing inside the row wraps either: captions, buttons, dropdown triggers, toggle labels and segments all carry `white-space: nowrap`, so a two-word label ("Export logo") can never make the row two lines tall. Items in `.bar-content` that do not fit move into the overflow menu — a [dropdown](dropdown.html) carrying the `.bar-overflow` class in `.bar-actions` — and move back when space returns. `assets/js/bar.js` does the moving; open/close belongs to dropdown.js.
 
 Priority is authored on the items, not inferred:
 
@@ -4515,11 +4550,11 @@ This section documents how the component is built. For usage, see the sections a
 | `--bar-background` | `var(--background-primary)` | Bar fill |
 | `--bar-border` | `var(--border-s) solid var(--border-faded)` | The rule under the bar |
 | `--bar-gap` | `var(--space-l)` | Space between groups, and between content and actions |
-| `--bar-group-gap` | `var(--space-s)` | Space inside a group, and between actions |
+| `--bar-group-gap` | `var(--space-xs)` | Space between items in the actions cluster. The close cancels it with a matching negative margin, so it sits flush against the overflow cell. A group's own internal gap is `--space-s`, not this token |
 | `--bar-padding-x` | `var(--space-xl)` | Inline padding |
-| `--bar-padding-y` | `var(--space-s)` | Block padding. Both density presets zero it |
+| `--bar-padding-y` | `var(--space-s)` | Block padding, and one term of the container's floor. Both density presets zero it |
 | `--bar-height` | `70px` | Fixed height of `data-density="regular"` only |
-| `--bar-control-height` | `36px` | Every control in the content region resolves to this; actions-cluster menu cells and the close stretch instead |
+| `--bar-control-height` | `36px` | Every control in the content region resolves to this, and the container's floor is built from it; actions-cluster menu cells and the close stretch instead |
 | `--bar-number-input-width` | `4.5rem` | Width of a number field in the bar |
 | `--bar-menu-max-width` | `20rem` | Ceiling for a menu opened from the bar below 768px |
 | `--bar-z` | `var(--z-bar)` | Stacking order when `data-sticky="true"` |
@@ -4533,7 +4568,7 @@ This section documents how the component is built. For usage, see the sections a
 | `.bar[data-sticky="true"]` | Docks at `--bar-top` |
 | `.bar[data-density="regular"]` | Fixed `--bar-height`, zero block padding |
 | `.bar[data-density="compact"]` | Zeroes `--bar-padding-y`; one control tall |
-| `.bar-container` | The row. Drops inline-end padding when a `.bar-close` is present |
+| `.bar-container` | The row. `min-height` of one control plus twice `--bar-padding-y`, so the height holds after the controls spill; drops inline-end padding when a `.bar-close` is present |
 | `.bar-content` | Leading region; no clip, no scroll — menus open across its edge, a too-wide item truncates itself |
 | `.bar-group` | A labelled cluster; the unit overflow moves |
 | `.bar-label` | Caption text; hidden below 768px, shown again inside the overflow panel |
@@ -4551,7 +4586,7 @@ This section documents how the component is built. For usage, see the sections a
 
 ### Key rules
 
-`min-height: 0` on the control list is the rule that makes the heights work — the base input's 44px floor beats padding, so trimming padding alone changes nothing.
+`min-height: 0` on the control list is the rule that makes the heights work — the base input's 44px floor beats padding, so trimming padding alone changes nothing. The container carries the opposite rule, its own floor of one control plus twice `--bar-padding-y`, so the row survives every control spilling into the panel.
 
 One row, enforced by the overflow model rather than by CSS alone: bar.js reads the content region's `scrollWidth` overhang and moves what does not fit into the menu — no clipping involved, which is what lets a menu open from inside the region at all. The old toolbar wrapped instead; the wrap came out because a wrapping bar makes a stretched close a tall slab and its `--scroll-offset` sum a lie.
 
@@ -6481,7 +6516,7 @@ document.getElementById('otp-block').addEventListener('cell-input:complete', fun
 
 Two contracts worth knowing:
 
-- Format and wiring are read once at bind time. To change `data-format` or swap the input afterwards, clear `data-cell-input-bound` and call `window.initCellInput(block.parentNode)`.
+- Format and wiring are read once at bind time. To change `data-format` or swap the input afterwards, clear `data-cell-input-bound` and call `window.initCellInput(block)` — the init takes the block itself, or any container to search.
 - Setting `input.value` from script fires no event; dispatch an `input` or `change` event after it and the cells repaint.
 
 A `data-format` with no typeable cells is an authoring error: the script leaves the block inert and names it in a console warning.
@@ -6553,6 +6588,185 @@ Overlay: the input is `position: absolute; inset: 0; opacity: 0; pointer-events:
 Focus: the caret cell is the focus indicator — `border-color: var(--input-focus)` plus a 1px inset shadow for 2px of visual weight, gated on `:focus-within`. No ring on the group: the caret says "focused, and here". A `forced-colors` block outlines the row instead, since high-contrast mode erases the caret's colour.
 Wrapping: row and word are both `flex-wrap: wrap` — words wrap as units, an over-long word wraps within itself.
 Motion: cell border and background transition on `--duration-xs` / `--ease-out`, removed under `prefers-reduced-motion: reduce`.
+
+### Chip
+
+A chip group asks a question and offers a handful of answers, wrapping onto as many rows as the labels need. It is native radios inside labels, so the browser supplies the radiogroup semantics, the arrow keys and the posted value — there is nothing for a script to keep in step, and selection works with no JavaScript at all.
+
+**A tag labels, a chip chooses.** [Tag](tag.html) is a `<span>` you read: metadata, a status, a filter you can dismiss. A chip is a control you press. If the thing cannot be selected, it is a tag.
+
+---
+
+## Anatomy
+
+| Part | Class | Notes |
+|---|---|---|
+| Group | `.chip-group` | The `radiogroup`. Carries layout, state and the clearable opt-in |
+| Chip | `.chip` | A `<label>` wrapping the radio and its text |
+| Input | — | `input[type="radio"]`, covering the chip as an invisible hit area |
+
+| Axis | Values | Effect |
+|---|---|---|
+| `data-layout` | *absent* | Chips size to their label and wrap. The default |
+| `data-layout` | `scale` | Even stops for an ordered set, still wrapping |
+| `data-clearable` | present | Re-clicking the selected chip clears it. Needs `chip.js` |
+
+---
+
+## Basic usage
+
+Every chip in a group shares one `name` — that is what makes them one answer rather than several. Name the group with `aria-labelledby` pointing at the question, or with `aria-label` when nothing visible names it.
+
+```html
+<p id="story-q">How was the story?</p>
+<div class="chip-group" role="radiogroup" aria-labelledby="story-q">
+  <label class="chip"><input type="radio" name="story" value="1"><span>Weak</span></label>
+  <label class="chip"><input type="radio" name="story" value="2"><span>Thin</span></label>
+  <label class="chip"><input type="radio" name="story" value="3" checked><span>Solid</span></label>
+  <label class="chip"><input type="radio" name="story" value="4"><span>Strong</span></label>
+  <label class="chip"><input type="radio" name="story" value="5"><span>Gripping</span></label>
+</div>
+```
+
+---
+
+## Scale layout
+
+`data-layout="scale"` gives an ordered set even stops, so a ramp reads as a ramp instead of ragged text. It still wraps — the last row stretches to fill, which is the trade for wrapping at all.
+
+Reach for it when the options are a sequence (least to most, never to always). Leave it off when they are unordered choices of very different lengths.
+
+```html
+<p id="characters-q">What were the characters like?</p>
+<div class="chip-group" data-layout="scale" role="radiogroup" aria-labelledby="characters-q">
+  <label class="chip"><input type="radio" name="characters" value="1"><span>Forgettable</span></label>
+  <!-- … -->
+</div>
+```
+
+`--chip-scale-min` sets the narrowest a stop may be before the row wraps. Re-point it when your labels are much shorter or much longer than the default assumes.
+
+---
+
+## Disabled and error
+
+Disable an option by disabling its radio — no extra class. The label takes the disabled pair and stops responding.
+
+`.is-error` on the **group** draws the unanswered border, for the moment a form is submitted with a question still blank. It sits on the group because the question is what is unanswered, not any one chip. A chip already chosen keeps its selected border, so an error state can never make a group look both answered and wrong.
+
+**Set `.is-error` and `aria-invalid="true"` together, always** — the class paints the border, the attribute tells assistive technology. One without the other is a half-reported error. A 1px stroke is a thin channel for the only signal a user gets, so pair it with a `.form-error` message and point the group at it with `aria-describedby`; the border is then reinforcement rather than the whole message.
+
+```html
+<p id="ending-q">How was the ending?</p>
+<div class="chip-group is-error" role="radiogroup" aria-labelledby="ending-q"
+     aria-invalid="true" aria-describedby="ending-err">
+  <label class="chip"><input type="radio" name="ending" value="1"><span>Unanswered</span></label>
+  <label class="chip"><input type="radio" name="ending" value="3" disabled><span>Disabled</span></label>
+</div>
+<p class="form-error" id="ending-err">Choose an answer before saving.</p>
+```
+
+---
+
+## Chip, segmented control or radio group
+
+All three ask for one answer. They differ in shape, and the shape is the decision.
+
+| Reach for | When |
+|---|---|
+| **Chip** | Labels are words of uneven length, there are more than a few, or they must wrap on a phone |
+| [**Segmented control**](form.html) | Two to five short labels that fit one row, and seeing them as a single unified control is the point |
+| [**Radio group**](radio-group.html) | The options need descriptions, or the list is long enough to read as a form field rather than a control |
+
+---
+
+## JavaScript
+
+**Selection needs no script.** The radios do it. Load `chip.js` only for `data-clearable`.
+
+Native radios cannot be unchecked by clicking the checked one, and a mandatory question sometimes needs an answer taken back. `data-clearable` opts a group into that behaviour; `chip.js` binds only groups carrying the attribute, so a page that never clears never needs the file.
+
+```html
+<p id="seen-q">Have you seen it before?</p>
+<div class="chip-group" data-clearable role="radiogroup" aria-labelledby="seen-q">
+  <label class="chip"><input type="radio" name="seen" value="yes"><span>Yes</span></label>
+</div>
+```
+
+Clearing fires `input` and `change` on the radio, so a consumer listening for the answer hears it being taken back the same way it heard it being given.
+
+**Delete or Backspace clears from the keyboard**, on the focused chip. Arrow keys deliberately do not: arrowing onto a radio dispatches a synthetic click in Chromium and Firefox, so treating that as a re-click would clear a chip the instant you reached it. Escape is not used either — it bubbles into `dialog.js` and `drawer.js` and would close the sheet the question sits in.
+
+Clearing is a DOM change, and assistive technology does not listen to DOM events. If a cleared answer needs announcing, pair it with a `role="status"` region — the pattern on [Cell Input](cell-input.html).
+
+**Clearing needs a real activation.** A re-click is recognised from a `pointerdown` and a `click` on the same chip, and the keyboard path needs an actual key event. A `click` synthesised on its own — `el.click()` from a script, a dispatched event, some automation harnesses — selects, but never clears. Ordinary mouse and touch both produce the pair, so this only bites synthetic activation. Drive the keyboard path instead when a test or script needs to clear.
+
+`initChip()` takes an optional argument: a container to search, or a single `.chip-group` to bind on its own. The element handed in joins the search rather than replacing it, so a clearable group nested inside it still binds.
+
+---
+
+## Accessibility
+
+- The group is `role="radiogroup"` and **must** be named — `aria-labelledby` pointing at the visible question, or `aria-label` when nothing visible names it. An unnamed radiogroup is announced as a bare set of options.
+- Arrow keys move between chips and Tab enters and leaves the group as one stop. That is the browser's native radiogroup behaviour; do not re-implement it.
+- The radio is `opacity: 0` and covers the chip. It is never `display: none`, which would forfeit focus and the arrow keys.
+- The focus ring is drawn on the label, since the radio itself is transparent.
+- Selection is an inverted surface, never a wash: a tint cannot carry state at the 3:1 a state indicator needs.
+- Under forced colours the fill is replaced by the system `Highlight` pair and every chip keeps a drawn border, so selection survives where backgrounds flatten.
+- A chip meets `--target-min` (44px) in the block axis. There is no `min-width` — a chip is as wide as its label, so a one- or two-character label lands near 35px. That clears the 24px of WCAG 2.2's 2.5.8 but not 44; size labels accordingly.
+- The rest border reads `--border-control`, not `--border-faded`. A chip's surface is transparent, so the border is the only thing saying it is pressable, and a control boundary needs 3:1. `--border-faded` is decorative at 1.4:1.
+- `Delete` and `Backspace` clear a `data-clearable` answer from the keyboard, so clearing is never pointer-only.
+- No `prefers-reduced-motion` guard, deliberately: a chip transitions colour and nothing else. There is no motion to reduce.
+
+---
+
+## Usage rules
+
+- **Do** give every chip in a group the same `name` — that is what makes it one answer.
+- **Do** name the group.
+- **Do** use `data-layout="scale"` for ordered sequences, and leave it off for unordered choices.
+- **Don't** use a chip for an action. It is an answer, not a button.
+- **Don't** use `.tag` as a control, or `.chip` as a label — see the split at the top of this page.
+- **Don't** put more than one answer in a group. A chip group is one-of-N; multi-select is not this component.
+- **Don't** re-implement arrow keys, roving focus or selection. The radios already do it.
+
+---
+
+## CSS reference
+
+### Tokens
+
+| Token | Default | What it controls |
+|---|---|---|
+| `--chip-background` | `transparent` | Rest surface |
+| `--chip-border` | `var(--border-faded)` | Rest border |
+| `--chip-text` | `var(--text-secondary)` | Rest text |
+| `--chip-hover-background` | `var(--background-faded)` | Hover wash — a preview, never selection |
+| `--chip-hover-text` | `var(--text-primary)` | Hover text |
+| `--chip-selected-background` | `var(--selected-background)` | Selected surface, from the system pair |
+| `--chip-selected-text` | `var(--selected-text)` | Text on the selected surface |
+| `--chip-radius` | `var(--radius-pill)` | Corner radius |
+| `--chip-padding-x` | `var(--space-m)` | Inline padding |
+| `--chip-gap` | `var(--space-xs)` | Gap between chips |
+| `--chip-scale-min` | `7rem` | Narrowest scale stop before the row wraps |
+| `--chip-duration` | `var(--duration-2xs)` | Colour transition |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.chip-group` | The radiogroup; wrapping flex by default |
+| `.chip-group[data-layout="scale"]` | Even stops via `auto-fit` grid |
+| `.chip-group[data-clearable]` | Opts into `chip.js` |
+| `.chip-group.is-error` | Unanswered-group border |
+| `.chip` | The label |
+| `.chip input[type="radio"]` | Invisible hit area covering the chip |
+| `.chip:has(input:checked)` | Selected |
+| `.chip:has(input:checked:disabled)` | Explicit winner where both states meet |
+
+### Key rules
+
+Selection reads `--selected-*`, the system pair shared with both segmented forms and the docs A-Z rail. Hover excludes checked and disabled explicitly — an equal-specificity hover rule that also matched the checked chip would out-rank it and flip the inverted label back to dark-on-dark. Disabled and checked can co-occur, so the winner is named rather than left to source order.
 
 ### Code
 
@@ -8924,6 +9138,8 @@ Use `<fieldset>` and `<legend>` to group related form controls:
 
 `.segmented-control` is a button group that acts like a single-select input — a set of options where seeing all of them at once is the point.
 
+It is one unified bar: equal segments, one row, no wrapping, two to five of them. When the labels are uneven, or there are more than five, or they must wrap on a phone, reach for [Chip](chip.html) instead — same semantics, different shape.
+
 **Nothing is drawn until something is selected.** There is no track, no outer border and no rules between segments; the selected segment is the only filled one, and its fill is the system's selected pair — the inverted neutral.
 
 ```html
@@ -9807,7 +10023,7 @@ This section documents how each element is built. For usage, see the sections ab
 | Property | Value |
 |---|---|
 | Background | `var(--yellow-light)` |
-| Color | `var(--warm-black)` |
+| Color | `var(--brown-dark)` |
 | Padding | `0 var(--space-2xs)` |
 
 Dark mode (`[data-theme="dark"]`): background shifts to `color-mix(in srgb, var(--yellow), var(--alpha-60))`, colour to `var(--off-white)`.
@@ -11035,6 +11251,8 @@ Add `.is-readonly` to disable interaction.
 
 Include `assets/js/rating.js` on any page using interactive ratings. The script auto-initialises all `.rating:not(.is-readonly)` elements.
 
+It re-runs on `bd:after-nav`, and takes an optional argument: a container to search, or a single `.rating` to bind on its own. `window.initRating(el)` binds that one and leaves the rest of the page alone.
+
 The component fires a `rating-change` custom event on the `.rating` element when the value changes:
 
 ```js
@@ -11264,7 +11482,7 @@ Two things about this shape are deliberate.
   <a class="skip-link" href="#main">Skip to content</a>
   <div class="site-header-inner">
     <div class="site-header-start">
-      <a class="site-header-logo" href="/">Acme</a>
+      <a class="site-header-logo" href="/">By Default</a>
     </div>
     <div class="site-header-end">
       <button type="button" class="button header-action">Sign in</button>
@@ -11311,7 +11529,7 @@ These two demos are the reason the component uses an auto margin rather than `sp
 
 `data-layout="center"` switches the inner element to `grid-template-columns: 1fr auto 1fr`. Flex with an auto margin cannot centre optically — the middle would drift with whatever the sides weigh — so this is a mode, not a slot.
 
-<a class="site-header-logo" href="#">Acme</a>
+<a class="site-header-logo" href="#">By Default</a>
       <div class="site-header-end">
         <button type="button" class="button header-action">Sign in</button>
       </div>
@@ -11909,7 +12127,7 @@ Include `assets/js/tabs.js` on any page that uses tabs. The script automatically
 <script src="/assets/js/tabs.js"></script>
 ```
 
-No manual initialisation is required.
+No manual initialisation is required. It re-runs on `bd:after-nav`, and takes an optional argument: a container to search, or a single `[role="tablist"]` to bind on its own. `window.initTabs(el)` binds that one and leaves the rest of the page alone.
 
 ---
 
@@ -11980,6 +12198,8 @@ This section documents how the component is built. For usage, see the sections a
 # Tag
 
 Tags are small interactive labels used for categorisation, filtering, and metadata display. They support colour variants via `data-color` and can be dismissible with a remove button.
+
+**A tag labels, a chip chooses.** A tag is a `<span>` the reader takes in — a status, a category, a filter already applied and now dismissible. To ask someone to *pick* one of a set, use [Chip](chip.html).
 
 The `.tag` class is required. Colour variants use the `data-color` attribute, the same API as button and badge.
 
@@ -12280,8 +12500,8 @@ The neutral toast, meaning one with no `data-type`, inverts with the theme:
 
 | Property | Value (Light) | Value (Dark) |
 |---|---|---|
-| Background | `var(--warm-black)` | `var(--neutral-100)` |
-| Text colour | `var(--off-white)` | `var(--warm-black)` |
+| Background | `var(--brown-dark)` | `var(--neutral-100)` |
+| Text colour | `var(--off-white)` | `var(--brown-dark)` |
 
 A typed toast keeps its status colour as text in both themes and reads its surface from the paired token:
 
@@ -12376,8 +12596,8 @@ The tooltip defines no component tokens — values are set directly on the compo
 
 | Property | Value |
 |---|---|
-| Background | `var(--warm-black)` — dark mode: `var(--neutral-100)` |
-| Text colour | `var(--off-white)` — dark mode: `var(--warm-black)` |
+| Background | `var(--brown-dark)` — dark mode: `var(--neutral-100)` |
+| Text colour | `var(--off-white)` — dark mode: `var(--brown-dark)` |
 | Corner radius | `var(--radius-s)` |
 | Padding | `var(--space-xs) var(--space-s)` |
 | Typography | `var(--font-primary)`, `var(--font-xs)`, `var(--font-weight-regular)`, `var(--line-height-m)` — pinned in full (with letter-spacing, case, style, and stretch normalised), because an unpinned pseudo-element inherits typography from its trigger: the same tooltip would render tighter on a button than on a span, and uppercase on a badge |
@@ -12685,6 +12905,8 @@ SVG sprites are the delivery format for icons in this system. No icon font exist
 
 Icons inherit colour through `currentColor`. To change an icon's colour, change the text colour of its parent. Never hardcode a fill value.
 
+One exception, and it is a file boundary rather than a loophole. A standalone `.svg` or `.png`, for a deck, an email or an ad platform, has no parent to inherit from, so an export bakes the chosen brand hex into the file. Icons in a page never do.
+
 <div >
     <div class="svg-icn" data-icon="info">
       <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none">
@@ -12731,6 +12953,8 @@ This shorthand only works in files processed by `cms/generator/generate-docs.js`
 
 A second placeholder renders the whole set at once: put `{{icon-registry}}` on a line of its own and the generator expands it into the full registry table. The Registry section below is built this way.
 
+A third, `{{icon-manifest}}`, is for a tool body only (`cms/apps/<slug>.html`). On a line of its own it expands into a `<script type="application/json" id="icon-manifest">` block holding every icon's own markup, display name and Brand Book category. It is page-sized, which is why it is inlined on the one page that reads it rather than shipped as a global script, and why it does not resolve in markdown: there the generator warns and leaves it as text.
+
 ---
 
 ## SVG Cleaner Tool
@@ -12766,7 +12990,7 @@ echo '<svg>...</svg>' | npx svg-cleaner --current-color --icon --icon-name arrow
 
 | Do | Don't |
 |---|---|
-| Use `fill="currentColor"` on all paths | Hardcode hex colours in SVG fills |
+| Use `fill="currentColor"` on all paths | Hardcode hex colours in inline SVG fills |
 | Use `.svg-icn` to wrap all icons | Use `<img>` tags for icons |
 | Include `data-icon` with a descriptive name | Leave icons unnamed |
 | Include `aria-hidden="true"` on decorative icons | Omit accessibility attributes |

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.7.0 */
+/* @bydefaultstudio/design-system v4.8.0 */
 // Copy button — unified handler for all .copy-btn variants
 // Supports data-copy (static value), data-clipboard-target (element text
 // content) and data-download (fetch-free file download via a temporary link).
@@ -60,6 +60,54 @@
     });
   }
 
+
+  // ── Announcing a copy ──
+  //
+  // The visual feedback is a class swap and a tooltip, neither of which a
+  // screen reader reports: without this, copying is entirely silent to one.
+  // WCAG 2.1 4.1.3 Status Messages (AA).
+  //
+  // One region for the whole page, shared with the docs site's own copy
+  // chrome — a second live region announcing the same event would double
+  // every message. Built at init rather than on first copy, because assistive
+  // tech has to register a live region before its first mutation or the first
+  // announcement is heard by nobody (the same reason toast.js builds its
+  // container up front).
+  var LIVE_REGION_ID = 'bd-copy-live';
+  var ANNOUNCE_MAX = 60;
+
+  function getLiveRegion() {
+    var region = document.getElementById(LIVE_REGION_ID);
+    if (region) return region;
+    if (!document.body) return null;
+    region = document.createElement('div');
+    region.id = LIVE_REGION_ID;
+    region.className = 'visually-hidden';
+    region.setAttribute('aria-live', 'polite');
+    region.setAttribute('aria-atomic', 'true');
+    document.body.appendChild(region);
+    return region;
+  }
+
+  function announceCopy(message) {
+    var region = getLiveRegion();
+    if (!region) return;
+    // Cleared first, then set on the next frame. Writing the same string twice
+    // is not a mutation, so copying one token twice would announce only once.
+    region.textContent = '';
+    requestAnimationFrame(function () {
+      region.textContent = message;
+    });
+  }
+
+  // What was copied is worth hearing — "Copied var(--space-m)" beats "Copied".
+  // But the icon table copies a whole <svg> element, and reading several
+  // hundred characters of path data aloud is worse than saying nothing, so
+  // anything long announces plainly.
+  function announceCopied(value) {
+    announceCopy(value && value.length <= ANNOUNCE_MAX ? 'Copied ' + value : 'Copied');
+  }
+
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('.copy-btn');
     if (!btn) return;
@@ -84,6 +132,7 @@
 
     copyToClipboard(text).then(function () {
       btn.classList.add('is-copied');
+      announceCopied(text);
 
       // Swap tooltip text if present. The original is captured once, in its
       // own attribute — a second click inside the feedback window would
@@ -104,7 +153,10 @@
         }
       }, FEEDBACK_DURATION);
     }).catch(function (err) {
-      // No false success state; the button stays as it was.
+      // No false success state; the button stays as it was. Announced all the
+      // same — a silent failure is worse than a reported one, and a screen
+      // reader user has no other signal that nothing reached the clipboard.
+      announceCopy('Copy failed');
       console.warn('[copy-button] copy failed:', err);
     });
   });
@@ -132,6 +184,7 @@
   // Wraps existing content into .copy-btn-default / .copy-btn-copied
   // so the CSS state swap (is-copied) shows a check icon + "Copied".
   function initCopyButtons() {
+    getLiveRegion();
     var buttons = document.querySelectorAll('.copy-btn');
     buttons.forEach(function (btn) {
       if (btn.querySelector('.copy-btn-default')) return;

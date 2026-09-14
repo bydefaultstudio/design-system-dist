@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.7.0 */
+/* @bydefaultstudio/design-system v4.8.0 */
 /**
  * Bar overflow
  * The bar (design-system.css §41) is always one row: items that do not fit
@@ -27,10 +27,35 @@
  * Open/close, focus and dismissal belong to dropdown.js, which delegates on
  * document — nothing here binds the trigger.
  *
- * @version 1.0.1
+ * @version 1.1.2
  */
 (function () {
-  var VERSION = '1.0.1';
+  var VERSION = '1.1.2';
+
+  /**
+   * Does the content region need to shed an item? Measured from the children's
+   * own boxes, not scrollWidth: scrollWidth counts every descendant's overflow,
+   * and a tooltip bubble (opacity: 0, absolutely positioned, centred under a
+   * 36px icon button) reaches past the region's edge by a pixel or two. That
+   * was enough to evict Colour Pairing's swatch group at 1400px — the region
+   * read 338 wide against 336 visible with the whole bar empty beside it. The
+   * span from the first child's left edge to the last child's right edge is
+   * what the row actually needs; the half-pixel absorbs sub-pixel rounding.
+   * Hidden children (a tool's .is-hidden group) report an empty box at 0,0,
+   * so the span is taken over the children that have a width.
+   */
+  function contentOverflows(content) {
+    var left = Infinity;
+    var right = -Infinity;
+    Array.from(content.children).forEach(function (item) {
+      var box = item.getBoundingClientRect();
+      if (!box.width) return;
+      if (box.left < left) left = box.left;
+      if (box.right > right) right = box.right;
+    });
+    if (right === -Infinity) return false;
+    return (right - left) > content.getBoundingClientRect().width + 0.5;
+  }
 
   /**
    * One managed bar. Restores everything to the bar, measures, then moves
@@ -72,7 +97,7 @@
     // Move the trailing collapsible item until nothing is clipped. Bounded by
     // the item count, so a bar that can never fit (all pinned) exits cleanly.
     var guard = content.children.length;
-    while (guard-- > 0 && content.scrollWidth > content.clientWidth) {
+    while (guard-- > 0 && contentOverflows(content)) {
       var items = Array.from(content.children);
       var candidate = null;
       for (var i = items.length - 1; i >= 0; i--) {
@@ -158,13 +183,21 @@
     measure(bar);
   }
 
-  function initBar(scope) {
-    var root = scope || document;
+  function initBar(scopeOrEl) {
+    var root = scopeOrEl || document;
+    // Accepts a scope to search, or the .bar itself — see tabs.js.
     var bars = root.querySelectorAll('.bar');
+    if (root.matches && root.matches('.bar')) {
+      bars = [root].concat(Array.from(bars));
+    }
     var managed = 0;
 
     bars.forEach(function (bar) {
-      if (bar.querySelector('.bar-overflow')) {
+      // Count real binds only. setupBar early-returns on an already-bound bar,
+      // and on a hard load initBar runs twice (DOMContentLoaded, then Barba's
+      // once() afterEnter), so counting every candidate reported the same
+      // total twice while the second pass wired nothing.
+      if (bar.querySelector('.bar-overflow') && !bar.dataset.barInit) {
         setupBar(bar);
         managed++;
       }

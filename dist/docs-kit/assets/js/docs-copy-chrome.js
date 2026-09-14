@@ -49,8 +49,53 @@
     });
   }
 
+  // ── Announcing a copy ──
+  //
+  // The visual feedback is a class swap, which a screen reader does not
+  // report: without this, copying is entirely silent to one. WCAG 2.1 4.1.3
+  // Status Messages (AA). One region for the whole page, shared with
+  // copy-button.js — whichever loads first builds it, and a second region
+  // would double every message.
+  var LIVE_REGION_ID = 'bd-copy-live';
+  var ANNOUNCE_MAX = 60;
+
+  function getLiveRegion() {
+    var region = document.getElementById(LIVE_REGION_ID);
+    if (region) return region;
+    if (!document.body) return null;
+    region = document.createElement('div');
+    region.id = LIVE_REGION_ID;
+    region.className = 'visually-hidden';
+    region.setAttribute('aria-live', 'polite');
+    region.setAttribute('aria-atomic', 'true');
+    document.body.appendChild(region);
+    return region;
+  }
+
+  function announceCopy(message) {
+    var region = getLiveRegion();
+    if (!region) return;
+    // Cleared first, then set on the next frame. Writing the same string twice
+    // is not a mutation, so copying one token twice would announce only once.
+    region.textContent = '';
+    requestAnimationFrame(function () {
+      region.textContent = message;
+    });
+  }
+
+  // What was copied is worth hearing — "Copied var(--space-m)" beats "Copied".
+  // But the icon table copies a whole <svg> element, and reading several
+  // hundred characters of path data aloud is worse than saying nothing, so
+  // anything long announces plainly.
+  function announceCopied(value) {
+    announceCopy(value && value.length <= ANNOUNCE_MAX ? 'Copied ' + value : 'Copied');
+  }
+
   function warnCopyFailed(err) {
-    // No false success state; the control stays as it was.
+    // No false success state; the control stays as it was. Announced all
+    // the same — a silent failure is worse than a reported one, and a screen
+    // reader user has no other signal that nothing reached the clipboard.
+    announceCopy('Copy failed');
     console.warn('[docs-copy-chrome] copy failed:', err);
   }
 
@@ -64,6 +109,7 @@
 
     copyToClipboard(text).then(function () {
       btn.classList.add('is-copied');
+      announceCopied(text);
       clearTimeout(btn.bdRevertTimer);
       btn.bdRevertTimer = setTimeout(function () {
         btn.classList.remove('is-copied');
@@ -91,6 +137,7 @@
       btn.classList.add('is-copied');
       if (iconEl) iconEl.innerHTML = ICON_CHECK;
       if (label) label.textContent = 'Copied';
+      announceCopy('Copied page link');
 
       clearTimeout(btn.bdRevertTimer);
       btn.bdRevertTimer = setTimeout(function () {
@@ -147,6 +194,7 @@
 
     copyToClipboard(text).then(function () {
       btn.classList.add('is-copied');
+      announceCopied(text);
       clearTimeout(btn.bdRevertTimer);
       btn.bdRevertTimer = setTimeout(function () {
         btn.classList.remove('is-copied');
@@ -156,6 +204,7 @@
 
   // Initialize color copy buttons with icon structure
   function initColorCopyButtons() {
+    getLiveRegion();
     var buttons = document.querySelectorAll('.color-copy-btn');
     buttons.forEach(function (btn) {
       if (btn.querySelector('.copy-btn-default')) return;

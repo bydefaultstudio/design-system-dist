@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.7.0 */
+/* @bydefaultstudio/design-system v4.8.0 */
 /**
  * Cell Input component — fixed-shape text entry rendered as per-character cells
  * Initialises all .cell-input elements that have a data-format and an <input>.
@@ -13,7 +13,7 @@
  * replacing the input afterwards requires clearing data-cell-input-bound
  * and re-running initCellInput on the block.
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 (function () {
   var MASK_CHAR = '•';
@@ -74,11 +74,17 @@
     };
   }
 
-  function initCellInput(scope) {
-    var root = scope || document;
+  function initCellInput(scopeOrEl) {
+    var root = scopeOrEl || document;
     var bound = 0;
 
-    root.querySelectorAll('.cell-input[data-format]').forEach(function (block) {
+    // Accepts a scope to search, or the .cell-input block itself — see tabs.js.
+    var blocks = root.querySelectorAll('.cell-input[data-format]');
+    if (root.matches && root.matches('.cell-input[data-format]')) {
+      blocks = [root].concat(Array.from(blocks));
+    }
+
+    blocks.forEach(function (block) {
       if (block.dataset.cellInputBound) return;
       var input = block.querySelector('input');
       var cellsEl = block.querySelector('.cell-input-cells');
@@ -164,7 +170,7 @@
     });
 
     // Only when something was actually wired — most pages have no cell input.
-    if (bound) console.log('[cell-input] v1.0.0 — init (' + bound + ')');
+    if (bound) console.log('[cell-input] v1.1.0 — init (' + bound + ')');
   }
 
   // Exposed for parity with the other components; the after-nav listener below

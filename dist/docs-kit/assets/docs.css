@@ -45,6 +45,7 @@
  *   19. Docs main content    — page header, scroll offsets
  *   20. Docs TOC             — sticky right rail
  *   21. Demo preview         — live demos in docs
+ *  21B. Specimen             — variant sets on the styleguide presentation
  *   22. Docs utilities       — token tags, demo helpers
  *   23. Code blocks          — markdown pre/code wrapper
  *   24. Docs cards           — index/landing layout
@@ -315,8 +316,8 @@
 }
 
 .az-index-letter.is-active {
-  color: var(--background-primary);
-  background-color: var(--text-primary);
+  color: var(--selected-text);
+  background-color: var(--selected-background);
 }
 
 /* Letters with no entries stay in place rather than being removed, so the
@@ -639,15 +640,41 @@ hr {
   color: var(--white);
 }
 
+/* The two above hardcode black and white, which is right for a primitive
+   swatch — a primitive does not flip with the theme. A row painted in a
+   *semantic* token does, so a fixed label colour inverts with it and vanishes.
+   This one tracks the theme instead: on a row whose background is the text
+   colour, the label takes the background colour. */
+.color-row.is-inverted .color-row-name,
+.color-row.is-inverted .color-copy-btn {
+  color: var(--text-inverted);
+}
+
+/* Hidden with opacity, not display.
+ *
+ * `display: none` was the original, paired with a `:focus-within` rule that
+ * could never fire: a display:none child is not focusable, so focus can never
+ * land inside the row to reveal it. That made the Hex and CSS buttons on every
+ * colour row pointer-only — WCAG 2.1.1 Keyboard, Level A. Opacity keeps them
+ * in the layout and in the tab order, so tabbing into the row reveals them the
+ * same way hovering does. */
 .color-row-actions {
-  display: none;
+  display: flex;
   gap: var(--space-s);
   margin-left: auto;
+  opacity: 0;
+  transition: opacity var(--duration-2xs) var(--ease-out);
 }
 
 .color-row:hover .color-row-actions,
 .color-row:focus-within .color-row-actions {
-  display: flex;
+  opacity: 1;
+}
+
+/* Focus has to be visible before the reveal transition has run, or the first
+   Tab into a row shows a ring on something still fading in. */
+.color-copy-btn:focus-visible {
+  opacity: 1;
 }
 
 .color-copy-btn {
@@ -783,8 +810,8 @@ button.color-row.is-copied {
 /* Pages with a docked bar stack it under the header, so anchors have to clear
    both. Keyed off the bar actually being present rather than off frontmatter.
 
-   Two sums, one per density, because only regular has a height token — a
-   compact bar is as tall as its tallest control (design-system.css §41), so
+   Two sums, one per density, because only regular has a height token — any
+   other bar is one control tall, a floor §41 enforces on the container, so
    its height is built from the tokens that produce it: one control, the
    padding above and below it, and the bottom rule.
 
@@ -1646,6 +1673,17 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   gap: var(--space-xl);
 }
 
+/* A left-aligned wrapping row of variants — the shape a styleguide entry wants
+   when it shows six buttons or four badges side by side. `is-centered` centres
+   and is wrong for scanning a set; this reads from the left edge like the text
+   above it. Was inline on every such demo until the styleguide made it twenty. */
+.demo-preview.is-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-l);
+}
+
 .demo-preview .bar {
   top: 0;
 }
@@ -1726,6 +1764,166 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   font-size: var(--font-s);
   /* --text-secondary, not --text-faded: body-size text needs 4.5:1 (AA) */
   color: var(--text-secondary);
+}
+
+
+/* ------ 21B. SPECIMEN — the styleguide presentation ------
+ * /styleguide.html is not a doc that contains components; it is a
+ * presentation of them. Components sit in the page as real elements with
+ * real copy — no .demo-preview frame, no code block, no copy affordance —
+ * so this vocabulary does one job: lay a set of variants out and name each
+ * one. Anything that wants a box still wants .demo-preview (Part B §5), and
+ * a left-aligned row inside one wants .demo-preview.is-row.
+ *
+ * There is no .specimen-label. .demo-eyebrow already is one (--font-s at
+ * --text-secondary, AA at body size) and a second name for the same rule is
+ * how two rules drift apart. Nor is there a neutral-ground box: when a
+ * specimen needs one, derive it from .asset-card-preview (Part A §5) against
+ * a real case rather than guessing the metrics in advance.
+ *
+ * Not .grid + .cols-*: that collapses at a hard 768px viewport breakpoint,
+ * where this needs a floor and auto-fill. If a second consumer ever wants
+ * this shape, the move is a .cols-auto modifier in design-system.css §7 —
+ * not a third copy of the same idea.
+ *
+ * No breakpoint here on purpose. The set self-collapses through auto-fill
+ * plus the min() floor below, so it needs no width to key on — which is
+ * what makes it correct at 1808px (sidebar collapsed), 1592px (expanded)
+ * and on a phone, without a query that can see only one of the three.
+ *
+ * One rule holds focus order honest across a page of ~130 specimens: never
+ * set order, grid-row/grid-column, grid-auto-flow: dense, or a reverse flex
+ * direction on a specimen. Auto-placement is row-major in source order, so
+ * DOM order, visual order and focus order agree — and nudging one awkward
+ * cell into place is exactly how WCAG 1.3.2 breaks. */
+
+/* A set of labelled variants. auto-fill rather than a per-section column
+   count, so a set of four badges and a set of eleven buttons read as one
+   rhythm. --specimen-min is the cell floor, raised in named steps rather
+   than per section: the first draft defaulted to 15rem and two sections
+   immediately needed five inline overrides to bring it down, which is a
+   token surface too coarse to use (§17 Rule 3). min(…, 100%) is what stops
+   a floor wider than the container overflowing — auto-fill on its own would
+   keep the cell at --specimen-min and push the page sideways. */
+.specimen-set {
+  --specimen-min: 10rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--specimen-min), 100%), 1fr));
+  gap: var(--space-2xl) var(--space-xl);
+}
+
+.specimen-set[data-min="m"] {
+  --specimen-min: 15rem;
+}
+
+.specimen-set[data-min="l"] {
+  --specimen-min: 20rem;
+}
+
+/* One cell: the thing, then its name. space-between pins the label to the
+   bottom so labels line up across a row whose specimens are different
+   heights — the row stretches, the label does not float mid-cell. */
+.specimen {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-m);
+  min-width: 0;
+}
+
+/* A block of colour, a bar of space, a corner radius. The foundations are the
+   one thing on this page with no component to stand in for them — a token has
+   no rendering of its own — so they get the one primitive that draws a value
+   directly. Three custom properties rather than three classes, because a
+   swatch, a spacing bar and a radius sample differ only in which value they
+   are showing. Four custom properties rather than four classes.
+
+   Inline `style="--swatch-color: …"` is the intended way to use it and is what
+   §3 permits on this page. Passing a value through a declared custom property
+   is not the same thing as hand-rolling a rule inline. All four knobs are
+   declared here rather than left as inline var() fallbacks, so the API is
+   readable from the rule and an ancestor can set one for a whole set.
+
+   One place it is the wrong primitive: a container scale. Those have to be
+   stacked against a shared width to be comparable, and inside a .specimen-set
+   every cell is narrower than --container-xs, so all five would clamp to the
+   cell and render identically. Same reasoning as the duration bars. */
+.specimen-swatch {
+  --swatch-color: var(--background-faded);
+  --swatch-height: 4rem;
+  --swatch-width: 100%;
+  --swatch-radius: 0;
+
+  width: var(--swatch-width);
+  height: var(--swatch-height);
+  background-color: var(--swatch-color);
+  border-radius: var(--swatch-radius);
+  /* An inset ring rather than a border: --background-primary and
+     --text-inverted are both near-white on a near-white page and would
+     otherwise be invisible swatches. Inset because it must not change the box,
+     which the radius and spacing specimens are measuring.
+
+     --border-control, not --border-faded. The faded token is documented in
+     design-system.css as decorative at 1.4:1 and explicitly not for a boundary
+     anyone has to perceive — and here the ring IS the boundary, the only thing
+     separating a white swatch from a white page. --border-control is the
+     system's 3:1-and-above token in both themes (4.74:1 light, 4.77:1 dark).
+     Its own comment frames it as an interactive boundary; it is defined by its
+     contrast contract rather than by interactivity, which is what this needs. */
+  box-shadow: inset 0 0 0 var(--border-s) var(--border-control);
+}
+
+/* A phone-sized viewport, for the components that only make sense docked to an
+   edge. .app-nav is the case that needs it: it is position: fixed with
+   inset-block-end: 0, so in flat flow it either pins to the real viewport or,
+   pinned to relative like the rule below does, sits in the page as a plain row
+   — which is not what a bottom bar is. Given a positioned ancestor and
+   position: absolute, its own insets dock it to the bottom of this box, which
+   is what a reader's phone actually shows.
+
+   390px to match .demo-frame (Part B §5), so the two agree on what "a phone"
+   means. Not an iframe, because these specimens are the page's own markup. */
+.specimen-viewport {
+  position: relative;
+  width: 390px;
+  max-width: 100%;
+  height: 26rem;
+  overflow: hidden;
+  background-color: var(--background-primary);
+  border: var(--border-s) solid var(--border-control);
+}
+
+.specimen-viewport > .app-nav,
+.specimen-viewport > .site-header,
+.specimen-viewport > .bar {
+  position: absolute;
+}
+
+/* A sticky or fixed component demoed in flat flow would leave the page and
+   pin itself to the viewport — .app-nav docks to the bottom edge, .site-header
+   sticks to the top. Pinned to relative inside a specimen so it sits where it
+   was written. This mirrors the same rule for .demo-preview (Part B §5); the
+   two are separate because neither container is inside the other.
+
+   .site-header also takes data-sticky="false", which is its own API and the
+   better answer where a component offers one — this rule is the fallback for
+   the components that do not. */
+.specimen > .site-header,
+.specimen > .bar,
+.specimen > .app-nav {
+  position: relative;
+  inset: auto;
+}
+
+/* flex-start above keeps a button at its intrinsic width, which is right for
+   almost everything. The exception is a component that IS full width — a
+   button with data-full-width, a text input, a progress bar — which has to
+   fill the cell or it reads as the wrong variant. Named data-full-width to
+   match the system's own boolean for this (design-system.css §12), not a
+   second word for the same idea. */
+.specimen[data-full-width] {
+  align-items: stretch;
 }
 
 
@@ -2036,7 +2234,6 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   .sidebar-nav-section-toggle {
     width: 100%;
     padding: var(--space-xl) var(--space-l);
-    font-size: var(--font-xl);
   }
 
   /* Show/hide sidebar-nav-list based on details open state */
@@ -2054,7 +2251,6 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   .sidebar-nav-link {
     padding: var(--space-xl) var(--space-l);
     white-space: normal;
-    font-size: var(--font-xl);
   }
 
   .sidebar-nav-list li {

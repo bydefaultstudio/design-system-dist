@@ -314,6 +314,11 @@ function buildIconMap() {
       .replace(/\n\s*/g, '') // collapse to single line
       .trim();
 
+    // The file's own markup, kept for the icon manifest: the Icon Library tool
+    // feeds it through the SVG Cleaner engine's icon mode, which adds data-icon
+    // itself — handing it the normalised form below would double the attribute.
+    const raw = svg;
+
     const geometry = readGeometry(svg);
     if (geometry) shapes.push({ key: key, geometry: geometry });
 
@@ -329,7 +334,7 @@ function buildIconMap() {
     // Add data-icon on the <svg> element for CSS targeting
     svg = svg.replace(/<svg/, `<svg data-icon="${key}"`);
 
-    map[key] = { svg: svg, file: file };
+    map[key] = { svg: svg, file: file, raw: raw };
   }
 
   ICON_MAP = map;
@@ -395,6 +400,143 @@ function warnBrandRegistryGaps() {
   if (missing.length) {
     console.warn(`⚠️  ${missing.length} icon(s) not listed in cms/brand-iconography.md: ${missing.join(', ')}`);
   }
+}
+
+//------- Icon Manifest -------//
+
+/**
+ * The Brand Book icon page is the only place the set is grouped and named:
+ * one `## Category` heading over each table, whose rows read
+ * `| {{icon:key}} | Display Name | \`key\` |`. Read that structure once so
+ * the Icon Library tool filters by the categories the brand book shows,
+ * rather than carrying a second list that drifts from it.
+ * @returns {{order: string[], byKey: Object<string, {name: string, category: string}>}}
+ */
+function parseIconCategories() {
+  const result = { order: [], byKey: {} };
+  const brandRegistryFile = path.join(DOCS_DIR, 'brand-iconography.md');
+  if (!fs.existsSync(brandRegistryFile)) {
+    console.warn('cms/brand-iconography.md not found — every icon in the manifest falls under "Other"');
+    return result;
+  }
+
+  // The body only: a frontmatter line starting "## " must not register a
+  // category.
+  const body = parseFrontmatter(fs.readFileSync(brandRegistryFile, 'utf8')).content;
+  let category = null;
+  for (const line of body.split('\n')) {
+    const heading = line.match(/^##\s+(.+?)\s*$/);
+    if (heading) {
+      category = heading[1];
+      if (!result.order.includes(category)) result.order.push(category);
+      continue;
+    }
+    const row = line.match(/^\|\s*\{\{icon:([a-z0-9-]+)\}\}\s*\|\s*([^|]*?)\s*\|/);
+    if (!row || !category) continue;
+    const key = row[1];
+    const existing = result.byKey[key];
+    if (existing) {
+      console.warn(`Icon "${key}" is listed twice in cms/brand-iconography.md (${existing.category}, ${category}) — the manifest keeps ${existing.category}`);
+      continue;
+    }
+    result.byKey[key] = { name: row[2].trim() || titleFromKey(key), category: category };
+  }
+  return result;
+}
+
+/**
+ * Figma exports carry internal ids ("clip0_14540_880") referenced by
+ * url(#id) and href="#id". Inlined 175 times on one page they collide, and a
+ * browser resolves url(#id) to the FIRST match document-wide, so later icons
+ * pick up the wrong clip. Prefix every id and its references with the icon
+ * key. The same three rewrites as scripts/build-icon-sprite.js, which cannot
+ * be required from here — it is a CLI that runs on load.
+ * @param {string} svg
+ * @param {string} prefix
+ * @returns {string}
+ */
+function namespaceIds(svg, prefix) {
+  const ids = new Set();
+  const idRe = /\sid="([^"]+)"/g;
+  let match;
+  while ((match = idRe.exec(svg))) ids.add(match[1]);
+  let out = svg;
+  for (const id of ids) {
+    const safe = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const ns = `${prefix}-${id}`;
+    // Function replacers: a string replacement would read a "$&" or "$1"
+    // inside an id as a substitution pattern.
+    out = out
+      .replace(new RegExp(`id="${safe}"`, 'g'), () => `id="${ns}"`)
+      .replace(new RegExp(`url\\(#${safe}\\)`, 'g'), () => `url(#${ns})`)
+      .replace(new RegExp(`href="#${safe}"`, 'g'), () => `href="#${ns}"`);
+  }
+  return out;
+}
+
+/**
+ * "arrow-top-right" → "Arrow Top Right", for icons the brand book has not
+ * named yet.
+ * @param {string} key
+ * @returns {string}
+ */
+function titleFromKey(key) {
+  return key.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+}
+
+/**
+ * The Icon Library tool's data, inlined on that page alone as a JSON block.
+ * Not a global script on purpose: the set is over 100 KB, and every entry in
+ * extraScripts ships on all ~125 pages. Expanded from {{icon-manifest}} in a
+ * tool body — an HTML body is the only place it resolves.
+ *
+ * The trade-off: _headers serves *.html with max-age=0, must-revalidate, so
+ * the block re-transfers on every deploy (about 36 KB brotli), where a
+ * fetched file under assets/ would sit in the hour cache. One page, static
+ * data, no async render or Barba re-entry race — inline is still the simpler
+ * correct answer.
+ *
+ * `raw` is the file's own markup (collapsed, ids namespaced), named as it
+ * is in ICON_MAP and deliberately not the normalised {{icon:}} form; see the
+ * note in buildIconMap. The tool re-derives the display form (100% sizing) in
+ * one pass at render, which is cheaper than shipping both forms twice over.
+ * @returns {string} HTML string
+ */
+function renderIconManifest() {
+  const keys = Object.keys(ICON_MAP).sort();
+  if (keys.length === 0) {
+    console.warn('{{icon-manifest}}: icon map is empty — no icons found in assets/images/svg-icons/');
+  }
+  const categories = parseIconCategories();
+  const OTHER = 'Other';
+  const unlisted = [];
+  const icons = keys.map(key => {
+    const meta = categories.byKey[key];
+    if (!meta) unlisted.push(key);
+    return {
+      key: key,
+      name: meta ? meta.name : titleFromKey(key),
+      category: meta ? meta.category : OTHER,
+      raw: namespaceIds(ICON_MAP[key].raw, key),
+    };
+  });
+  // warnBrandRegistryGaps matches {{icon:}} anywhere in the brand book; this
+  // parser only reads table rows under a heading, so an icon can pass that
+  // check and still land here. Name the ones that did.
+  if (unlisted.length && categories.order.length) {
+    console.warn(`${unlisted.length} icon(s) have no category row in cms/brand-iconography.md and fall under "Other": ${unlisted.join(', ')}`);
+  }
+  const used = new Set(icons.map(icon => icon.category));
+  const order = categories.order.filter(name => used.has(name));
+  if (used.has(OTHER) && !order.includes(OTHER)) order.push(OTHER);
+
+  // \u003c keeps "</script>" and "<!--" out of the block whatever the markup holds
+  // The brand names the export files (icon_<brand>_<key>_...), so a second
+  // instance's arrow-up never collides with this one's in a downloads folder.
+  const manifest = Object.assign(ROOT_BRAND_KEY ? { brand: ROOT_BRAND_KEY } : {}, { categories: order, icons: icons });
+  const json = JSON.stringify(manifest).replace(/</g, '\\u003c');
+  console.log(`Icon manifest: ${icons.length} icons in ${order.length} categories, ${Math.round(json.length / 1024)} KB`);
+  return `<script type="application/json" id="icon-manifest">${json}</script>`;
 }
 
 /**
@@ -815,6 +957,13 @@ function markdownToHtml(markdown) {
   // a page actually contains the placeholder.
   markdown = markdown.replace(/^\{\{icon-registry\}\}[^\S\n]*$/m, renderIconRegistry);
 
+  // {{icon-manifest}} is a tool-body placeholder (cms/apps/<slug>.html). In
+  // markdown it would publish as literal text, so say so at build time. Same
+  // line-only match as the registry, so a doc can still mention it inline.
+  if (/^\{\{icon-manifest\}\}[^\S\n]*$/m.test(markdown)) {
+    console.warn('{{icon-manifest}} only resolves in a tool body (cms/apps/<slug>.html) — here it renders as text');
+  }
+
   let html = marked(markdown);
 
   // Add IDs to headings for anchor links
@@ -937,6 +1086,97 @@ function generateTableOfContents(html) {
 
   toc += '</ul></nav>';
   return toc;
+}
+
+// ── Styleguide coverage ──
+//
+// cms/styleguide.md carries every foundation and component in one scroll. This
+// keeps it honest: the page it generates is only trustworthy if it is complete.
+const STYLEGUIDE_SOURCE = 'styleguide.md';
+
+/**
+ * The slug a styleguide section declares, derived from the page it must cover.
+ *
+ * Taken from the output basename rather than the cms filename so the gate
+ * compares the section against what the build actually writes.
+ *
+ * Basenames are unique across the pages this gate sees today, but nothing in
+ * the code guarantees it: deriveOutputPath honours CONFIG.filenameOverrides,
+ * which can send any page anywhere (styleguide.md and glossary.md are already
+ * pulled to the output root that way). Two Website pages overridden into
+ * different folders with the same basename would collide here. Hence
+ * assertUniqueSlugs below — the invariant is asserted rather than assumed.
+ */
+function styleguideSlug(htmlPath) {
+  return path.basename(htmlPath, '.html');
+}
+
+/**
+ * Strip the regions of a source file where markup is quoted rather than live:
+ * HTML comments, <pre> and <code>.
+ *
+ * The coverage gate scans raw text for an attribute, so without this a section
+ * commented out while debugging still counts as covered — the component
+ * vanishes from the page and the build stays green, which is the exact failure
+ * the gate exists to prevent. A <code> or <pre> block showing the attribute as
+ * an example counts too.
+ */
+function stripQuotedMarkup(source) {
+  return source
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<pre\b[\s\S]*?<\/pre>/g, '')
+    .replace(/<code\b[\s\S]*?<\/code>/g, '');
+}
+
+/**
+ * Reconcile the styleguide against the pages it is supposed to show.
+ *
+ * An entry is declared by `data-component="<slug>"` on the section presenting
+ * that component. This replaced a "Full docs:" link when the page became a
+ * raw-HTML presentation — an HTML body has no markdown link syntax to key on —
+ * but it is the better anchor either way: an attribute is written by the
+ * author and never by a demo, which closes the "a link inside a demo counts as
+ * coverage" hole the old form had. It is also the section's CSS and JS hook,
+ * so a declaration that goes missing takes the styling with it rather than
+ * failing silently in one place only.
+ *
+ * @param {Array<{filename: string, title: string, htmlPath: string}>} expected
+ * @returns {{missing: string[], stale: string[]}}
+ */
+function validateStyleguideCoverage(expected, known) {
+  const source = path.join(DOCS_DIR, STYLEGUIDE_SOURCE);
+  if (!fs.existsSync(source)) return { missing: [], stale: [], empty: false };
+
+  const body = stripQuotedMarkup(fs.readFileSync(source, 'utf8'));
+  const declared = new Set();
+  // Either quote style: a single-quoted attribute is valid HTML, and silently
+  // not matching it reports the page as missing a declaration that is visibly
+  // right there on the tag.
+  for (const match of body.matchAll(/\sdata-component=("([^"]*)"|'([^']*)')/g)) {
+    const slug = (match[2] !== undefined ? match[2] : match[3]).trim();
+    if (slug) declared.add(slug);
+  }
+
+  return {
+    missing: expected
+      .filter(page => !declared.has(styleguideSlug(page.htmlPath)))
+      .map(page => `  ${page.title} — cms/${page.filename}`),
+    // The digest drifts both ways: a component that is removed or drafted
+    // leaves its section behind, presenting something the system no longer has.
+    //
+    // Checked against every page the build produces, not just the pages the
+    // gate requires. `styleguide-exempt` means a page need not appear — it has
+    // never meant it must not, and scoping this to the required set would turn
+    // the opt-out into a ban (CLAUDE.md §8). The same allowance covers showing
+    // a docs-site or brand component here deliberately.
+    stale: [...declared]
+      .filter(slug => !known.has(slug))
+      .map(slug => `  data-component="${slug}" — no cms page produces this`),
+    // A styleguide that declares nothing at all is not a passing styleguide.
+    // Without this the gate is satisfied by an empty file, since `missing` is
+    // the only other thing standing between it and a green build.
+    empty: declared.size === 0,
+  };
 }
 
 // ── Page types ──
@@ -1988,6 +2228,11 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
     order: sidebarOrderMap[file.htmlPath] || 999,
     level: type.level,
     chrome: type.chrome,
+    // The tool pair renderer has always passed this; a cms/*.md page could not,
+    // so `sidebar: "collapsed"` in frontmatter was read by nothing and did
+    // nothing — the quietest kind of wrong, since the page still built. Both
+    // renderers now read the same field.
+    sidebar: frontmatter.sidebar || null,
   });
 }
 
@@ -3019,6 +3264,12 @@ function generateSourceDirPages(template, {
     let content = fillPageClose(body, upHref);
     if (type.body === 'html') {
       content = content.replace(/\{\{icon:([a-z0-9-]+)\}\}/g, (match, name) => getIcon(name));
+      // {{icon-manifest}} resolves only in an HTML body like this one; in
+      // markdown it warns instead (markdownToHtml). Line-anchored like
+      // {{icon-registry}}, so an inline mention survives as text, and not
+      // global: one page holds one manifest, and a second copy would
+      // duplicate its id.
+      content = content.replace(/^[^\S\n]*\{\{icon-manifest\}\}[^\S\n]*$/m, renderIconManifest);
     }
 
     // Assert the close came out navigable. The check above proves the attribute
@@ -4001,8 +4252,17 @@ async function generateDocs() {
   // Discipline). When enabled, every published *.md file must declare which
   // layer it belongs to. Drives docs-site index filtering and llms.txt scope.
   const VALID_LAYERS = new Set(['foundation', 'core', 'docs-site', 'app']);
+  // 'expanded' is the default and a no-op; it is accepted so a page can say so
+  // out loud rather than relying on the absence of a field.
+  const VALID_SIDEBAR = new Set(['collapsed', 'expanded']);
   const layerErrors = [];
   const typeErrors = [];
+  // Every portable Website page owes the styleguide an entry (see the gate below).
+  const styleguideExpected = [];
+  // Every page the build actually produces, by output slug. The gate's stale
+  // check reads this rather than the required set, so that showing something
+  // extra stays legal and only a slug matching no page at all is an error.
+  const styleguideKnown = new Set();
 
   for (const filename of markdownFiles) {
     const filePath = path.join(DOCS_DIR, filename);
@@ -4031,8 +4291,36 @@ async function generateDocs() {
     // means `doc`, which is what nearly every page is. Only a value that is
     // present and unrecognised fails, because that is a typo silently getting
     // doc chrome rather than the chrome the author asked for.
+    // The styleguide shows the system in one scroll, so every portable
+    // Website page has to appear on it. Collected here, checked after the
+    // loop — `styleguide-exempt` opts out a page with nothing to specimen.
+    // Keyed on the output folder, not the section label: renaming the section
+    // in config would silently empty this set and disable the gate forever,
+    // which is the exact failure §17 Rule 5 records for the index filter.
+    const out = deriveOutputPath(filename, frontmatter.section);
+    const outPath = out.folder ? `${out.folder}/${out.htmlName}` : out.htmlName;
+    styleguideKnown.add(styleguideSlug(outPath));
+
+    if (SECTION_FOLDERS[frontmatter.section] === 'website'
+        && (frontmatter.layer === 'foundation' || frontmatter.layer === 'core')
+        && String(frontmatter['styleguide-exempt']) !== 'true') {
+      styleguideExpected.push({
+        filename,
+        title: frontmatter.title || filename,
+        htmlPath: outPath,
+      });
+    }
+
     if (frontmatter.type && !Object.prototype.hasOwnProperty.call(PAGE_TYPES, frontmatter.type)) {
       typeErrors.push(`  ${filename} — invalid type "${frontmatter.type}"`);
+    }
+
+    // nav.js matches the literal 'collapsed' and nothing else, so any other
+    // value emits an attribute that does nothing. Validated because that is
+    // precisely the failure this field already had once: `sidebar:` was read
+    // by no renderer at all on this path, and the page still built.
+    if (frontmatter.sidebar && !VALID_SIDEBAR.has(frontmatter.sidebar)) {
+      typeErrors.push(`  ${filename} — invalid sidebar "${frontmatter.sidebar}" (must be one of: collapsed, expanded)`);
     }
 
     // `tool` and `bare` are not producible from a cms/*.md file. A tool is a
@@ -4101,6 +4389,61 @@ async function generateDocs() {
     console.error(typeErrors.join('\n'));
     console.error(`\nValid types: ${Object.keys(PAGE_TYPES).join(', ')}`);
     console.error('Omit `type:` entirely for an ordinary documentation page.\n');
+    process.exit(1);
+  }
+
+  // Fail the build when the styleguide has fallen behind the system it shows.
+  //
+  // A hand-authored digest drifts the first time a component is added, and a
+  // styleguide missing a component is worse than none — it reads as complete.
+  // Keyed on the `data-component` each section carries, which is also its CSS
+  // and JS hook, so there is no separate convention to keep in step. Skipped
+  // entirely where the page does not exist, which is every consumer of the
+  // docs kit.
+  if (fs.existsSync(path.join(DOCS_DIR, STYLEGUIDE_SOURCE)) && styleguideExpected.length === 0) {
+    console.error('\n❌ The styleguide gate matched no pages at all.');
+    console.error('   Nothing maps to the "website" output folder, so the gate is inert.');
+    console.error('   Check sectionFolders in docs.config.js.\n');
+    process.exit(1);
+  }
+
+  // The gate keys on output basenames, so two expected pages sharing one would
+  // let a single section satisfy both. Nothing in deriveOutputPath prevents it
+  // (see styleguideSlug), so it is asserted rather than trusted.
+  const slugOwners = new Map();
+  for (const page of styleguideExpected) {
+    const slug = styleguideSlug(page.htmlPath);
+    if (slugOwners.has(slug)) {
+      console.error(`\n❌ Two styleguide pages share the slug "${slug}":`);
+      console.error(`  cms/${slugOwners.get(slug)} and cms/${page.filename}`);
+      console.error('\nThe coverage gate cannot tell them apart. Rename one, or give it a');
+      console.error('distinct filenameOverrides entry in cms/docs.config.js.\n');
+      process.exit(1);
+    }
+    slugOwners.set(slug, page.filename);
+  }
+
+  const { missing, stale, empty } = validateStyleguideCoverage(styleguideExpected, styleguideKnown);
+  if (empty) {
+    console.error(`\n❌ cms/${STYLEGUIDE_SOURCE} declares no components at all.`);
+    console.error('   Every section needs data-component="<slug>". With none, the gate');
+    console.error('   has nothing to reconcile and would pass an empty page.\n');
+    process.exit(1);
+  }
+  if (missing.length > 0 || stale.length > 0) {
+    if (missing.length > 0) {
+      console.error(`\n❌ The styleguide is missing ${missing.length} entr${missing.length === 1 ? 'y' : 'ies'}:`);
+      console.error(missing.join('\n'));
+      console.error(`\nAdd a section to cms/${STYLEGUIDE_SOURCE} carrying data-component="<slug>",`);
+      console.error('or set `styleguide-exempt: "true"` in its frontmatter when it is prose');
+      console.error('with nothing to specimen.');
+    }
+    if (stale.length > 0) {
+      console.error(`\n❌ The styleguide declares ${stale.length} component(s) that no longer exist:`);
+      console.error(stale.join('\n'));
+      console.error(`\nRemove the section from cms/${STYLEGUIDE_SOURCE}.`);
+    }
+    console.error('');
     process.exit(1);
   }
 

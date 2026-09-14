@@ -1,17 +1,27 @@
-/* @bydefaultstudio/design-system v4.7.0 */
+/* @bydefaultstudio/design-system v4.8.0 */
 /**
  * Tabs component
  * Initialises all .tabs[role="tablist"] on the page.
  * Supports click activation and arrow key navigation.
  *
- * @version 1.1.0
+ * @version 1.2.0
  */
 (function () {
-  function initTabs(scope) {
-    var root = scope || document;
+  function initTabs(scopeOrEl) {
+    var root = scopeOrEl || document;
     var bound = 0;
 
-    root.querySelectorAll('[role="tablist"]').forEach(function (tablist) {
+    // Accepts a scope to search, or the tablist itself. An element cannot
+    // match its own querySelectorAll, so a late-mounted tablist that could
+    // only hand us its parent would drag every sibling tablist in with it.
+    // The node handed in joins the set rather than replacing it, so nesting
+    // still resolves — see cms/js-code-structure.md.
+    var tablists = root.querySelectorAll('[role="tablist"]');
+    if (root.matches && root.matches('[role="tablist"]')) {
+      tablists = [root].concat(Array.from(tablists));
+    }
+
+    tablists.forEach(function (tablist) {
       if (tablist.dataset.tabsBound) return;
       tablist.dataset.tabsBound = 'true';
       bound++;
@@ -49,7 +59,7 @@
       });
     });
 
-    if (bound) console.log('[tabs] v1.1.0 — init (' + bound + ')');
+    if (bound) console.log('[tabs] v1.2.0 — init (' + bound + ')');
   }
 
   // Panel ids are only unique within a page, and during a transition the
