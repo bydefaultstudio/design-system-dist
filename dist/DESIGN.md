@@ -70,13 +70,13 @@ spacing:
 rounded:
   2xs: '2px'
   xs: '4px'
-  s: '6px'
-  m: '10px'
+  s: '8px'
+  m: '12px'
   l: '16px'
   xl: '24px'
   pill: '999px'
 ---
-<!-- @bydefaultstudio/design-system v4.8.0 -->
+<!-- @bydefaultstudio/design-system v5.0.0 -->
 
 # By Default Design System
 
@@ -112,7 +112,7 @@ Four type roles compose the primitives into building blocks. Each role carries i
 
 Sizes are stepped rem values, never viewport-relative, so browser zoom and user font-size preferences keep working (WCAG 1.4.4). The heading roles step down automatically at 1439px and 959px inside the engine; never write your own breakpoint typography. Body copy holds {typography.body.fontSize} at every width.
 
-Font families are role slots, not faces: `--font-primary` carries the interface, `--font-secondary` the editorial voice, `--font-code` monospace contexts. The engine ships neutral system stacks in these slots; the brand's licensed faces arrive through `theme.css`. Reference the slots, never a family name.
+Font families are role slots, not faces: `--font-primary` carries the interface, `--font-secondary` the editorial voice, `--font-code` monospace contexts. The engine ships neutral system stacks in these slots; the brand's licensed faces arrive through `theme.css`. Reference the slots, never a family name. Two of the slots, `--font-placeholder` and `--font-scribble`, are for greeking a work-in-progress layout; the engine resolves them to the primary face, and a theme that wants the effect supplies a redaction face the same way it supplies any other. Greeked text is still read aloud by a screen reader.
 
 Text measure is capped with line-length tokens (`--line-length-body`, 55ch, and `--line-length-headline`, 22ch) rather than pixel widths.
 
@@ -149,8 +149,8 @@ All spacing comes from the token scale in the front matter ({spacing.s}, {spacin
 The complete utility vocabulary, generated from the CSS. These are the only legal names. The families deliberately use different suffix conventions (`.top-large` but `.gap-l`), so never guess a name that is not in these lists:
 
 - **Block gaps**: `.gap-none`, `.gap-xs`, `.gap-s`, `.gap-m`, `.gap-l`, `.gap-xl`, `.gap-2xl`, `.gap-3xl`
-- **Section spacing (top)**: `.top-small`, `.top-medium`, `.top-large`, `.top-xl`
-- **Section spacing (bottom)**: `.bottom-small`, `.bottom-medium`, `.bottom-large`, `.bottom-xl`
+- **Section spacing (top)**: `.top-xsmall`, `.top-small`, `.top-medium`, `.top-large`, `.top-xl`
+- **Section spacing (bottom)**: `.bottom-xsmall`, `.bottom-small`, `.bottom-medium`, `.bottom-large`, `.bottom-xl`
 - **Padding**: `.padding-global`, `.padding-s`, `.padding-m`, `.padding-l`, `.padding-xl`, `.padding-2xl`, `.padding-3xl`, `.padding-section`
 - **Containers**: `.container-xs`, `.container-s`, `.container-m`, `.container-l`, `.container-xl`
 - **Max-widths**: `.max-width-xs`, `.max-width-s`, `.max-width-m`, `.max-width-l`, `.max-width-xl`, `.max-width-full`
@@ -201,7 +201,7 @@ Button variation accepts only these values, generated from the CSS; omitting an 
 - `data-size`: `small` | `xsmall`
 - `data-icon-only` (boolean flag)
 - `data-full-width` (boolean flag)
-- `data-color`: `danger` | `red` | `success` | `green`
+- `data-color`: `danger` | `red` | `success` | `green` | `accent`
 - `data-tooltip`: free text (the value is displayed)
 
 The semantic motion token set:

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.8.0 */
+/* @bydefaultstudio/design-system v5.0.0 */
 /* ============================================================
    BD Video player — component-scoped CSS
    ============================================================
@@ -82,8 +82,8 @@
   --bd-video-font-m: var(--font-m, 1.125rem);
 
   /* RADIUS — design system scale (pill is inlined as 999px in the rules) */
-  --bd-video-radius-s: var(--radius-s, 6px);
-  --bd-video-radius-m: var(--radius-m, 10px);
+  --bd-video-radius-s: var(--radius-s, 8px);
+  --bd-video-radius-m: var(--radius-m, 12px);
 
   position: relative;
   width: 100%;

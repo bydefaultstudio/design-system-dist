@@ -282,9 +282,128 @@
     });
   }
 
+
+  // ── Specimen copy (the Placeholder page) ──
+  //
+  // A specimen carries [data-specimen] and nothing else: no ids, no buttons,
+  // no copy strings in the markup. Both values are derived from the element
+  // at init, so the element is the single source of truth and editing a line
+  // can never leave a stale string behind a button. That is the whole reason
+  // this is built rather than hand-written — the page has ~50 specimens, and
+  // half of them would otherwise carry their own text twice.
+  //
+  // The buttons are plain .copy-btn with data-copy, so copy-button.js owns
+  // the click, the copied state and the screen-reader announcement. Nothing
+  // about copying is reimplemented here; this only builds and fills.
+
+  var MD_WRAP = { STRONG: '**', B: '**', EM: '*', I: '*', S: '~~', DEL: '~~', CODE: '`' };
+
+  // Inline HTML to markdown. Deliberately small: it covers what the specimens
+  // actually use and leaves anything else as its text, which is the right
+  // failure for a page whose job is supplying plain copy.
+  function inlineMarkdown(node) {
+    var out = '';
+    for (var i = 0; i < node.childNodes.length; i++) {
+      var child = node.childNodes[i];
+      if (child.nodeType === 3) { out += child.nodeValue; continue; }
+      if (child.nodeType !== 1) continue;
+      var tag = child.tagName;
+      if (tag === 'A') {
+        var href = child.getAttribute('href') || '';
+        out += '[' + inlineMarkdown(child) + '](' + href + ')';
+      } else if (MD_WRAP[tag]) {
+        out += MD_WRAP[tag] + inlineMarkdown(child) + MD_WRAP[tag];
+      } else {
+        out += inlineMarkdown(child);
+      }
+    }
+    return out;
+  }
+
+  function blockMarkdown(el) {
+    var tag = el.tagName;
+    if (/^H[1-6]$/.test(tag)) {
+      return new Array(parseInt(tag[1], 10) + 1).join('#') + ' ' + inlineMarkdown(el).trim();
+    }
+    if (tag === 'BLOCKQUOTE') return '> ' + inlineMarkdown(el).trim();
+    if (tag === 'UL' || tag === 'OL') {
+      var items = el.querySelectorAll(':scope > li');
+      var lines = [];
+      for (var i = 0; i < items.length; i++) {
+        lines.push((tag === 'OL' ? (i + 1) + '. ' : '- ') + inlineMarkdown(items[i]).trim());
+      }
+      return lines.join('\n');
+    }
+    // A container specimen: serialise each block child and separate them the
+    // way markdown does. Lets one button copy a whole worked example.
+    if (el.children.length && /^(DIV|SECTION|ARTICLE)$/.test(tag)) {
+      var parts = [];
+      for (var c = 0; c < el.children.length; c++) {
+        var part = blockMarkdown(el.children[c]);
+        if (part) parts.push(part);
+      }
+      return parts.join('\n\n');
+    }
+    return inlineMarkdown(el).trim();
+  }
+
+  // Plain text: what the element reads as, with the whitespace the source
+  // indentation introduced collapsed away. A list is the exception — collapsed
+  // to one run it is four sentences jammed together and useful to nobody, so
+  // its items keep the line breaks and lose only the markers.
+  function plainText(el) {
+    var squash = function (node) { return (node.textContent || '').replace(/\s+/g, ' ').trim(); };
+    if (el.tagName === 'UL' || el.tagName === 'OL') {
+      var items = el.querySelectorAll(':scope > li');
+      var lines = [];
+      for (var i = 0; i < items.length; i++) lines.push(squash(items[i]));
+      return lines.join('\n');
+    }
+    return squash(el);
+  }
+
+  function specimenButton(label, value) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'button copy-btn';
+    btn.setAttribute('data-variant', 'faded');
+    btn.setAttribute('data-size', 'small');
+    btn.setAttribute('data-copy', value);
+    btn.setAttribute('aria-label', 'Copy as ' + label.toLowerCase() + ': ' + value.slice(0, 60));
+    btn.innerHTML = '<span class="copy-btn-default"><div class="svg-icn">' + ICON_COPY + '</div> ' + label + '</span>'
+      + '<span class="copy-btn-copied"><div class="svg-icn">' + ICON_CHECK + '</div> Copied</span>';
+    return btn;
+  }
+
+  function initSpecimenCopy() {
+    var specimens = document.querySelectorAll('[data-specimen]');
+    for (var i = 0; i < specimens.length; i++) {
+      var el = specimens[i];
+      // Re-entrant: barba re-runs this on every page swap, and a specimen
+      // that already has its group must not collect a second one.
+      if (el.nextElementSibling && el.nextElementSibling.classList.contains('specimen-actions')) continue;
+
+      var text = plainText(el);
+      if (!text) continue;
+      var markdown = blockMarkdown(el);
+
+      var group = document.createElement('div');
+      group.className = 'button-group specimen-actions bottom-xsmall';
+      group.appendChild(specimenButton('Text', text));
+      // Only offer the markdown copy when it differs. For a plain sentence the
+      // two are the same string, and a second button copying it is noise.
+      if (markdown && markdown !== text) {
+        group.appendChild(specimenButton('Markdown', markdown));
+      }
+
+      el.parentNode.insertBefore(group, el.nextSibling);
+    }
+  }
+
   function initAll() {
     initIconTables();
     initColorCopyButtons();
+    initSpecimenCopy();
   }
 
   // Expose for re-init after client-side page swaps

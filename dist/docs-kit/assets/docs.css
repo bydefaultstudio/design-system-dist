@@ -2,7 +2,7 @@
  * DOCS-SITE STYLES
  * =====================================================================
  *
- * Everything that only exists to power the BrandOS docs site itself —
+ * Everything that only exists to power the By Default OS docs site itself —
  * the layout shell (top nav, sidebar, TOC, footer), the docs page
  * chrome (page header, feedback widget), the auth UI, and the reusable
  * docs-only components (sticky bar, copy button, asset card, don't
@@ -28,6 +28,7 @@
  *   4. A–Z Index          — jump-to-letter rail (behaviour: assets/js/az-index.js)
  *   5. Asset Card         — brand-asset showcase pattern
  *   6. Don't Card         — "do/don't" rule cards used in brand docs
+ *   7. Gallery            — media grid (behaviour: assets/js/gallery.js)
  *      (cross-page transition styles ship separately with the site)
  *
  * Part B — Docs-site shell (singletons + page chrome)
@@ -51,6 +52,8 @@
  *   24. Docs cards           — index/landing layout
  *   25. Responsive           — media queries for the docs shell
  *   26. Auth                 — user-info chip, login overlay, login page chrome
+ *   27. Wireframe            — low-fidelity map of a page layout
+ *   28. Site search          — ⌘K dialog and /search.html results (behaviour: assets/js/search.js)
  * ===================================================================== */
 
 
@@ -265,6 +268,7 @@
   flex-wrap: wrap;
   gap: var(--space-xs);
   align-items: center;
+  border-bottom: var(--bar-border);
 
   /* Docks under whatever the page already docks — header, plus the sticky
      bar when one is present. --scroll-offset (section 11 below) carries that
@@ -535,11 +539,137 @@ input.glossary-search {
   font-size: var(--font-s);
 }
 
+
+/* ------ 7. GALLERY ------
+ * A grid of images or videos. The video half is what makes this a
+ * component rather than a wrapper — a grid of images is already
+ * .grid.cols-3.gap-l with .img inside it, and that is the shape to
+ * reach for when there is no video in the set.
+ *
+ *   <div class="gallery" data-gallery data-cols="3" data-ratio="16x9">
+ *     <figure class="gallery-item">
+ *       <div class="bd-video" data-bd-pause-offscreen data-bd-scrubber data-bd-mute>
+ *         <video class="bd-video-player" src="..." poster="..."
+ *                aria-label="..." playsinline preload="none"></video>
+ *       </div>
+ *       <figcaption class="gallery-caption">What this shows.</figcaption>
+ *     </figure>
+ *     <figure class="gallery-item">
+ *       <img class="gallery-media" src="..." width="1080" height="608"
+ *            loading="lazy" alt="...">
+ *       <figcaption class="gallery-caption">What this shows.</figcaption>
+ *     </figure>
+ *   </div>
+ *
+ * Gallery owns the group — the grid, the ratio box, the caption, and
+ * (in gallery.js) playback policy across its own tiles. bd-video owns
+ * the player; nothing here restyles one.
+ *
+ * Owns its grid rather than composing .grid.cols-3.gap-l, on the
+ * .book-shelf precedent (design-system.css §37): a component that
+ * depends on the consumer applying the right utility combo is not
+ * portable, and .grid's own collapse would not follow it. The second
+ * reason is specific to media — .grid drops straight from 3 columns to
+ * 1 at 768px, and a 3-up media grid wants an intermediate step rather
+ * than that cliff. Breakpoints are in §8 RESPONSIVE below, as container
+ * queries, with the rest of the docs-site queries.
+ *
+ * The ratio box is not decoration. .bd-video sets no aspect-ratio and
+ * .bd-video-player no height (bd-video.css §1), so a video cell with
+ * preload="none" and no poster yet has no intrinsic size and collapses
+ * to a 0px-tall row. Images take the same box so mixed ratios stay
+ * level across the grid — the problem asset-card solved with
+ * --contain, solved here by cropping instead, because a gallery tile
+ * is a thumbnail and a letterboxed thumbnail wastes the cell.
+ */
+
+:root {
+  --gallery-gap: var(--space-l);
+  --gallery-caption-gap: var(--space-s);
+  /* Defaults for the two axes, overridden by the data attributes below.
+     Named here so a host page can re-point them for a one-off grid
+     without authoring an attribute the component does not define. */
+  --gallery-cols: 3;
+  --gallery-ratio: 16 / 9;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(var(--gallery-cols), minmax(0, 1fr));
+  gap: var(--gallery-gap);
+}
+
+/* -- Variation: columns -- */
+
+.gallery[data-cols="2"] {
+  --gallery-cols: 2;
+}
+
+.gallery[data-cols="3"] {
+  --gallery-cols: 3;
+}
+
+.gallery[data-cols="4"] {
+  --gallery-cols: 4;
+}
+
+/* -- Variation: media ratio -- */
+
+.gallery[data-ratio="1x1"] {
+  --gallery-ratio: 1 / 1;
+}
+
+.gallery[data-ratio="4x3"] {
+  --gallery-ratio: 4 / 3;
+}
+
+.gallery[data-ratio="16x9"] {
+  --gallery-ratio: 16 / 9;
+}
+
+.gallery[data-ratio="9x16"] {
+  --gallery-ratio: 9 / 16;
+}
+
+/* -- Tile -- */
+
+.gallery-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gallery-caption-gap);
+  min-width: 0; /* grid items floor at min-content; a wide caption would push the track */
+  margin: 0;    /* <figure> carries a UA margin */
+}
+
+.gallery-item > .bd-video,
+.gallery-media {
+  width: 100%;
+  aspect-ratio: var(--gallery-ratio);
+}
+
+.gallery-media {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  /* Holds the cell while a lazy image is still out of view. Without it the
+     ratio box is a transparent hole against the page. */
+  background-color: var(--background-faded);
+}
+
+.gallery-item > .bd-video .bd-video-player {
+  height: 100%;
+}
+
+.gallery-caption {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
 /* =====================================================================
  * PART B — DOCS-SITE SHELL
  * =====================================================================
  *
- * Layout, navigation, page chrome, and auth UI for the BrandOS docs
+ * Layout, navigation, page chrome, and auth UI for the By Default OS docs
  * site. Singletons (one top nav, one sidebar, one footer) plus the
  * media queries that adapt the shell to small screens.
  * ===================================================================== */
@@ -1441,6 +1571,7 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
 
 .page-feedback-prompt {
   margin: 0;
+  font-size: var(--font-4xl);
 }
 
 .page-feedback-description {
@@ -1530,6 +1661,70 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
      (The docs TOC never hit this because it is a grid sibling, not a
      descendant.) No JS reads this element's scroll state. */
   overflow: clip;
+}
+
+/* Floats (an .img or a figure carrying [data-float], design-system.css §24)
+   are contained here, not where they are declared, because containment
+   belongs to the layout they sit in. This is for markdown prose, where the
+   float and the headings are loose in the body with nothing between them —
+   a float inside a .block is already contained by its own wrapper, and
+   headings inside one are flex items, which ignore clear.
+
+   The subject is the column, not the <article> inside it. Only `doc` and
+   `page` have that wrapper (PAGE_TYPES.article), so a float loose in a
+   `shelf` or `contents` body — which is exactly what the Lab invites — would
+   otherwise escape the column and be cut off by the `overflow: clip` above,
+   since clip does not establish a block formatting context.
+
+   flow-root makes the column's height include its floats, so one can never
+   hang out into the feedback block — and unlike overflow: hidden it creates
+   no scroll container, so the sticky note above still holds.
+
+   In practice it never fires as the thing that saves the layout. .docs-main
+   is a child of .docs-content-grid, which is display: grid, and a grid item
+   is already an independent formatting context. The grid drops to block only
+   under @container main-content (max-width: 767.98px) — the exact query that
+   releases the float below, so by the time the BFC goes away there is no
+   float left to contain. It is kept as the explicit statement of intent: the
+   containment is then declared here rather than depending on a display value
+   set six hundred lines away for unrelated reasons. The :has() gate keeps it
+   from firing when there is nothing to contain.
+
+   clear: both on the headings is the rule doing the visible work.
+
+   Headings clear, so a float beside the last paragraph of a section never
+   runs on under the next h2; that one is free. A descendant selector rather
+   than a child of the article, for the same reason — and it stays harmless
+   inside a .block, because clear does nothing to a flex item. */
+.docs-main:has(:is(.img, figure)[data-float]) {
+  display: flow-root;
+}
+
+.docs-main :is(h1, h2, h3, h4, h5, h6) {
+  clear: both;
+}
+
+/* The docs shell breaks on content-container width, not the viewport — the
+   sidebar can leave a 520px column inside an 800px window. design-system.css
+   releases a float on the viewport, which is the portable rule; this is the
+   same release keyed on the container that only this layer knows exists. */
+@container main-content (max-width: 767.98px) {
+  :is(.img, figure)[data-float="left"],
+  :is(.img, figure)[data-float="right"] {
+    float: none;
+    margin-inline: 0;
+    max-width: var(--img-width, var(--img-width-default, 100%));
+  }
+
+  /* Same margin-block restore as the viewport release in design-system.css
+     §24 — a released figure otherwise keeps the float's zero top margin. */
+  .img[data-float="left"],
+  .img[data-float="right"] { margin-block: 0; }
+
+  figure[data-float="left"],
+  figure[data-float="right"] { margin-block: var(--space-xl); }
+
+  :is(.img, figure)[data-float]:not([data-width]) { --img-width-default: 100%; }
 }
 
 /* Anchor offset is design-system.css §39B now, driven by --scroll-offset
@@ -2081,6 +2276,36 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   }
 }
 
+/* ---- Gallery: step the columns down, don't drop them ---- */
+/* Two steps rather than .grid's single 3-to-1 cliff, which is the reason
+   Gallery owns its grid at all (§7). Portrait tiles (data-ratio="9x16") are
+   the constraint at the bottom end: two of them side by side in a phone-width
+   container are each about 150px wide, which is a thumbnail of a thumbnail.
+   Hence one column below 480, where the others could still hold two.
+
+   Both selectors, and in this order. The default --gallery-cols is inherited
+   from :root, so the only competing declaration is .gallery[data-cols="N"] at
+   (0,2,0) — which a bare .gallery rule here would lose to, leaving the queries
+   doing nothing on exactly the galleries that declare their columns. The
+   [data-cols] selector ties at (0,2,0) and wins on source order, which is why
+   this block has to stay below §7 — the same ordering trap recorded on
+   .book-cover in design-system.css §37. */
+@container main-content (max-width: 767.98px) {
+
+  .gallery,
+  .gallery[data-cols] {
+    --gallery-cols: 2;
+  }
+}
+
+@container main-content (max-width: 479.98px) {
+
+  .gallery,
+  .gallery[data-cols] {
+    --gallery-cols: 1;
+  }
+}
+
 /* ---- Mobile: Overlay sidebar ---- */
 @media (max-width: 768px) {
 
@@ -2409,4 +2634,860 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
 .access-denied-icon {
   width: 2.5rem;
   height: 2.5rem;
+}
+
+
+/* ------ 27. WIREFRAME — low-fidelity map of a page layout ------
+ * Draws the docs shell as labelled regions sitting where they sit on a real
+ * page, so the structure can be read at a glance and each region selected for
+ * detail. Used by the Page Layouts reference.
+ *
+ * Appended as §27 rather than slotted in beside the other components at §5–§7:
+ * renumbering the eighteen sections below them to gain adjacency is a diff
+ * nobody can review, and the index at the top of this file is what makes the
+ * order navigable anyway.
+ *
+ * Scope: this is `docs-site`, not `core` (§17 Rule 7). It has one consumer and
+ * its regions are this shell's regions — a second product wanting a wireframe
+ * of its own layout would need different ones, and that is the point at which
+ * it earns a move.
+ *
+ * Every value is a token declared on .wireframe and consumed below —
+ * proportions, spacing, type, the focus ring. Colour is the one thing set per
+ * region, through data-color, and even that resolves into three region tokens
+ * that every rule below reads. Anything hardcoded in a rule is a gap in that
+ * surface, not a shortcut.
+ *
+ * Nesting is real nesting. A region that holds regions holds them in the DOM
+ * — Content is the parent of Article and Aside, not a sibling drawn to look
+ * like one — which is why a region is a <div> and not a <button>: a button
+ * cannot contain a button. The control is the label inside it, which is a
+ * <button>, so nesting is legal and a screen reader still lands on something
+ * that says it can be pressed. Depth is carried by tone, one step up the
+ * hue's ramp per level, so the eye reads a card on a surface without a
+ * border.
+ */
+
+.wireframe {
+  /* -- The map's own frame --
+   * One gap for the whole map: between regions, between a region's label and
+   * its children, and between the article and the aside. A second value on
+   * any of those would say the two spaces mean different things. */
+  --wireframe-background: var(--background-primary);
+  /* One frame for the map and the detail panel, so the two read as a pair.
+     --border-faded is right here: a frame is decoration, not a control
+     boundary (design-system.css §2b), so it carries no contrast duty. */
+  --wireframe-border: var(--border-s) solid var(--border-faded);
+  --wireframe-radius: var(--radius-s);
+  --wireframe-padding: var(--space-s);
+  --wireframe-gap: var(--space-s);
+
+  /* -- A region -- */
+  --wireframe-region-radius: var(--radius-xs);
+  --wireframe-region-padding: var(--space-s) var(--space-m);
+  --wireframe-region-font: var(--font-primary);
+  /* Every label on the component, not just a region's: the detail panel's
+     terms read it too, so one step moves them together. */
+  --wireframe-label-size: var(--font-s);
+
+  /* -- Focus ring --
+   * The ring is drawn on the region, not on the label button that holds
+   * focus, so it frames the card rather than striking through a word. Same
+   * width as the base `button:focus-visible` ring (design-system.css §2b).
+   * Not the same colour: --status-info becomes --blue-light in dark mode
+   * while these fills stay pastel, which is a 1:1 ring — so the ring takes
+   * the region's own dark step, which is ≥6.5:1 on either fill in either
+   * mode. Same precedent as .page-header[data-color] :focus-visible. */
+  --wireframe-focus-width: 2px;
+
+  /* -- Columns --
+   * The real numbers as fr units, so the ratio survives any width this is read
+   * at and the values stay checkable against the shell they describe.
+   * Map: --sidebar-width (280px) against the 1160px main track of a 1440px
+   * viewport. Content: .docs-content-grid's 1032px of content, less
+   * --toc-width (220px) and the --space-2xl gap between them, leaves 780px of
+   * article. Separate tokens because they are separate ratios — one surface
+   * that drove both could not correct either alone. */
+  --wireframe-sidebar-track: 280fr;
+  --wireframe-main-track: 1160fr;
+  --wireframe-article-track: 780fr;
+  --wireframe-aside-track: 220fr;
+
+  /* -- Row heights --
+   * The shape of a page, not its measurements. Named steps rather than a value
+   * per region, so the proportions stay comparable when one is adjusted. */
+  --wireframe-row-s: 2.5rem;
+  --wireframe-row-m: 3.5rem;
+  --wireframe-row-l: 5rem;
+  --wireframe-row-xl: 9rem;
+
+  /* -- Detail panel -- */
+  --wireframe-info-padding: var(--space-xl);
+  --wireframe-info-gap: var(--space-s) var(--space-l);
+  --wireframe-info-term-width: 8rem;
+  --wireframe-stack-gap: var(--space-m);
+  /* The map sits in prose flow directly under the chip group that drives it,
+     and markdown gives a control no trailing space of its own. The component
+     owns that gap rather than the page hanging a section utility off the
+     chips — .top-*\/.bottom-* are section spacing, and a control is not a
+     section. Same division as .demo-preview, which carries its own margin. */
+  --wireframe-flow-gap: var(--space-xl);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--wireframe-stack-gap);
+  margin-top: var(--wireframe-flow-gap);
+}
+
+/* -- The map --
+ * Regions sit where they sit on a page: the sidebar down the left as a
+ * full-height column, everything else stacked in .wireframe-main beside it —
+ * the wireframe's .docs-main-area. The stack is flex, not named grid rows, on
+ * purpose: a hidden region in a named row leaves an empty track behind, and
+ * the gap is paid on both sides of it, so a type without a bar showed a
+ * double gap under its page header. A hidden flex item leaves nothing. */
+.wireframe-map {
+  display: grid;
+  grid-template-columns: minmax(0, var(--wireframe-sidebar-track)) minmax(0, var(--wireframe-main-track));
+  gap: var(--wireframe-gap);
+  padding: var(--wireframe-padding);
+  background: var(--wireframe-background);
+  border: var(--wireframe-border);
+  border-radius: var(--wireframe-radius);
+}
+
+.wireframe-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wireframe-gap);
+  min-width: 0;
+}
+
+/* No sidebar column at all rather than an empty one — a layout without a
+   sidebar runs its header the full width, and a blank column says otherwise. */
+.wireframe-map[data-sidebar="false"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* With the column gone the sidebar would auto-place into a row of its own
+   above the stack. The JS hides it in step with the attribute, but that
+   invariant was living in a second file: a consumer driving the component
+   without that script would get a stray full-width region. */
+.wireframe-map[data-sidebar="false"] .wireframe-region[data-area="sidebar"] {
+  display: none;
+}
+
+/* -- A region --
+ * A <div> holding a label <button>. The button carries focus and the
+ * selected state (aria-current); the div carries the colour, the geometry
+ * and any regions nested inside it. Three colour tokens carry one hue's
+ * ramp; data-color below re-points them, and everything else reads them.
+ * Neutral when no hue is set — the grey of the shell, for the regions that
+ * are always there and never the point. */
+.wireframe-region {
+  --wireframe-region-lighter: var(--neutral-100);
+  --wireframe-region-light: var(--neutral-200);
+  --wireframe-region-dark: var(--neutral-900);
+  /* The base step is the selected fill. Which end of the ramp can sit on it
+     as text depends on the hue — the five signal hues are dark at base and
+     take the lighter step, the four bright accents are light at base and
+     take the dark step — so each hue names its own below. */
+  --wireframe-region-base: var(--neutral-600);
+  --wireframe-region-on-base: var(--wireframe-region-lighter);
+  /* Fill is its own token so depth and the free frame re-point it without a
+     specificity contest. Only the selected state below sets `background`
+     directly, which is what lets it win over every re-point regardless of
+     order — the same shape as .bar[data-density] re-pointing --bar-padding-y. */
+  --wireframe-region-fill: var(--wireframe-region-lighter);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--wireframe-row-m);
+  padding: var(--wireframe-region-padding);
+  border-radius: var(--wireframe-region-radius);
+  background: var(--wireframe-region-fill);
+  color: var(--wireframe-region-dark);
+  font-family: var(--wireframe-region-font);
+  font-size: var(--wireframe-label-size);
+  text-align: center;
+  cursor: pointer;
+  transition: background-color var(--duration-2xs) var(--ease-out),
+              color var(--duration-2xs) var(--ease-out);
+}
+
+/* .wireframe-region sets display:flex, and an author rule beats the UA sheet's
+   [hidden] { display: none } whatever the specificity — so hiding a region
+   needs an author rule of its own or the attribute does nothing at all.
+   Content is named as well because its own display:grid below ties on
+   specificity and would otherwise win on order. */
+.wireframe-region[hidden],
+.wireframe-region[data-area="content"][hidden] {
+  display: none;
+}
+
+/* -- The label: the control --
+ * The base button reset leaves it as inherited text, which is what a label
+ * should be. Its own ring is suppressed in favour of one on the region. */
+.wireframe-label:focus-visible {
+  outline: none;
+}
+
+.wireframe-region:has(> .wireframe-label:focus-visible) {
+  outline: var(--wireframe-focus-width) solid var(--wireframe-region-dark);
+  outline-offset: calc(-1 * var(--wireframe-focus-width));
+}
+
+/* A region inside a region: one step up the ramp, so depth reads as tone. */
+.wireframe-region .wireframe-region {
+  --wireframe-region-fill: var(--wireframe-region-light);
+}
+
+/* -- Colour: which hue a region carries --
+ * The palette ramp is the only per-hue surface the system has, so this is the
+ * one place a component reads it. Each hue maps once, into the region tokens,
+ * and no rule below names a hue. --on-base is the text that clears 4.5:1 on
+ * the hue's base step in the brand theme; red is the one that does not (4.05
+ * with the lighter step, 3.25 with the dark), so it stays unused on the map. */
+.wireframe-region[data-color="brown"]  { --wireframe-region-lighter: var(--brown-lighter);  --wireframe-region-light: var(--brown-light);  --wireframe-region-dark: var(--brown-dark);  --wireframe-region-base: var(--brown);  --wireframe-region-on-base: var(--brown-lighter); }
+.wireframe-region[data-color="red"]    { --wireframe-region-lighter: var(--red-lighter);    --wireframe-region-light: var(--red-light);    --wireframe-region-dark: var(--red-dark);    --wireframe-region-base: var(--red);    --wireframe-region-on-base: var(--red-lighter); }
+.wireframe-region[data-color="blue"]   { --wireframe-region-lighter: var(--blue-lighter);   --wireframe-region-light: var(--blue-light);   --wireframe-region-dark: var(--blue-dark);   --wireframe-region-base: var(--blue);   --wireframe-region-on-base: var(--blue-lighter); }
+.wireframe-region[data-color="yellow"] { --wireframe-region-lighter: var(--yellow-lighter); --wireframe-region-light: var(--yellow-light); --wireframe-region-dark: var(--yellow-dark); --wireframe-region-base: var(--yellow); --wireframe-region-on-base: var(--yellow-dark); }
+.wireframe-region[data-color="green"]  { --wireframe-region-lighter: var(--green-lighter);  --wireframe-region-light: var(--green-light);  --wireframe-region-dark: var(--green-dark);  --wireframe-region-base: var(--green);  --wireframe-region-on-base: var(--green-lighter); }
+.wireframe-region[data-color="purple"] { --wireframe-region-lighter: var(--purple-lighter); --wireframe-region-light: var(--purple-light); --wireframe-region-dark: var(--purple-dark); --wireframe-region-base: var(--purple); --wireframe-region-on-base: var(--purple-lighter); }
+.wireframe-region[data-color="aqua"]   { --wireframe-region-lighter: var(--aqua-lighter);   --wireframe-region-light: var(--aqua-light);   --wireframe-region-dark: var(--aqua-dark);   --wireframe-region-base: var(--aqua);   --wireframe-region-on-base: var(--aqua-dark); }
+.wireframe-region[data-color="pink"]   { --wireframe-region-lighter: var(--pink-lighter);   --wireframe-region-light: var(--pink-light);   --wireframe-region-dark: var(--pink-dark);   --wireframe-region-base: var(--pink);   --wireframe-region-on-base: var(--pink-dark); }
+.wireframe-region[data-color="peach"]  { --wireframe-region-lighter: var(--peach-lighter);  --wireframe-region-light: var(--peach-light);  --wireframe-region-dark: var(--peach-dark);  --wireframe-region-base: var(--peach);  --wireframe-region-on-base: var(--peach-dark); }
+
+/* -- Proportion --
+ * Keyed on data-area, so the map's shape lives in one place. Order is source
+ * order, which is also the page's. */
+.wireframe-region[data-area="siteheader"] { min-height: var(--wireframe-row-s); }
+.wireframe-region[data-area="pageheader"] { min-height: var(--wireframe-row-l); }
+.wireframe-region[data-area="bar"] { min-height: var(--wireframe-row-s); }
+.wireframe-region[data-area="article"] { min-height: var(--wireframe-row-xl); }
+.wireframe-region[data-area="pager"] { min-height: var(--wireframe-row-m); }
+.wireframe-region[data-area="feedback"] { min-height: var(--wireframe-row-m); }
+.wireframe-region[data-area="footer"] { min-height: var(--wireframe-row-m); }
+
+/* Selected: the hue's base step, with whichever end of the ramp reads on it.
+   Styled off
+   the label's aria-current rather than a state class so the visible state
+   cannot disagree with what a screen reader is told — the same reasoning as
+   the header menu's aria-expanded icon swap (§1B). `> ` keeps it to the
+   region's own label: a selected Article must not also paint Content.
+   Regions inside a selected region keep their own fill, so a selected parent
+   reads as a surface under its children. */
+.wireframe-region:has(> .wireframe-label[aria-current="true"]) {
+  background: var(--wireframe-region-base);
+  color: var(--wireframe-region-on-base);
+}
+
+.wireframe-region:has(> .wireframe-label[aria-current="true"]:focus-visible) {
+  outline-color: var(--wireframe-region-on-base);
+}
+
+/* -- Content: a region that holds regions --
+ * Its label is a caption at the start of its surface, and its children lay
+ * out on that surface at the real article-to-aside ratio. */
+.wireframe-region[data-area="content"] {
+  display: grid;
+  grid-template-columns: minmax(0, var(--wireframe-article-track)) minmax(0, var(--wireframe-aside-track));
+  grid-template-areas:
+    "label   label"
+    "article aside";
+  gap: var(--wireframe-gap);
+  /* stretch, not the centre a leaf region sets: the aside runs the full
+     height of the article beside it, as the real rail does. */
+  align-items: stretch;
+  min-height: 0;
+  padding: var(--wireframe-padding);
+  text-align: start;
+}
+
+.wireframe-region[data-area="content"] > .wireframe-label {
+  grid-area: label;
+  justify-self: start;
+}
+
+/* One column. The aside is removed from the flow rather than emptied, so the
+   body's real full-width state is what gets drawn. */
+.wireframe-region[data-area="content"][data-columns="1"] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "label" "article";
+}
+
+.wireframe-region[data-area="content"][data-columns="1"] .wireframe-region[data-area="aside"] {
+  display: none;
+}
+
+/* No wrapper to draw — a free frame emits none — so Content stops being a
+   surface and just holds its body. Its label goes with it, and the label is
+   the control, so nothing is left to focus or select. */
+.wireframe-region[data-area="content"][data-framed="false"] {
+  background: transparent;
+  padding: 0;
+  gap: 0;
+  cursor: default;
+}
+
+.wireframe-region[data-area="content"][data-framed="false"] > .wireframe-label {
+  display: none;
+}
+
+/* …and its one child is a region in its own right, not a card on nothing. */
+.wireframe-region[data-area="content"][data-framed="false"] .wireframe-region {
+  --wireframe-region-fill: var(--wireframe-region-lighter);
+}
+
+/* -- Detail panel --
+ * What the selected region is. Kept in the component rather than left to the
+ * page, because the map is unreadable without somewhere for the detail to go. */
+.wireframe-info {
+  padding: var(--wireframe-info-padding);
+  background: var(--background-faded);
+  border-radius: var(--wireframe-radius);
+}
+
+.wireframe-info dl {
+  display: grid;
+  grid-template-columns: minmax(0, var(--wireframe-info-term-width)) minmax(0, 1fr);
+  gap: var(--wireframe-info-gap);
+  margin: 0;
+}
+
+/* Plain text. The base `dl dt` sets italic and semi-bold, and both are reset:
+   the term is a quiet label beside its value, not an emphasised one. */
+.wireframe-info dt {
+  font-size: var(--wireframe-label-size);
+  font-style: normal;
+  font-weight: var(--font-weight-regular);
+  color: var(--text-faded);
+}
+
+/* padding: 0 resets the base `dl dd { padding: 0 var(--space-l) }`. The grid
+   below already sets the gutter, so the inherited padding indents the value
+   column a second --space-l and takes the same off its right edge. */
+.wireframe-info dd {
+  margin: 0;
+  padding: 0;
+  color: var(--text-secondary);
+}
+
+/* A selector is prose here, not a token chip — it has to be allowed to wrap. */
+.wireframe-info dd code {
+  white-space: normal;
+}
+
+/* -- Narrow --
+ * The map's own breakpoint, kept with the component rather than in §25: the
+ * columns collapse on the component's width, not the shell's. */
+@media (max-width: 767.98px) {
+  .wireframe-map {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .wireframe-region[data-area="content"],
+  .wireframe-region[data-area="content"][data-columns="1"] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "label" "article" "aside";
+  }
+
+  .wireframe-info dl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2xs);
+  }
+
+  .wireframe-info dt:not(:first-of-type) {
+    margin-top: var(--space-s);
+  }
+}
+
+/* The skeleton listing under the map. A code block rather than part of the
+   wireframe, stepped down a size so a wide line fits without wrapping, and a
+   dim class for the parts of the markup that stand in for a page's own. */
+.wf-markup {
+  margin: 0;
+  overflow-x: auto;
+  font-size: var(--font-2xs);
+  line-height: var(--line-height-2xl);
+}
+
+.wf-markup .wf-dim {
+  color: var(--text-faded);
+}
+
+/* ------ 28. SITE SEARCH ------
+ * Composes the Dialog component (design-system.css §29). .search-dialog is a
+ * role class on .dialog, the way .feedback-modal above it is — it re-points
+ * dialog tokens and adds the parts the component has no opinion about: the
+ * field row, the result list, the group headings and the key-hint footer.
+ *
+ * Three things it deliberately does differently from a dialog:
+ *   - It sits high rather than centred. A result list grows downward, and a
+ *     centred box that grows would move its own first row away from the eye.
+ *   - --dialog-padding is zero. The field, the list and the footer each own
+ *     their padding so the list can scroll edge to edge under them.
+ *   - Below the breakpoint it fills the viewport. A 640px card on a phone is a
+ *     keyboard, a card, and no results visible.
+ *
+ * The markup is emitted by cms/generator/generate-docs.js into nav.js, beside
+ * the site header and outside the Barba container; assets/js/search.js is
+ * behaviour only. Sizing tokens are declared here rather than inline so a
+ * consuming product can re-skin search without touching a rule. */
+
+.search-dialog {
+  --search-width: 640px;
+  --search-top: 10vh;
+  --search-field-height: 64px;
+
+  --dialog-max-width: var(--search-width);
+  --dialog-padding: 0;
+  /* The component centres with margin:auto; search is anchored near the top. */
+  margin: var(--search-top) auto auto auto;
+  max-height: min(70vh, calc(100dvh - var(--search-top) - var(--space-2xl)));
+  gap: 0;
+}
+
+/* -- Field --
+ * Shared by both hosts. The row is the control: the input inside it is
+ * stripped of its own border and background, so the box and the focus ring
+ * belong to the row or they belong to nothing. Each host then says how the
+ * row is drawn — edge-to-edge and underlined in the dialog, as an ordinary
+ * input in the page. */
+
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+}
+
+.search-dialog .search-field {
+  padding: 0 var(--space-m) 0 var(--space-l);
+  min-height: var(--search-field-height);
+  border-bottom: var(--border-s) solid var(--border-faded);
+}
+
+.search-field-icon {
+  flex: none;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  color: var(--text-faded);
+}
+
+/* input.search-input, not .search-input: the base rules are element selectors
+   at (0,1,1) — `input[type="text"]` in design-system.css §12 — so a bare
+   class at (0,1,0) loses to them and the field silently keeps body sizing.
+   The same trap is recorded for the glossary field in §4, which is still a
+   search input: the whole text-input family shares one selector list, so the
+   specificity is the same either way and only the type name differs. */
+input.search-input {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: var(--font-l);
+}
+
+input.search-input:focus,
+input.search-input:focus-visible {
+  outline: none;
+}
+
+/* The focus ring belongs on the field row: the input has no border of its own,
+   so a ring drawn on it would trace bare text. Shared — both hosts strip the
+   input, so both need the ring one level out. */
+.search-field:focus-within {
+  outline: var(--border-m) solid var(--input-focus);
+  outline-offset: calc(var(--border-m) * -1);
+}
+
+/* -- Filters -- */
+
+/* [hidden] is the module's own signal and has to beat whatever display the
+   host sets — including the dialog's `display: flex` under 768px, which is
+   both later in source and (0,2,0). Hence one rule at (0,3,0) naming both
+   hosts rather than a bare `.search-filters[hidden]`, which would tie and
+   lose. A third host adds a selector here. */
+.search-dialog .search-filters[hidden],
+.search-page .search-filters[hidden] {
+  display: none;
+}
+
+.search-dialog .search-filters {
+  padding: var(--space-m) var(--space-l) 0 var(--space-l);
+}
+
+/* Says what the chips act on. The row filters pages only — names are not
+   section-scoped — so without this it reads as a filter the results ignore. */
+.search-filters-label {
+  flex: none;
+  align-self: center;
+  font-size: var(--font-2xs);
+  letter-spacing: var(--letter-spacing-l);
+  text-transform: uppercase;
+  color: var(--text-faded);
+}
+
+/* -- Status line --
+ * Present from first render and never display:none. A live region revealed at
+ * announce time is not reliably announced — the same rule cms/login.md records
+ * for its error region — so this collapses by height instead. */
+.search-status {
+  margin: 0;
+  padding: var(--space-s) var(--space-l) 0 var(--space-l);
+  min-height: 1lh;
+}
+
+.search-status:empty {
+  padding-block: 0;
+  min-height: 0;
+}
+
+/* -- Results -- */
+
+.search-results {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-s) 0 var(--space-m) 0;
+}
+
+/* .search-results is the scroll container and holds two halves: .search-listbox
+   carries role="listbox" and may own only option rows, .search-panel takes
+   every other state — idle content, callouts, the loading skeleton.
+
+   Both are plain blocks with no padding or border of their own. That is a
+   constraint, not just a description: it is what lets the empty one collapse to
+   no height without display:none, and what lets the callout's own top margin
+   collapse with this one instead of adding to it. Give either a padding and the
+   prose-failed gap silently doubles.
+
+   TWO states paint both halves — Loading prose (rows + skeleton) and Prose
+   unavailable (rows + callout) — so this rule is load-bearing for both. So is
+   the value: the skeleton used to be a .search-group sibling and took its gap
+   from the rule below, so anything other than --space-m here is a silent
+   change to the loading state.
+
+   :empty means no child nodes at all, and a single space is a text node, so
+   paint() is passed '' or a .join('') and never an indented template literal
+   (same trap as icon-library.css). */
+.search-listbox:not(:empty) + .search-panel {
+  margin-top: var(--space-m);
+}
+
+.search-group + .search-group {
+  margin-top: var(--space-m);
+}
+
+.search-group-label {
+  margin: 0;
+  padding: var(--space-xs) var(--space-l);
+  font-size: var(--font-2xs);
+  letter-spacing: var(--letter-spacing-l);
+  text-transform: uppercase;
+  color: var(--text-faded);
+}
+
+.search-group-count {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.search-result {
+  display: flex;
+  align-items: center;
+  /* Default at the point of use, so a host that declares nothing still gets a
+     gap. A host only sets --search-row-gap when it wants a different one. */
+  gap: var(--search-row-gap, var(--space-m));
+  width: 100%;
+  min-height: var(--target-min);
+  padding: var(--space-s) var(--space-l);
+  text-align: left;
+  color: var(--text-primary);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* The active row is an inverted surface, not a tint. The --background-faded
+   scale tops out around 1.4:1 against the page, which reads as "slightly
+   different" rather than "this is the one Enter will open" — and a keyboard
+   user has nothing else telling them where they are. */
+.search-result[aria-selected="true"],
+.search-result:hover {
+  background-color: var(--selected-background);
+  color: var(--selected-text);
+}
+
+.search-result[aria-selected="true"] .search-result-meta,
+.search-result[aria-selected="true"] .search-result-excerpt,
+.search-result:hover .search-result-meta,
+.search-result:hover .search-result-excerpt {
+  color: var(--selected-text);
+  opacity: 0.75;
+}
+
+.search-result-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.search-result-name {
+  font-size: var(--font-m);
+  overflow-wrap: anywhere;
+}
+
+.search-result[data-type="token"] .search-result-name,
+.search-result[data-type="class"] .search-result-name {
+  font-family: var(--font-quaternary);
+  font-size: var(--font-s);
+}
+
+.search-result-meta,
+.search-result-excerpt {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+/* Two lines, and the clamp is load-bearing now rather than decorative: the
+   excerpt is the row's promise about where the link opens, and it is the
+   option's aria-describedby target. It clamps what the eye sees and nothing
+   that a screen reader hears, which is the right way round. `line-clamp`
+   beside the prefixed one, matching design-system.css. */
+.search-result-excerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.search-result-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+
+/* Ringed, because a token that resolves to the page's own background would
+   otherwise be an invisible swatch in an empty box. currentColor rather than a
+   border token: on the selected row the surface inverts, and a fixed faint ring
+   would disappear against it exactly when the row is the one being looked at. */
+.search-result-swatch {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: var(--border-s) solid currentColor;
+  opacity: 0.999; /* isolates the ring from the row's own opacity shifts */
+}
+
+
+/* A recent query is two controls side by side — run it, or forget it. They are
+   siblings rather than nested because the remove button used to be a span
+   inside the row button, which no keyboard could reach and no button may
+   legally contain. The row keeps the full width; the remove sits on top of its
+   trailing edge so the layout is unchanged. */
+.search-recent {
+  display: flex;
+  align-items: stretch;
+}
+
+.search-recent .search-result {
+  flex: 1 1 auto;
+}
+
+.search-result-remove {
+  flex: none;
+  padding: 0 var(--space-m);
+  color: var(--text-faded);
+}
+
+.search-result-remove:hover {
+  color: var(--text-primary);
+}
+
+.search-skeleton {
+  pointer-events: none;
+}
+
+.search-skeleton .skeleton-line {
+  height: 1lh;
+  width: 60%;
+}
+
+/* The inset is the dialog's edge padding, not the callout's own. On the page
+   it left the callout starting 16px right of the field, the chips and every
+   result row. */
+.search-dialog .search-empty {
+  margin: var(--space-m) var(--space-l);
+}
+
+/* -- See all --
+ * The last row of the list, and on a phone the only route to the results page:
+ * the footer that used to carry that link is display:none under 768px. It is
+ * an ordinary .search-result so the arrow keys and Enter reach it like any
+ * other row — the rule above it is what marks it as the end of the list rather
+ * than one more result. */
+
+/* .search-result.search-see-all, not a bare .search-see-all: the row carries
+   both classes and `.search-result` also sets `color`, so at (0,1,0) each the
+   link colour would win only on source order — and the natural place to add a
+   `.search-result` rule is below this block. (0,2,0) settles it. */
+.search-result.search-see-all {
+  border-top: var(--border-s) solid var(--border-faded);
+  color: var(--text-link);
+}
+
+/* -- Footer -- */
+
+.search-dialog-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-l);
+  padding: var(--space-s) var(--space-l);
+  border-top: var(--border-s) solid var(--border-faded);
+  font-size: var(--font-2xs);
+  color: var(--text-faded);
+}
+
+.search-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.search-hint-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.search-all {
+  margin-left: auto;
+}
+
+/* -- Page host --
+ * /search.html. The same parts as the dialog, in a page: no close button,
+ * no key-hint footer, no "see all" link in the footer — this is the see-all.
+ *
+ * The dialog is an overlay that owns its own box, so it strips the field to
+ * bare text on a bordered surface. A page has no such box, so the field has
+ * to look like a field: the row takes back the design system's input border
+ * and background, and the ring drawn on :focus-within above lands on that
+ * border rather than on nothing.
+ *
+ * Layout comes from `.block gap-l` on the element itself, per the layout
+ * hierarchy — this class carries host identity and nothing else. */
+
+/* The design system's text inputs carry no radius (design-system.css §12), so
+   neither does this: a rounded field here would be the only one on the site.
+   Padding and min-height are the base input's exactly. The glossary field is
+   the same idea on the same page type, and it changes font-size alone. */
+.search-page .search-field {
+  padding: var(--space-m) var(--space-l);
+  min-height: var(--target-min);
+  border: var(--border-s) solid var(--input-border);
+  background-color: var(--input-background);
+}
+
+/* The list scrolls inside the dialog because the dialog has a fixed height.
+   A page has none: the page itself is the scroll container, and leaving
+   overflow-y:auto here gives a scrollbar inside a scrollbar and strands the
+   last results in a box nobody thinks to scroll. */
+.search-page .search-results {
+  flex: none;
+  overflow: visible;
+  padding: 0;
+}
+
+/* -- Header trigger --
+ * Reads as a field on desktop and an icon on mobile. .header-action-label is
+ * what collapses (design-system.css §40), so the kbd hint collapses with it and
+ * the accessible name stays on aria-label either way. */
+
+.header-search-btn {
+  --button-padding-x: var(--space-m);
+  gap: var(--space-s);
+}
+
+.header-search-kbd:empty {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .header-search-btn {
+    min-width: 200px;
+    justify-content: flex-start;
+    border: var(--border-s) solid var(--border-faded);
+  }
+
+  .header-search-placeholder {
+    color: var(--text-faded);
+  }
+
+  .header-search-kbd {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .search-dialog {
+    --search-top: 0;
+    width: 100vw;
+    max-width: none;
+    max-height: 100dvh;
+    height: 100dvh;
+    margin: 0;
+  }
+
+  /* A touch device has no keyboard to hint at, and the row is the only thing
+     competing with the results for vertical space. */
+  .search-dialog-footer {
+    display: none;
+  }
+
+  /* The dialog is a height-constrained flex column here (100dvh), and every
+     child but the list defaults to `flex: 0 1 auto` — so the overflowing
+     results stole 13px from the chip row and 8px from the status line, slicing
+     the second line of "Brand Book" in half. Measured, not theorised. */
+  .search-dialog .search-field,
+  .search-dialog .search-filters,
+  .search-dialog .search-status {
+    flex: none;
+  }
+
+  /* Shared: a chip row that wraps to three lines on a phone pushes the first
+     result below the fold, on both hosts. nowrap on the chip itself is what
+     makes the row actually scroll instead of wrapping — without it the chips
+     shrink, and `overflow-x: auto` forces overflow-y to compute to auto, so
+     the clipped row gains a silent second scroll axis that shifts every chip
+     when one is tabbed to. */
+  .search-dialog .search-filters,
+  .search-page .search-filters {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .search-dialog .search-filters .chip,
+  .search-page .search-filters .chip {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .search-dialog .search-filters::-webkit-scrollbar,
+  .search-page .search-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .search-result[data-type="token"] .search-result-text,
+  .search-result[data-type="class"] .search-result-text {
+    gap: var(--space-2xs);
+  }
 }

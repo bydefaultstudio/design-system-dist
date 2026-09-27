@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.8.0 */
+/* @bydefaultstudio/design-system v5.0.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -31,6 +31,15 @@
   --font-script:    cursive;
   --font-editorial: var(--font-secondary);
   --font-code:      var(--font-quaternary);
+
+  /* Greeking slots: a face that renders text unreadable, so a work-in-progress
+     layout can be judged on structure rather than copy. Neutral here, like
+     every slot above — the engine names no face and ships no font. A brand
+     that wants greeking declares the @font-face in its own theme.css and
+     re-points these two. Left alone they resolve to the primary face, so the
+     tokens are always safe to reference and simply do nothing. */
+  --font-placeholder: var(--font-primary);
+  --font-scribble:    var(--font-primary);
 
   /* -- Palette -- */
   --off-white: var(--neutral-50);
@@ -396,6 +405,16 @@
   --selected-background: var(--text-primary);
   --selected-text: var(--background-primary);
 
+  /* -- Highlight -- */
+  /* The <mark> pair, and the surface a brand re-skins to move every highlight at
+     once. Both halves are opaque, and neither is mixed with the page surface: a
+     highlight lands on whatever is behind it — including the inverted
+     --selected-background of an active search row — and a translucent surface or
+     a surface-derived ink inverts its own contrast when it does. Search excerpts
+     are the heaviest consumer. */
+  --mark-background: var(--yellow-light);
+  --mark-color: var(--brown-dark);
+
   /* -- Card tokens removed — uses semantic tokens directly -- */
 
   /* -- Tooltip tokens removed — uses values directly on component -- */
@@ -508,7 +527,14 @@
   --checkbox-selected: #e8e6e3;
   --checkbox-border: #555;
   --checkbox-checkmark: #1a1a1a;
-  /* -- Toggle/Card/Tooltip/Toast/Dialog/Mark color tokens removed — dark mode handled on components -- */
+
+  /* -- Highlight -- */
+  /* The full-strength step, not the pale one: --yellow-light is a wash built for
+     white and glares on a dark surface. The ink stays dark because the surface
+     stays light. */
+  --mark-background: var(--yellow);
+  --mark-color: var(--brown-dark);
+  /* -- Toggle/Card/Tooltip/Toast/Dialog color tokens removed — dark mode handled on components -- */
 
   /* -- Dropdown -- */
   --dropdown-background: var(--background-plain);
@@ -571,7 +597,11 @@
     --checkbox-selected: #e8e6e3;
     --checkbox-border: #555;
     --checkbox-checkmark: #1a1a1a;
-    /* -- Toggle/Card/Tooltip/Toast/Dialog/Mark color tokens removed — dark mode handled on components -- */
+
+    /* -- Highlight -- */
+    --mark-background: var(--yellow);
+    --mark-color: var(--brown-dark);
+    /* -- Toggle/Card/Tooltip/Toast/Dialog color tokens removed — dark mode handled on components -- */
 
     /* -- Dropdown -- */
     --dropdown-background: var(--background-plain);
@@ -846,6 +876,16 @@
   --max-width-l: 1200px;
   --max-width-xl: 1440px;
 
+  /* Image widths — a separate, smaller scale on purpose. The two above size
+     page shells; an image in prose sits inside one, so a shell step is the
+     wrong unit for it. Pointed at --max-width-* until 2026-09-23, which put
+     three of five steps beyond any reading column, where they all silently
+     meant "full width". These three are each visibly different in a column
+     of 700-1000px, which is every column this system puts prose in. */
+  --img-width-s: 200px;
+  --img-width-m: 480px;
+  --img-width-l: 640px;
+
   /* -- Line length (typographic readability, 45–75ch range) -- */
   --line-length-headline: 22ch;
   --line-length-body: 55ch;
@@ -880,8 +920,8 @@
   /* -- Border radius tokens -- */
   --radius-2xs: 2px;
   --radius-xs: 4px;
-  --radius-s: 6px;
-  --radius-m: 10px;
+  --radius-s: 8px;
+  --radius-m: 12px;
   --radius-l: 16px;
   --radius-xl: 24px;
   --radius-pill: 999px;
@@ -1090,6 +1130,10 @@ section {
 }
 
 /* -- Top spacing combo classes -- */
+.top-xsmall {
+  padding-top: var(--section-xs);
+}
+
 .top-small {
   padding-top: var(--section-s);
 }
@@ -1107,6 +1151,10 @@ section {
 }
 
 /* -- Bottom spacing combo classes -- */
+.bottom-xsmall {
+  padding-bottom: var(--section-xs);
+}
+
 .bottom-small {
   padding-bottom: var(--section-s);
 }
@@ -1214,10 +1262,22 @@ section {
 }
 
 
-/* -- Self alignment -- */
+/* -- Self alignment. Places a box in its parent, on the inline axis. Only
+      says anything once the box is narrower than the space it is given, so it
+      is inert rather than broken at full width. -- */
+[data-align="left"] {
+  margin-inline: 0 auto;
+  justify-self: start;
+}
+
 [data-align="center"] {
   margin-inline: auto;
   justify-self: center;
+}
+
+[data-align="right"] {
+  margin-inline: auto 0;
+  justify-self: end;
 }
 
 
@@ -1558,6 +1618,10 @@ button.button {
   --button-text-color: var(--text-inverted);
   --button-font: var(--font-primary);
   --button-text-size: var(--font-m);
+  /* Leading is a token because the filled button and the text variant need
+     different values: 0.7 is right when 32px of padding builds the box, and
+     wrong when the padding is zero (see [data-variant="text"]). */
+  --button-leading: var(--line-height-xs);
   --button-padding-y: var(--space-l);
   --button-padding-x: var(--space-xl);
   --button-gap: var(--space-m);
@@ -1581,7 +1645,7 @@ button.button {
   font-family: var(--button-font);
   font-size: var(--button-text-size);
   font-weight: var(--font-weight-regular);
-  line-height: var(--line-height-xs);
+  line-height: var(--button-leading);
   /* letter-spacing: var(--letter-spacing-s); */
   text-transform: none;
   text-decoration: none;
@@ -1637,6 +1701,9 @@ button.button {
   --button-text-color: var(--button-color);
   --button-padding-x: 0;
   --button-padding-y: 0;
+  /* No padding to build the box, so the line box IS the box: at 0.7 an
+     18px label sat in 12.6px and stacked text buttons collided. */
+  --button-leading: var(--line-height-l);
 }
 .button[data-variant="text"]:hover {
   text-decoration: underline;
@@ -1718,6 +1785,29 @@ button.button {
   --button-color: color-mix(in srgb, var(--status-success), var(--background-primary) 15%);
 }
 
+/* The brand accent — what --text-link defaults to. Meant for the text
+   variant, where an action should read as a link among neutral ones (the
+   login screen's recovery actions); a filled accent button works but has no
+   consumer, and under the By Default theme its dark-mode hover step is only
+   1.04:1 — add a hover treatment before giving it one.
+
+   Hover mixes toward the INK, the opposite direction to the status colours
+   above. Engine defaults (--blue / --yellow as declared in this file; a brand
+   theme re-points them and brings its own numbers): the accent sits at about
+   5:1 on the surfaces it lands on (5.17:1 on white; 4.99:1 on the dark card's
+   --background-secondary) — enough for the --font-s these actions use, with
+   no headroom: 15% toward the ground lands at 3.98:1 in both themes, under the
+   4.5:1 that small text needs. Toward the ink it climbs (6.22:1 light / 5.73:1
+   dark) and stays a visible step (1.20:1 / 1.15:1). Self-corrects with the
+   theme because --text-primary flips with it: darkens blue in light mode,
+   brightens yellow in dark. */
+.button[data-color="accent"] {
+  --button-color: var(--text-accent);
+}
+
+.button[data-color="accent"]:hover {
+  --button-color: color-mix(in srgb, var(--text-accent), var(--text-primary) 15%);
+}
 /* -- Role classes -- */
 /* Role classes override component tokens only. They never redeclare the base
    structure, so padding, focus ring, sizes and states are inherited intact.
@@ -1936,45 +2026,55 @@ h6 {
 
 }
 
-/* Progressive editorial scale. Each level is a foundation --font-*
-   primitive, one step up from the next level, stepped at the 959px
-   breakpoint rather than clamp() so type tracks browser zoom and user
-   font-size (WCAG 1.4.4). For hero-scale display type, set font-size to
+/* Editorial scale. Each level is a foundation --font-* primitive, stepped
+   at the 959px breakpoint rather than clamp() so type tracks browser zoom
+   and user font-size (WCAG 1.4.4). The ladder tops out at 36px — roughly
+   twice body — and lands on body size at h6, where weight rather than size
+   separates it from copy. That mirrors Material 3, Primer, Spectrum and
+   Apple: in-page headings sit at or below 2× body; anything larger is
+   display type. For hero-scale display type, set font-size to
    --headline-size / --title-size on your own display class instead of
    restyling the elements. */
 h1 {
-  font-size: var(--font-7xl);  /* 48px · 36px ≤959 */
-  line-height: var(--line-height-m);
+  font-size: var(--font-5xl);  /* 36px · 32px ≤959 */
 }
 
 h2 {
-  font-size: var(--font-6xl);  /* 40px · 32px ≤959 */
+  font-size: var(--font-3xl);  /* 28px · 24px ≤959 */
 }
 
 h3 {
-  font-size: var(--font-5xl);  /* 36px · 28px ≤959 */
+  font-size: var(--font-2xl);  /* 24px · 22px ≤959 */
 }
 
+/* h4 to h6 hold their size at every width. The ≤959px ladder above them
+   ends at 22px, so stepping h4 would land it on h5, and stepping h5 would
+   land it on h6 — two levels collapsing into one style on every phone. */
 h4 {
-  font-size: var(--font-4xl);  /* 32px · 24px ≤959 */
-}
-
-h5 {
-  font-size: var(--font-3xl);  /* 28px · 22px ≤959 */
-}
-
-h6 {
-  font-size: var(--font-2xl);  /* 24px · 20px ≤959 */
+  font-size: var(--font-l);    /* 20px at every width */
   line-height: var(--line-height-l);
 }
 
+/* h5 and h6 sit within body range, so weight carries the hierarchy and
+   the negative tracking that suits large sizes is released. */
+h5 {
+  font-size: var(--font-m);    /* 18px at every width */
+  font-weight: var(--font-weight-semi-bold);
+  line-height: var(--line-height-l);
+  letter-spacing: 0;
+}
+
+h6 {
+  font-size: var(--font-s);    /* 16px at every width */
+  font-weight: var(--font-weight-semi-bold);
+  line-height: var(--line-height-l);
+  letter-spacing: 0;
+}
+
 @media (max-width: 959px) {
-  h1 { font-size: var(--font-5xl); }
-  h2 { font-size: var(--font-4xl); }
-  h3 { font-size: var(--font-3xl); }
-  h4 { font-size: var(--font-2xl); }
-  h5 { font-size: var(--font-xl); }
-  h6 { font-size: var(--font-l); }
+  h1 { font-size: var(--font-4xl); }
+  h2 { font-size: var(--font-2xl); }
+  h3 { font-size: var(--font-xl); }
 }
 
 /* -- Paragraphs -- */
@@ -2002,10 +2102,12 @@ a:not(.button):hover {
   text-underline-offset: 0.25em;
 }
 
-/* The glyph warns that an underlined run of text leaves the site. A button is
-   already a distinct affordance and carries its own icon slot, so it is excluded
-   — on an icon-only button the mark would trail the icon as a second glyph. */
-a[target="_blank"]:not(.button)::after {
+/* The glyph warns that an underlined run of text leaves the site, so it belongs
+   to prose. Anything that sets `text-decoration: none` and carries its own icon
+   slot is not prose and is excluded — on an icon-only button, or on a dropdown
+   row that already leads with a share icon, the mark trails as a second,
+   unexplained glyph. */
+a[target="_blank"]:not(.button):not(.dropdown-item)::after {
   content: "";
   display: inline-block;
   width: 0.75em;
@@ -2220,7 +2322,7 @@ a:not([href]) {
 
 /* -- Base callout -- */
 .callout {
-  padding: var(--space-m) var(--space-l);
+  padding: var(--space-l);
   margin-top: var(--space-l);
   margin-bottom: var(--space-l);
   background-color: var(--background-faded);
@@ -2240,7 +2342,7 @@ a:not([href]) {
   display: flex;
   align-items: center;
   gap: var(--space-s);
-  font-weight: var(--font-weight-semi-bold);
+  font-weight: var(--font-weight-medium);
   font-size: var(--font-m);
   line-height: var(--line-height-s);
 }
@@ -2334,6 +2436,7 @@ select {
   color: var(--input-text);
   background-color: var(--input-background);
   border: var(--border-s) solid var(--input-border);
+  border-radius: var(--radius-m);
   padding: var(--space-m) var(--space-l);
   min-height: var(--target-min);
   width: 100%;
@@ -3233,10 +3336,18 @@ input[type="radio"]:disabled:checked {
 }
 
 /* -- Form error message -- */
+/* A row, so a leading .svg-icn sits beside the words rather than above them.
+   Text-only usage is unchanged: a lone text run is one flex item. The icon
+   is a <span class="svg-icn">, not the usual <div> — a <p> cannot contain a
+   <div>, the parser closes it. */
 .form-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
   font-size: var(--font-s);
   color: var(--status-danger);
   margin-top: var(--space-xs);
+  --icon-size: 1.25em;
 }
 
 /* -- Access support form states -- */
@@ -3469,10 +3580,12 @@ details .disclosure-content {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
 }
 /* -- Card inner elements -- */
+/* One rung below h3: a card grid usually sits under an h2 or h3, and its
+   titles must never outrank the heading that introduces them. */
 .card-title {
   margin-top: 0;
   margin-bottom: var(--space-s);
-  font-size: var(--font-3xl);
+  font-size: var(--font-xl);
   line-height: var(--line-height-m);
 }
 
@@ -4065,23 +4178,12 @@ kbd {
 }
 
 /* -- Highlighted text -- */
+/* Both modes come from --mark-background / --mark-color, so a brand moves every
+   highlight from the token block and this rule never needs a theme selector. */
 mark {
-  background-color: var(--yellow-light);
-  color: var(--brown-dark);
+  background-color: var(--mark-background);
+  color: var(--mark-color);
   padding: 0 var(--space-2xs);
-}
-
-/* -- Mark dark mode -- */
-[data-theme="dark"] mark {
-  background-color: color-mix(in srgb, var(--yellow), var(--alpha-60));
-  color: var(--off-white);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) mark {
-    background-color: color-mix(in srgb, var(--yellow), var(--alpha-60));
-    color: var(--off-white);
-  }
 }
 
 /* -- Figure / Figcaption -- */
@@ -4110,21 +4212,152 @@ abbr[title] {
 
 /* ------ 24. IMAGE ------ */
 
+/* Three axes: how wide the image may grow, what proportions it holds, and
+   whether prose wraps around it. All data attributes, matching button, gallery
+   and page-header.
+
+   Two of the three describe the box rather than the picture, so width, float
+   and align also apply to a <figure>. A captioned image is one box — the
+   caption wraps, floats and is measured with the picture or it is describing
+   something else — while the ratio crops the picture alone and stays on the
+   <img> inside. Authors do not hold that split themselves: the {{image: …}}
+   shortcode in the docs generator puts each attribute on the right element.
+
+   Where the image sits once it is narrower than its column is deliberately
+   NOT here. [data-align] in section 6 already means "place this box in its
+   parent" — the same axis, so it needs no image-specific rule and carries
+   justify-self with it. Section 40 records what overloading that attribute
+   for a different axis cost the last time.
+
+   Widths step with --img-width-*, which is the image's own scale and not the
+   page-shell scale — see the tokens. Three steps and no attribute for full
+   width, which is four sizes; the shells offer five, and the top two of those
+   were unreachable from inside a reading column. --img-width and
+   --img-ratio are read with a fallback and declared nowhere, so an ancestor
+   can re-point either for a one-off without authoring an attribute this
+   component does not define. */
+
 /* -- Base image -- */
 .img {
   display: block;
   width: 100%;
+  max-width: var(--img-width, var(--img-width-default, 100%));
   height: auto;
+  aspect-ratio: var(--img-ratio, auto);
   object-fit: cover;
 }
 
-/* -- Aspect ratio combos -- */
-.img-1x1  { aspect-ratio: 1 / 1; }
-.img-3x2  { aspect-ratio: 3 / 2; }
-.img-4x3  { aspect-ratio: 4 / 3; }
-.img-16x9 { aspect-ratio: 16 / 9; }
-.img-21x9 { aspect-ratio: 21 / 9; }
+/* -- Width. Matches a figure as well, because a captioned image is one box:
+      the caption has to be measured and placed with the picture, not with the
+      column. Scoped to the two rather than a bare [data-width] — the docs
+      shell already carries that attribute on .docs-content-grid. -- */
+:is(.img, figure)[data-width="s"] { --img-width: var(--img-width-s); }
+:is(.img, figure)[data-width="m"] { --img-width: var(--img-width-m); }
+:is(.img, figure)[data-width="l"] { --img-width: var(--img-width-l); }
 
+/* The image reads --img-width through the max-width on .img above. A figure
+   has no such declaration of its own, so it needs this one. The property
+   inherits to the image inside, which costs nothing — that image is already
+   width: 100% of a box this has just capped. */
+figure[data-width] {
+  max-width: var(--img-width, var(--img-width-default, 100%));
+}
+
+/* -- Ratio. object-fit: cover on the base is what crops rather than stretches
+      once a ratio is forced; with no ratio it is inert. -- */
+.img[data-ratio="1x1"]  { --img-ratio: 1 / 1; }
+.img[data-ratio="3x2"]  { --img-ratio: 3 / 2; }
+.img[data-ratio="4x3"]  { --img-ratio: 4 / 3; }
+.img[data-ratio="16x9"] { --img-ratio: 16 / 9; }
+.img[data-ratio="21x9"] { --img-ratio: 21 / 9; }
+
+/* -- Float. Prose wraps around the image, the aligned-image pattern every
+      prose CMS converges on. The image stays in the flow of the text, so the
+      paragraphs after it stay markdown — the alternative, a two-column media
+      block, has to hold the text inside its own markup, and the markdown
+      pipeline does not parse inside raw HTML.
+
+      Three things a float needs that a plain image does not:
+
+      It is clamped to half the column. A float's margin sits outside its
+      width, so width: 100% plus a margin overflows the column and leaves the
+      text nothing — every paragraph silently drops below, which is the one
+      failure this axis exists to prevent. Half is the widest a picture can be
+      and still be beside text rather than above it.
+
+      It gets a width when given none, the smallest step, through a second
+      fallback slot rather than a declaration on the element, so an ancestor
+      re-pointing --img-width still reaches a float the way it reaches any
+      other .img.
+
+      Its sides are logical — inline-start/end for the float, margin-inline
+      for the gap — so under dir="rtl" the gap stays on the text-facing side.
+      The value names stay left/right to match [data-align].
+
+      Containment is the containing layout's job, as it is on every site. A
+      flex item cannot float, so a float inside a .block needs its own plain
+      wrapper — and that wrapper, being a flex item, then contains the float
+      itself. In markdown prose there is no wrapper, so the docs article is
+      flow-root and its headings clear (docs-site .docs-main). -- */
+:is(.img, figure)[data-float="left"],
+:is(.img, figure)[data-float="right"] {
+  max-width: min(var(--img-width, var(--img-width-default, 100%)), 50%);
+}
+
+/* margin-block is declared per element rather than across both, so that each
+   release below can restore that element's own resting value at matching
+   specificity and let source order settle it. The two resting values differ:
+   an .img has none, a figure carries --space-xl. Both need zero at the top
+   while floating, or the picture starts below the first line of the text it
+   is meant to sit beside. */
+.img[data-float="left"],
+.img[data-float="right"] { margin-block: 0 var(--space-s); }
+
+figure[data-float="left"],
+figure[data-float="right"] { margin-block: 0 var(--space-s); }
+
+/* float: left first as a fallback. inline-start is the newest thing in this
+   file — Safari only took it in 17.4, later than :has() and @container, both
+   of which this section already leans on — and an unsupported value drops the
+   whole declaration, which would leave the image in flow at half width with a
+   stray margin. The physical value is right in LTR and wrong only in RTL on a
+   browser too old for the logical one. */
+:is(.img, figure)[data-float="left"]  { float: left;  float: inline-start; margin-inline: 0 var(--space-xl); }
+:is(.img, figure)[data-float="right"] { float: right; float: inline-end;   margin-inline: var(--space-xl) 0; }
+
+:is(.img, figure)[data-float]:not([data-width]) { --img-width-default: var(--img-width-s); }
+
+/* Released on a narrow viewport: a float beside a column of a few hundred
+   pixels leaves nothing to wrap, so the image drops back into flow and the
+   text follows underneath. The half-column clamp goes with it, and a float
+   that was given no width returns to full width — it only ever had a width
+   for the sake of the text beside it. One that was given a width keeps it.
+   The docs shell adds the same release on its content-container width in
+   docs-site.css, where that container exists. */
+@media (max-width: 768px) {
+  :is(.img, figure)[data-float="left"],
+  :is(.img, figure)[data-float="right"] {
+    float: none;
+    margin-inline: 0;
+    max-width: var(--img-width, var(--img-width-default, 100%));
+  }
+
+  /* Back to each element's resting value — see the per-element declarations
+     above. Without this a released figure keeps margin-block: 0 and butts
+     into the paragraph above it. */
+  .img[data-float="left"],
+  .img[data-float="right"] { margin-block: 0; }
+
+  figure[data-float="left"],
+  figure[data-float="right"] { margin-block: var(--space-xl); }
+
+  :is(.img, figure)[data-float]:not([data-width]) { --img-width-default: 100%; }
+}
+
+/* The .img-16x9 family of combo classes was deleted on 2026-09-23 and every
+   usage migrated to data-ratio. They had briefly coexisted, both setting
+   --img-ratio so the attribute would win; two spellings for one axis is the
+   thing this section exists to stop. */
 
 /* NOTE: .bar is section 41, near the end of this file. It sits beside
    Site Header (section 40) because the two are the same bar shape and were
@@ -5507,6 +5740,16 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   background-color: color-mix(in srgb, var(--status-success), var(--alpha-10));
 }
 
+/* Restated for hover, because the unfilled variants' hover wash is (0,3,0)
+   and the state above is (0,2,0): left alone it erases the success fill under
+   the pointer that just caused it, which is every copy made with a mouse.
+   The colour and the border survived it; only the fill did not, so on an
+   outline or transparent button the loss was invisible and on a faded one it
+   is the whole state. */
+.copy-btn.is-copied:hover {
+  background-color: color-mix(in srgb, var(--status-success), var(--alpha-10));
+}
+
 /* -- Variant: icon only -- */
 .copy-btn.is-icon-only {
   padding: var(--space-s);
@@ -6009,8 +6252,8 @@ input[type="range"]:disabled::-webkit-slider-thumb {
 
 /* The heading scale steps by restating font-size on the element, not by
    re-pointing a token — so a class that sets its own size has to carry the
-   step itself, or it stays at desktop size on every phone. Every step drops
-   two rungs, matching h1-h6.
+   step itself, or it stays at desktop size on every phone. Every size
+   variant drops two rungs.
 
    This block must stay BELOW the size variants: the bare .book-cover rule
    here is (0,1,0) against their (0,2,0), so the variants' own steps only win
@@ -6022,7 +6265,7 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   }
 
   .book-cover[data-size="small"] {
-    --book-cover-title-size: var(--font-2xl);
+    --book-cover-title-size: var(--font-xl);
   }
 
   .book-cover[data-size="large"] {
@@ -6372,7 +6615,7 @@ details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn
   display: flex;
   flex-direction: column;
   gap: var(--space-m);
-  padding: 0 var(--book-contents-item-padding) var(--book-contents-item-padding);
+  padding: var(--space-l) var(--book-contents-item-padding) var(--book-contents-item-padding);
 }
 
 /* Rotation is travel; the state change itself is the feedback. */
@@ -6424,7 +6667,7 @@ details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn
   --page-nav-border: var(--border-s) solid var(--border-faded);
   --page-nav-link-padding: var(--space-xl) var(--space-2xl);
   --page-nav-link-gap: var(--space-m);
-  --page-nav-title-size: var(--font-5xl);
+  --page-nav-title-size: var(--font-2xl);
   --page-nav-arrow-color: var(--text-secondary);
   --page-nav-arrow-color-hover: var(--text-link);
 
@@ -6436,7 +6679,7 @@ details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn
    step itself. Mirrors the h3 step at the same breakpoint. */
 @media (max-width: 959px) {
   .page-nav {
-    --page-nav-title-size: var(--font-3xl);
+    --page-nav-title-size: var(--font-xl);
   }
 }
 
@@ -6483,7 +6726,7 @@ details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn
 }
 
 .page-nav-label {
-  font-size: var(--font-xs);
+  font-size: var(--font-2xs);
   font-family: var(--font-primary);
   color: var(--text-secondary);
   font-weight: var(--font-weight-semi-bold);
@@ -7695,9 +7938,11 @@ section[id] {
   /* The subtitle is a line of prose, so it gets a reading measure rather than
      the container's full width. */
   --page-header-subtitle-max-width: var(--max-width-s);
-  /* Matches h1 at both steps of the heading scale. Restated rather than
-     inherited so the title can be an <h1> on a page and an <h2> in a demo
-     without changing size — see the note on .page-header-title. */
+  /* Display size for the page's one title: 48px, above the h1 element
+     default (36px) by design, so the title outranks every in-body heading.
+     Set here rather than inherited so the title can be an <h1> on a page
+     and an <h2> in a demo without changing size — see the note on
+     .page-header-title. */
   --page-header-title-size: var(--font-7xl);
 }
 
@@ -8208,17 +8453,30 @@ section[id] {
    ships no script of its own. Password reveal is password-toggle.js. */
 
 :root {
-  --login-max-width: 380px;   /* one-column form measure */
+  --login-max-width: 560px;   /* one-column form measure — set by eye on the
+                                 login-scenarios experiment page, 2026-09-24 */
   --login-logo-height: 88px;  /* header logo slot */
+  /* The two stack gaps. Tokens because .login-status:empty has to cancel
+     exactly the gap of whichever container it sits in — it drifted once when
+     the cancellation was a separate number from the gap. */
+  --login-gap: var(--space-xl);
+  --login-form-gap: var(--space-l);
+  --login-field-gap: var(--space-s);
 }
 
+/* Everything on one axis: the header, the labels, the status lines, the
+   trailing actions — and the fields' own text, since text-align inherits into
+   an input's value and placeholder — are all centred, so the eye never has
+   to change column. That last one is deliberate: a left-aligned value in a
+   centred card is the one thing that would break the axis. */
 .login {
   width: 100%;
   max-width: var(--login-max-width);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-l);
+  gap: var(--login-gap);
+  text-align: center;
 }
 
 /* -- Header: logo + title + subtitle -- */
@@ -8226,7 +8484,7 @@ section[id] {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-s);
+  gap: var(--space-m);
   text-align: center;
 }
 
@@ -8240,17 +8498,23 @@ section[id] {
   width: auto;
 }
 
-/* Size is fixed by the class; weight stays with the heading element, so
-   an h1 and an h2 render the same size here but keep their own weight. */
+/* Size and leading are fixed by the class; weight stays with the heading
+   element, so an h1 and an h2 render the same size here but keep their own
+   weight. */
 .login-title {
   margin-block: 0;
   font-size: var(--font-3xl);
+  line-height: var(--line-height-m);
 }
 
 .login-subtitle {
   margin-block: 0;
   font-size: var(--font-m);
   color: var(--text-secondary);
+  /* The address sits here on its own line and has no break opportunity, so
+     a long one would otherwise run out of the card (see .section-header-title
+     for the same call). */
+  overflow-wrap: anywhere;
 }
 
 /* Populated by flow JS (invite / recovery instructions); collapses when unused */
@@ -8264,26 +8528,61 @@ section[id] {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: var(--space-s);
+  gap: var(--login-form-gap);
 }
 
 /* Tighter rhythm than the document-flow default: the pane's own gap owns
-   the spacing between groups, the group only owns label-to-input. */
+   the spacing between groups, the group only owns label-to-input and
+   input-to-error — and owns them alone: the global label margin is zeroed
+   below so the gap is the whole distance, not a summand of it. The gap is a
+   token because the empty error line has to cancel exactly this much. */
 .login-form .form-group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2xs);
+  gap: var(--login-field-gap);
   margin-bottom: 0;
 }
 
+/* Centring is inherited from .login; only the colour and the margin are
+   this rule's. */
 .login-form label {
   color: var(--text-secondary);
+  margin-bottom: 0;
+}
+
+/* The field's own error line, under the field it describes — and the live
+   region that announces it (role="alert"), so it is rendered from first paint
+   and EMPTY at rest rather than hidden: a region revealed from display:none
+   at announce time is not reliably read. Empty it is a zero-height flex box,
+   and the negative margin cancels the group gap it would otherwise open,
+   exactly as .login-status:empty does for its container. The group gap owns
+   the distance when it shows; the row is centred with the rest of the card. */
+.login-form .form-error {
+  margin-top: 0;
+  justify-content: center;
+}
+
+.login-form .form-error:empty {
+  margin-top: calc(-1 * var(--login-field-gap));
 }
 
 /* Divider spacing is re-pointed, not overridden — the pane gap already
    separates it from its neighbours. */
 .login-form .divider {
   --divider-spacing: var(--space-2xs);
+}
+
+/* A cell input is fit-content, and a fit-content flex item in this column
+   lands at flex-start — a 212px row hard against the left edge under a
+   centred header. Centred for the case where it is not full-width; with
+   [data-full-width] on the block it fills the measure like the email field.
+   Corner and gap are re-pointed, not overridden: the cells take the email
+   field's --radius-m so the two panes share one field shape, and the wider
+   gap keeps six grown cells reading as six boxes rather than a strip. */
+.login-form .cell-input {
+  align-self: center;
+  --cell-input-radius: var(--radius-m);
+  --cell-input-gap: var(--space-s);
 }
 
 /* -- Meta row: remember-me vs forgot link -- */
@@ -8306,10 +8605,18 @@ section[id] {
 /* Not display: none — that would drop the live region out of the
    accessibility tree while empty, and polite (role="status") regions
    revealed from display:none are not reliably announced. The element
-   stays rendered at zero height; the negative margin cancels the extra
-   pane gap it would otherwise open. */
-.login-status:empty {
-  margin-top: calc(-1 * var(--space-s));
+   stays rendered at zero height; the negative margin cancels the gap it
+   would otherwise open. Two placements are documented — inside a pane, as
+   every cms/login.md demo does, or pooled at the top of the card outside
+   both panes, as auth/login.html does for its two-pane flow — and each
+   reads the gap token of its own container. When this was one number it
+   was right for one of them and wrong for the other. */
+.login-form > .login-status:empty {
+  margin-top: calc(-1 * var(--login-form-gap));
+}
+
+.login > .login-status:empty {
+  margin-top: calc(-1 * var(--login-gap));
 }
 
 .login-status[data-type="danger"] {
@@ -8321,10 +8628,28 @@ section[id] {
 }
 
 /* -- Footer: trailing text actions -- */
+/* Text size is re-pointed, not overridden: the actions sit on the body line
+   with the label and status (--font-s), below the submit's --font-m. An
+   action carrying its own data-size keeps it — that is how one action is
+   ranked below the others — so the re-point is scoped to the unsized ones. */
 .login-footer {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: var(--space-m);
+}
+
+.login-footer .button:not([data-size]) {
+  --button-text-size: var(--font-s);
+}
+
+/* A recovery line: muted lead-in with the action inline — "Didn't get the
+   code? Send again" reads as one sentence, where two stacked buttons read as
+   two equal choices. The button inside inherits the footer's text size. */
+.login-hint {
+  margin-block: 0;
+  font-size: var(--font-s);
+  color: var(--text-secondary);
 }
 
 
@@ -8430,17 +8755,6 @@ section[id] {
     background-color var(--duration-xs) var(--ease-out);
 }
 
-/* The next empty cell reads as the caret — only while the input has focus —
-   and it IS the focus indicator (no ring around the group: the caret says
-   "focused, and here", which is strictly more than a ring says, so the ring
-   would be redundant ink). The inset shadow doubles the 1px border to a 2px
-   accent without shifting layout. cell-input.js keeps the caret on the last
-   cell when the row is full, so a complete entry never loses its indicator. */
-.cell-input:focus-within .cell-input-cell.is-active {
-  border-color: var(--input-focus);
-  box-shadow: inset 0 0 0 1px var(--input-focus);
-}
-
 /* Pre-revealed punctuation (hyphens, slashes, apostrophes) — shown, not typed */
 .cell-input-cell[data-cell="separator"] {
   width: var(--cell-input-separator-width);
@@ -8479,6 +8793,45 @@ section[id] {
   font-size: var(--font-xs);
 }
 
+/* -- Width -- */
+
+/* Fills its container, like a button with the same attribute. The words are
+   flattened (display: contents) so every letter cell is a direct item of the
+   row and they share the width uniformly whatever the format — with the words
+   as the items, "3 4" gave each word half the row and its cells two sizes.
+   Cells stay square and the row never wraps: it is sized by the container
+   alone, with no floor, so a narrow container gets small square cells rather
+   than an orphan cell wrapping and ballooning to a row-wide square. The cost:
+   words no longer wrap as units and the word gap is not shown, so a
+   full-width format shows its structure with separators. Separator cells keep
+   their fixed width. */
+.cell-input[data-full-width] {
+  width: 100%;
+}
+
+.cell-input[data-full-width] .cell-input-cells {
+  width: 100%;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--cell-input-gap);
+}
+
+.cell-input[data-full-width] .cell-input-word {
+  display: contents;
+}
+
+.cell-input[data-full-width] .cell-input-cell[data-cell="letter"] {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.cell-input[data-full-width] .cell-input-cell[data-cell="separator"] {
+  flex: 0 0 auto;
+}
+
 /* -- States -- */
 
 /* Verdict states colour the letter cells; separators stay quiet */
@@ -8504,6 +8857,24 @@ section[id] {
 .cell-input.is-disabled .cell-input-cell {
   background: var(--input-disabled-bg);
   color: var(--input-disabled-text);
+}
+
+/* The next empty cell reads as the caret — only while the input has focus —
+   and it IS the focus indicator (no ring around the group: the caret says
+   "focused, and here", which is strictly more than a ring says, so the ring
+   would be redundant ink). The inset shadow doubles the 1px border to a 2px
+   accent without shifting layout. cell-input.js keeps the caret on the last
+   cell when the row is full, so a complete entry never loses its indicator.
+
+   THE POSITION OF THIS RULE IS LOAD-BEARING — it sits after the verdict
+   states on purpose. The .is-error letter-cell rule above ties with it at
+   (0,4,0), so whichever is declared last wins. Placed before it, the caret
+   border was repainted danger-red along with its five neighbours, leaving a
+   1px inset shadow as the only focus indicator — in exactly the state where
+   focus moves automatically (a rejected code). Do not move it back up. */
+.cell-input:focus-within .cell-input-cell.is-active {
+  border-color: var(--input-focus);
+  box-shadow: inset 0 0 0 1px var(--input-focus);
 }
 
 
@@ -8781,12 +9152,49 @@ section[id] {
   --chip-selected-background: var(--selected-background);
   --chip-selected-text: var(--selected-text);
   --chip-radius: var(--radius-pill);
-  --chip-padding-x: var(--space-m);
+  --chip-padding-x: var(--space-xl);
   --chip-gap: var(--space-xs);
   /* Narrowest a scale stop may be before the row wraps. Sized so five stops
      fit two rows on a 375px viewport at --font-s. */
   --chip-scale-min: 7rem;
   --chip-duration: var(--duration-2xs);
+
+  /* -- Colour variant -- */
+  /* 48px clears --target-min (44px) on both axes, so a chip carrying no text
+     still meets 2.5.8 without the inline padding a text chip leans on. */
+  --chip-colour-size: 3rem;
+  /* The ring of page ground between the paint and the chip's edge. It is a
+     drawn ring, not a gap: --chip-colour-ground is opaque so the selected
+     border reads as separate from the fill rather than thickening it. */
+  --chip-colour-gap: 0.125rem;
+  /* --background-primary, not --background-plain: the ring should read as the
+     page the chip sits on, and in dark mode those two differ (#1a1a1a vs
+     #2a2a2a). It must stay OPAQUE whatever it points at — the ring's whole job
+     is to separate the selected border from the paint. */
+  --chip-colour-ground: var(--background-primary);
+  --chip-colour-check: 1.5rem;
+  /* The selected and hover rings. Component tokens, not --border-l/--border-m
+     directly: a brand tuning the chip's ring should not have to move every 3px
+     border in the system to do it (§17 Rule 3). */
+  --chip-colour-ring: var(--border-l);
+  /* 2.5px is deliberately off the border scale (1 / 1.5 / 3px). Hover has to
+     read as clearly thinner than the selected ring and clearly more than a
+     hairline, and with --chip-colour-gap down at 2px the 1.5px step was lost
+     against the swatch hairline beside it. */
+  --chip-colour-ring-hover: 0.15625rem;
+  /* The swatch's own hairline. A token because it is the only thing giving a
+     white or near-ground swatch a shape — and therefore the one a brand is
+     most likely to want to move. Keep it at 3:1 against --chip-colour-ground
+     or a pale swatch loses its edge. */
+  --chip-swatch-border: var(--border-control);
+  --chip-swatch-border-width: var(--border-s);
+  /* The fallback when a consumer sets no --chip-fill. Opaque on purpose: a
+     translucent default resolves to r=0 in the luma chain, which picks a white
+     mark, and a white mark on the ground ring is no mark at all. */
+  --chip-colour-empty: var(--background-primary);
+  /* A disabled swatch has no text to grey out, so the paint itself has to
+     carry the state — the one case where tinting it is the lesser evil. */
+  --chip-disabled-opacity: 0.4;
 }
 
 .chip-group {
@@ -8824,7 +9232,7 @@ section[id] {
   text-align: center;
   color: var(--chip-text);
   background-color: var(--chip-background);
-  border: var(--border-s) solid var(--chip-border);
+  border: var(--border-m) solid var(--chip-border);
   border-radius: var(--chip-radius);
   cursor: pointer;
   transition: background-color var(--chip-duration) var(--ease-out),
@@ -8959,6 +9367,269 @@ section[id] {
     border-color: GrayText;
   }
 }
+
+/* -- Colour variant -- */
+/*
+ * A chip whose answer IS a colour, so it shows the colour instead of naming it.
+ * Same control as every other chip — a label wrapping a covered radio — with
+ * the text moved to .visually-hidden and the paint handed to --chip-fill.
+ *
+ * Selection is a ring in the swatch's own colour, separated from the fill by
+ * --chip-colour-gap, plus a check drawn on the paint. The ring is deliberately
+ * NOT contrast-corrected: on a pale swatch it reads as a soft halo at around
+ * 1.05:1 and carries nothing. The check is what satisfies 1.4.11, which is why
+ * its ink flips rather than being fixed. Do not "fix" the ring to a neutral —
+ * the colour-intensifying read is the point, and it was decided with the
+ * low-contrast case on the table.
+ */
+.chip[data-variant="colour"] {
+
+  inline-size: var(--chip-colour-size);
+  block-size: var(--chip-colour-size);
+  /* The square size is the hit area now, so the text chip's block floor and
+     its inline padding both come off — left in, the padding would win and
+     stretch the chip into a lozenge. */
+  min-height: 0;
+  padding: var(--chip-colour-gap);
+  background-color: var(--chip-colour-ground);
+  /* Unselected draws no ring at all, so the paint is a full 36px; selecting
+     spends 3px of it on the ring and the paint becomes 30px. That size change
+     is the design, not a rounding artefact — see the Figma frame. */
+  border-width: 0;
+  border-color: transparent;
+  /* Colour only. border-width is deliberately NOT transitioned: it resizes the
+     paint (36 → 33 → 30px), and animating a layout property on every tile of a
+     40-swatch grid is both a reduced-motion question and a needless reflow.
+     The width snaps; the colour fades. */
+  transition: border-color var(--chip-duration) var(--ease-out);
+}
+
+
+/* Without relative colour syntax every mark is the one light ink, which on a
+   light fill is no mark at all — and the mark is what carries selection. A halo
+   in the opposite ink costs two declarations and makes the fallback legible on
+   any fill instead of only on dark ones. */
+@supports not (color: rgb(from red r g b)) {
+  .chip-swatch::after {
+    filter: drop-shadow(0 0 1px var(--selected-background))
+            drop-shadow(0 0 1px var(--selected-background));
+  }
+}
+
+/* The paint, and deliberately NOT scoped to the chip. A painted colour area
+   that draws a pass/fail mark in an ink it works out for itself is useful to
+   anything showing a colour, so a consumer drawing its own tile takes
+   the paint and the mark from here rather than keeping a second copy. Geometry stays chip-scoped
+   below; only the paint and the mark are shared.
+
+   A hairline in --border-control (4.7:1 in both themes) so a white or
+   near-ground swatch still has a shape. */
+.chip-swatch {
+  /* --chip-fill is NOT declared here. Declaring a custom property on the
+     element shadows the value an ancestor set, and the consumer sets it on the
+     chip (or the tile) and lets it inherit down. The default belongs at each
+     use site instead. */
+  /* No-relative-colour fallback; the @supports block below replaces it. */
+  --chip-check-ink: var(--selected-text);
+  /* The mark drawn when the swatch is chosen. Swapped, not overridden, so the
+     shape lives in one place and data-contrast only names a different icon. */
+  --chip-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z'/%3E%3C/svg%3E");
+
+  position: relative;
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  background-color: var(--chip-fill, var(--chip-colour-empty));
+  border: var(--chip-swatch-border-width) solid var(--chip-swatch-border);
+  border-radius: inherit;
+}
+
+/* The ink flips on the fill's own brightness, so an arbitrary user-entered hex
+   gets a readable check with nothing computed in script.
+
+   Two steps, because the r/g/b keywords only exist inside a colour function and
+   cannot be lifted into a custom property on their own. --chip-ink-luma parks
+   the weighted brightness in a red channel; the ink rule then thresholds it.
+
+   Luma, not OKLCH lightness. The boundary that matters is WCAG's own crossover
+   between black and white (relative luminance 0.1791), and OKLCH lightness does
+   not track it for saturated hues: --brown #737373 and #808080 want opposite
+   inks yet sit 0.05 apart in OKLCH L, with several blues and greens between
+   them. Weighted luma separates them.
+
+   107.5 is not a round number because it was swept, not chosen: every threshold
+   from 100 to 140 was scored against a 24,389-point sample of the sRGB cube for
+   how often it picks the lower-contrast ink and for its worst case. No luma
+   threshold is exact — luma is gamma-encoded and relative luminance is not, so
+   they disagree by hue — and 107.5 is the best available, leaving about 6.6% of
+   the cube on the merely-adequate ink.
+
+   So state the guarantee honestly: **every fill gets at least 3.03:1**, which
+   clears 1.4.11's 3:1 for a non-text indicator. It is NOT a 4.5:1 guarantee.
+   Across the 36 brand colours the worst case is better than that — see
+   cms/chip.md — but an arbitrary hex only gets 3:1. Re-run the sweep if the
+   brand palette is re-pointed.
+
+   The multiplier only has to be large enough that the clamp saturates: at *255
+   a fill landing within one unit of the threshold resolved to a mid grey, which
+   on a mid-grey fill is no mark at all. It is a step function, so make the step
+   steep.
+
+   Alpha is pinned to 1: omitted, it inherits the origin's, and a transparent
+   swatch would render a fully transparent check. */
+@supports (color: rgb(from red r g b)) {
+  .chip-swatch {
+    --chip-ink-luma: rgb(from var(--chip-fill, var(--chip-colour-empty)) calc(0.2126 * r + 0.7152 * g + 0.0722 * b) 0 0);
+    --chip-check-ink: rgb(from var(--chip-ink-luma)
+      clamp(0, (107.5 - r) * 100000, 255)
+      clamp(0, (107.5 - r) * 100000, 255)
+      clamp(0, (107.5 - r) * 100000, 255) / 1);
+  }
+}
+
+/* The check rides the paint rather than a badge, so it needs no box of its own.
+   Reuses the brand check path already inlined for option::checkmark. */
+.chip-swatch::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  inline-size: var(--chip-colour-check);
+  block-size: var(--chip-colour-check);
+  background-color: var(--chip-check-ink);
+  opacity: 0;
+  mask-image: var(--chip-mark);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-image: var(--chip-mark);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  transition: opacity var(--chip-duration) var(--ease-out);
+}
+
+/* A chip that stands for a colour PAIR can report whether the pair works. The
+   mark becomes a cross, so pass and fail differ in shape and not merely in
+   colour — 1.4.1 is satisfied for a sighted user without a second cue.
+
+   It is not satisfied for anyone else: nothing about a mask reaches an
+   assistive technology. The consumer MUST say so in the chip's own label,
+   e.g. <span class="visually-hidden">Aqua — fails contrast</span>. Both
+   consumers have pairs that fail: Colour Pairing measures them, and the Image
+   Placeholder's aqua, peach, yellow and pink presets sit between 1.39:1 and
+   1.72:1 by design. */
+.chip-swatch[data-contrast="fail"],
+.chip[data-variant="colour"][data-contrast="fail"] .chip-swatch {
+  --chip-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6.4 19L5 17.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L5 6.4L6.4 5L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L17.6 5L19 6.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L19 17.6L17.6 19L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L6.4 19Z'/%3E%3C/svg%3E");
+}
+
+/* Named rather than left to the cascade: the base .chip:has(input:checked)
+   paints --chip-selected-background over the whole chip, which on a colour
+   chip would bury the swatch under the inverted surface. */
+.chip[data-variant="colour"]:has(input:checked) {
+  background-color: var(--chip-colour-ground);
+  border-width: var(--chip-colour-ring);
+  border-color: var(--chip-fill);
+}
+
+.chip[data-variant="colour"]:has(input:checked) .chip-swatch::after {
+  opacity: 1;
+}
+
+/* A swatch used outside a chip has no radio to read, so its consumer reveals
+   the mark itself — see cms/chip.md. */
+
+/* The base hover washes the background, which a colour chip has no room for —
+   its background is the ground ring. Hover takes the ring instead, at the
+   thinner weight, so hover and selection read as degrees of one thing.
+
+   The ring is --border-control here and NOT --chip-fill, unlike the selected
+   ring. Selection can afford an uncorrected ring because the mark carries it;
+   hover has no mark, so the ring is the only carrier and has to clear 3:1 on
+   its own. --border-control is 4.7:1 in both themes. */
+.chip[data-variant="colour"]:hover:not(:has(input:checked)):not(:has(input:disabled)) {
+  background-color: var(--chip-colour-ground);
+  border-width: var(--chip-colour-ring-hover);
+  border-color: var(--border-control);
+}
+
+/* The base rule greys the label's text and border; a colour chip has no text,
+   so the only thing left to fade is the paint. That does misreport the colour
+   slightly, which is a real cost — accepted because a disabled option is not
+   one the reader is being asked to judge, and a swatch with no disabled signal
+   at all is worse. The cursor carries over from the base rule. */
+.chip[data-variant="colour"]:has(input:disabled) {
+  border-color: transparent;
+}
+
+/* The fade is mixed into the paint rather than applied as opacity to the
+   swatch. opacity would take the mark down with it — a child cannot be more
+   opaque than its parent — and a locked-in answer's mark would land near 2.5:1.
+   1.4.11 exempts inactive controls, so that is not a failure, but an answer you
+   can still read is worth one declaration. */
+.chip[data-variant="colour"]:has(input:disabled) .chip-swatch {
+  background-color: color-mix(in srgb,
+    var(--chip-fill, var(--chip-colour-empty)) calc(var(--chip-disabled-opacity) * 100%),
+    var(--chip-colour-ground));
+}
+
+.chip-group.is-error .chip[data-variant="colour"] {
+  border-width: var(--chip-colour-ring);
+  border-color: var(--status-danger);
+}
+
+/* The base names these two winners rather than leaving them to specificity
+   (see the .chip-group.is-error rules above), and the variant has to name them
+   again: .chip-group.is-error .chip:has(input:checked) is (0,4,1) and beats the
+   variant's own (0,3,1) selected rule, so without this an answered colour chip
+   would paint its ring the inverted neutral instead of its own colour. */
+.chip-group.is-error .chip[data-variant="colour"]:has(input:checked) {
+  border-color: var(--chip-fill, var(--chip-colour-empty));
+}
+
+/* And a disabled chip must not keep the 3px ring the error rule just gave it,
+   or an unanswered, unavailable option reads as chosen. */
+.chip-group.is-error .chip[data-variant="colour"]:has(input:disabled) {
+  border-width: 0;
+}
+
+/* Two corrections to the obvious assumption, both verified rather than guessed:
+   a mask is not a forced-colours target, so the mark does NOT flatten; and
+   forced-color-adjust inherits, so declaring it on the selected chip would let
+   that chip keep its real paint while every unselected one flattened — an
+   inconsistent grid, and a Highlight mark drawn on an arbitrary brand colour.
+   So the swatch surrenders its paint explicitly, on both states. */
+@media (forced-colors: active) {
+  .chip[data-variant="colour"] {
+    border-width: 1px;
+    border-color: CanvasText;
+  }
+
+  .chip[data-variant="colour"]:has(input:checked) {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-width: var(--border-l);
+    border-color: Highlight;
+  }
+
+  .chip[data-variant="colour"]:has(input:checked) .chip-swatch::after {
+    background-color: Highlight;
+  }
+
+  /* Said outright rather than inherited. Canvas on both states keeps the grid
+     consistent, and CanvasText keeps every swatch's edge drawn. */
+  .chip[data-variant="colour"] .chip-swatch {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+  }
+}
+
+/* No prefers-reduced-motion guard: what transitions here is colour and opacity
+   only. The paint does change size between rest, hover and selected, but that
+   is a state change applied instantly, not an animation — which is exactly why
+   border-width is kept out of the transition above. */
 
 /* ------ 15. COMPONENTS IN PROGRESS ------ */
 /*

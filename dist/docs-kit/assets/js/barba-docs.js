@@ -3,7 +3,7 @@
  *
  * The portable core of the docs-kit's optional page-transition feature,
  * enabled with `pageTransitions: true` in docs.config.js. Derived from the
- * BrandOS site's assets/js/barba-init.js — that file is this one's sibling,
+ * By Default OS site's assets/js/barba-init.js — that file is this one's sibling,
  * not its consumer: the two are maintained separately, so a fix made here
  * may need mirroring there and vice versa.
  *

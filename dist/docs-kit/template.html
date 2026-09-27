@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" {{BRAND_THEME_ATTR}}>
+<html lang="en" {{BRAND_THEME_ATTR}}{{SPACE_ATTR}}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{PAGE_TITLE}} - {{SITE_NAME}}</title>
     <meta name="description" content="{{META_DESCRIPTION}}">
-
+{{SEARCH_META}}
     {{FAVICON_LINKS}}
 
     <!-- Open Graph -->
@@ -64,11 +64,14 @@
     <div{{WRAPPER_ATTRS}}>
     <div{{CONTAINER_ATTRS}}>
         <!-- The main landmark opens here, not at .docs-main below, so it holds
-             the page header as well as the article. A <header> maps to `banner`
+             the page header as well as the page body — an article element on
+             a `doc` or `page`, the listing itself on a `shelf` or `contents`
+             (PAGE_TYPES.article). Spelled without its angle brackets so a
+             grep for the tag still finds only real ones. A <header> maps to `banner`
              unless it is inside main/article/aside/nav/section, so a page header
              left outside main becomes a second banner alongside the site
              header's. The tool pages are arranged the same way. -->
-        <main>
+        <main{{MAIN_ATTRS}}>
         <!-- Page Header (full width, outside grid) -->
         {{PAGE_HEADER}}
 

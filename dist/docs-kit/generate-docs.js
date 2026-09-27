@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { readIconAliases } = require('./icon-aliases');
 const { marked } = require('marked');
 
 //------- Project discovery -------//
@@ -66,6 +67,10 @@ const CONFIG = {
   sectionIcons: userConfig.sectionIcons || {},
   rootLinks: userConfig.rootLinks || [],
   markdownSourceBase: userConfig.markdownSourceBase || null,
+  // Site search. Opt-in: the indexes are a build step (tools/build-search.js)
+  // and the UI is search.js, and the docs kit ships neither, so on by default
+  // a kit consumer would get a header button that opens nothing.
+  search: userConfig.search === true,
   validateLayers: userConfig.validateLayers === true,
   pageTransitions: userConfig.pageTransitions === true,
   uiScripts: userConfig.uiScripts || null, // null = kit-bundled copy-button + dropdown
@@ -194,34 +199,6 @@ const ICONS_DIR = CONFIG.iconsDir
   : path.join(KIT_ASSETS, 'icons');
 let ICON_MAP = {};
 
-/**
- * Renamed icons keep a byte-identical source file under the old name so
- * consumer icons.manifest.json entries keep resolving. Those files must ship
- * in the sprite but stay out of every browsable surface, or the registry
- * shows two names for one glyph.
- * @returns {Set<string>} deprecated icon keys
- */
-function readIconAliases() {
-  // Beside the icons first — that's where the package puts it for consumers
-  // building against dist/icons/src — then the project root, for this repo.
-  const file = [
-    path.join(ICONS_DIR, '..', 'aliases.json'),
-    path.join(ROOT, 'icons.aliases.json'),
-  ].find(p => fs.existsSync(p));
-  if (!file) return new Set();
-  try {
-    const aliases = JSON.parse(fs.readFileSync(file, 'utf8')).aliases;
-    if (!aliases || typeof aliases !== 'object' || Array.isArray(aliases)) {
-      console.warn(`⚠️  ${path.basename(file)} has no "aliases" object — deprecated icon names will show in the registry`);
-      return new Set();
-    }
-    return new Set(Object.keys(aliases).map(k => k.toLowerCase()));
-  } catch (err) {
-    console.warn(`⚠️  ${path.basename(file)} is unreadable (${err.message}) — deprecated icon names will show in the registry`);
-    return new Set();
-  }
-}
-
 // Numbers as SVG path data actually writes them: optional sign, optional
 // leading dot (".5"), optional exponent ("-1.52588e-05"). A naive \d+(\.\d+)?
 // splits both of those into garbage.
@@ -287,7 +264,7 @@ function buildIconMap() {
   }
   // Underscore-prefixed files are drafts — the sprite builder skips them too
   const files = fs.readdirSync(ICONS_DIR).filter(f => f.endsWith('.svg') && !f.startsWith('_'));
-  const aliases = readIconAliases();
+  const aliases = readIconAliases({ rootDir: ROOT, iconsDir: ICONS_DIR, surface: 'the icon registry' });
   const map = {};
   const seen = {};
   const shapes = [];
@@ -668,6 +645,16 @@ function slugifySection(section) {
   return String(section).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'page';
 }
 
+/**
+ * The human label behind a section slug — "brand-book" → "Brand Book". The
+ * search index filters and labels results by section, and the label is the
+ * only form a reader recognises. Root pages have no section and get ''.
+ */
+function sectionLabelFromSlug(slug) {
+  if (!slug || slug === 'page') return '';
+  return Object.keys(CONFIG.sectionFolders || {}).find(label => slugifySection(label) === slug) || '';
+}
+
 // Special filename overrides for files that don't follow the prefix-strip
 // pattern (config: filenameOverrides)
 const FILENAME_OVERRIDES = CONFIG.filenameOverrides;
@@ -934,6 +921,188 @@ function escapeAttr(text) {
     .replace(/>/g, '&gt;');
 }
 
+//------- Image shortcode -------//
+
+/**
+ * {{image: src="…" alt="…" caption="…" width="s" ratio="16x9" float="left"}}
+ *
+ * Markdown's ![alt](src) emits a bare <img> — no class, no attributes — so
+ * any image that is sized, cropped, placed or floated has to be written as
+ * raw HTML. A captioned one then has to split its attributes across two
+ * elements: the box attributes belong on the <figure>, the ratio on the
+ * <img> inside it. That split is the part an author gets wrong, so the
+ * shortcode does it rather than documenting it.
+ *
+ * Expanded BEFORE marked() runs, which is not a preference:
+ *
+ * A renderer override cannot work. Marked wraps every image in <p>, so a
+ * renderer returning a figure emits <p><figure>…</figure></p> — invalid,
+ * because a paragraph takes phrasing content and a figure is flow content.
+ * And there is no markdown syntax for a width or a float to hang off.
+ *
+ * Expanding after marked() cannot work either. By then the line is already
+ * <p>{{image: src=&quot;…</p>, with every quote entity-escaped.
+ *
+ * A raw <figure> at column 0 passes through marked untouched, including
+ * directly after a paragraph with no blank line between them — it is a
+ * CommonMark type-6 HTML block, which may interrupt a paragraph.
+ *
+ * The uncaptioned branch emits a bare <img>, which is a type-7 block and may
+ * NOT interrupt a paragraph. Written straight under a line of prose it is
+ * swallowed into that paragraph, behind a <br> from breaks: true. A blank
+ * line above it is therefore required, and cannot be inserted here: inside a
+ * raw HTML block — a .demo-preview, a lab section — a blank line would end
+ * the block and escape the rest of it. So it is documented instead
+ * (cms/image.md), the way the no-blank-lines-in-a-demo rule is.
+ */
+
+// Closed value sets, checked so a typo fails the build rather than emitting
+// an attribute no CSS rule matches — which looks like the feature is broken
+// rather than like the value is wrong. They mirror design-system.css §24.
+const IMAGE_SHORTCODE_VALUES = {
+  width: ['s', 'm', 'l'],
+  ratio: ['1x1', '3x2', '4x3', '16x9', '21x9'],
+  align: ['left', 'center', 'right'],
+  float: ['left', 'right'],
+};
+
+// Where the picture sits and how wide it may grow describe the box, so they
+// move to the <figure> when there is one — the caption is part of that box
+// and has to be measured, placed and floated with it. The ratio is a property
+// of the picture itself, so it stays on the <img> either way.
+const IMAGE_BOX_PARAMS = ['width', 'align', 'float'];
+const IMAGE_PARAMS = ['src', 'alt', 'caption', 'ratio', ...IMAGE_BOX_PARAMS];
+
+/**
+ * Build the markup for one {{image: …}} line.
+ * @param {string} params - everything between `{{image:` and `}}`
+ * @param {string} line - the whole line, quoted back in any error
+ * @returns {string} an <img> or a <figure> holding one
+ */
+function renderImageShortcode(params, line) {
+  const fail = (reason) => {
+    throw new Error(`{{image}}: ${reason}\n  ${line}\n  (grep cms/ for that line)`);
+  };
+
+  // No prototype: otherwise attrs.constructor is already set, and a parameter
+  // by that name would be reported as a duplicate rather than as unknown.
+  const attrs = Object.create(null);
+  const pair = /([a-z]+)="([^"]*)"/g;
+  let match;
+  while ((match = pair.exec(params))) {
+    if (attrs[match[1]] !== undefined) fail(`duplicate parameter "${match[1]}"`);
+    attrs[match[1]] = match[2];
+  }
+
+  // Anything the pair pattern did not consume is a typo — an unquoted value,
+  // a stray word, a curly quote pasted in from a document. Naming the
+  // leftover points at the character rather than at the line again.
+  const leftover = params.replace(/([a-z]+)="([^"]*)"/g, '').trim();
+  if (leftover) fail(`could not parse "${leftover}" — every value needs straight double quotes`);
+
+  for (const key of Object.keys(attrs)) {
+    if (!IMAGE_PARAMS.includes(key)) {
+      fail(`unknown parameter "${key}" — expected ${IMAGE_PARAMS.join(', ')}`);
+    }
+    const allowed = IMAGE_SHORTCODE_VALUES[key];
+    if (allowed && !allowed.includes(attrs[key])) {
+      fail(`${key}="${attrs[key]}" is not one of ${allowed.join(', ')}`);
+    }
+  }
+
+  if (!attrs.src) fail('src is required');
+  // Presence, not content: alt="" is the correct markup for a decorative
+  // image and nothing here can tell the two apart. Leaving it out altogether
+  // is an accessibility defect, which is why this fails the build where an
+  // unknown {{icon:}} only warns.
+  if (attrs.alt === undefined) fail('alt is required — use alt="" for a decorative image');
+
+  const box = IMAGE_BOX_PARAMS
+    .filter((key) => attrs[key])
+    .map((key) => ` data-${key}="${attrs[key]}"`)
+    .join('');
+  const ratio = attrs.ratio ? ` data-ratio="${attrs.ratio}"` : '';
+  const src = escapeAttr(attrs.src);
+  const alt = escapeAttr(attrs.alt);
+
+  // No caption, no figure: there is only one element for the attributes to
+  // sit on, and an empty <figure> around a picture says nothing to anyone.
+  if (attrs.caption === undefined) {
+    return `<img class="img"${box}${ratio} src="${src}" alt="${alt}">`;
+  }
+
+  // The caption is markdown — parseInline, so `code`, a link or emphasis
+  // behaves the way it does in the sentence above it. Inline only: a
+  // figcaption takes phrasing content, and a caption wanting a list or a
+  // second paragraph is prose that belongs outside the figure.
+  const caption = marked.parseInline(attrs.caption);
+  return [
+    `<figure${box}>`,
+    `<img class="img"${ratio} src="${src}" alt="${alt}">`,
+    `<figcaption>${caption}</figcaption>`,
+    '</figure>',
+  ].join('\n');
+}
+
+/**
+ * Expand every {{image: …}} line that is not inside a fenced code block.
+ *
+ * Fence state is tracked line by line rather than by splitting on a pattern,
+ * because a fence is defined by its marker AND its length: a ```` block may
+ * contain ``` lines, and only a run of the same character at least as long
+ * closes it. Pairing on the first three characters instead — the obvious
+ * shortcut — reads such a block's opener against the inner closer, and every
+ * fence after it is inverted until the counts happen to re-sync. The failure
+ * is silent both ways round: a shortcode in prose left literal, or one
+ * expanded inside a code block that meant to show it.
+ *
+ * The {{icon:}} guard cannot be reused for any of this. It works by matching
+ * rendered <code>/<pre> in an alternation, and before marked runs there is no
+ * such markup to match.
+ *
+ * Inline code needs no guard: only a line beginning with the shortcode
+ * matches, and a line of inline code begins with a backtick. Column 0 for the
+ * same reason — an indented shortcode stays literal and visibly so, rather
+ * than expanding into a figure marked would then read as an indented code
+ * block. That is the one escape hatch, so it stays silent; anything else that
+ * starts the line with the shortcode and does not parse is an error.
+ */
+function expandImageShortcodes(markdown) {
+  if (!markdown.includes('{{image:')) return markdown;
+
+  let fence = null;
+  return markdown.split('\n').map((line) => {
+    const marker = /^([`~]{3,})/.exec(line);
+
+    if (fence) {
+      // Closes only on the same character, at least as long, and alone on the
+      // line — a closing fence takes no info string.
+      const closes = marker
+        && marker[1][0] === fence.char
+        && marker[1].length >= fence.length
+        && line.slice(marker[1].length).trim() === '';
+      if (closes) fence = null;
+      return line;
+    }
+
+    if (marker) {
+      fence = { char: marker[1][0], length: marker[1].length };
+      return line;
+    }
+
+    if (!line.startsWith('{{image:')) return line;
+
+    const match = /^\{\{image:\s*(.*?)\s*\}\}[^\S\n]*$/.exec(line);
+    if (!match) {
+      throw new Error(
+        `{{image}}: the shortcode has to be the whole line — it must close with }} and carry nothing after it`
+        + `\n  ${line}\n  (grep cms/ for that line)`
+      );
+    }
+    return renderImageShortcode(match[1], line);
+  }).join('\n');
+}
+
 /**
  * Convert markdown to HTML using marked
  */
@@ -957,6 +1126,16 @@ function markdownToHtml(markdown) {
   // a page actually contains the placeholder.
   markdown = markdown.replace(/^\{\{icon-registry\}\}[^\S\n]*$/m, renderIconRegistry);
 
+  // {{page-types}} inlines the PAGE_TYPES table as JSON for the Page Layouts
+  // wireframe. Same line-only match and lazy replacer as the registry above,
+  // so a doc can still mention the placeholder inline as text.
+  markdown = markdown.replace(/^\{\{page-types\}\}[^\S\n]*$/m, renderPageTypes);
+
+  // Expand {{image: …}} into an <img>, or a <figure> when it carries a
+  // caption. Before marked(), like the registry above and unlike {{icon:}} —
+  // see expandImageShortcodes for why that is the only order that works.
+  markdown = expandImageShortcodes(markdown);
+
   // {{icon-manifest}} is a tool-body placeholder (cms/apps/<slug>.html). In
   // markdown it would publish as literal text, so say so at build time. Same
   // line-only match as the registry, so a doc can still mention it inline.
@@ -967,6 +1146,8 @@ function markdownToHtml(markdown) {
   let html = marked(markdown);
 
   // Add IDs to headings for anchor links
+  html = markSearchIgnoredBlocks(html);
+
   html = html.replace(/<h([1-6])>([^<]+)<\/h[1-6]>/g, (match, level, text) => {
     const id = text.toLowerCase()
       .replace(/[^\w\s-]/g, '') // Remove special characters
@@ -1196,24 +1377,53 @@ function validateStyleguideCoverage(expected, known) {
 //   chrome    feedback block + footer
 //   frame     'grid' = the 1080px content grid; 'wide' = full measure;
 //             'free' = no frame at all, the body brings its own layout
+//   article   whether the framed body is wrapped in <article>. Off for the two
+//             listing types: a shelf of covers or a contents list is
+//             navigation, not a composition, and every prose rule scoped to
+//             `.docs-main > article` would otherwise reach it. Meaningless on
+//             a free frame, which emits no wrapper at all, so those say false
 //   body      'markdown' | 'html' — 'html' skips markdownToHtml entirely
 //
 // `shelf` and `contents` are assigned by the generator for the pages it builds
 // itself (home, section indexes). They are in the table because the renderer
 // keys on them, not because anyone authors them.
 const PAGE_TYPES = {
-  shelf:    { level: 0, header: true,  stickyBar: false,  toc: false, pager: false, chrome: true,  frame: 'grid', body: 'markdown' },
-  contents: { level: 1, header: true,  stickyBar: 'full', toc: false, pager: false, chrome: true,  frame: 'grid', body: 'markdown' },
-  doc:      { level: 2, header: true,  stickyBar: 'full', toc: true,  pager: true,  chrome: true,  frame: 'grid', body: 'markdown' },
-  page:     { level: 2, header: true,  stickyBar: 'full', toc: false, pager: true,  chrome: true,  frame: 'wide', body: 'html' },
+  shelf:    { level: 0, header: true,  stickyBar: false,  toc: false, pager: false, chrome: true,  frame: 'grid', article: false, body: 'markdown' },
+  contents: { level: 1, header: true,  stickyBar: 'full', toc: false, pager: false, chrome: true,  frame: 'grid', article: false, body: 'markdown' },
+  doc:      { level: 2, header: true,  stickyBar: 'full', toc: true,  pager: true,  chrome: true,  frame: 'grid', article: true,  body: 'markdown' },
+  page:     { level: 2, header: true,  stickyBar: 'full', toc: false, pager: true,  chrome: true,  frame: 'wide', article: true,  body: 'html' },
   // The loosest type on purpose. A tool can look like anything; its only
   // requirement is that the reader can get out, which is the data-page-close
   // contract enforced at build time — not chrome this emits.
-  tool:     { level: 2, header: false, stickyBar: false,  toc: false, pager: false, chrome: false, frame: 'free', body: 'html' },
-  bare:     { level: null, header: false, stickyBar: false, toc: false, pager: false, chrome: false, frame: 'free', body: 'html' },
+  tool:     { level: 2, header: false, stickyBar: false,  toc: false, pager: false, chrome: false, frame: 'free', article: false, body: 'html' },
+  bare:     { level: null, header: false, stickyBar: false, toc: false, pager: false, chrome: false, frame: 'free', article: false, body: 'html' },
 };
 
 const DEFAULT_PAGE_TYPE = 'doc';
+/**
+ * The PAGE_TYPES table itself, inlined as a JSON block by {{page-types}}.
+ *
+ * This exists so the Page Layouts wireframe draws from the real table rather
+ * than a copy of it. The wireframe was built against a hand transcription and
+ * carried a comment saying it would drift — the same way the chrome matrix
+ * drifted out of page-layouts.md within four days of being copied there. A
+ * generated block cannot drift: it is the object.
+ *
+ * Only the chrome fields ship. `base`, `source` and each region's prose are
+ * presentation the page owns, have no counterpart here, and so cannot fall
+ * out of step with anything.
+ *
+ * Small enough to inline (well under 1 KB) and wanted on one page, so it
+ * follows {{icon-manifest}} rather than extraScripts — renderIconManifest
+ * writes that trade-off out in full.
+ *
+ * @returns {string} a JSON script block
+ */
+function renderPageTypes() {
+  // \u003c keeps "</script>" out of the block whatever a future field holds
+  const json = JSON.stringify(PAGE_TYPES).replace(/</g, '\\u003c');
+  return `<script type="application/json" id="page-types">${json}</script>`;
+}
 
 /**
  * Resolve a page's type preset, then apply the per-page overrides.
@@ -1271,6 +1481,12 @@ const ROOT_SPACE = {
   manifest: ROOT_MANIFEST,
   themeCss: (navBase) => rootThemeCss(navBase),
   themeAttr: '',
+  // Which space rendered this page, as an attribute nothing at runtime writes.
+  // `data-brand-theme` cannot answer that question: the early-theme bootstrap
+  // in the page head sets it from localStorage, so on a root page it means
+  // "this reader previewed a brand", not "this page belongs to one". Anything
+  // deciding what chrome to ship reads this instead. See generateNavJs.
+  spaceAttr: '',
   slugPrefix: '',
   footerText: () => SITE.footerText,
   defaultsDir: () => DOCS_DIR,
@@ -1285,6 +1501,7 @@ function brandSpace(brandKey, theme) {
     themeCss: (brandRelBase) =>
       `<!-- Brand Theme Override (must load last to override base styles) -->\n    <link rel="stylesheet" href="${brandRelBase}assets/theme.css">`,
     themeAttr: `data-brand-theme="${brandKey}"`,
+    spaceAttr: ` data-space="${brandKey}"`,
     slugPrefix: `${brandKey}-`,
     footerText: () => buildFooterHtml(theme.manifest.footerText),
     defaultsDir: () => path.join(DOCS_DIR, 'brands', brandKey),
@@ -1318,6 +1535,7 @@ function renderPage(template, {
   content = '',
   toc = '',
   frame = 'grid',
+  article = true,
   pageNav = '',
   access,
   scripts = '',
@@ -1330,8 +1548,18 @@ function renderPage(template, {
   // matches the literal 'collapsed'; a user's saved preference still wins.
   sidebar = null,
   containerExtra = '',
+  // Whether the site search indexes this page. Engine pages are in by default;
+  // a brand instance's pages are out (a prospect's search must never surface
+  // another tenant — ROADMAP, "Per-instance search indexes"), and a page can
+  // opt out with `search: "false"` in frontmatter. Both indexes key on the one
+  // this emits, so there is no second exclusion list to keep in step.
+  searchable = space.key === null,
 }) {
   const assets = assetBase === null ? navBase : assetBase;
+  const sectionLabel = searchable ? sectionLabelFromSlug(pageSection) : '';
+  const searchMeta = sectionLabel
+    ? `    <meta data-pagefind-filter="section[content]" data-pagefind-meta="section[content]" content="${escapeAttr(sectionLabel)}">\n`
+    : '';
   const chrome = brandChromeSlots(space.manifest, assets);
   const themeCssBase = brandRelBase === null ? assets : brandRelBase;
 
@@ -1353,12 +1581,15 @@ function renderPage(template, {
   return template
     .replaceAll('{{PAGE_TITLE}}', () => title)
     .replaceAll('{{META_DESCRIPTION}}', () => description)
+    .replace('{{SEARCH_META}}', () => searchMeta)
+    .replace('{{MAIN_ATTRS}}', () => (searchable ? ' data-pagefind-body' : ''))
     .replace('{{PAGE_HEADER}}', () => header)
     .replace('{{PAGE_STICKY_BAR}}', () => stickyBar)
     .replace('{{DESIGN_SYSTEM_PATH}}', () => prefixHref(assets, PROJECT_CONFIG.designSystemPath))
     .replace('{{BRAND_CSS}}', () => brandCssLink(assets))
     .replace('{{BRAND_THEME_CSS}}', () => space.themeCss(themeCssBase))
     .replace('{{BRAND_THEME_ATTR}}', () => space.themeAttr)
+    .replace('{{SPACE_ATTR}}', () => space.spaceAttr)
     .replace('{{FONT_HEAD}}', () => fontHeadHtml(space.manifest, navBase))
     .replace('{{PAGE_NAV}}', () => pageNav)
     .replace('{{PAGE_CHROME}}', () => hasChrome ? buildPageChrome(space.footerText()) : '')
@@ -1377,7 +1608,7 @@ function renderPage(template, {
     .replace('{{CONTAINER_EXTRA}}', () => containerExtra)
     .replace('{{LAYOUT_ATTRS}}', () => sidebar ? ` data-sidebar-default="${escapeAttr(sidebar)}"` : '')
     .replaceAll('{{NAV_BASE}}', () => navBase)
-    .replace('{{PAGE_BODY}}', () => buildPageBody({ frame, content, toc }));
+    .replace('{{PAGE_BODY}}', () => buildPageBody({ frame, content, toc, article }));
 }
 
 /**
@@ -1397,17 +1628,24 @@ function renderPage(template, {
  * §1, `.docs-content-grid[data-width="wide"]`), so a custom body can use the
  * full column while keeping the page's padding and rhythm.
  */
-function buildPageBody({ frame, content, toc = '' }) {
+function buildPageBody({ frame, content, toc = '', article = true }) {
   if (frame === 'free') return content;
 
   const widthAttr = frame === 'wide' ? ' data-width="wide"' : '';
+  // The listing types drop the <article>: a shelf or a contents list is
+  // navigation, and the element would announce it as a composition to a
+  // screen reader while inviting prose rules scoped to it to leak in. The
+  // table decides (PAGE_TYPES.article); this only obeys.
+  const body = article
+    ? `<article>
+                    ${content}
+                </article>`
+    : content;
   return `<div class="docs-content-grid padding-global"${widthAttr}>
             <!-- Main Content -->
             <div class="docs-main">
                 ${tocDropdown(toc)}
-                <article>
-                    ${content}
-                </article>
+                ${body}
             </div>
 
             <!-- Table of Contents -->
@@ -1444,9 +1682,28 @@ function buildPageChrome(footerText) {
  * Both TOC renderings are emitted by buildPageBody from the same raw list;
  * docs-site.css §8 shows exactly one of them, keyed on content-area width.
  */
+// Authored blocks that are UI, not prose. A swatch list indexes as "off-white
+// Hex CSS brown Hex CSS" and a demo preview indexes its own sample copy, so a
+// search for "off-white" or a demo's placeholder text would match the page that
+// merely displays it. The names inside them still reach the symbol index, which
+// reads them deliberately.
+//
+// Matched on the class, not on attribute order: `<div data-theme="dark"
+// class="demo-preview">` is as valid as the other way round, and an
+// order-sensitive rewrite silently misses it.
+const SEARCH_IGNORED_BLOCKS = ['demo-preview', 'color-list'];
+const SEARCH_IGNORE_RE = new RegExp(
+  `<div(?![^>]*data-pagefind-ignore)((?:\\s[^>]*)?\\sclass="[^"]*\\b(?:${SEARCH_IGNORED_BLOCKS.join('|')})\\b)`,
+  'g'
+);
+
+function markSearchIgnoredBlocks(html) {
+  return html.replace(SEARCH_IGNORE_RE, '<div data-pagefind-ignore$1');
+}
+
 function tocAside(tableOfContents) {
   if (!tableOfContents) return '';
-  return `<aside class="docs-toc">
+  return `<aside class="docs-toc" data-pagefind-ignore>
       <span class="toc-header">On this page</span>
       <div class="toc-wrapper">${tableOfContents}</div>
     </aside>`;
@@ -1461,7 +1718,7 @@ function tocAside(tableOfContents) {
  */
 function tocDropdown(tableOfContents) {
   if (!tableOfContents) return '';
-  return `<details class="docs-toc-dropdown">
+  return `<details class="docs-toc-dropdown" data-pagefind-ignore>
       <summary>On this page</summary>
       <div class="disclosure-content">${tableOfContents}</div>
     </details>`;
@@ -1543,6 +1800,7 @@ function generateIndexPage(template, filesBySection) {
     order: 0,
     level: PAGE_TYPES.shelf.level,
     frame: PAGE_TYPES.shelf.frame,
+    article: PAGE_TYPES.shelf.article,
     chrome: PAGE_TYPES.shelf.chrome,
   });
 }
@@ -1682,6 +1940,7 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
     order: sectionOrderValue,
     level: PAGE_TYPES.contents.level,
     frame: PAGE_TYPES.contents.frame,
+    article: PAGE_TYPES.contents.article,
     chrome: PAGE_TYPES.contents.chrome,
   });
 }
@@ -1949,7 +2208,7 @@ function buildBar({ sectionHref, sectionLabel, title, mdHref = null, width = 'do
                 </a>
                 <div class="dropdown-divider" role="separator"></div>
                 <a href="${mdHref}" class="dropdown-item js-md-open" role="menuitem" target="_blank" rel="noopener noreferrer">
-                  ${getIcon('open-full')}
+                  ${getIcon('share')}
                   <span>Open .md in new tab</span>
                 </a>
               </div>` : '';
@@ -1959,7 +2218,7 @@ function buildBar({ sectionHref, sectionLabel, title, mdHref = null, width = 'do
   // (design-system.css §41). No role="toolbar" here: this bar carries a
   // breadcrumb, and the class names the box while the role names the contents.
   const widthAttr = width ? ` data-width="${width}"` : '';
-  return `<div class="bar" data-density="regular"${widthAttr} data-sticky="true">
+  return `<div class="bar" data-density="regular"${widthAttr} data-sticky="true" data-pagefind-ignore>
       <div class="bar-container">
         <div class="bar-content">
           <nav class="breadcrumb" aria-label="Breadcrumb">
@@ -2143,7 +2402,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
   // prose and wrong for a hand-written page body. {{icon:name}} still expands:
   // the expansion normally lives inside markdownToHtml, so it is done here for
   // the bodies that skip it — the same parity the pair renderer keeps for
-  // tools, and what page-types.md promises for every HTML body. The guard
+  // tools, and what building-a-page.md promises for every HTML body. The guard
   // matches the markdown path's: the shorthand stays literal inside <code>,
   // <pre>, and HTML comments — an expansion inside a comment injects the
   // fallback's own comment markers and breaks the comment open at the first
@@ -2218,6 +2477,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
     content: htmlContent,
     toc: type.toc ? tableOfContents : '',
     frame: type.frame,
+    article: type.article,
     pageNav: type.pager ? generatePageNav(file, pageOrder) : '',
     access,
     scripts: pageScripts,
@@ -2228,6 +2488,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
     order: sidebarOrderMap[file.htmlPath] || 999,
     level: type.level,
     chrome: type.chrome,
+    searchable: frontmatter.search !== 'false',
     // The tool pair renderer has always passed this; a cms/*.md page could not,
     // so `sidebar: "collapsed"` in frontmatter was read by nothing and did
     // nothing — the quietest kind of wrong, since the page still built. Both
@@ -2244,6 +2505,12 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
  *   data-base=""     → root pages (assets/...)
  *   data-base="../"  → subdirectory pages (../assets/...)
  *   data-sidebar="false" → top nav only, no sidebar
+ *   data-search="false"  → no search trigger and no dialog. For a page that
+ *                          loads nav.js without dialog.js and search.js —
+ *                          every hand-authored bare page (login, account,
+ *                          access-denied, support, examples/bare): a trigger
+ *                          there would open nothing, and on the pages served
+ *                          signed out the indexes sit behind the gate anyway.
  */
 function generateNavJs(filesBySection) {
   // Build navigation HTML (no active page — active detection is done at runtime)
@@ -2278,6 +2545,7 @@ function generateNavJs(filesBySection) {
   if (!mount) return;
 
   var hasSidebar = mount.getAttribute('data-sidebar') !== 'false';
+  var hasSearch = mount.getAttribute('data-search') !== 'false';
 
   // ── Shared SVG icons (loaded from assets/images/svg-icons/) ──
   var ICON_HAMBURGER = '${esc(getRawIcon('menu'))}';
@@ -2289,6 +2557,9 @@ function generateNavJs(filesBySection) {
   var ICON_SUN = '${esc(getRawIcon('sun'))}';
   var ICON_MOON = '${esc(getRawIcon('moon'))}';
   var ICON_MAIL = '${esc(getRawIcon('mail'))}';
+  var ICON_SEARCH = '${esc(getRawIcon('search'))}';
+  var ICON_CLOCK = '${esc(getRawIcon('clock'))}';
+  var ICON_RETURN = '${esc(getRawIcon('return-arrow'))}';
 
   // ── Build site header HTML ──
   var headerStart = '<div class="site-header-start">';
@@ -2311,7 +2582,48 @@ function generateNavJs(filesBySection) {
 
   var ICON_CHEVRON_DOWN = '${esc(getRawIcon('chevron-down'))}';
 
-  var headerEnd = '<div class="site-header-end">'${contactNavJs}
+  // ── Brand instances ship no search surface ──
+  //
+  // The indexes cover the engine's pages only: renderPage's \`searchable\`
+  // defaults to \`space.key === null\`, so nothing an instance owns is indexed.
+  // Left as it was, a client pressing Cmd+K on their own brand page got the
+  // engine's system back — "By Default OS", "Brand Setup" — which crosses
+  // the one line a prospect has to be able to see (PROJECT_OVERVIEW section 11).
+  // Until per-instance indexing lands, no search at all is the correct failure.
+  //
+  // The gate is here at runtime, not at build: nav.js is one file for the whole
+  // site (root and instance pages load the same URL), and the \`space\`
+  // descriptor is a per-page render concept that never reaches this function.
+  // data-space is written by the generator from that descriptor and by nothing
+  // else, which is the whole point of it existing.
+  //
+  // It is NOT data-brand-theme, which was the obvious choice and is wrong: the
+  // early-theme bootstrap in every page head sets that attribute from
+  // localStorage before this deferred script runs. Any reader who had ever
+  // previewed a brand would have lost search on every page of the site — no
+  // trigger, no dialog, and no Cmd+K either — with no error and no way back
+  // short of clearing site data.
+  //
+  // search.js needs no matching change: initSearch bails when #site-search is
+  // absent, and it registers the Cmd+K / "/" listener after that bail, so the
+  // shortcuts go unbound with the markup. The same bail covers a page that
+  // opts out with data-search="false" on its mount (hasSearch above).
+  var isBrandInstance = document.documentElement.hasAttribute('data-space');
+
+  // Reads as a field on desktop and an icon on mobile — .header-action-label
+  // is what collapses, and the accessible name lives on aria-label either way.
+  // It is a button, not an input: the field is in the dialog, and two fields
+  // that both look like search is the confusion this avoids.
+  var searchTriggerJs = ${!CONFIG.search ? "''" : `(isBrandInstance || !hasSearch) ? '' : ('<button type="button" class="button header-action header-search-btn"'
+    + ' data-dialog-open="site-search" aria-controls="site-search"'
+    + ' aria-haspopup="dialog" aria-keyshortcuts="Meta+K Control+K"'
+    + ' aria-label="Search the system">'
+    + '<div class="svg-icn">' + ICON_SEARCH + '</div>'
+    + '<span class="header-action-label header-search-placeholder">Search</span>'
+    + '<kbd class="header-search-kbd" aria-hidden="true"></kbd>'
+    + '</button>')`};
+
+  var headerEnd = '<div class="site-header-end">' + searchTriggerJs${contactNavJs}
     + '<button type="button" class="button header-action dark-mode-toggle" data-icon-only aria-label="Dark mode">'
     + '<div class="svg-icn dark-mode-icon-light">' + ICON_SUN + '</div>'
     + '<div class="svg-icn dark-mode-icon-dark">' + ICON_MOON + '</div>'
@@ -2323,6 +2635,72 @@ function generateNavJs(filesBySection) {
     + '<a class="skip-link" href="#main">Skip to content</a>'
     + '<div class="site-header-inner">' + headerStart + headerEnd + '</div>'
     + '</header>';
+
+  // ── Build search dialog ──
+  //
+  // Emitted here rather than built in search.js so its icons come from the
+  // registry like every other icon on the site, and so the markup ships even
+  // if the module fails to load. It is a <dialog> for the same reason the
+  // sidebar is: dialog.js gives Escape, the focus trap, focus return and the
+  // scroll lock from the attributes alone.
+  //
+  // Injected as a sibling of the header, outside [data-barba="wrapper"], so a
+  // page transition never tears it down and its fixed positioning is never
+  // trapped inside a transformed ancestor.
+  //
+  // Gated with the trigger above: an instance, or a page that opted out on its
+  // mount, ships neither — no dialog to open and nothing to open it with.
+  var searchDialogHtml = ${!CONFIG.search ? "''" : `(isBrandInstance || !hasSearch) ? '' : ('<dialog id="site-search" class="dialog search-dialog" aria-label="Search the system"'
+    + ' data-symbols="${siteHref('/search-index/symbols.json')}"'
+    + ' data-pagefind="${siteHref('/pagefind/pagefind.js')}"'
+    + ' data-search-page="${siteHref('/search.html')}">'
+    // <search> carries an implicit role="search"; stating it again is noise.
+    + '<search class="search-field">'
+    + '<div class="svg-icn search-field-icon">' + ICON_SEARCH + '</div>'
+    // type="text", not "search". role="combobox" already overrides the implicit
+    // role, the base input rules name both types in one selector list so the
+    // styling is identical, and the webkit clear affordance was being hidden in
+    // CSS anyway — so the only live effect of type="search" was Chrome's native
+    // clear swallowing the first Escape, which cost a second press to close the
+    // dialog once anything was typed.
+    + '<input type="text" class="search-input" id="site-search-input" role="combobox"'
+    + ' aria-expanded="false" aria-controls="site-search-results" aria-autocomplete="list"'
+    // enterkeyhint carries what the type used to: a soft keyboard renders a
+    // Search action key for type="search" and a plain return for type="text",
+    // and that is UA behaviour no computed-style check can see.
+    + ' autocomplete="off" autocapitalize="none" spellcheck="false" autofocus'
+    + ' enterkeyhint="search"'
+    + ' placeholder="Search the system" aria-label="Search the system">'
+    + '<button type="button" class="button close-btn search-close" data-icon-only data-size="small" data-dialog-close aria-label="Close search">'
+    + '<div class="svg-icn">' + ICON_CLOSE + '</div>'
+    + '</button>'
+    + '</search>'
+    + '<div class="search-filters chip-group" role="radiogroup" aria-label="Show pages in section" hidden></div>'
+    // In the DOM from first render and never display:none — a live region
+    // revealed at announce time is not reliably announced (cms/login.md).
+    + '<p class="search-status text-size-s text-faded" aria-live="polite"></p>'
+    // role="listbox" may own only options and groups. The listbox therefore
+    // takes result rows and nothing else; the panel beside it takes every other
+    // state — the idle content, the callouts, the loading skeleton.
+    // .search-results stays the scroll container and the styling hook.
+    //
+    // The id moves onto the listbox and keeps its value, so aria-controls is
+    // unchanged and still correct: it must name the popup element itself, and
+    // .search-results is a roleless wrapper.
+    + '<div class="search-results">'
+    + '<div class="search-listbox" id="site-search-results" role="listbox" aria-label="Search results"></div>'
+    + '<div class="search-panel"></div>'
+    + '</div>'
+    + '<footer class="search-dialog-footer">'
+    + '<span class="search-hint"><kbd>&uarr;</kbd><kbd>&darr;</kbd> navigate</span>'
+    + '<span class="search-hint"><span class="svg-icn search-hint-icon">' + ICON_RETURN + '</span> open</span>'
+    + '<span class="search-hint"><kbd>esc</kbd> close</span>'
+    // "See all results", matching the row at the end of the list. "Open full
+    // search" invented a name for the page — it is titled Search, and calling
+    // it "full search" implies the dialog is a lesser version of it.
+    + '<a class="search-all" href="${siteHref('/search.html')}">See all results</a>'
+    + '</footer>'
+    + '</dialog>')`};
 
   // ── Build sidebar HTML (if needed) ──
   var sidebarHtml = '';
@@ -2359,7 +2737,15 @@ function generateNavJs(filesBySection) {
   // The mount (#site-nav) already contains <main class="docs-main-area"> from
   // the template. Use insertAdjacentHTML to prepend the header + sidebar
   // BEFORE the existing <main>, preserving it in place as a grid sibling.
-  mount.insertAdjacentHTML('afterbegin', headerHtml + sidebarHtml);
+  mount.insertAdjacentHTML('afterbegin', headerHtml + sidebarHtml + searchDialogHtml);
+
+  // A brand instance ships no search surface, so it must not ship a route to
+  // one either. The sidebar is built once for the whole site, so the entries
+  // that only exist on the engine's own site are marked and dropped here.
+  if (isBrandInstance) {
+    var engineOnly = mount.querySelectorAll('[data-engine-only]');
+    for (var eo = 0; eo < engineOnly.length; eo++) engineOnly[eo].remove();
+  }
 
   // Give the skip link something to land on. Done here rather than in the
   // page template because hand-written pages (the tool apps) use the same
@@ -2608,9 +2994,14 @@ function buildNavSectionsHtml(filesBySection) {
   }
 
   // Root-level links above the section list (config: rootLinks — array of
-  // { title, href, icon, access? }). Each renders as a single nav link in the
-  // same shape as the Home link, never as a one-item collapsible section.
-  // For root pages that belong to no section (e.g. the Glossary).
+  // { title, href, icon, access?, requires? }). Each renders as a single nav
+  // link in the same shape as the Home link, never as a one-item collapsible
+  // section. For root pages that belong to no section (e.g. the Glossary).
+  //
+  // `requires: 'search'` ties a link to the search feature, which can be off
+  // for a build and is always off inside a brand instance. Without it the
+  // sidebar kept a Search entry pointing at a page the instance does not
+  // have — the off switch produced a broken route rather than no route.
   for (const link of CONFIG.rootLinks || []) {
     // Fail loudly on a bad entry — a silent skip here would ship a nav with a
     // missing or dead root link and nothing in the build output to say why.
@@ -2622,8 +3013,13 @@ function buildNavSectionsHtml(filesBySection) {
       console.error(`❌ rootLinks icon not in the registry: "${link.icon}" (${link.title})`);
       process.exit(1);
     }
+    if (link.requires === 'search' && !CONFIG.search) continue;
+    // One nav.js serves the whole site, so the instance half of the gate has
+    // to be a runtime one — the same reason the search trigger and dialog are
+    // gated in the emitted script rather than here.
+    const engineOnly = link.requires === 'search' ? ' data-engine-only' : '';
     const rootIconHtml = link.icon ? `<div class="svg-icn">${getRawIcon(link.icon)}</div>` : '';
-    html += `<a href="${siteHref(link.href)}" class="sidebar-nav-link sidebar-nav-root-link" data-access="${escapeAttr(link.access || 'team')}" aria-label="${escapeAttr(link.title)}" data-tooltip="${escapeAttr(link.title)}" data-tooltip-position="right">${rootIconHtml}<span>${escapeAttr(link.title)}</span></a>`;
+    html += `<a href="${siteHref(link.href)}" class="sidebar-nav-link sidebar-nav-root-link" data-access="${escapeAttr(link.access || 'team')}"${engineOnly} aria-label="${escapeAttr(link.title)}" data-tooltip="${escapeAttr(link.title)}" data-tooltip-position="right">${rootIconHtml}<span>${escapeAttr(link.title)}</span></a>`;
   }
 
   // Read ordering from _defaults.md (configurable per directory)
@@ -2896,6 +3292,27 @@ function writeThemeConfig(themes) {
   // output reads from the manifest, never from literals (rework §3.4).
   if (ROOT_MANIFEST && ROOT_MANIFEST.emailSignature) {
     payload.emailSignature = ROOT_MANIFEST.emailSignature;
+  }
+  // The Colour Pairing tool's recommended pairs are the brand's call, so the
+  // engine carries none; a malformed list fails here rather than reaching
+  // the page as a panel of broken chips. Token names are checked at runtime,
+  // against the palette the theme actually defines.
+  if (ROOT_MANIFEST && ROOT_MANIFEST.colorPairings !== undefined) {
+    const pairs = ROOT_MANIFEST.colorPairings;
+    const valid = Array.isArray(pairs) && pairs.every(pair =>
+      pair && typeof pair.fg === 'string' && pair.fg && typeof pair.bg === 'string' && pair.bg);
+    if (!valid) {
+      throw new Error(`${ROOT_MANIFEST_PATH}: "colorPairings" must be an array of { "fg": "<token>", "bg": "<token>" }`);
+    }
+    const seen = new Set();
+    for (const pair of pairs) {
+      const key = `${pair.fg}|${pair.bg}`;
+      if (seen.has(key)) {
+        throw new Error(`${ROOT_MANIFEST_PATH}: "colorPairings" lists ${pair.fg} on ${pair.bg} twice`);
+      }
+      seen.add(key);
+    }
+    payload.colorPairings = pairs.map(pair => ({ fg: pair.fg, bg: pair.bg }));
   }
   const banner = `/**
  * Theme Configuration (GENERATED FILE, do not edit)
@@ -3298,6 +3715,7 @@ function generateSourceDirPages(template, {
       content,
       toc: type.toc ? generateTableOfContents(content) : '',
       frame: type.frame,
+      article: type.article,
       stickyBar: type.stickyBar
         ? buildBar({
             sectionHref: upHref,
@@ -3309,6 +3727,12 @@ function generateSourceDirPages(template, {
           })
         : '',
       access: deriveDataAccess(frontmatter),
+      // Out of search: the page-type skeletons are specimens, and a tool page
+      // is an application — its text is button labels, so indexing it puts
+      // "Save Copy URL Reset" into the prose index and matches a search for
+      // "copy" on four tools. Each tool's -docs page carries its prose and
+      // links to it, which is the route the site already offers.
+      searchable: dirName !== 'examples' && type.name !== 'tool' && frontmatter.search !== 'false',
       sectionSlug: slug,
       pageSection: slugifySection(section),
       order: parseInt(frontmatter.order, 10) || 999,
@@ -3335,7 +3759,7 @@ function generateSourceDirPages(template, {
     console.error('\nPut data-page-close on an <a> anywhere the layout suits — the');
     console.error('bar\'s trailing cluster, a corner of the canvas. Leave the href');
     console.error('off and the section index is filled in. It must be a link, not a');
-    console.error('button: nothing reads the attribute at runtime. See cms/page-types.md.\n');
+    console.error('button: nothing reads the attribute at runtime. See cms/building-a-page.md.\n');
     process.exit(1);
   }
 
@@ -3423,7 +3847,13 @@ function generateBrandSectionOverviews(template, themes) {
         sectionSlug: `${brandKey}-${slugifySection(title)}-overview`,
         pageSection: `${brandKey}-${slugifySection(title)}`,
         order: overviewOrder,
-        level: 1,
+        // Read the row rather than restate it. A brand overview is a contents
+        // page in every respect, so when that row changes — as `article` just
+        // did — the brand space moves with the root instead of drifting.
+        level: PAGE_TYPES.contents.level,
+        frame: PAGE_TYPES.contents.frame,
+        article: PAGE_TYPES.contents.article,
+        chrome: PAGE_TYPES.contents.chrome,
       });
     }
 
@@ -3712,8 +4142,8 @@ function generateBrandBook(template, themes) {
     contentHtml += `<section class="brand-book-section block gap-l">
       <h2>Colours</h2>
       <div class="grid cols-2 gap-l">
-        <div class="color-list border border-faded">${colorColLeft.map(renderColorRow).join('')}</div>
-        <div class="color-list border border-faded">${colorColRight.map(renderColorRow).join('')}</div>
+        <div class="color-list border border-faded" data-pagefind-ignore>${colorColLeft.map(renderColorRow).join('')}</div>
+        <div class="color-list border border-faded" data-pagefind-ignore>${colorColRight.map(renderColorRow).join('')}</div>
       </div>
     </section>`;
 
@@ -3737,8 +4167,8 @@ function generateBrandBook(template, themes) {
     contentHtml += `<section class="brand-book-section block gap-l">
       <h2>Backgrounds</h2>
       <div class="grid cols-2 gap-l">
-        <div class="color-list border border-faded">${bgColLeft.map(renderColorRow).join('')}</div>
-        <div class="color-list border border-faded">${bgColRight.map(renderColorRow).join('')}</div>
+        <div class="color-list border border-faded" data-pagefind-ignore>${bgColLeft.map(renderColorRow).join('')}</div>
+        <div class="color-list border border-faded" data-pagefind-ignore>${bgColRight.map(renderColorRow).join('')}</div>
       </div>
     </section>`;
 
@@ -4019,7 +4449,12 @@ function generateBrandIndexPages(template, themes) {
       sectionSlug: `${brandKey}-home`,
       pageSection: `${brandKey}-home`,
       order: 0,
-      level: 0,
+      // A brand home is a shelf, so it reads the shelf's row — same reason as
+      // the overviews above and the root home at generateIndexPage.
+      level: PAGE_TYPES.shelf.level,
+      frame: PAGE_TYPES.shelf.frame,
+      article: PAGE_TYPES.shelf.article,
+      chrome: PAGE_TYPES.shelf.chrome,
     });
 
     // Write to brand folder
@@ -4383,7 +4818,7 @@ async function generateDocs() {
     process.exit(1);
   }
 
-  // Fail the build on an unrecognised page type (see cms/page-types.md)
+  // Fail the build on an unrecognised page type (see cms/building-a-page.md)
   if (typeErrors.length > 0) {
     console.error('\n❌ Unknown page type:');
     console.error(typeErrors.join('\n'));

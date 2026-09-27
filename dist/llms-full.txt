@@ -1,16 +1,16 @@
-<!-- @bydefaultstudio/design-system v4.8.0 -->
+<!-- @bydefaultstudio/design-system v5.0.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 4.8.0 (package)**
+**Version: 5.0.0 (package)**
 
 ## Getting the System
 
 The system ships as one CSS file plus an icon sprite, distributed through the public artefact repo:
 
 ```bash
-npm install github:bydefaultstudio/design-system-dist#semver:^4.8.0
+npm install github:bydefaultstudio/design-system-dist#semver:^5.0.0
 ```
 
 - Link `design-system.css` before any site or theme CSS.
@@ -724,15 +724,20 @@ The composable border system. Combine one structural class with width, style, an
 
 ## Image Aspect Ratios
 
-Lock an image to a fixed ratio. Use on the `<img>` element directly.
+Crop an image to a fixed ratio. `data-ratio` goes on the `<img>` itself, never
+on a wrapping figure — the ratio crops the picture, not the box around it.
 
-| Class | Ratio | Description |
+| Attribute | Ratio | Description |
 | --- | --- | --- |
-| `.img-1x1` | 1:1 | Square |
-| `.img-3x2` | 3:2 | Standard photo |
-| `.img-4x3` | 4:3 | Classic |
-| `.img-16x9` | 16:9 | Widescreen |
-| `.img-21x9` | 21:9 | Cinematic |
+| `data-ratio="1x1"` | 1:1 | Square |
+| `data-ratio="3x2"` | 3:2 | Standard photo |
+| `data-ratio="4x3"` | 4:3 | Classic |
+| `data-ratio="16x9"` | 16:9 | Widescreen |
+| `data-ratio="21x9"` | 21:9 | Cinematic |
+
+Width, alignment and float are the image's other three axes. See the
+[image component](/website/image.html) for all four and for the
+`{{image: …}}` shortcode that writes them.
 
 ---
 
@@ -781,6 +786,8 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--font-script` | `cursive` |  |
 | `--font-editorial` | `var(--font-secondary)` |  |
 | `--font-code` | `var(--font-quaternary)` |  |
+| `--font-placeholder` | `var(--font-primary)` |  |
+| `--font-scribble` | `var(--font-primary)` |  |
 | **Palette** | | |
 | `--off-white` | `var(--neutral-50)` |  |
 | `--off-black` | `var(--neutral-900)` |  |
@@ -1034,6 +1041,9 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--selection-background` | `var(--text-primary)` |  |
 | `--selected-background` | `var(--text-primary)` |  |
 | `--selected-text` | `var(--background-primary)` |  |
+| **Highlight** | | |
+| `--mark-background` | `var(--yellow-light)` |  |
+| `--mark-color` | `var(--brown-dark)` |  |
 | **Divider tokens** | | |
 | `--divider-color` | `var(--border-faded)` |  |
 | `--divider-thickness` | `var(--border-s)` |  |
@@ -1126,6 +1136,9 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--max-width-m` | `960px` |  |
 | `--max-width-l` | `1200px` |  |
 | `--max-width-xl` | `1440px` |  |
+| `--img-width-s` | `200px` |  |
+| `--img-width-m` | `480px` |  |
+| `--img-width-l` | `640px` |  |
 | **Line length (typographic readability, 45–75ch range)** | | |
 | `--line-length-headline` | `22ch` |  |
 | `--line-length-body` | `55ch` |  |
@@ -1153,8 +1166,8 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | **Border radius tokens** | | |
 | `--radius-2xs` | `2px` |  |
 | `--radius-xs` | `4px` |  |
-| `--radius-s` | `6px` |  |
-| `--radius-m` | `10px` |  |
+| `--radius-s` | `8px` |  |
+| `--radius-m` | `12px` |  |
 | `--radius-l` | `16px` |  |
 | `--radius-xl` | `24px` |  |
 | `--radius-pill` | `999px` |  |
@@ -1250,8 +1263,10 @@ These are the actual CSS custom property values from `design-system.css`. Always
 
 | Token | Value | Note |
 | --- | --- | --- |
-| `--login-max-width` | `380px` | one-column form measure |
 | `--login-logo-height` | `88px` | header logo slot |
+| `--login-gap` | `var(--space-xl)` |  |
+| `--login-form-gap` | `var(--space-l)` |  |
+| `--login-field-gap` | `var(--space-s)` |  |
 
 ### 47. CELL INPUT
 
@@ -1323,6 +1338,9 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--checkbox-selected` | `#e8e6e3` |  |
 | `--checkbox-border` | `#555` |  |
 | `--checkbox-checkmark` | `#1a1a1a` |  |
+| **Highlight** | | |
+| `--mark-background` | `var(--yellow)` |  |
+| `--mark-color` | `var(--brown-dark)` |  |
 | **Dropdown** | | |
 | `--dropdown-background` | `var(--background-plain)` |  |
 
@@ -1587,28 +1605,28 @@ The scale uses a **progressive step** approach: +2px in the body range, +4px in 
 
 ## Headings
 
-All headings use `var(--font-secondary)` (ES Face). Every level (`h1`–`h6`) uses stepped rem sizing — one size on desktop, one step down below 960px. Sizes never use viewport units, so headings track browser zoom and user font-size settings (WCAG 1.4.4 Resize Text). Element defaults follow a traditional editorial scale (Major Third / ~1.25× progression).
+All headings take `var(--title-family)`. Every level (`h1`–`h6`) uses stepped rem sizing — `h1` to `h3` take one size on desktop and step down one rung below 960px; `h4` to `h6` hold their size at every width. Sizes never use viewport units, so headings track browser zoom and user font-size settings (WCAG 1.4.4 Resize Text). The ladder tops out at 36px, roughly twice body, and lands on body size at `h6`, where weight rather than size separates it from copy. That is the pattern Material 3, Primer, Spectrum and Apple share: in-page headings sit at or below 2× body, and anything larger is display type.
 
 Display contexts (hero pages, feature CTAs) use the separate `--headline-size` and `--title-size` role tokens, applied by setting `font-size` on your own display class. Element defaults stay smaller; display classes opt into hero sizing through the tokens.
 
 <div class="block gap-m">
-      <p class="demo-eyebrow">Heading 2</p>
+      <p class="demo-eyebrow">Heading 2 · --font-3xl 28px · --font-2xl 24px</p>
       <h2 >Every detail contributes to the whole</h2>
     </div>
     <div class="block gap-m">
-      <p class="demo-eyebrow">Heading 3</p>
+      <p class="demo-eyebrow">Heading 3 · --font-2xl 24px · --font-xl 22px</p>
       <h3 >Structure creates clarity in complexity</h3>
     </div>
     <div class="block gap-m">
-      <p class="demo-eyebrow">Heading 4</p>
+      <p class="demo-eyebrow">Heading 4 · --font-l 20px</p>
       <h4 >Good defaults eliminate guesswork</h4>
     </div>
     <div class="block gap-m">
-      <p class="demo-eyebrow">Heading 5</p>
+      <p class="demo-eyebrow">Heading 5 · --font-m 18px</p>
       <h5 >Constraints unlock creative freedom</h5>
     </div>
     <div class="block gap-m">
-      <p class="demo-eyebrow">Heading 6</p>
+      <p class="demo-eyebrow">Heading 6 · --font-s 16px</p>
       <h6 >Small decisions compound over time</h6>
     </div>
   </div>
@@ -1620,16 +1638,16 @@ Display contexts (hero pages, feature CTAs) use the separate `--headline-size` a
 <h3>Structure creates clarity in complexity</h3>
 ```
 
-| Element | Size (desktop · ≤959px) | Line Height | Letter Spacing |
-| --- | --- | --- | --- |
-| `h1` | 48px · 36px | `var(--line-height-m)` (1.2) | -0.04em |
-| `h2` | 40px · 32px | `var(--line-height-m)` (1.2) | -0.04em |
-| `h3` | 36px · 28px | `var(--line-height-m)` (1.2) | -0.04em |
-| `h4` | 32px · 24px | `var(--line-height-m)` (1.2) | -0.04em |
-| `h5` | 28px · 22px | `var(--line-height-m)` (1.2) | -0.04em |
-| `h6` | 24px · 20px | `var(--line-height-l)` (1.4) | -0.04em |
+| Element | Size token (desktop · ≤959px) | Size (desktop · ≤959px) | Weight | Line Height | Letter Spacing |
+| --- | --- | --- | --- | --- | --- |
+| `h1` | `var(--font-5xl)` · `var(--font-4xl)` | 36px · 32px | 400 | `var(--line-height-m)` (1.2) | -0.03em |
+| `h2` | `var(--font-3xl)` · `var(--font-2xl)` | 28px · 24px | 400 | `var(--line-height-m)` (1.2) | -0.03em |
+| `h3` | `var(--font-2xl)` · `var(--font-xl)` | 24px · 22px | 400 | `var(--line-height-m)` (1.2) | -0.03em |
+| `h4` | `var(--font-l)` | 20px · 20px | 400 | `var(--line-height-l)` (1.4) | -0.03em |
+| `h5` | `var(--font-m)` | 18px · 18px | 600 | `var(--line-height-l)` (1.4) | 0 |
+| `h6` | `var(--font-s)` | 16px · 16px | 600 | `var(--line-height-l)` (1.4) | 0 |
 
-Each heading size is a primitive `--font-*` token, one step up from the next level, stepped down one rung below 960px. No new tokens, no fluid units. Display sizing comes from `--headline-size` (56px → 28px) and `--title-size` (40px → 24px), set on your own display classes and kept distinct from element defaults so plain `<h1>` and `<h2>` in body copy read at editorial size.
+Each heading size is a primitive `--font-*` token. No new tokens, no fluid units. On desktop, `h1` to `h4` sit 1.17× to 1.29× apart, wide enough to read as levels on size alone. `h5` and `h6` fall inside body range, so weight does the work there: both are semi-bold, and both release the negative tracking that suits large sizes. Below 960px the ladder compresses to 32 / 24 / 22 / 20 / 18 / 16, so `h4` to `h6` hold their size rather than step: one more rung would land each on the level beneath it and merge two levels into one style on every phone. No two levels ever share a size, and the weight change at `h5` marks the point where size alone stops carrying the hierarchy. Display sizing comes from `--headline-size` (56px → 28px) and `--title-size` (40px → 24px), set on your own display classes and kept distinct from element defaults so plain `<h1>` and `<h2>` in body copy read at editorial size.
 
 ---
 
@@ -1740,9 +1758,25 @@ Used for pullquotes and highlighted passages. Renders in the secondary serif fon
 
 ---
 
+## Keyboard key
+
+`kbd` marks a key the reader is meant to press, not a key being discussed. It renders as a key cap: mono face, faded ground, hairline border and a one-pixel bottom shadow. It never wraps, so a chord stays one object.
+
+```html
+<p>Press <kbd>⌘K</kbd> to open search, then <kbd>esc</kbd> to close it.</p>
+```
+
+A chord is one `kbd` — <kbd>⌘K</kbd>, not `<kbd>⌘</kbd><kbd>K</kbd>` — because it is one press. Where the label differs by platform, stamp it at runtime rather than writing both: the search trigger's hint reads ⌘K on a Mac and Ctrl K everywhere else.
+
+| Element | Token | Font | Value |
+| --- | --- | --- | --- |
+| `kbd` | `var(--font-2xs)` | `var(--font-quaternary)` | IBM Plex Mono |
+
+---
+
 ## Links
 
-Links use text-color underlines with a hover transition. The default state shows `var(--text-plain)` text with a `var(--text-link)` coloured underline. On hover, the text colour shifts to `var(--text-link)` and the underline moves down slightly. External links (`target="_blank"`) automatically show a share icon via `::after` that inherits the link colour. The icon signals that a run of underlined text leaves the site, so it is suppressed on `.button` — a button already reads as its own affordance and carries its own icon slot.
+Links use text-color underlines with a hover transition. The default state shows `var(--text-plain)` text with a `var(--text-link)` coloured underline. On hover, the text colour shifts to `var(--text-link)` and the underline moves down slightly. External links (`target="_blank"`) automatically show a share icon via `::after` that inherits the link colour. The icon signals that a run of underlined text leaves the site, so it is suppressed wherever the link is not prose: on `.button` and on `.dropdown-item`, both of which drop the underline and carry their own icon slot, where the mark would trail as a second glyph.
 
 <div class="block gap-m">
       <p class="demo-eyebrow">External link</p>
@@ -1767,7 +1801,7 @@ Links use text-color underlines with a hover transition. The default state shows
 | Underline offset | 2.5px → 4px on hover |
 | Underline thickness | 1.5px |
 | Transition | 0.3s all |
-| External icon | `::after` on `a[target="_blank"]:not(.button)`, inherits `currentColor` |
+| External icon | `::after` on `a[target="_blank"]:not(.button):not(.dropdown-item)`, inherits `currentColor` |
 
 ---
 
@@ -1805,9 +1839,45 @@ code, pre, kbd { font-family: var(--font-quaternary); }
 
 ---
 
+## Greeking Faces
+
+Two faces that exist to be unreadable. `--font-placeholder` (Redacted) draws every glyph as a solid bar; `--font-scribble` (Redacted Script) draws a handwritten squiggle. Set one on a half-built layout and the filler stops competing for attention, so the structure, the rhythm and the line lengths are all you can judge — which is the only question a work-in-progress page is being looked at to answer.
+
+<div class="block gap-m">
+      <p class="demo-eyebrow">Scribble, Redacted Script</p>
+      <p >Typography is the voice of design</p>
+    </div>
+  </div>
+</div>
+
+```css
+/* Greek a whole block while its copy is still being written */
+.wip { font-family: var(--font-placeholder); }
+
+/* Or one slot at a time */
+.wip-caption { font-family: var(--font-scribble); }
+```
+
+| Token | Font | Weights | Renders as |
+| --- | --- | --- | --- |
+| `var(--font-placeholder)` | Redacted | 400 | Solid bars |
+| `var(--font-scribble)` | Redacted Script | 300, 400, 700 | Handwritten squiggle |
+
+Three things worth knowing before reaching for them.
+
+They are **a slot a brand may leave empty.** Every other family token names a role a brand fills with a face of its own; these name a role most brands will not fill, and leaving them alone costs nothing — the slot resolves to the primary face and greeking simply does not happen.
+
+They are **brand-supplied, like every other face.** The engine declares `--font-placeholder` and `--font-scribble` as neutral slots resolving to the primary face and ships no font. By Default's `theme.css` declares the `@font-face` rules — pointing at `assets/fonts/redacted{,-script}/`, woff2 with the original ttf as fallback — and re-points the two slots, exactly as it does for `--font-script`. A browser fetches a face only when something on the page uses it, so a page that greeks nothing downloads nothing. Another brand, or a consumer of the package, gets the slot names and the fallback: the tokens are always safe to reference and simply render readable text until a theme supplies the faces. Both stacks end in `--font-primary`, so a missing file or an uncovered character renders readably rather than not at all — a limit of greeking, not a hole in it.
+
+They are **for work in progress only.** Greeked text is invisible to nobody: a screen reader still reads every word, and the copy is still in the DOM, in the page source and in search results. Redaction is a visual effect, never a way to hide content. Anything that must not be read must not be on the page.
+
+Copy for them is on the [Placeholder](/docs/placeholder.html) page.
+
+---
+
 ## Font Weight
 
-Available weight values from light to black. All headings default to regular weight.
+Available weight values from light to black. `h1` to `h4` default to regular weight; `h5` and `h6` are semi-bold, since at body size weight is what marks them as headings.
 
 <div class="block gap-m">
       <p class="demo-eyebrow">Regular</p>
@@ -2313,6 +2383,7 @@ Section spacing controls the vertical rhythm between major page sections. Apply 
 
 | Class | Token | Desktop | Mobile |
 | --- | --- | --- | --- |
+| `.top-xsmall` / `.bottom-xsmall` | `var(--section-xs)` | 24px | 24px |
 | `.top-small` / `.bottom-small` | `var(--section-s)` | 32px | 24px |
 | `.top-medium` / `.bottom-medium` | `var(--section-m)` | 64px | 32px |
 | `.top-large` / `.bottom-large` | `var(--section-l)` | 96px | 56px |
@@ -2519,11 +2590,11 @@ Border radius tokens control corner rounding. Apply them directly via CSS. There
 
 <div class="block gap-m">
       <p class="demo-eyebrow">Small</p>
-      <div class="border border-faded padding-l" >6px radius</div>
+      <div class="border border-faded padding-l" >8px radius</div>
     </div>
     <div class="block gap-m">
       <p class="demo-eyebrow">Medium</p>
-      <div class="border border-faded padding-l" >10px radius</div>
+      <div class="border border-faded padding-l" >12px radius</div>
     </div>
     <div class="block gap-m">
       <p class="demo-eyebrow">Large</p>
@@ -2547,8 +2618,8 @@ border-radius: var(--radius-m);
 | Token | Value |
 | --- | --- |
 | `var(--radius-xs)` | 4px |
-| `var(--radius-s)` | 6px |
-| `var(--radius-m)` | 10px |
+| `var(--radius-s)` | 8px |
+| `var(--radius-m)` | 12px |
 | `var(--radius-l)` | 16px |
 | `var(--radius-xl)` | 24px |
 | `var(--radius-pill)` | 999px |
@@ -2793,12 +2864,12 @@ This document defines the rules and conventions for building components in the B
 
 ## How this system is organized
 
-Components are split across **four layers** so the design system can be lifted into other products without dragging the BrandOS docs site along with it:
+Components are split across **four layers** so the design system can be lifted into other products without dragging the By Default OS docs site along with it:
 
 - **`foundation`**: tokens, layout primitives, utilities. Lives in `assets/css/design-system.css`. Ships with every product.
 - **`core`**: reusable components (button, card, dropdown, …) plus brand identity docs (`brand-*.md`). Lives in `design-system.css`. Ships with every product.
-- **`docs-site`**: components that only power *this* BrandOS docs site (asset-card, book-cover, dont-card). Lives in `assets/css/docs-site.css`. Does **not** ship.
-- **`app`**: BrandOS-specific tools, integrations, and project content (calculators, world clock, ad preview, project case studies). Does **not** ship.
+- **`docs-site`**: components that only power *this* By Default OS docs site (asset-card, book-cover, dont-card). Lives in `assets/css/docs-site.css`. Does **not** ship.
+- **`app`**: By Default OS-specific tools, integrations, and project content (calculators, world clock, ad preview, project case studies). Does **not** ship.
 
 Every `cms/*.md` doc declares its layer in frontmatter:
 
@@ -2936,7 +3007,7 @@ Every interactive component must include:
 | Mark / Abbr / Figure | `mark`, `abbr`, `figure` | No | `mark.md` |
 | Skeleton | `.skeleton-line`, `.skeleton-label`, `.skeleton-input` | No | `skeleton.md` |
 
-> Asset Card, Book Cover and Don't Card are documented separately as **docs-site components**. They only exist to power this BrandOS docs site and are not part of the portable design system. See [Layer Discipline](/docs/setup.html) and CLAUDE.md §17.
+> Asset Card, Book Cover and Don't Card are documented separately as **docs-site components**. They only exist to power this By Default OS docs site and are not part of the portable design system. See [Layer Discipline](/docs/setup.html) and CLAUDE.md §17.
 
 ---
 
@@ -2999,7 +3070,7 @@ The website is also a channel — one of the places the brand meets an audience 
 | X card image | 1200×628 | JPG/PNG | 1 MB | `summary_large_image`; usually the OG image reused |
 | Favicon | SVG source + 32×32 PNG + ICO | SVG/PNG/ICO | – | avatar logo variant; lives in `assets/icons/` |
 | Apple touch icon | 180×180 | PNG | – | `assets/icons/apple-touch-icon.png` |
-| Page imagery | ratio set at render | – | – | `.img` + `img-1x1 / img-3x2 / img-4x3 / img-16x9 / img-21x9`, crop with the [image component](/website/image.html), not in the export |
+| Page imagery | ratio set at render | – | – | `.img` + `data-ratio="1x1 / 3x2 / 4x3 / 16x9 / 21x9"`, crop with the [image component](/website/image.html), not in the export |
 
 _Specs verified against platform documentation: 2026-07-05._
 
@@ -4351,7 +4422,7 @@ The identity configuration: breadcrumb in the content region, actions and close 
 </div>
 ```
 
-This exact shape is what the docs generator emits on every doc page. A tool's bar is the same component with controls in the content region instead of a breadcrumb, and the same trailing cluster — actions, overflow, close (see [Page Types](../docs/page-types.html)). Toggles and segmented controls centre themselves the same way — any supported child adapts without extra classes.
+This exact shape is what the docs generator emits on every doc page. A tool's bar is the same component with controls in the content region instead of a breadcrumb, and the same trailing cluster — actions, overflow, close (see [Building a Page](../docs/building-a-page.html)). Toggles and segmented controls centre themselves the same way — any supported child adapts without extra classes.
 
 ---
 
@@ -4790,7 +4861,7 @@ Structure classes the JS writes: `.bd-cursor-ready` and `.bd-cursor-replacing` o
 
 BD Video is the full player: a large centre play/pause button, a seek scrubber with time display, mute and fullscreen buttons, keyboard shortcuts, and timed link cards that surface over the frame. Author two elements — a `.bd-video` container and a `.bd-video-player` `<video>` inside it — then switch features on with `data-bd-*` attributes on the container. Everything else (buttons, scrubber, cue slot, icon sprite) is built by `assets/js/bd-video.js` at init, so the markup stays two elements no matter how many features run. Companion styles live in `bd-video.css`.
 
-For a decorative loop with no controls, use a plain `<video autoplay muted loop playsinline>` instead — this component is for video the visitor is meant to operate.
+For a decorative loop with no controls, use a plain `<video autoplay muted loop playsinline>` instead — this component is for video the visitor is meant to operate. See [Decorative loops use a plain video](#decorative-loops) for what you take on by doing that.
 
 ---
 
@@ -4807,24 +4878,33 @@ Every feature is off until its attribute is present. All attributes are booleans
 | Timed cue cards | `data-bd-cues` | `data-bd-cues` |
 | Pause when scrolled out of view | `data-bd-pause-offscreen` | `data-bd-pause-offscreen` |
 
-Always on, no attribute needed: the centre play/pause button, click-the-video-to-toggle, controls that auto-hide after 3s idle, keyboard shortcuts, state-aware `aria-label`s, and the reduced-motion carve-out.
+Always on, no attribute needed: the centre play/pause button, click-the-video-to-toggle, [controls that auto-hide after 3s](#auto-hide), keyboard shortcuts, state-aware `aria-label`s, and the reduced-motion carve-out.
 
 The component consumes design-system tokens only through namespaced `--bd-video-*` tokens with literal fallbacks, so it works on pages without `design-system.css`.
 
-## Configuration
-
-Define `window.bdVideoConfig` before the script loads. Every key is optional.
-
-| Key | Default | Meaning |
-|---|---|---|
-| `cueLabel` | `"View case study"` | Float-cursor label shown over a timed cue card. Applies only when the player rides the custom cursor (`data-cursor-badge` on the container) |
-
-Name the destination in `cueLabel` — the default suits a studio showreel linking to case studies; a product tour linking to docs would set `cueLabel: "Read the guide"`.
-
 ## Basic usage
 
+The two authored elements and nothing else. No attributes means no generated scrubber, mute or fullscreen button — but the centre play/pause button, click-the-video-to-toggle, the keyboard map and the auto-hide are all present, because those are not features you switch on. This is the smallest player that still works.
+
 ```html
-<div class="bd-video" role="region" aria-label="Video player"
+<div class="bd-video" role="region" aria-label="Studio showreel">
+  <video class="bd-video-player"
+         src="/assets/video/showreel.mp4"
+         poster="/assets/images/showreel-poster.jpg"
+         aria-label="Studio showreel"
+         playsinline
+         preload="metadata"></video>
+</div>
+```
+
+Use it when the only decision on offer is play or stop — a 10-second product loop, a gallery tile, a silent process film. Add a control the moment the visitor needs to do something the centre button cannot express.
+
+## Full controls
+
+`data-bd-scrubber`, `data-bd-mute` and `data-bd-fullscreen` together: the seek bar with its `1:23 / 5:30` readout, and the two pill buttons bottom-right. This is the configuration for video someone watches deliberately.
+
+```html
+<div class="bd-video" role="region" aria-label="Studio showreel"
      data-bd-scrubber data-bd-mute data-bd-fullscreen>
   <video class="bd-video-player"
          src="/assets/video/showreel.mp4"
@@ -4835,10 +4915,35 @@ Name the destination in `cueLabel` — the default suits a studio showreel linki
 </div>
 ```
 
-A muted autoplay preview adds the unmute prompt. In preview state the player runs silent and the centre button invites a start; the first play/unmute restarts from zero with sound.
+`data-bd-mute` is not optional on a player that carries audio — see [Accessibility](#accessibility). `data-bd-fullscreen` is a silent no-op on iOS Safari, so never make fullscreen the only route to something.
+
+## Auto-hide
+
+Three seconds after the last pointer move or touch, a **playing** player fades its chrome out; the next move or tap brings it back. The timer also starts at init, so a player that autoplays sheds its controls three seconds after the page loads with no interaction at all. It runs in every configuration and there is no attribute to turn it off — press play on either demo above and leave the pointer still to watch it happen.
+
+Two carve-outs stop the timer hiding something the visitor still needs:
+
+- **A playing player only.** The timer re-reads the media element when it fires and does nothing if the video is paused, so a player the visitor stopped keeps its chrome.
+- **Keyboard focus inside the player.** If anything inside the container matches `:focus-visible` when the timer fires, nothing hides — a keyboard visitor does not lose the controls they are tabbing through. Tabbing into chrome that has *already* hidden brings it straight back.
+
+`:focus-visible` rather than `document.activeElement` is the whole of the second carve-out, and the distinction is not academic. A mouse click on a button focuses it, so an `activeElement` test cannot tell a pointer press on the play button — how most playback starts — from a keyboard visitor navigating the controls. Keying on plain focus meant the chrome only ever hid when the click missed every button, which is the bug fixed in 0.8.1.
+
+Two cases hold the chrome open by design, both of them the browser's ruling rather than the player's. A visitor who **presses a key after clicking** makes the already-focused button match `:focus-visible`, and a visitor running **forced focus indicators** (Windows high-contrast, macOS Full Keyboard Access) makes every focused element match. Both mean someone is using the keyboard, which is the carve-out working, not failing.
+
+In the bare configuration under [Basic usage](#basic-usage) there is no control bar to hide, so only the centre button goes.
+
+The delay is the `HIDE_DELAY` constant in `bd-video.js` and is deliberately not exposed through `window.bdVideoConfig`: it is a house behaviour, and a player that hides its controls on a different clock to every other player is a bug, not a variant. The hidden state is `.is-controls-hidden`; the centre button fades on `--bd-video-duration-transition` and the control bar on the slower `--bd-video-duration-fade`.
+
+Two limits worth knowing, both recorded under [Accessibility](#accessibility): hidden buttons stay in the tab order at `opacity: 0` until focus reaches them, and a video that stops *on its own* never gets its control bar back.
+
+## Muted autoplay preview
+
+`autoplay muted loop` on the `<video>` plus `data-bd-unmute-prompt` on the container. The player runs silent from the start and offers an unmute prompt instead of assuming the visitor wants sound; the centre button reads Play over the moving frame because it is an invitation to leave preview, not a state readout. The first play or unmute restarts from zero with sound.
+
+Pair it with `data-bd-pause-offscreen` so a preview scrolled past stops costing battery.
 
 ```html
-<div class="bd-video" role="region" aria-label="Video player"
+<div class="bd-video" role="region" aria-label="Studio showreel"
      data-bd-scrubber data-bd-mute data-bd-fullscreen data-bd-unmute-prompt data-bd-pause-offscreen>
   <video class="bd-video-player"
          src="/assets/video/showreel.mp4"
@@ -4848,12 +4953,16 @@ A muted autoplay preview adds the unmute prompt. In preview state the player run
 </div>
 ```
 
+Under `prefers-reduced-motion` the script strips `autoplay` and pauses the video, so this demo holds its poster instead of moving. Below 768px the centre button is hidden in preview state and the unmute prompt moves to the top-right — tapping the frame starts playback.
+
 ## Timed cue cards
 
 `data-bd-cues` reads an inline JSON block inside the container and shows one link card at a time over the frame. `start`, `end`, `title`, `href` and `image` are required; `excerpt` is optional. Entries are validated (invalid ones are dropped with a console warning), sorted by `start`, and their thumbnails preloaded.
 
+Press play below: the first card appears half a second in and hands over to the second at four seconds. Both link to real pages, so clicking one leaves this page — that is the behaviour, not a demo shortcut.
+
 ```html
-<div class="bd-video" role="region" aria-label="Video player" data-bd-scrubber data-bd-cues>
+<div class="bd-video" role="region" aria-label="Studio showreel" data-bd-scrubber data-bd-cues>
   <video class="bd-video-player"
          src="/assets/video/showreel.mp4"
          poster="/assets/images/showreel-poster.jpg"
@@ -4876,6 +4985,32 @@ A muted autoplay preview adds the unmute prompt. In preview state the player run
 
 Clicking a card pauses the video and navigates — exiting fullscreen first when the player is fullscreen. Cues are suppressed during preview, during scrubbing, and for 800ms after a preview exit. Hovering a card holds it open past its end time (released on mouse leave, with a 3s fallback for touch).
 
+## Decorative loops
+
+A loop nobody is meant to operate is not a player. Drop `.bd-video` entirely and write the `<video>` on its own: no JS, no generated chrome, none of the player's 50KB of script and 17KB of CSS.
+
+```html
+<video src="/assets/video/texture-loop.mp4"
+       poster="/assets/images/texture-loop-poster.jpg"
+       autoplay muted loop playsinline preload="auto"
+       aria-hidden="true" tabindex="-1"></video>
+```
+
+That is the whole of the pattern: no controls, no chrome, no classes. The video above is exactly the snippet, looping as written.
+
+**The button under it is not part of the pattern — it is this page paying the pattern's bill.** `loop` is indefinite motion running beside text you are reading, and **WCAG 2.2.2 Pause, Stop, Hide** says that owes the visitor a way to stop it. The criterion measures how long the *movement* lasts rather than the clip, so a loop always owes it however short the file, and `aria-hidden` buys no exemption — it hides the element from assistive tech, not the movement from anyone's eye.
+
+Native `controls` would settle 2.2.2 in one attribute and is still the wrong answer here: it puts the browser's chrome on a page whose whole job is showing the system's own. So the control is a `.button`, driven by `assets/js/demo-loop-guard.js`. That module is worth reading, because it *is* the worked example of what the next two bullets ask of you — it reads its label off the media element rather than off the click, so a video stopped by anything else still reads honestly, and it applies the reduced-motion carve-out no bare `<video>` gets for free.
+
+In production, pick one deliberately: let the clip play once and stop, keep `loop` and build a pause control, or keep `loop` somewhere it is not competing with text for attention.
+
+The player is not the escape hatch either. Moving a decorative loop into `.bd-video` makes it `autoplay muted`, which is preview state, and the first press of the centre button there calls `exitPreview` — it restarts from zero, unmutes and plays. Pausing takes a second press.
+
+Two more things the player would have handled and this does not:
+
+- **Size it yourself.** `bd-video.css` is what gives `.bd-video-player` its `width: 100%`; a bare `<video>` renders at its intrinsic pixel width until the layout it sits in says otherwise. Size it from the consuming layout's own class — the demo above carries an inline `width` only because a docs demo has no layout to inherit from.
+- **Reduced motion is yours to honour, and only JavaScript can do it.** CSS cannot suppress `autoplay` or pause a video, and `<source media="…">` is honoured by Safari alone. The player does it with `matchMedia("(prefers-reduced-motion: reduce)")` — remove `autoplay`, call `pause()`. A bare `<video>` needs the same from you; the demo above gets it from `demo-loop-guard.js`.
+
 ## JavaScript
 
 Include `assets/js/bd-video.js` once per page. It self-initialises on `DOMContentLoaded` and exits early when the page has no `.bd-video-player`.
@@ -4886,6 +5021,16 @@ Include `assets/js/bd-video.js` once per page. It self-initialises on `DOMConten
 | `window.cleanupBdVideo()` | Disconnect the viewport observers and remove the document-level listeners before a router swaps page content. Idempotent |
 
 A client-side router must call both: `cleanupBdVideo()` before the swap, `initBdVideo(container)` on the entering container.
+
+### Configuration
+
+Define `window.bdVideoConfig` before the script loads. Every key is optional.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `cueLabel` | `"View case study"` | Float-cursor label shown over a timed cue card. Applies only when the player rides the custom cursor (`data-cursor-badge` on the container) |
+
+Name the destination in `cueLabel` — the default suits a studio showreel linking to case studies; a product tour linking to docs would set `cueLabel: "Read the guide"`.
 
 ### Events
 
@@ -4922,14 +5067,16 @@ What is accessible today:
 - **The scrubber is a real slider**: `role="slider"`, `tabindex="0"`, `aria-label="Seek"`, and live `aria-valuemin` / `aria-valuemax` / `aria-valuenow` / `aria-valuetext` (spoken as "1 minute 4 seconds of 3 minutes 20 seconds"). Focused, it takes <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> for 5-second steps, <kbd>PageUp</kbd> / <kbd>PageDown</kbd> for 10% of duration, and <kbd>Home</kbd> / <kbd>End</kbd> for start and end.
 - **Every generated control has a focus ring**: a 2px `:focus-visible` outline with offset on the centre button, unmute prompt, mute button, fullscreen button, scrubber and cue card.
 - **Icon and accessible name never diverge**: every code path that swaps the centre, mute or fullscreen icon rewrites that button's `aria-label` in the same step. Hover tooltips duplicate those labels and carry no unique information; the visible `1:23 / 5:30` readout is `aria-hidden`, because the scrubber's `aria-valuetext` already carries it.
+- **The centre button tracks the video, not the click that started it**: `play`, `pause` and `ended` listeners re-read the media element, so playback changed from anywhere — a video reaching its end, another component pausing this one, the browser's own context-menu or picture-in-picture controls — still leaves an honest label. Two paths opt out on purpose: preview shows Play over a playing video because the button is an invitation to exit preview, and the offscreen soft-pause freezes the chrome so a video that pauses out of sight does not appear to have stopped when it scrolls back.
 - **Auto-hide respects focus**: when the 3s idle timer fires with focus inside the player, the controls stay up.
 - **Cue cards have a live region**: the cue region is `aria-live="polite"`, and its `aria-label` is written once per cue rather than on every loop.
 - **Reduced motion is honoured**: `autoplay` is stripped, the deferred-autoplay marker is dropped, the video is paused, and control transitions are switched off.
 
 Known gaps beyond captions — treat these as constraints when placing a player, and as the roadmap after captions:
 
-- Controls hidden by the idle timer stay in the tab order at `opacity: 0`, and focus arriving afterwards does not bring them back (**2.4.7**). The mute button suppressed by the unmute prompt (`.is-mute-hidden`) is invisible and focusable the same way.
-- There are no `play` / `pause` / `ended` listeners, so state changed outside the component's own handlers leaves the centre button's label stale (**4.1.2**): a video that ends, the offscreen soft-pause, a rejected `play()`, and the browser's own context-menu or picture-in-picture controls.
+- Controls hidden by the idle timer stay in the tab order at `opacity: 0` (**2.4.7**). Keyboard focus reaching them does now bring them back — a `focusin` handler re-shows the chrome when the arriving element matches `:focus-visible` (0.8.1) — but they are focusable while invisible in the gap before that fires. The mute button suppressed by the unmute prompt (`.is-mute-hidden`) is invisible and focusable with no such recovery.
+- **A video that stops on its own never gets its control bar back** (**2.1.1**, **2.4.7**). `.is-controls-hidden` is cleared only on the `togglePlay` pause path; the `play` / `pause` / `ended` listeners run `reflectPlaybackState`, which restores the centre button through the `.bd-video.is-paused .bd-video-center-play` override in CSS but never clears the class. Let the [full-controls demo](#full-controls) reach its end without moving the pointer: the scrubber, mute and fullscreen buttons sit at `opacity: 0; pointer-events: none` until the pointer moves. A `.bd-video.is-paused .bd-video-controls { opacity: 1; pointer-events: auto; }` rule beside the centre button's would close it.
+- A `play()` rejected by the browser's autoplay policy still leaves the centre button reading Pause over a video that never started (**4.1.2**). The listeners above cannot catch it — the element never leaves paused, so no event fires — and `togglePlay` calls `play()` without handling the rejection. This is the remainder of the gap the listeners closed.
 - <kbd>Space</kbd> is handled at the player root, so it toggles playback rather than activating the focused button (**2.1.1**), and the arrow shortcuts have no modifier guard, so <kbd>Alt</kbd> + <kbd>←</kbd> seeks instead of going back (**2.1.4**).
 - Below 768px a preview player hides the centre button; with no `data-bd-mute` or `data-bd-fullscreen` that configuration leaves no keyboard-operable play control at all (**2.1.1**). Ship at least one control button on mobile preview players.
 - Fullscreen uses the unprefixed API only, so the button and <kbd>F</kbd> are a silent no-op on iOS Safari, and fullscreen neither traps focus nor makes the rest of the page `inert` (**2.4.3**).
@@ -4954,7 +5101,7 @@ Author requirements:
 
 **Don't**
 
-- Don't use bd-video for decorative background loops — a plain `<video>` with no controls is lighter and needs no JS
+- Don't use bd-video for decorative background loops — a plain `<video>` with no controls is lighter and needs no JS ([what that costs you](#decorative-loops))
 - Don't ship a player for video with speech until captions land (see above)
 - Don't hand-author the centre button, controls bar or scrubber — the script owns that DOM and removes stale copies
 - Don't re-theme by overriding `.bd-video-*` rules; override the `--bd-video-*` tokens instead
@@ -4985,7 +5132,7 @@ Every token is scoped under `.bd-video` and resolves through a design-system var
 | `--bd-video-inset` | `var(--space-s, 0.75rem)` | Outer inset for the scrubber and cue region |
 | `--bd-video-font-family` | `var(--font-primary, system-ui, …)` | All player text |
 | `--bd-video-font-2xs` / `-xs` / `-m` | `var(--font-*, …)` | Cue excerpt / time + tooltips / unmute prompt |
-| `--bd-video-radius-s` | `var(--radius-s, 6px)` | Tooltips and cue card |
+| `--bd-video-radius-s` | `var(--radius-s, 8px)` | Tooltips and cue card |
 
 Cue colours deliberately never inherit semantic tokens like `--text-primary`: those flip in dark mode, the video behind them does not.
 
@@ -5285,7 +5432,7 @@ A colour-only status fails [WCAG 1.4.1](https://www.w3.org/WAI/WCAG21/Understand
 | default | `250px` | `--font-5xl` | `--font-3xl` | `--space-2xl` |
 | `large` | `340px` | `--font-6xl` | `--font-4xl` | `--space-3xl` |
 
-Each title drops two rungs below 960px, the same step the heading scale takes.
+Each title drops two rungs below 960px.
 
 **Keep one size per shelf.** Uniform height is what makes an index read as a shelf rather than a pile — mixing sizes in one grid is the fastest way to lose that. The demo above breaks the rule only to show the three side by side.
 
@@ -5732,6 +5879,8 @@ No background, no border. The button is invisible until hovered. Use `data-varia
 
 Unstyled text-only button with no padding. Adds underline on hover. Use `data-variant="text"` for inline actions that should look like a text link but semantically remain a button.
 
+A text button with a `data-size` keeps that size's padding: `[data-size]` is declared after `[data-variant="text"]` and the two tie on specificity, so the size wins. That is the intended reading — a smaller text action gets the padding back as hit area, which a 14px line box on its own would not clear — and the sign-in screen's "Request access" relies on it.
+
 ```html
 <button class="button" data-variant="text">Learn more</button>
 ```
@@ -5801,6 +5950,7 @@ For cases where multiple children should stretch together, use `.align-stretch` 
 | `data-color="success"` | `data-color="green"` | Confirmations, positive outcomes |
 | `data-color="warning"` | `data-color="yellow"` | Caution, attention needed |
 | `data-color="info"` | `data-color="blue"` | Informational, neutral CTAs |
+| `data-color="accent"` | — | The brand accent, `--text-accent`, which the link colour defaults to. An action that should read as a link among neutral ones |
 
 ### Primary coloured
 
@@ -5814,13 +5964,23 @@ For cases where multiple children should stretch together, use `.align-stretch` 
 <button class="button" data-variant="faded" data-color="info">Info</button>
 ```
 
+### Accent
+
+The accent is what the link colour defaults to, so it belongs on the text variant: it lifts the action a user is meant to reach for above the neutral ones around it, without making it a filled button. The login screen's recovery actions use it. A filled accent button works too, but nothing uses one. It does not follow `data-color` modes on a surface (`.page-header`, `.book-cover`), which leave `--text-accent` alone on purpose; inside a moded surface use a neutral text button.
+
+Hover moves toward the ink rather than the ground. With the engine's default `--blue` and `--yellow` the accent sits at about 5:1 on its surface in both themes, enough for small text with no headroom, so mixing it toward the ground the way the status colours do would drop it under 4.5:1. Toward the ink it climbs and still reads as a step. A brand theme re-points those primitives and brings its own numbers; the direction holds.
+
+```html
+<button class="button" data-variant="text" data-color="accent">Send again</button>
+```
+
 ---
 
 ## Hover
 
 All buttons transition on hover.
 
-**Filled buttons** (primary and all `data-color` variants): the button colour shifts via `color-mix` to blend 10% of the background into the text colour.
+**Filled buttons** shift `--button-color` via `color-mix`. The base mixes 10% toward `--background-primary`. A colour exception picks its own direction: toward the ground, which is what danger and success do at 15%, or toward the ink (`--text-primary`) when lightening would drop the rest colour under 4.5:1, which is what accent does. The rule is that the rest colour stays readable in both themes, not that hover always lightens. Measure both before choosing.
 
 **Unfilled variants** (outline, faded, outline-faded, transparent): gain a subtle accent fill at 10% alpha of the button's identity colour.
 
@@ -6001,6 +6161,7 @@ This section documents how the component is built. For usage, see the sections a
 | `--button-text-color` | `var(--text-inverted)` | Text colour |
 | `--button-font` | `var(--font-secondary)` | Font family |
 | `--button-text-size` | `var(--body-size)` | Text size |
+| `--button-leading` | `var(--line-height-xs)` | Line height. The text variant re-points it to `--line-height-l`: with no padding to build the box, 0.7 leaves the label in a box shorter than its glyphs |
 | `--button-padding-y` | `var(--space-m)` | Vertical padding |
 | `--button-padding-x` | `var(--space-xl)` | Horizontal padding |
 | `--button-radius` | `0` | Corner radius |
@@ -6314,7 +6475,7 @@ Combine `.card--flush` with `.card--interactive` to create a clickable card with
 
 ```html
 <a class="card card--flush card--interactive" href="#">
-  <img class="img img-16x9 card-image" src="image.jpg" alt="Description">
+  <img class="img card-image" data-ratio="16x9" src="image.jpg" alt="Description">
   <div >
     <h3 class="card-title">Card with image</h3>
     <p class="card-description">Supporting text below the image.</p>
@@ -6398,6 +6559,7 @@ On a phone this matters: the single input keeps the OS caret, the soft keyboard 
 | `data-size` | block | `small` | Compact cells for long formats |
 | `data-type` | block | `success`, `danger` | Verdict colouring — see Verdicts |
 | `data-static` | block | boolean | Display-only cells, no input, no JS |
+| `data-full-width` | block | boolean | Fills the container; every letter cell takes an equal share and stays square, never wraps — see Full width |
 
 The component owns `--cell-input-*` geometry and colour tokens; override those rather than the selectors.
 
@@ -6483,6 +6645,19 @@ Colour is never the whole message. A verdict ships with a visible text outcome i
   <input type="text" id="code" aria-label="Verification code: 6 digits" aria-invalid="true">
 </div>
 <p role="status">That code has expired — a new one is on its way.</p>
+```
+
+## Full width
+
+A boolean attribute, the same one a button takes. The block fills its container and every letter cell takes an equal share of the row, staying square — the words are flattened so the share is uniform whatever the format, where a `"3 4"` with the words as the items would give each word half the row. The row never wraps and has no floor: it is sized by the container alone, so a narrow one gets small square cells rather than an orphan cell wrapping onto its own row-wide line. Two things go with that: words no longer wrap as units, and the word gap is not shown, so a full-width format shows its structure with separators (`"2-2-2"`), which keep their fixed width. Use it where the field should read as the same width as the text inputs around it, as the sign-in screen does.
+
+</div>
+
+```html
+<div class="cell-input" data-format="6" data-mode="digits" data-full-width>
+  <label class="cell-input-cells" for="code" aria-hidden="true"></label>
+  <input type="text" id="code" aria-label="Verification code: 6 digits" autocomplete="one-time-code">
+</div>
 ```
 
 ## Static display
@@ -6581,6 +6756,7 @@ This section documents how the component is built. For usage, see the sections a
 | `.cell-input.is-error` | Paints the danger state |
 | `.cell-input.is-disabled` | Disabled surface; pair with `disabled` on the input |
 | `.cell-input[data-static]` | Display-only: default cursor, hand-authored cells |
+| `.cell-input[data-full-width]` | Block and cells row at `100%`, row `nowrap` with `--cell-input-gap`; words `display: contents`; letter cells `flex: 1 1 0`, `min-width: 0`, `aspect-ratio: 1`; separators `flex: 0 0 auto` |
 
 ### Key rules
 
@@ -6604,12 +6780,15 @@ A chip group asks a question and offers a handful of answers, wrapping onto as m
 | Group | `.chip-group` | The `radiogroup`. Carries layout, state and the clearable opt-in |
 | Chip | `.chip` | A `<label>` wrapping the radio and its text |
 | Input | — | `input[type="radio"]`, covering the chip as an invisible hit area |
+| Swatch | `.chip-swatch` | The painted area, and what draws the mark. Not scoped to the chip — see below |
 
 | Axis | Values | Effect |
 |---|---|---|
 | `data-layout` | *absent* | Chips size to their label and wrap. The default |
 | `data-layout` | `scale` | Even stops for an ordered set, still wrapping |
 | `data-clearable` | present | Re-clicking the selected chip clears it. Needs `chip.js` |
+| `data-variant` | `colour` | The chip shows a colour instead of naming one |
+| `data-contrast` | `fail` | Colour variant only. The selected mark becomes a cross |
 
 ---
 
@@ -6645,6 +6824,89 @@ Reach for it when the options are a sequence (least to most, never to always). L
 ```
 
 `--chip-scale-min` sets the narrowest a stop may be before the row wraps. Re-point it when your labels are much shorter or much longer than the default assumes.
+
+---
+
+## Colour variant
+
+When the answer *is* a colour, naming it is worse than showing it. `data-variant="colour"` turns the chip into a swatch: the label text moves to `.visually-hidden`, the paint arrives on `--chip-fill`, and selection is a ring in the swatch's own colour with a mark on the paint.
+
+It is the same control underneath — native radios in labels — so the arrow keys, the focus ring and the group semantics are unchanged.
+
+```html
+<label class="chip" data-variant="colour" >
+  <input type="radio" name="preset" value="green" checked>
+  <span class="chip-swatch" aria-hidden="true"></span>
+  <span class="visually-hidden">Green</span>
+</label>
+```
+
+The examples below pass primitive tokens (`var(--green)`, `var(--blue)`) straight into `--chip-fill`. That is the one place §3's semantic-tokens rule does not apply: a colour picker's payload *is* a primitive — the colour is the answer, not a role. Everything else about the chip stays on semantic tokens.
+
+**The text does not disappear, it moves.** `.visually-hidden` keeps a real name in the DOM, so the label still names its own radio and nothing needs `aria-label`. A colour chip with no text at all is an unnamed control.
+
+### The mark chooses its own ink
+
+The check is drawn on the paint, not in a badge, so it has to stay readable on whatever colour arrives — including a hex a user typed. It flips automatically, in CSS, with no script:
+
+<p id="chip-ink-light-q" class="text-secondary">A light fill takes a dark mark</p>
+  <div class="chip-group" role="radiogroup" aria-labelledby="chip-ink-light-q">
+    <label class="chip" data-variant="colour" ><input type="radio" name="chip-ink-light" value="grey-808080" checked><span class="chip-swatch" aria-hidden="true"></span><span class="visually-hidden">Grey 808080</span></label>
+    <label class="chip" data-variant="colour" ><input type="radio" name="chip-ink-light" value="white"><span class="chip-swatch" aria-hidden="true"></span><span class="visually-hidden">White</span></label>
+    <label class="chip" data-variant="colour" ><input type="radio" name="chip-ink-light" value="yellow"><span class="chip-swatch" aria-hidden="true"></span><span class="visually-hidden">Yellow</span></label>
+    <label class="chip" data-variant="colour" ><input type="radio" name="chip-ink-light" value="green-light"><span class="chip-swatch" aria-hidden="true"></span><span class="visually-hidden">Green light</span></label>
+  </div>
+</div>
+
+Those two greys are one step apart and flip, because the threshold tracks WCAG's own crossover between black and white rather than a perceptual midpoint.
+
+Be precise about what that buys you. The threshold was swept against a 24,389-point sample of the sRGB cube, and **no** single threshold is exact — luma is gamma-encoded and relative luminance is not, so they disagree by hue. The one in use is the best available:
+
+- **Any** fill, including a hex a user typed, gets at least **3.03:1** — enough for 1.4.11, which asks 3:1 of a non-text indicator. It is not a 4.5:1 guarantee.
+- Across the 36 brand colours the worst case is **4.43:1**, on `--brown`.
+- For about 6.6% of the cube it picks the merely-adequate ink rather than the better one. Both still clear 3:1.
+
+`--chip-fill` must be an **opaque** colour. A transparent fill has no brightness to read, so the mark defaults to light — right on a dark page, invisible on a light one. An invalid value (a typo'd hex, a gradient) is worse: it makes both the paint and the mark invalid at computed-value time, and the chip renders as an empty ring with no console warning.
+
+Two more limits worth knowing. Without relative-colour-syntax support (Firefox below 128) the ink falls back to a single light value, so light fills lose their mark. And `data-variant="colour"` does **not** compose with `data-layout="scale"`: a colour chip has an explicit width, so it will not stretch to fill a scale column and each swatch strands ~64px of empty grid.
+
+### Reporting a pair that fails
+
+A colour chip often stands for a *pair* — an ink and its ground. `data-contrast="fail"` swaps the check for a cross, so a failing pair says so where it is chosen rather than only in a readout.
+
+<p id="chip-fail-q" class="text-secondary">The same group, with the failing pair chosen</p>
+  <div class="chip-group" role="radiogroup" aria-labelledby="chip-fail-q">
+    <label class="chip" data-variant="colour" ><input type="radio" name="chip-fail" value="blue"><span class="chip-swatch" aria-hidden="true"></span><span class="visually-hidden">Blue — passes contrast</span></label>
+    <label class="chip" data-variant="colour" data-contrast="fail" ><input type="radio" name="chip-fail" value="aqua" checked><span class="chip-swatch" aria-hidden="true"></span><span class="visually-hidden">Aqua — fails contrast</span></label>
+  </div>
+</div>
+
+```html
+<label class="chip" data-variant="colour" data-contrast="fail"
+       >
+  <input type="radio" name="preset" value="aqua">
+  <span class="chip-swatch" aria-hidden="true"></span>
+  <span class="visually-hidden">Aqua — fails contrast</span>
+</label>
+```
+
+Pass and fail differ in **shape**, not colour, so the distinction survives for a colour-blind user. It does not survive for a screen reader — a CSS mask reaches no assistive technology — so the hidden label has to carry it. Writing `data-contrast="fail"` without saying so in the label is the mistake to avoid.
+
+An unselected chip draws no mark at all, pass or fail. The judgement appears on the answer you chose, not on every option at once.
+
+### The swatch works outside a chip
+
+`.chip-swatch` is deliberately **not** scoped to `.chip`. A painted colour area that draws a pass/fail mark in an ink it works out for itself is useful to anything showing a colour, and a second copy of that logic is exactly what this variant exists to remove.
+
+It brings its own paint, hairline, mark and ink. What it does not bring is a reason to show the mark — outside a chip there is no radio to read, so the consumer reveals it:
+
+```css
+.my-tile:has(input:checked) .chip-swatch::after { opacity: 1; }
+```
+
+Colour Pairing's grids are colour chips outright, and its Pairings panel draws a split swatch by adding a half-width gradient to `.chip-swatch`. A consumer that does compose a bare swatch puts `data-contrast="fail"` on the swatch itself, since that is the element reading `--chip-mark`.
+
+Set `--chip-fill` on an **ancestor** and let it inherit. Do not redeclare it on the swatch: a custom property declared on an element shadows the value an ancestor set, which is why `.chip-swatch` states its defaults at the use site rather than as its own declarations.
 
 ---
 
@@ -6716,7 +6978,14 @@ Clearing is a DOM change, and assistive technology does not listen to DOM events
 - A chip meets `--target-min` (44px) in the block axis. There is no `min-width` — a chip is as wide as its label, so a one- or two-character label lands near 35px. That clears the 24px of WCAG 2.2's 2.5.8 but not 44; size labels accordingly.
 - The rest border reads `--border-control`, not `--border-faded`. A chip's surface is transparent, so the border is the only thing saying it is pressable, and a control boundary needs 3:1. `--border-faded` is decorative at 1.4:1.
 - `Delete` and `Backspace` clear a `data-clearable` answer from the keyboard, so clearing is never pointer-only.
-- No `prefers-reduced-motion` guard, deliberately: a chip transitions colour and nothing else. There is no motion to reduce.
+- No `prefers-reduced-motion` guard, deliberately: a chip transitions colour and nothing else. There is no motion to reduce. The colour variant's paint does change size between rest, hover and selected, but that is applied instantly — `border-width` is kept out of the transition so no geometry animates.
+- A colour chip is 48px square, so it clears `--target-min` on **both** axes — the text chip's inline-padding caveat does not apply.
+- A colour chip's name comes from a `.visually-hidden` span. Without it the control is unnamed, because the swatch is `aria-hidden`.
+- The selected ring is the swatch's own colour and is **not** contrast-corrected. On a pale swatch it reads near 1.05:1 and carries nothing; the mark is what satisfies 1.4.11, which is why its ink flips. This was chosen deliberately — do not "fix" the ring to a neutral.
+- **Hover is the exception.** It has no mark, so the ring is its only carrier and it uses `--border-control` (4.7:1) rather than the fill. Hover and selection therefore differ in colour as well as weight, which is correct: they are different states, not degrees of one.
+- Under forced colours the swatch surrenders its paint on **both** states, explicitly. A mask is not a forced-colours target so the mark never flattens, and `forced-color-adjust` inherits — declaring it only on the selected chip would leave that one chip painted while the rest flattened.
+- `data-contrast="fail"` changes only the mask. Say it in the hidden label too, or the state reaches sighted users only.
+- Under forced colours the paint and the mask both flatten, so the colour variant falls back to a `Highlight` ring and a `Highlight` mark. The swatch colour itself cannot survive that mode.
 
 ---
 
@@ -6729,6 +6998,10 @@ Clearing is a DOM change, and assistive technology does not listen to DOM events
 - **Don't** use `.tag` as a control, or `.chip` as a label — see the split at the top of this page.
 - **Don't** put more than one answer in a group. A chip group is one-of-N; multi-select is not this component.
 - **Don't** re-implement arrow keys, roving focus or selection. The radios already do it.
+- **Do** give every colour chip a `.visually-hidden` name, and put the pass/fail verdict in it.
+- **Don't** pass a transparent or semi-transparent `--chip-fill`. The mark's ink is read from the fill's brightness.
+- **Don't** set `data-contrast` on an option the user has not chosen — it draws nothing, and it is not a filter.
+- **Don't** redeclare `--chip-fill` on `.chip-swatch`. Set it on the chip, or on whatever wraps the swatch, and let it inherit.
 
 ---
 
@@ -6739,17 +7012,28 @@ Clearing is a DOM change, and assistive technology does not listen to DOM events
 | Token | Default | What it controls |
 |---|---|---|
 | `--chip-background` | `transparent` | Rest surface |
-| `--chip-border` | `var(--border-faded)` | Rest border |
+| `--chip-border` | `var(--border-control)` | Rest border |
 | `--chip-text` | `var(--text-secondary)` | Rest text |
 | `--chip-hover-background` | `var(--background-faded)` | Hover wash — a preview, never selection |
 | `--chip-hover-text` | `var(--text-primary)` | Hover text |
 | `--chip-selected-background` | `var(--selected-background)` | Selected surface, from the system pair |
 | `--chip-selected-text` | `var(--selected-text)` | Text on the selected surface |
 | `--chip-radius` | `var(--radius-pill)` | Corner radius |
-| `--chip-padding-x` | `var(--space-m)` | Inline padding |
+| `--chip-padding-x` | `var(--space-xl)` | Inline padding |
 | `--chip-gap` | `var(--space-xs)` | Gap between chips |
 | `--chip-scale-min` | `7rem` | Narrowest scale stop before the row wraps |
 | `--chip-duration` | `var(--duration-2xs)` | Colour transition |
+| `--chip-colour-size` | `3rem` | Colour chip's square size |
+| `--chip-colour-gap` | `0.125rem` | Ground ring between the paint and the edge |
+| `--chip-colour-ground` | `var(--background-primary)` | That ring's colour. Must stay **opaque**, so the selected ring reads as separate from the paint |
+| `--chip-colour-ring` | `var(--border-l)` | Selected ring width |
+| `--chip-colour-ring-hover` | `0.15625rem` | Hover ring width. Off the border scale on purpose — see the CSS comment |
+| `--chip-swatch-border` | `var(--border-control)` | The swatch's own hairline. Keep it at 3:1 against the ground or a pale swatch loses its edge |
+| `--chip-swatch-border-width` | `var(--border-s)` | That hairline's width |
+| `--chip-colour-check` | `1.5rem` | Mark size |
+| `--chip-fill` | `var(--background-faded)` | The colour a colour chip shows. Set per chip |
+| `--chip-mark` | check icon | The mark drawn when selected. `data-contrast="fail"` swaps it for a cross |
+| `--chip-check-ink` | computed | The mark's ink, flipped from `--chip-fill`'s brightness |
 
 ### Selectors
 
@@ -6763,6 +7047,11 @@ Clearing is a DOM change, and assistive technology does not listen to DOM events
 | `.chip input[type="radio"]` | Invisible hit area covering the chip |
 | `.chip:has(input:checked)` | Selected |
 | `.chip:has(input:checked:disabled)` | Explicit winner where both states meet |
+| `.chip[data-variant="colour"]` | The colour variant: square, ground ring, no text |
+| `.chip-swatch` | The paint and the mark. Usable outside a chip |
+| `.chip-swatch[data-contrast="fail"]` | Swaps the mark for a cross |
+| `.chip[data-variant="colour"]:has(input:checked)` | Ring in the fill's own colour; reveals the mark |
+| `.chip-group.is-error .chip[data-variant="colour"]:has(input:checked)` | Names the winner over the group error, as the base does |
 
 ### Key rules
 
@@ -8818,7 +9107,7 @@ All standard text input types are styled globally:
 <input type="tel" placeholder="Phone">
 ```
 
-**Properties:** full width, `font-size: var(--font-m)` (matches body text), `padding: var(--space-m) var(--space-l)`, border from `var(--input-border)`, smooth focus transition.
+**Properties:** full width, `font-size: var(--font-m)` (matches body text), `padding: var(--space-m) var(--space-l)`, border from `var(--input-border)`, `var(--radius-m)` corners, smooth focus transition.
 
 ---
 
@@ -9372,7 +9661,7 @@ The customizable select picker reuses `--dropdown-background`, `--dropdown-borde
 | `.form-toggle.is-label-right label` | Label-right variant, reorders grid column |
 | `.form-group` | Label + input wrapper, bottom margin spacing |
 | `.form-hint` | Helper text below input |
-| `.form-error` | Error message styling |
+| `.form-error` | Error message: `--status-danger` at `--font-s`, a flex row with `--space-xs` gap so a leading `.svg-icn` (`--icon-size: 1.25em`) sits beside the words — use a `<span class="svg-icn">` inside the `<p>`, since a paragraph cannot hold a `<div>` |
 | `.segmented-control` | Button group track: faded background, pill radius |
 | `.segmented-control-btn` | Segment button: padding, transitions |
 | `.segmented-control-btn.is-active` | Active segment: primary bg, inverted text |
@@ -9391,108 +9680,240 @@ The customizable select picker reuses `--dropdown-background`, `--dropdown-borde
 
 ### Image
 
-Images use a **composable architecture** similar to borders. The `.img` base class provides consistent display behaviour, and aspect-ratio combo classes control proportions independently.
+# Image
+
+An image on a page answers four questions: how wide it may grow, what proportions it holds, where it sits once it is narrower than its column, and whether the text wraps around it. Each is one attribute.
+
+The `.img` class is required — it makes the image a block that fills its container and crops rather than stretches when a ratio is forced. Variation is `data-width`, `data-ratio`, `data-float` and `data-align`. In a markdown page, write all of it with the [`{{image: …}}` shortcode](#image-in-markdown) instead of hand-writing the HTML.
 
 ---
 
-## Base Class
+## Anatomy
 
-The `.img` class turns images into block-level elements with responsive width and cover-fit behaviour.
+| Axis | Mechanism | Example |
+|---|---|---|
+| Width | `data-width` | `data-width="s"` |
+| Ratio | `data-ratio` | `data-ratio="16x9"` |
+| Float | `data-float` | `data-float="left"` |
+| Alignment | `data-align` | `data-align="center"` |
+
+The image has its own width scale, `--img-width-*`, deliberately smaller than the `--container-*` and `--max-width-*` scales that size page shells — an image in prose sits inside a shell, so a shell step is the wrong unit for it. The gap beside a float comes from `--space-*`.
+
+**Width, float and alignment describe the box. Ratio describes the picture.** That distinction does nothing until a caption arrives — then the box is a `<figure>` and the picture is the `<img>` inside it, and the three box attributes move to the figure while `data-ratio` stays on the image. Getting that split wrong is the reason the shortcode exists.
+
+---
+
+## Basic usage
 
 ```html
 <img class="img" src="image.jpg" alt="Description">
 ```
 
-| Property | Value | Purpose |
+With nothing else, the image fills its container at its natural proportions.
+
+---
+
+## Width
+
+`data-width` caps how wide the image may grow. It is a cap, not a fixed width — below it the image is still fluid.
+
+```html
+<img class="img" data-width="m" src="image.jpg" alt="Description">
+```
+
+| Value | Token | Width |
 |---|---|---|
-| `display` | `block` | Removes inline whitespace gap |
-| `width` | `100%` | Fills container width |
-| `height` | `auto` | Maintains natural aspect ratio |
-| `object-fit` | `cover` | Crops to fill when aspect ratio is forced |
+| `s` | `var(--img-width-s)` | 200px |
+| `m` | `var(--img-width-m)` | 480px |
+| `l` | `var(--img-width-l)` | 640px |
+
+No attribute means the full width of the column, which is the fourth size and the default.
+
+Three steps, not five. The scale pointed at `--max-width-*` until 2026-09-23, which put its top three steps beyond any reading column — in a 780px docs column, `m`, `l` and `xl` all silently meant "full width". These three are each visibly different in any column this system sets prose in.
 
 ---
 
-## Aspect Ratio Combos
+## Ratio
 
-Add an aspect-ratio class alongside `.img` to enforce proportions. The image will crop to fit using `object-fit: cover`.
-
-### 1:1
+`data-ratio` crops the image to fixed proportions. The image fills the frame and crops from the centre — `object-fit: cover` on the base class is what makes a grid of mismatched sources stay a grid.
 
 ```html
-<img class="img img-1x1" src="image.jpg" alt="Description">
+<img class="img" data-ratio="1x1" src="image.jpg" alt="Description">
+<img class="img" data-ratio="21x9" src="image.jpg" alt="Description">
 ```
 
-### 3:2
+| Value | Ratio | Use |
+|---|---|---|
+| `1x1` | 1:1 | Square |
+| `3x2` | 3:2 | Standard photo |
+| `4x3` | 4:3 | Classic |
+| `16x9` | 16:9 | Widescreen |
+| `21x9` | 21:9 | Cinematic |
 
-```html
-<img class="img img-3x2" src="image.jpg" alt="Description">
-```
-
-### 4:3
-
-```html
-<img class="img img-4x3" src="image.jpg" alt="Description">
-```
-
-### 16:9
-
-```html
-<img class="img img-16x9" src="image.jpg" alt="Description">
-```
-
-### 21:9
-
-```html
-<img class="img img-21x9" src="image.jpg" alt="Description">
-```
+Without a ratio the image keeps its natural proportions and nothing is cropped.
 
 ---
 
-## Available Classes
+## Alignment
 
-| Class | Effect |
+`data-align` places the image in its parent once it is narrower than the space it is given. It is the same foundation utility every other box uses, not an image attribute — which is why it does nothing on a full-width image, and why it needs a width to act on.
+
+```html
+<img class="img" data-width="m" data-align="center" src="image.jpg" alt="Description">
+```
+
+`left`, `center` and `right` are the three values.
+
+---
+
+## Float
+
+`data-float` takes the image out of the flow and wraps the prose around it. The paragraphs beside it stay ordinary paragraphs, which is the point — the alternative, a two-column media block, has to hold that text inside its own markup.
+
+</div>
+
+```html
+<img class="img" data-float="left" src="image.jpg" alt="Description">
+
+<p>Text that wraps beside it.</p>
+```
+
+Three things follow from floating, and each is handled for you:
+
+- **It is clamped to half the column.** A float's margin sits outside its width, so a full-width float would overflow and leave the text nothing to occupy.
+- **It takes `s` when given no width.** A float exists to have text beside it; at full width there is no beside.
+- **It releases on a narrow column.** Below `768px` the image drops back into the flow and the text follows underneath. One that was given a width keeps it; one that was not returns to full width.
+
+### Containing a float
+
+A float has to be contained by the layout it sits in, not by itself.
+
+**In markdown prose**, this is already done — the docs column is a `flow-root` and its headings clear, so a float never runs on under the next heading or out of the bottom of the page.
+
+**Inside a `.block`**, wrap the float and its text in a plain `<div>`. A block is a flex column and flex items ignore `float`; the wrapper is its own formatting context, so it contains the float for free. That is the wrapper in the demo above.
+
+---
+
+## Caption
+
+A caption makes the image a `<figure>`. The box attributes move to the figure, because the caption has to be measured, placed and floated with the picture or it is describing something else. `data-ratio` stays on the `<img>`.
+
+```html
+<figure data-width="m">
+  <img class="img" src="image.jpg" alt="">
+  <figcaption>A caption belongs to its figure.</figcaption>
+</figure>
+```
+
+Note `alt=""` on a captioned image. A caption that already names what the picture shows makes the alt text a duplicate for anyone reading with a screen reader — see [Accessibility](#accessibility).
+
+---
+
+## Image in markdown
+
+Markdown's `![alt](src)` emits a bare `<img>`: no class, no attributes, no figure. `{{image: …}}` is the way to write an image in any `cms/*.md` page. It expands at build time, puts each attribute on the right element, and takes markdown in the caption.
+
+```markdown
+{{image: src="/path/to/image.jpg" alt="" caption="What this shows." width="s"}}
+```
+
+| Parameter | Required | Values |
+|---|---|---|
+| `src` | Yes | Any URL or path |
+| `alt` | Yes | Any text; `alt=""` for a decorative image |
+| `caption` | No | Inline markdown |
+| `width` | No | `s` `m` `l` |
+| `ratio` | No | `1x1` `3x2` `4x3` `16x9` `21x9` |
+| `align` | No | `left` `center` `right` |
+| `float` | No | `left` `right` |
+
+Rules worth knowing before you write one:
+
+- **It must be the whole line, starting at column 0.** Indenting it is the way to show the syntax outside a code block: an indented shortcode stays literal, visibly so. Anything else — text after the `}}`, a second shortcode on the same line — fails the build rather than publishing the braces.
+- **It does not expand inside a fenced code block**, which is how this page shows the syntax.
+- **Leave a blank line above an uncaptioned one.** Written directly under a line of prose it is pulled into that paragraph, because a bare `<img>` cannot interrupt a paragraph in markdown the way a `<figure>` can. A captioned one is safe either way; the blank line is the habit worth having.
+- **Write plain characters in `src` and `alt`.** The generator escapes them — typing `&amp;` yourself yields a literal `&amp;` on the page. `caption` is different: it is markdown, so it is parsed rather than escaped, and any HTML in it is passed through as HTML.
+- **A caption takes inline markdown**: `` `code` ``, a link, emphasis. Not a list or a second paragraph — a `<figcaption>` holds phrasing content.
+- **A mistake fails the build**, naming the line: a missing `alt`, a missing `src`, an unknown or duplicated parameter, an unquoted value, or a value outside the table above. This is deliberately stricter than `{{icon:}}`, which only warns — a missing `alt` is an accessibility defect rather than a typo.
+
+The shortcode runs in markdown bodies only. A `page` or `tool` body is raw HTML already and writes the `<figure>` directly.
+
+---
+
+## Accessibility
+
+- Every image must carry `alt`. There is no valid reason to omit the attribute — the shortcode fails the build if you do.
+- Use `alt=""` when the image is decorative, or when a caption beside it already says the same thing. An empty alt tells a screen reader to skip the image; a missing alt makes it read the filename.
+- Do not repeat the caption in the alt text. The caption is already announced.
+- Do not put words into a placeholder image with `?text=` while the alt is empty — that is content nobody using a screen reader can reach.
+- A floated image stays in the reading order where it is written, so put it before the paragraph it belongs to, not after.
+
+---
+
+## Usage rules
+
+**Do**
+
+- Use `data-width` to constrain an image, so it lines up with the other measures on the page
+- Put `data-ratio` on the `<img>` and the box attributes on the `<figure>`
+- Wrap a float and its text in a plain `<div>` when they sit inside a `.block`
+- Write images in markdown with the shortcode
+
+**Do not**
+
+- Do not use `.img` on a decorative SVG icon — use `.svg-icn`, see [Iconography](/website/iconography.html)
+- Do not set `width` or `height` attributes, or an inline `max-width`, alongside `.img` — the attributes manage sizing
+- Do not put `data-align` on a full-width image expecting it to do something; alignment needs a width
+- Do not reach for a float to build a two-column layout — that is a [layout](/website/layout.html) job
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | What it controls |
+|---|---|---|
+| `--img-width-s` | `200px` | The small step |
+| `--img-width-m` | `480px` | The medium step |
+| `--img-width-l` | `640px` | The large step |
+
+`--img-width` and `--img-ratio` are the resolved slots the attributes write to, not tokens to set directly — though an ancestor can re-point either for a one-off.
+
+### Styling
+
+| Property | Value |
 |---|---|
-| `.img` | Base image: block display, full width, cover fit |
-| `.img-1x1` | Square (1:1) |
-| `.img-3x2` | Landscape (3:2) |
-| `.img-4x3` | Landscape (4:3) |
-| `.img-16x9` | Widescreen (16:9) |
-| `.img-21x9` | Ultra-wide (21:9) |
+| Display | `block` |
+| Width | `100%` |
+| Max width | `var(--img-width, var(--img-width-default, 100%))` |
+| Aspect ratio | `var(--img-ratio, auto)` |
+| Object fit | `cover` |
+| Float gap | `var(--space-xl)` on the text-facing side |
 
----
+### Selectors
 
-## Usage with Components
+| Selector | Purpose |
+|---|---|
+| `.img` | Base image |
+| `:is(.img, figure)[data-width]` | Sets `--img-width` to an `--img-width-*` step |
+| `figure[data-width]` | Applies that measure, which `.img` gets from its own base rule |
+| `.img[data-ratio]` | Sets `--img-ratio` |
+| `:is(.img, figure)[data-float]` | `float: inline-start / inline-end`, clamped to `min(width, 50%)` |
+| `[data-align]` | Foundation utility, section 6 — `margin-inline` plus `justify-self` |
+| `.docs-main:has(:is(.img, figure)[data-float])` | Docs-site only: contains a float loose in markdown prose |
 
-Images compose with component-specific classes. For example, inside a card:
+### Key rules
 
-```html
-<a class="card card--flush card--interactive" href="#">
-  <img class="img img-16x9 card-image" src="image.jpg" alt="Description">
-  <div >
-    <h3 class="card-title">Card with image</h3>
-    <p class="card-description">Supporting text below the image.</p>
-  </div>
-</a>
-```
+Width and ratio are two custom properties, not two declarations, so either can be re-pointed by an ancestor for a one-off without inventing an attribute.
 
-Here `.img` provides the base display, `.img-16x9` sets the aspect ratio, and `.card-image` adds the top border-radius specific to cards.
+Float sides are logical — `inline-start` / `inline-end`, `margin-inline` — so the gap stays on the text-facing side under `dir="rtl"`. The value names stay `left` and `right` to match `data-align`.
 
----
+The float releases at `max-width: 768px` in the design system, and again on the content-column width in the docs site, because a sidebar can leave a narrow column inside a wide window.
 
-## How Object-Fit Works
-
-When an aspect ratio is applied, the image may not match its natural proportions. `object-fit: cover` ensures the image always fills the frame, cropping from the centre rather than stretching or letterboxing.
-
-- **Without aspect ratio**, image displays at natural proportions, no cropping
-- **With aspect ratio**, image crops to fill the forced proportions
-
----
-
-## Do Not
-
-- Do not use `.img` on decorative SVG icons. Use `.svg-icn` instead
-- Do not hardcode `width` and `height` attributes when using `.img`. The class manages sizing
-- Do not combine multiple aspect-ratio classes on one element
+The five aspect-ratio combo classes that used to set these ratios were removed on 2026-09-23; `data-ratio` replaces them.
 
 ### Login
 
@@ -9515,6 +9936,7 @@ Centering on the page belongs to the consuming layout, not the component. `.logi
 | `.login-meta` | Row between fields and submit: remember-me against forgot-password |
 | `.login-status` | Form-level live region for error or success messages |
 | `.login-footer` | Trailing text actions below a pane |
+| `.login-hint` | A recovery line inside the footer: muted lead-in with the action inline — "Didn't get the code? Send again" |
 
 ---
 
@@ -9748,28 +10170,45 @@ Passwordless entry: one email field, one action. Pair it with the one-time code 
 
 ## One-time code
 
-The code field is a plain text input tuned for the moment: `inputmode="numeric"` raises the number pad on touch keyboards, `autocomplete="one-time-code"` lets the browser offer the code straight from the message that delivered it, and `spellcheck="false"` stops the squiggle under a string that was never a word.
+The code field is a [Cell Input](/website/cell-input.html) — one cell per digit, so the reader sees the shape of what they are copying before they type a character. `data-format="6"` declares that shape and `data-mode="digits"` filters the entry and raises the number pad.
+
+It is **one real input** behind the cells, never one input per cell: that is what keeps the caret, the soft keyboard and `autocomplete="one-time-code"` working, so iOS can offer the code straight from the message that delivered it. The cells are decoration and stay `aria-hidden`; the input carries the accessible name, and that name begins with the visible label's words — `aria-label` wins over `<label for>`, so a name that says something else fails Label in Name and speech input cannot address the field by what it sees. On a wrong code, put `.is-error` on the **block** — the cells take the colour, and the input takes `aria-invalid`.
+
+Notifications have dedicated places. **Errors live under the field** — every one, including offline and rate-limit, because that is where the reader is: a `.form-error` line directly under the cells, a `warning` icon and a short sentence ("Incorrect code. Try again."). That line is both the field's description (`aria-describedby`, alongside the subtitle) and the live region that announces it (`role="alert"`), so it is rendered from first paint and **empty at rest**, never hidden — a region revealed from `display: none` at announce time is not reliably read — and the icon is cloned in with the message and removed with it, so the description is never stale. **Confirmations live at the top of the card** ("Code sent. Check your email.") in the shared `role="status"` region. Nothing is said twice. Clear the field **before** painting the verdict: clearing dispatches the change event that resets the invalid state, so a verdict painted first is gone before the frame is drawn.
+
+The block takes `data-full-width` so the field is the same width as the email field on the pane before it, and the login re-points its corner to the email field's `--radius-m`: switching panes must not change what a field looks like. The label names the shape — "Enter the 6-digit code" — and the subtitle carries the address on its own line, so the reader can check where the code went without reading a sentence around it. Recovery is one line, not two buttons: a muted lead-in with the action inline (`.login-hint`), and changing address on its own line below.
 
 <form class="login-form" autocomplete="on" novalidate>
       <div class="form-group">
-        <label for="demo-otp-code">One-time code</label>
-        <input type="text" id="demo-otp-code" name="code" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" pattern="[0-9]*" maxlength="6" required aria-required="true">
+        <label for="demo-otp-code">Enter the 6-digit code</label>
+        <div class="cell-input" data-format="6" data-mode="digits" data-full-width>
+          <label class="cell-input-cells" for="demo-otp-code" aria-hidden="true"></label>
+          <input type="text" id="demo-otp-code" name="code" aria-label="Enter the 6-digit code" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false" required aria-required="true" aria-describedby="demo-otp-code-error">
+        </div>
+        <p class="form-error" id="demo-otp-code-error" role="alert"><span class="svg-icn" data-icon="warning" aria-hidden="true">{{icon:warning}}</span>Incorrect code. Try again.</p>
       </div>
       <p class="login-status" id="demo-otp-status" data-type="danger" role="alert" aria-live="assertive"></p>
       <button type="submit" class="button" data-full-width>Verify</button>
     </form>
     <div class="login-footer">
-      <button type="button" class="button" data-variant="text">Resend code</button>
+      <p class="login-hint">Didn’t get the code? <button type="button" class="button" data-variant="text" data-color="accent">Send again</button></p>
+      <button type="button" class="button" data-variant="text" data-color="accent">Use a different email</button>
     </div>
   </div>
 </div>
 
 ```html
 <div class="form-group">
-  <label for="otp-code">One-time code</label>
-  <input type="text" id="otp-code" name="code"
-         inputmode="numeric" autocomplete="one-time-code" spellcheck="false"
-         pattern="[0-9]*" maxlength="6" required aria-required="true">
+  <label for="otp-code">Enter the 6-digit code</label>
+  <div class="cell-input" data-format="6" data-mode="digits" data-full-width>
+    <label class="cell-input-cells" for="otp-code" aria-hidden="true"></label>
+    <input type="text" id="otp-code" name="code" aria-label="Enter the 6-digit code"
+           autocomplete="one-time-code" autocorrect="off" autocapitalize="off"
+           spellcheck="false" required aria-required="true"
+           aria-describedby="otp-code-error">
+  </div>
+  <!-- empty at rest; the script clones the icon in with the message -->
+  <p class="form-error" id="otp-code-error" role="alert"></p>
 </div>
 ```
 
@@ -9824,7 +10263,7 @@ The component ships no script of its own. Wiring a login page in a new product t
 <script src="/assets/js/password-toggle.js" defer></script>
 ```
 
-**2. Intercept every submit.** Each submitting pane is a real `<form>`, and the handler prevents the default — a form that falls through to a native submit navigates with the typed values, credentials included, in the URL. Keep the button enabled and mark it `.is-loading` while the request runs; write the outcome into the pane's `.login-status`. The status element is already in the DOM and stays in the accessibility tree while empty, so filling it with text is all a reliable announcement needs.
+**2. Intercept every submit.** Each submitting pane is a real `<form>`, and the handler prevents the default — a form that falls through to a native submit navigates with the typed values, credentials included, in the URL. Keep the button enabled and mark it `.is-loading` while the request runs; write the outcome where it belongs (see Accessibility): under the field, in its `.form-error`, when the pane has one field — the one-time code pane — or into the pane's `.login-status` when the message is about the pane as a whole, as here, where an email and a password have to match each other. Either element is already in the DOM and stays in the accessibility tree while empty, so filling it with text is all a reliable announcement needs.
 
 ```js
 const form = document.querySelector('#sign-in-form');
@@ -9880,10 +10319,11 @@ The social sign-in buttons and their brand marks are in [Social sign-in](#social
 
 On sign-up the email is the future identifier, so it takes `username` — that is what lets password managers pair it with the adjacent `new-password` field and save the credential.
 
-- Set `.is-error` and `aria-invalid="true"` together, always — the class paints the border and the danger focus ring, the attribute tells assistive technology. One without the other is a half-reported error.
+- Set `.is-error` and `aria-invalid="true"` together, always — the class paints, the attribute tells assistive technology. One without the other is a half-reported error. **The class goes wherever the component paints from, which is not always the field:** a plain input takes it on itself, a [Cell Input](/website/cell-input.html) takes it on the *block*, because the input there is invisible and the cells carry the colour. `aria-invalid` always rides the input.
 - Per-field messages use `.form-error` with an `id`, wired to the input through `aria-describedby`.
-- The form-level `.login-status` is a live region: `role="alert"` with `aria-live="assertive"` for errors, or `role="status"` with `aria-live="polite"` for confirmations. A pane that needs both keeps two elements. Keep the element in the DOM and rendered from first render and fill it with text — a region inserted or revealed from `display: none` at announce time is not reliably announced, which is why the empty state collapses by height rather than by `display`. Don't also point fields at it with `aria-describedby` — the live region announces on its own, and a form-level message is not a field description.
-- The one-time code field pairs `inputmode="numeric"` with a visible label; never replace the label with a placeholder.
+- **Where a message lives is decided by what it is about.** An error about one field — its validity, or the outcome of submitting it when the pane has only that field, as the one-time code pane does — goes under that field in its `.form-error` line: the input points at it with `aria-describedby` **and** the line is the live region (`role="alert"`), so the sentence is in one place and is both announced and read back with the field. An error about the pane as a whole — two fields that must match each other, or a pane with no field to hang it on — goes in the pane's `.login-status` (`role="alert"`, `aria-live="assertive"`), and fields do **not** point at it: it describes none of them. Confirmations go in a `role="status"` `.login-status`, polite, at the top of the card. A pane that needs both keeps two elements.
+- Whichever element carries it: keep it in the DOM and rendered from first render, and fill it with text — a region inserted or revealed from `display: none` at announce time is not reliably announced, which is why the empty state collapses by height rather than by `display`. Truly empty, too: no whitespace between the tags, or `:empty` stops matching and the gap it cancels reopens. Put the icon in only alongside a message.
+- The one-time code field is a [Cell Input](/website/cell-input.html) — one cell per digit — and still pairs `inputmode="numeric"` in the markup with a visible label; never replace the label with a placeholder. Keep `inputmode` declared even though `data-mode="digits"` sets it too: the markup is the contract, the script is the convenience.
 - Labels are always visible `<label for>` elements. The password toggle keeps its `aria-label`/`aria-pressed` contract from [Password Toggle](/website/password-toggle.html).
 - Identifier fields (email as username, one-time code) carry `autocapitalize="none"` and `spellcheck="false"` — mobile keyboards otherwise capitalise the first letter and spellcheck marks the address, both of which cause failed sign-ins that look like wrong passwords.
 - Password fields carry the same pair. The reveal toggle flips them to plain text inputs, and at that moment autocapitalize can mangle further typing while browser spellcheck can send the revealed value to a spellcheck service.
@@ -9898,7 +10338,8 @@ On sign-up the email is the future identifier, so it takes `username` — that i
 - Compose with `.card` when the page wants the form on a panel
 - Let the page layout own the centering — `.login` only caps its own width
 - Keep one pane visible at a time; switch siblings with `.is-hidden`
-- Put trailing text actions ("Back to sign in", "Resend code") in a `.login-footer` as `.button` with `data-variant="text"`
+- Put trailing text actions ("Back to sign in", "Use a different email") in a `.login-footer` as `.button` with `data-variant="text"`; a recovery action that reads as a sentence ("Didn’t get the code? Send again") goes in a `.login-hint` inside the footer, the button inline
+- Give the actions the user is meant to reach for `data-color="accent"` so they read as links — on the code pane that is "Send again" and "Use a different email". An action ranked below them, like the demoted "Request access", stays neutral
 - Give every password field the reveal toggle, including sign-up — creating a password is where seeing it matters most
 - While a submit is in flight, keep the button enabled and mark it `.is-loading` — a disabled button drops keyboard focus and goes silent for screen readers
 - Answer a reset request the same way whether or not the account exists — "If an account exists for that address, we've sent a link" — so the form never confirms which emails are registered
@@ -9922,25 +10363,31 @@ This section documents how the component is built. For usage, see the sections a
 
 | Token | Default | Purpose |
 |---|---|---|
-| `--login-max-width` | `380px` | Width cap of the root column — the one-column form measure |
+| `--login-max-width` | `560px` | Width cap of the root column — the one-column form measure |
 | `--login-logo-height` | `88px` | Height of the header logo slot |
+| `--login-gap` | `var(--space-xl)` | The `.login` stack gap; `.login-status:empty` cancels exactly this when it sits directly in `.login` |
+| `--login-form-gap` | `var(--space-l)` | The `.login-form` pane gap; `.login-status:empty` cancels exactly this when it sits inside a pane |
+| `--login-field-gap` | `var(--space-s)` | The `.form-group` gap inside a pane — label to field, field to error line; `.form-error:empty` cancels exactly this |
 
 ### Selectors
 
 | Selector | Purpose |
 |---|---|
-| `.login` | Root column: full width up to the cap, flex column, `--space-l` gap, centered items |
-| `.login-header` | Centered logo/title/subtitle stack with `--space-s` gap |
+| `.login` | Root column: full width up to the cap, flex column, `--login-gap` gap, centered items and centered text — everything on the card sits on one axis, the fields' own values and placeholders included, since `text-align` inherits into inputs |
+| `.login-header` | Centered logo/title/subtitle stack with `--space-m` gap |
 | `.login-logo` | Logo slot at token height; inner `svg` scales to it and inherits `currentColor` |
 | `.login-title` | Heading at `--font-3xl`, weight from the heading element, document-flow margins removed |
-| `.login-subtitle` | Supporting line at `--font-m` in `--text-secondary`; `:empty` collapses it |
-| `.login-form` | Full-width pane, flex column with `--space-s` gap |
-| `.login-form .form-group` | Scoped tightening: `--space-2xs` label-to-input gap, `margin-bottom` zeroed — the pane gap owns inter-group spacing |
-| `.login-form label` | `--text-secondary` |
+| `.login-subtitle` | Supporting line at `--font-m` in `--text-secondary`; `:empty` collapses it; `overflow-wrap: anywhere` so an address on its own line cannot run out of the card |
+| `.login-form` | Full-width pane, flex column with `--login-form-gap` gap |
+| `.login-form .form-group` | Scoped tightening: `--login-field-gap` between label, field and error line, `margin-bottom` zeroed — the pane gap owns inter-group spacing |
+| `.login-form label` | `--text-secondary`, centered; the global label `margin-bottom` is zeroed so the group gap is the whole label-to-input distance, not a summand of it |
+| `.login-form .form-error` | The pane's error line and live region: `margin-top` zeroed so the group gap owns the distance, row centred with the card; `:empty` pulls back `--login-field-gap` so an empty line opens no gap |
 | `.login-form .divider` | Re-points `--divider-spacing` to `--space-2xs` — the pane gap already separates it |
+| `.login-form .cell-input` | `align-self: center` for a fit-content row; re-points `--cell-input-radius` to `--radius-m` (the email field's corner) and `--cell-input-gap` to `--space-s` |
 | `.login-meta` | Wrapping space-between row for remember-me and the forgot link |
-| `.login-status` | Form-level live region at `--font-s`, centered; `:empty` collapses it to zero height while it stays in the accessibility tree; `data-type="danger"`/`"success"` pick the status colour |
-| `.login-footer` | Centered column for trailing text actions |
+| `.login-status` | Live region at `--font-s`, centered — on the sign-in screen, confirmations only, at the top of the card; `:empty` collapses it to zero height while it stays in the accessibility tree, with a negative top margin that cancels the gap it would otherwise open — `--login-form-gap` when it is a direct child of a pane, `--login-gap` when it is pooled at the top of `.login` outside both panes; `data-type="danger"`/`"success"` pick the status colour |
+| `.login-footer` | Centered column for trailing text actions, `--space-m` gap; re-points `--button-text-size` to `--font-s` for actions without their own `data-size`, so they sit on the body line below the submit and an explicit size still ranks one below the others |
+| `.login-hint` | Muted (`--text-secondary`, `--font-s`) lead-in inside the footer with a text button inline |
 
 ### Key rules
 
@@ -9957,7 +10404,7 @@ The design system styles three semantic HTML elements for inline and block-level
 
 ## Highlighted text (mark)
 
-The `<mark>` element highlights text with a yellow background. In dark mode, the background shifts to a semi-transparent yellow.
+The `<mark>` element highlights text with a yellow background. Both halves come from `--mark-background` and `--mark-color`, so a brand moves every highlight on the site by re-pointing that pair. Dark mode takes the full-strength yellow rather than the pale wash, and keeps the same dark ink.
 
 ```html
 <p>This is <mark>highlighted text</mark> within a paragraph.</p>
@@ -9978,6 +10425,8 @@ The `<abbr>` element indicates an abbreviation or acronym. It renders with a dot
 ## Figure and figcaption
 
 The `<figure>` element wraps media content (images, code blocks, diagrams) with an optional `<figcaption>` for descriptive text.
+
+For a captioned **image** specifically, see [Image](/website/image.html): the figure carries the width, alignment and float, the image inside carries the ratio, and `{{image: …}}` writes both from one line of markdown.
 
 <figcaption>Caption text describing the image above.</figcaption>
   </figure>
@@ -10022,11 +10471,24 @@ This section documents how each element is built. For usage, see the sections ab
 
 | Property | Value |
 |---|---|
-| Background | `var(--yellow-light)` |
-| Color | `var(--brown-dark)` |
+| Background | `var(--mark-background)` |
+| Color | `var(--mark-color)` |
 | Padding | `0 var(--space-2xs)` |
 
-Dark mode (`[data-theme="dark"]`): background shifts to `color-mix(in srgb, var(--yellow), var(--alpha-60))`, colour to `var(--off-white)`.
+The element rule carries no theme selector. `--mark-background` resolves to `var(--yellow-light)` in light mode and `var(--yellow)` in dark; `--mark-color` is `var(--brown-dark)` in both.
+
+Both halves are opaque on purpose, and neither is mixed with the page surface. A highlight lands on whatever sits behind it — including the inverted `--selected-background` of an active search row — and a translucent surface or a surface-derived ink inverts its own contrast when it does.
+
+**The surface a highlight sits on makes no difference to its contrast, and that is the point.** Measured on a normal row and on the inverted active row of the search dialog, the numbers are identical to two decimal places. The rule this replaced mixed a translucent yellow with near-white ink, and measured 3.7:1 on a normal dark row against **1.5:1** on an active one — where the surface flips light underneath the highlight and takes the ink's contrast with it.
+
+The ratios themselves are a brand's to set, because the pair resolves through `--yellow-light`, `--yellow` and `--brown-dark`, and a brand re-points those:
+
+| | Light | Dark |
+|---|---|---|
+| Engine defaults | 14.8:1 | 5.8:1 |
+| By Default (this site) | 14.8:1 | 10.2:1 |
+
+Both clear WCAG AA. **A brand re-pointing the yellow scale owns that result** — dark mode is the one to check, since it takes the full-strength step rather than the pale wash and has the smaller margin.
 
 ### `abbr[title]`
 
@@ -10057,8 +10519,7 @@ Dark mode (`[data-theme="dark"]`): background shifts to `color-mix(in srgb, var(
 
 | Selector | Purpose |
 |---|---|
-| `mark` | Highlighted text with yellow background |
-| `[data-theme="dark"] mark` | Dark mode override for mark |
+| `mark` | Highlighted text; both colours from the `--mark-*` tokens |
 | `abbr[title]` | Abbreviation with dotted underline |
 | `figure` | Media wrapper with vertical margin |
 | `figcaption` | Caption text: small, italic, faded |
@@ -10775,7 +11236,7 @@ This section documents how the component is built. For usage, see the sections a
 | `--page-nav-border` | `var(--border-s) solid var(--border-faded)` | Top rule, and the divider between stacked links on mobile |
 | `--page-nav-link-padding` | `var(--space-xl) var(--space-2xl)` | Inset inside each half |
 | `--page-nav-link-gap` | `var(--space-m)` | Space between arrow and text |
-| `--page-nav-title-size` | `var(--font-5xl)` | Title size; steps to `var(--font-3xl)` below 960px |
+| `--page-nav-title-size` | `var(--font-2xl)` | Title size, matching `h3`; steps to `var(--font-xl)` below 960px |
 | `--page-nav-arrow-color` | `var(--text-secondary)` | Arrow at rest |
 | `--page-nav-arrow-color-hover` | `var(--text-link)` | Arrow on hover |
 
@@ -11456,6 +11917,7 @@ header.site-header                     data-sticky="false" | data-layout="center
       a.site-header-logo
     nav.nav                            optional
     .site-header-end                   optional
+      button.button.header-search-btn  search trigger, on the docs site
       .dropdown                        account, mode switch
       button.button.header-action      theme toggle
 ```
@@ -11636,6 +12098,7 @@ Below 768px the header changes in three ways, none of which needs authoring:
 | Action labels | `.header-action-label` is hidden; the accessible name stays on `aria-label` |
 | Nav | Hidden **only** with `data-nav-collapse="drawer"` — see below |
 | Padding | Contents go flush to the viewport edge, so the first and last actions read as full-height tap targets |
+| Search trigger | Collapses to its icon with the other action labels, and the `kbd` hint goes with them — a touch device has no ⌘K to press |
 
 The frame below is a real 390px viewport, not a narrow box. Media queries resolve against an iframe's own viewport, so the header's responsive rules genuinely fire inside it; a narrow `<div>` on this page could not show them at all.
 

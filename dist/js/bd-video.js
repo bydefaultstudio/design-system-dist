@@ -1,11 +1,16 @@
-/* @bydefaultstudio/design-system v4.8.0 */
+/* @bydefaultstudio/design-system v5.0.0 */
 /**
  * Script Purpose: Configurable video player — play/pause, scrubber, mute, fullscreen, keyboard shortcuts, timed cues
  * Author: By Default
  * Created: 2026-04-12
- * Version: 0.7.0
- * Last Updated: 2026-07-30
+ * Version: 0.8.1
+ * Last Updated: 2026-09-19
  *
+ * 0.8.1 — auto-hide keys on :focus-visible, not activeElement, so clicking a
+ *         control no longer pins the chrome open; keyboard focus re-shows it,
+ *         and a blocked pass re-arms instead of retiring the timer for good
+ * 0.8.0 — native play/pause/ended listeners, so the centre button tracks the
+ *         media element rather than the handler that started it (4.1.2)
  * 0.7.0 — promoted into the design system; cue label configurable; canonical
  *         bd:after-nav
  *
@@ -35,14 +40,16 @@
  * Always-on features:
  *   - Large centered play/pause button with tooltip
  *   - Tap/click video to toggle play/pause
- *   - Controls auto-hide after 3s idle, reappear on hover/tap
+ *   - Controls auto-hide after 3s idle, reappear on hover/tap or keyboard focus
+ *     (held up while :focus-visible is inside the player, not plain focus)
  *   - Center button stays visible while paused
  *   - Reduced motion: video does not autoplay, poster shows
  *   - Global keyboard shortcuts (Space/K, M, F, arrows)
  *   - ARIA labels update dynamically with state
  *   - Timestamped link cards via data-bd-cues + inline JSON data block
  *
- * Sustainability roadmap (priority-ordered, NOT built yet):
+ * Sustainability roadmap (priority-ordered, NOT built yet — except where a line
+ * says SHIPPED; numbering is stable because other files cite these by number):
  *   1. [CRITICAL] Captions / subtitles — <track kind="subtitles"> + data-bd-captions
  *                  CC toggle. WCAG 1.2.2 Level A.
  *   2. Loading state class (.is-loading on `waiting`, removed on `canplay`) —
@@ -52,8 +59,9 @@
  *   4. Public custom events — partially implemented (cue events only:
  *                  bd-video:cue-enter, bd-video:cue-exit). Remaining:
  *                  bd-video:play / pause / ended / error / waiting still pending.
- *   5. Visibility-based pause (data-bd-pause-offscreen) — IntersectionObserver.
- *                  Saves CPU/battery on long pages with multiple videos.
+ *                  Note bd-video:statechange already covers play/pause/ended
+ *                  for consumers that only need the resulting state.
+ *   5. SHIPPED — visibility-based pause (data-bd-pause-offscreen).
  *   6. Lazy preload upgrade — preload="none" default, upgrade to "metadata" on
  *                  near-viewport, "auto" on first play(). Bandwidth win.
  *   7. Volume slider (data-bd-volume) — finer control than just mute/unmute.
@@ -246,14 +254,50 @@ function initPlayerInstance(video) {
   // -- Controls auto-hide --
   //
 
+  // Is a KEYBOARD visitor parked on something in here?
+  //
+  // This used to ask root.contains(document.activeElement), which cannot tell
+  // the two ways focus lands on a control apart. Clicking the centre button —
+  // how most playback starts — focuses it, so the guard read "someone is
+  // navigating these controls" and the chrome never hid. Auto-hide only ever
+  // fired when the click missed every button: on the video frame, or outside
+  // the player entirely. :focus-visible is exactly the distinction we need,
+  // and the browser draws it: keyboard focus matches, a pointer press on a
+  // button does not. bd-video.css already draws every focus ring with it.
+  //
+  // Guarded because a browser that does not know the selector throws a
+  // SyntaxError rather than returning null. Answering false there is the right
+  // fallback, not the old activeElement test: a browser without :focus-visible
+  // has already dropped all seven of this component's focus rings, so it has no
+  // keyboard focus to protect — and reinstating the old test would reinstate the
+  // 0.8.1 bug along with it.
+  function hasKeyboardFocus() {
+    try {
+      return !!root.querySelector(":focus-visible");
+    } catch (err) {
+      return false;
+    }
+  }
+
+  // Re-arm rather than give up when a keyboard visitor blocks the hide.
+  // Nothing else restarts this timer: showControls runs on pointer move, touch
+  // and keyboard focus, so a single blocked pass used to leave the chrome up
+  // for good the moment focus moved on — tab into the player, tab back out, and
+  // a playing video kept its controls forever. Pausing needs no retry, because
+  // the resume path calls showControls itself.
+  function autoHide() {
+    if (video.paused) return;
+    if (hasKeyboardFocus()) {
+      hideTimer = setTimeout(autoHide, HIDE_DELAY);
+      return;
+    }
+    root.classList.add("is-controls-hidden");
+  }
+
   function showControls() {
     root.classList.remove("is-controls-hidden");
     clearTimeout(hideTimer);
-    hideTimer = setTimeout(function autoHide() {
-      if (!video.paused && !root.contains(document.activeElement)) {
-        root.classList.add("is-controls-hidden");
-      }
-    }, HIDE_DELAY);
+    hideTimer = setTimeout(autoHide, HIDE_DELAY);
   }
 
   //
@@ -265,16 +309,26 @@ function initPlayerInstance(video) {
   centerBtn.className = "bd-video-center-play";
   root.appendChild(centerBtn);
 
-  // In preview mode, show play icon (invitation to start); otherwise pause
+  // In preview mode, show the play icon — an invitation to start, not a state
+  // readout. Otherwise seed from the media element rather than assuming the
+  // video is running: a player authored preload="none" with no autoplay (every
+  // tile in a gallery) is paused and has never played, and assuming otherwise
+  // put a Pause icon labelled "Pause" over it while syncCursor below wrote
+  // data-bd-state="paused" — the same 4.1.2 divergence the listeners further
+  // down exist to prevent, sitting in the default state.
+  //
+  // Seeding this way is only safe because those listeners exist: an autoplaying
+  // unmuted video is still paused at this point, so it starts on Play and the
+  // play event corrects it a moment later.
   if (isPreview) {
     root.classList.add("is-preview");
     centerBtn.innerHTML = ICON_PLAY;
     centerBtn.setAttribute("aria-label", "Play");
     centerBtn.setAttribute("data-tooltip", "Play");
   } else {
-    centerBtn.innerHTML = ICON_PAUSE;
-    centerBtn.setAttribute("aria-label", "Pause");
-    centerBtn.setAttribute("data-tooltip", "Pause");
+    centerBtn.innerHTML = video.paused ? ICON_PLAY : ICON_PAUSE;
+    centerBtn.setAttribute("aria-label", video.paused ? "Play" : "Pause");
+    centerBtn.setAttribute("data-tooltip", video.paused ? "Play" : "Pause");
   }
 
   // Remove any old inline play button from the controls bar
@@ -372,6 +426,62 @@ function initPlayerInstance(video) {
 
   centerBtn.addEventListener("click", togglePlay);
   video.addEventListener("click", togglePlay);
+
+  // The media element is the authority on playback state, not whichever handler
+  // happened to start it. Without these three the centre button lies whenever
+  // playback changes outside togglePlay: a video that ends, another component
+  // pausing this one, and the browser's own context-menu or picture-in-picture
+  // controls. That was the recorded 4.1.2 gap.
+  //
+  // A play() rejected by the autoplay policy is NOT covered and stays on that
+  // list: the element never left paused, so browsers fire nothing here to
+  // listen for. Closing it needs the rejection handled where play() is called.
+  //
+  // Two paths are deliberately excluded, and both of them look like bugs:
+  //
+  //   Preview shows Play over a *playing* video on purpose — the button is an
+  //   invitation to exit preview, not a state readout, so reflecting there would
+  //   flip it to Pause and strand the reader with no way back to the start.
+  //
+  //   The offscreen soft-pause freezes the chrome by design. It sets
+  //   resumeOnReenter before calling pause(), which is what this reads to tell
+  //   its pause apart from a real one. The resume path clears the flag before
+  //   play(), so re-entry reflects and simply re-asserts what is already shown.
+  function reflectPlaybackState() {
+    if (isPreview) return;
+    var paused = video.paused;
+    centerBtn.innerHTML = paused ? ICON_PLAY : ICON_PAUSE;
+    centerBtn.setAttribute("aria-label", paused ? "Play" : "Pause");
+    centerBtn.setAttribute("data-tooltip", paused ? "Play" : "Pause");
+    syncPausedState();
+    syncCursor();
+  }
+
+  function handleNativePause() {
+    if (resumeOnReenter) return;
+    reflectPlaybackState();
+  }
+
+  video.addEventListener("play", reflectPlaybackState);
+  video.addEventListener("pause", handleNativePause);
+  video.addEventListener("ended", reflectPlaybackState);
+
+  // A pending auto-resume is a claim on the reader's attention: "you were
+  // watching this, you only scrolled away". Starting a different player
+  // retires that claim, and togglePlay and exitPreview already clear the flag
+  // on the same principle — this is the third case, the user taking control of
+  // someone else. Without it an offscreen-paused player resumes when it scrolls
+  // back and, in a gallery, pauses the video the reader actually chose. Scroll
+  // position should not decide what is playing.
+  function handleForeignPlay(event) {
+    if (event.target === root) return;
+    if (!event.detail || event.detail.state !== "playing") return;
+    resumeOnReenter = false;
+  }
+
+  // Tracked, because it is a document listener closing over this instance —
+  // untracked it would survive every Barba nav and hold the detached player.
+  addInstanceListener(document, "bd-video:statechange", handleForeignPlay);
 
   //
   // -- Unmute prompt (config: unmutePrompt) --
@@ -1114,6 +1224,17 @@ function initPlayerInstance(video) {
 
   root.addEventListener("mousemove", function handleMouseMove() { showControls(); });
   root.addEventListener("touchstart", function handleTouchStart() { showControls(); }, { passive: true });
+
+  // Tabbing into hidden chrome must reveal it. Without this the guard above
+  // only holds controls that are ALREADY up: a pointer visitor who clicks play
+  // and then reaches for the keyboard lands on a button at opacity 0. focusin
+  // (not focus) because it bubbles from the generated buttons. The same
+  // :focus-visible test keeps a pointer press from cancelling the auto-hide it
+  // just started.
+  root.addEventListener("focusin", function handleFocusIn() {
+    if (hasKeyboardFocus()) showControls();
+  });
+
   showControls();
 }
 
@@ -1159,9 +1280,15 @@ function cleanupBdVideo() {
 }
 window.cleanupBdVideo = cleanupBdVideo;
 
-// Wait for DOM before initializing
+// Wait for DOM before initializing. The listener wraps the call rather than
+// being initBdVideo itself: a listener is handed the Event, which would arrive
+// as `scope` and make `root` an Event object with no querySelectorAll. Every
+// `defer` script takes the else branch — readyState is already "interactive" by
+// then — which is why this never surfaced on a page that loads it correctly.
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initBdVideo);
+  document.addEventListener("DOMContentLoaded", function initOnReady() {
+    initBdVideo();
+  });
 } else {
   initBdVideo();
 }

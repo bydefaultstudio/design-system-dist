@@ -56,9 +56,14 @@ function namespaceIds(inner, prefix) {
 // glyph, which would ship silently to exactly the legacy consumers the alias
 // exists to protect — so verify the pair still matches on every build.
 function verifyAliases() {
-  const file = path.join(ROOT, "icons.aliases.json");
-  if (!fs.existsSync(file)) return;
-  const aliases = JSON.parse(fs.readFileSync(file, "utf8")).aliases || {};
+  // Throws on a malformed file: this build must fail rather than ship a stale
+  // glyph (see cms/generator/icon-aliases.js for the two contracts).
+  // Required here, not at the top: this file also ships as dist/tools/ for
+  // sprite-builder's helpers, where ../cms/generator does not exist, and
+  // only this repo's own sprite build ever verifies aliases.
+  const { readIconAliasMap } = require("../cms/generator/icon-aliases");
+  const aliases = readIconAliasMap({ rootDir: ROOT });
+  if (!Object.keys(aliases).length) return;
   for (const [oldName, entry] of Object.entries(aliases)) {
     const oldFile = path.join(SRC_DIR, `${oldName}.svg`);
     const newFile = path.join(SRC_DIR, `${entry.renamedTo}.svg`);
@@ -74,7 +79,7 @@ function verifyAliases() {
   }
 }
 
-function buildSprite() {
+function buildSprite(targetFile) {
   if (!fs.existsSync(SRC_DIR)) {
     console.error(`source directory not found: ${SRC_DIR}`);
     process.exit(1);
@@ -87,7 +92,8 @@ function buildSprite() {
     console.error(`no .svg files found in ${SRC_DIR}`);
     process.exit(1);
   }
-  fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true });
+  const outFile = targetFile || OUT_FILE;
+  fs.mkdirSync(path.dirname(outFile), { recursive: true });
   const symbols = files.map((file) => {
     const name = path.basename(file, ".svg");
     const source = fs.readFileSync(path.join(SRC_DIR, file), "utf8");
@@ -107,13 +113,13 @@ function buildSprite() {
     `</svg>`,
     ``,
   ].join("\n");
-  fs.writeFileSync(OUT_FILE, sprite);
-  console.log(`wrote ${files.length} symbols to ${path.relative(ROOT, OUT_FILE)}`);
+  fs.writeFileSync(outFile, sprite);
+  console.log(`wrote ${files.length} symbols to ${path.relative(ROOT, outFile)}`);
 }
 
-function main() {
+function main(targetFile) {
   try {
-    buildSprite();
+    buildSprite(targetFile);
   } catch (err) {
     console.error(`sprite build failed: ${err.message}`);
     process.exit(1);

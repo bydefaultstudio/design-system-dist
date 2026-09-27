@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v4.8.0 */
+/* @bydefaultstudio/design-system v5.0.0 */
 /**
  * BD Cursor — desktop custom cursor (native / label / badge / graphic / halo)
  * ONE overlay element (.cursor-overlay) becomes every author-driven render.
@@ -33,12 +33,12 @@
  * Content refresh: dispatch "bd-cursor:refresh" after mutating a hovered
  * element's data-cursor-* attributes (bd-video does this on play/pause).
  *
- * @version 6.0.0
+ * @version 6.1.0
  */
 (function () {
   "use strict";
 
-  var VERSION = "6.0.0";
+  var VERSION = "6.1.0";
 
   var DEFAULTS = {
     spritePath: "/assets/images/svg-icons/_sprite.svg",
@@ -172,10 +172,20 @@
 
     // Single source of truth for the overlay transform so the two write sites
     // (animate + the firstMove snap) can never desync the offset.
+    //
+    // Float modes hang the overlay LABEL_OFFSET_Y below the pointer, and flip it
+    // ABOVE when that would clip the bottom of the viewport — plain tooltip
+    // behaviour, without which a label near the fold is cut off or pushes the
+    // page. Replace mode centres on the pointer instead, so it never flips.
     function overlayTransform(x, y) {
-      var yPart = replaceActive
-        ? "calc(" + y + "px - 50%)"
-        : "calc(" + y + "px + " + LABEL_OFFSET_Y + "px)";
+      var yPart;
+      if (replaceActive) {
+        yPart = "calc(" + y + "px - 50%)";
+      } else if (y + LABEL_OFFSET_Y + overlay.offsetHeight > window.innerHeight) {
+        yPart = "calc(" + y + "px - " + LABEL_OFFSET_Y + "px - 100%)";
+      } else {
+        yPart = "calc(" + y + "px + " + LABEL_OFFSET_Y + "px)";
+      }
       return "translate3d(calc(" + x + "px - 50%), " + yPart + ", 0)";
     }
 
@@ -260,6 +270,11 @@
     function showActiveTarget() {
       if (activeTarget && !activeTarget.hasAttribute(NATIVE_ATTR)) {
         if (applyContent(activeTarget)) {
+          // Re-apply the transform: the flip above reads overlay.offsetHeight,
+          // which this content swap may just have changed while the rAF loop is
+          // parked (stationary pointer, atom swapped underneath it by a scroll
+          // or a bd-cursor:refresh).
+          overlay.style.transform = overlayTransform(overlayX, overlayY);
           overlay.classList.add("is-visible");
           phase = "visible";
           return;

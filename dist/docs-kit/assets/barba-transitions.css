@@ -6,7 +6,7 @@
    (pageTransitions: true in docs.config.js). Emitted into the output and
    linked automatically when the flag is on.
 
-   Sibling file: the BrandOS site keeps its own copy at
+   Sibling file: the By Default OS site keeps its own copy at
    assets/css/barba-transitions.css — a fix made here may need mirroring
    there and vice versa. The kit copy differs only in its token fallbacks:
    --top-nav-height and --background-primary may not exist in a consumer's
