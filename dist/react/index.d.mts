@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v5.1.0 */
+/* @bydefaultstudio/design-system v5.1.1 */
 export { Dialog } from './dialog.mjs';
 export type { DialogProps, DialogHideSource } from './dialog.mjs';
 

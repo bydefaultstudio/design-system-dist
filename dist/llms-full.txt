@@ -1,16 +1,16 @@
-<!-- @bydefaultstudio/design-system v5.1.0 -->
+<!-- @bydefaultstudio/design-system v5.1.1 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 5.1.0 (package)**
+**Version: 5.1.1 (package)**
 
 ## Getting the System
 
 The system ships as one CSS file plus an icon sprite, distributed through the public artefact repo:
 
 ```bash
-npm install github:bydefaultstudio/design-system-dist#semver:^5.1.0
+npm install github:bydefaultstudio/design-system-dist#semver:^5.1.1
 ```
 
 - Link `design-system.css` before any site or theme CSS.
@@ -14174,8 +14174,8 @@ Package consumers control which icons they ship via `icons.manifest.json` at the
 
 ### When to Subset
 
-Most sites reference 15–45 of the 175 icons in the registry. The sprite carries
-177 symbols — the extra two are deprecated names kept resolving for consumers
+Most sites reference 15–45 of the 176 icons in the registry. The sprite carries
+178 symbols — the extra two are deprecated names kept resolving for consumers
 (`icons.aliases.json`) and deliberately hidden from the registry. The master sprite — every icon, unfiltered — is roughly 115KB; a subset sprite trims that to just what the site uses.
 
 | Situation | What to do |
@@ -14364,7 +14364,7 @@ echo '<svg>...</svg>' | npx svg-cleaner --current-color --icon --icon-name arrow
 
 The full brand icon set. This table is generated at build time from `assets/images/svg-icons/`, so it always matches the source directory. The `data-icon` value is the name to use with the wrapper, the shorthand, and the sprite. For a categorised view with copy and download, see the [Brand Book iconography page](/brand/iconography.html).
 
-`3d`, `accessibility`, `ad-left`, `ad-right`, `ad-top`, `add`, `ai`, `ai-chat`, `ai-large`, `ar`, `arrow-down`, `arrow-left`, `arrow-right`, `arrow-top`, `arrow-top-right`, `arrow-up`, `back-arrow`, `bolt`, `book`, `book-open`, `bookmark`, `browser`, `calendar`, `catalog`, `chart`, `chat`, `check`, `check-circled`, `check-squared`, `checklist`, `chevron-down`, `chevron-down-large`, `chevron-left`, `chevron-left-large`, `chevron-right`, `chevron-right-large`, `chevron-up`, `chevron-up-large`, `circled`, `click-2`, `clock`, `close`, `close-circled`, `close-large`, `code`, `cog`, `copy`, `credit-card`, `cursor`, `cursor-pointer-1`, `cursor-pointer-2`, `cursor-pointer-4`, `design`, `design-system`, `desktop`, `docs`, `download`, `drag`, `exclamation`, `eye`, `eye-off`, `fast-forward`, `file`, `file-audio`, `file-css`, `file-doc`, `file-font`, `file-html`, `file-img`, `file-json`, `file-md`, `file-txt`, `file-video`, `filter`, `flame`, `flame-spark`, `folder`, `folder-open`, `font-size`, `frame`, `full-screen`, `game`, `gamepad`, `globe`, `headphones`, `heart`, `home`, `info`, `instagram`, `link`, `linkedin`, `list`, `lock`, `login`, `logout`, `loop`, `loop-reverse`, `mail`, `map`, `menu`, `minus`, `mobile`, `moon`, `more-horizontal`, `more-vertical`, `news`, `open-full`, `paintbrush`, `partner`, `pause`, `pencil`, `pencil-draw`, `percentage`, `photo`, `photos`, `pin`, `play`, `play-2`, `play-outline`, `present`, `question`, `reddit`, `refresh`, `return-arrow`, `rewind`, `scroll-down`, `search`, `search-large`, `send`, `settings`, `share`, `share-1`, `shop`, `shopping-bag`, `sidebar-close-2`, `sidebar-left-close`, `sidebar-left-open`, `sidebar-right-close`, `sidebar-right-open`, `smiling`, `sound`, `sound-off`, `sound-on`, `spotify`, `squared`, `stack`, `status-0`, `status-10`, `status-100`, `status-20`, `status-50`, `status-75`, `status-check`, `sticky-bottom`, `sticky-top`, `sun`, `sun-2`, `swap`, `t-shirt`, `tablet`, `tap-3`, `target`, `thumbs-down`, `thumbs-up`, `tiktok`, `trash`, `trending`, `unlock`, `user`, `users`, `video`, `warning`, `weapon`, `widgets`, `youtube`
+`3d`, `accessibility`, `ad-left`, `ad-right`, `ad-top`, `add`, `ai`, `ai-chat`, `ai-large`, `ar`, `archive`, `arrow-down`, `arrow-left`, `arrow-right`, `arrow-top`, `arrow-top-right`, `arrow-up`, `back-arrow`, `bolt`, `book`, `book-open`, `bookmark`, `browser`, `calendar`, `catalog`, `chart`, `chat`, `check`, `check-circled`, `check-squared`, `checklist`, `chevron-down`, `chevron-down-large`, `chevron-left`, `chevron-left-large`, `chevron-right`, `chevron-right-large`, `chevron-up`, `chevron-up-large`, `circled`, `click-2`, `clock`, `close`, `close-circled`, `close-large`, `code`, `cog`, `copy`, `credit-card`, `cursor`, `cursor-pointer-1`, `cursor-pointer-2`, `cursor-pointer-4`, `design`, `design-system`, `desktop`, `docs`, `download`, `drag`, `exclamation`, `eye`, `eye-off`, `fast-forward`, `file`, `file-audio`, `file-css`, `file-doc`, `file-font`, `file-html`, `file-img`, `file-json`, `file-md`, `file-txt`, `file-video`, `filter`, `flame`, `flame-spark`, `folder`, `folder-open`, `font-size`, `frame`, `full-screen`, `game`, `gamepad`, `globe`, `headphones`, `heart`, `home`, `info`, `instagram`, `link`, `linkedin`, `list`, `lock`, `login`, `logout`, `loop`, `loop-reverse`, `mail`, `map`, `menu`, `minus`, `mobile`, `moon`, `more-horizontal`, `more-vertical`, `news`, `open-full`, `paintbrush`, `partner`, `pause`, `pencil`, `pencil-draw`, `percentage`, `photo`, `photos`, `pin`, `play`, `play-2`, `play-outline`, `present`, `question`, `reddit`, `refresh`, `return-arrow`, `rewind`, `scroll-down`, `search`, `search-large`, `send`, `settings`, `share`, `share-1`, `shop`, `shopping-bag`, `sidebar-close-2`, `sidebar-left-close`, `sidebar-left-open`, `sidebar-right-close`, `sidebar-right-open`, `smiling`, `sound`, `sound-off`, `sound-on`, `spotify`, `squared`, `stack`, `status-0`, `status-10`, `status-100`, `status-20`, `status-50`, `status-75`, `status-check`, `sticky-bottom`, `sticky-top`, `sun`, `sun-2`, `swap`, `t-shirt`, `tablet`, `tap-3`, `target`, `thumbs-down`, `thumbs-up`, `tiktok`, `trash`, `trending`, `unlock`, `user`, `users`, `video`, `warning`, `weapon`, `widgets`, `youtube`
 
 ---
 
