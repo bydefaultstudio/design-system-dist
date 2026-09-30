@@ -1,16 +1,16 @@
-<!-- @bydefaultstudio/design-system v5.0.0 -->
+<!-- @bydefaultstudio/design-system v5.1.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 5.0.0 (package)**
+**Version: 5.1.0 (package)**
 
 ## Getting the System
 
 The system ships as one CSS file plus an icon sprite, distributed through the public artefact repo:
 
 ```bash
-npm install github:bydefaultstudio/design-system-dist#semver:^5.0.0
+npm install github:bydefaultstudio/design-system-dist#semver:^5.1.0
 ```
 
 - Link `design-system.css` before any site or theme CSS.
@@ -1053,8 +1053,31 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--dropdown-border` | `var(--border-faded)` |  |
 | `--dropdown-item-hover` | `var(--background-faded)` |  |
 | `--dropdown-menu-min-width` | `250px` |  |
+| `--dropdown-panel-max-width` | `20rem` |  |
 | **Select picker tokens** | | |
 | `--select-picker-max-height` | `18rem` |  |
+| **Date picker tokens** | | |
+| `--date-picker-cell-size` | `var(--target-min)` |  |
+| **Field tokens** | | |
+| `--field-height` | `var(--target-min)` |  |
+| `--field-height-s` | `2.25rem` |  |
+| `--field-height-l` | `var(--5xl)` |  |
+| `--field-font` | `var(--body-size)` |  |
+| `--field-padding-x` | `var(--space-l)` |  |
+| `--field-padding-y` | `var(--space-m)` |  |
+| `--field-icon-size` | `1.25rem` |  |
+| **The side-label column. A form re-points it to fit its longest label.** | | |
+| `--form-label-width` | `10rem` |  |
+| **Check tokens: checkbox, radio, toggle** | | |
+| `--check-size` | `var(--space-xl)` |  |
+| `--check-mark-size` | `14px` |  |
+| `--radio-dot-inset` | `5px` |  |
+| `--check-gap` | `var(--space-s)` |  |
+| `--check-label-font` | `var(--font-s)` |  |
+| `--toggle-width` | `44px` | visual width that happens to equal 44 — not --target-min |
+| `--toggle-height` | `var(--space-xl)` |  |
+| `--toggle-knob-size` | `18px` |  |
+| `--toggle-knob-offset` | `3px` |  |
 | **Dialog tokens** | | |
 | `--dialog-max-width` | `560px` |  |
 | **Rating tokens** | | |
@@ -1231,7 +1254,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--segmented-thumb-radius` | `calc(var(--segmented-track-radius) - var(--segmented-track-padding))` |  |
 | `--segmented-thumb-duration` | `var(--duration-xs)` |  |
 
-### 13. DISCLOSURE (details / summary)
+### 52. FIELD
 
 | Token | Value | Note |
 | --- | --- | --- |
@@ -1255,7 +1278,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 
 ### 46. LOGIN ------
    An authentication stack: header, one or more form panes, trailing text
-   actions. Thin by design — it composes .card, .form-group, .password-field
+   actions. Thin by design — it composes .card, .form-group, .field
    and .button rather than restyling them. Page centering belongs to the
    consuming layout, not the component. Pane switching (sign in vs reset vs
    one-time code) is consumer JavaScript toggling .is-hidden; the component
@@ -1330,7 +1353,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--input-border` | `#3a3a3a` |  |
 | `--input-background` | `rgba(255, 255, 255, 0.08)` |  |
 | `--input-text` | `#f0eeeb` |  |
-| `--input-placeholder` | `rgba(255, 255, 255, 0.45)` |  |
+| `--input-placeholder` | `var(--text-faded)` |  |
 | `--input-focus` | `var(--text-accent)` |  |
 | `--input-disabled-bg` | `rgba(255, 255, 255, 0.06)` |  |
 | `--input-disabled-text` | `rgba(255, 255, 255, 0.3)` |  |
@@ -2408,13 +2431,14 @@ sit at the 24px floor exactly, extended in practice by their labels.
 | --- | --- | --- |
 | `var(--target-min)` | 44px | Minimum hit area for standalone pointer targets |
 
-The password toggle is the system's own precedent — a small icon control
-whose hit area pads out to the floor while the icon stays its size:
+The field's clear and password toggle are the system's own precedent — a
+small icon control whose hit area fills a `--target-min` square of the box
+while the icon stays its size:
 
 ```css
-.password-toggle {
-  min-width: var(--target-min);
-  min-height: var(--target-min);
+.field-clear,
+.field-toggle {
+  width: var(--target-min);
 }
 ```
 
@@ -3003,6 +3027,11 @@ Every interactive component must include:
 | Section Header | `.section-header`, `.section-header-title`, `.section-header-actions` | No | `section-header.md` |
 | Login | `.login`, `.login-header`, `.login-logo`, `.login-title`, `.login-subtitle`, `.login-form`, `.login-meta`, `.login-status`, `.login-footer` | No | `login.md` |
 | Cell Input | `.cell-input`, `.cell-input-cells`, `.cell-input-word`, `.cell-input-cell` | Yes — `cell-input.js` (cell build + paint) | `cell-input.md` |
+| Field | `.field`, `.field-icon`, `.field-clear`, `.field-toggle` | Yes — `field.js` (clear + `.is-filled`); `password-toggle.js` for the toggle | `field.md` |
+| Password Toggle | `.field-toggle` inside a `.field` | Yes — `password-toggle.js` | `password-toggle.md` |
+| Chip | `.chip-group`, `.chip`, `.chip-swatch` — `data-variant="colour"`, `data-split` | Optional — `chip.js` for a clearable group | `chip.md` |
+| Dropdown | `.dropdown`, `.dropdown-trigger`, `.dropdown-menu` (`data-variant="panel"` for content), `.dropdown-item` | Yes — `dropdown.js` | `dropdown.md` |
+| Date Picker | `.date-picker`, `.field`, `.date-picker-panel`, `.date-picker-day` | Yes — `date-picker.js` (grid build + keyboard) on top of `dropdown.js` | `date-picker.md` |
 | App Navigation | `.app-nav`, `.app-nav-link`, `.app-nav-icon`, `.app-nav-label`, `.app-nav-badge` | No | `app-nav.md` |
 | Mark / Abbr / Figure | `mark`, `abbr`, `figure` | No | `mark.md` |
 | Skeleton | `.skeleton-line`, `.skeleton-label`, `.skeleton-input` | No | `skeleton.md` |
@@ -3909,24 +3938,28 @@ Keep a group to about five before the count takes over. Past that the faces are 
 
 ### In an account menu
 
-The avatar replaces the leading icon on an identity row.
+The avatar is the trigger, inside the button that carries the name, and it heads the identity row in the panel. Both are `aria-hidden`: the button's label and the name beside the row already say who this is.
 
 ```html
 <div class="dropdown" data-placement="bottom-end">
-  <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false">
-    <span class="avatar" data-size="small" aria-hidden="true">E</span>
-    Account
+  <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Account, Erlen Masson">
+    <span class="avatar" aria-hidden="true">EM</span>
   </button>
-  <div class="dropdown-menu" role="menu">
-    <button class="dropdown-item" role="menuitem" type="button">
-      <span class="avatar" data-size="small" aria-hidden="true">E</span>
-      Profile
-    </button>
+  <div class="dropdown-menu">
+    <div class="dropdown-header">
+      <span class="avatar" aria-hidden="true">EM</span>
+      <div>
+        <div id="account-name">Erlen Masson</div>
+        <div class="dropdown-desc">erlen@bydefault.studio</div>
+      </div>
+    </div>
+    <div class="dropdown-divider" role="separator"></div>
+    <div class="dropdown-group" role="menu" aria-labelledby="account-name">…</div>
   </div>
 </div>
 ```
 
-See [Site Header](/website/site-header.html) for the full account menu in a header.
+The full pattern is the [Dropdown](/website/dropdown.html)'s avatar item; the [Site Header](/website/site-header.html) shows it in a header.
 
 ---
 
@@ -4430,6 +4463,8 @@ This exact shape is what the docs generator emits on every doc page. A tool's ba
 
 The instrument configuration. Every control in the content region resolves to one height — `--bar-control-height`, 36px. That is the difference between a bar and a row of unrelated widgets, and it is the component's job, not the page's. The exception is structural, not stylistic: menu cells in the actions cluster and the close stretch to the bar's full height instead — see Menus in the actions cluster.
 
+A [Field](field.html) in a bar — a search with its icon and clear — is sized as a whole: the box takes the bar height and the bar's surface, and the input inside it is left alone; the type stays at the bar's size. It needs no `data-size`; the bar's own rule outranks the attribute, so a bar cannot host a large field either. The bar's control height and the small field size read one token, `--field-height-s`.
+
 <div class="bar-group">
         <label class="bar-label" for="bar-colour">Colour</label>
         <input type="color" id="bar-colour" value="#1f1f1f" aria-label="Colour">
@@ -4650,6 +4685,7 @@ This section documents how the component is built. For usage, see the sections a
 | `.bar .button`, `.dropdown-trigger`, `select`, `input`, `.segmented-control`, `.number-input` | One `height`, and `min-height: 0` to lift the base input's 44px floor |
 | `.bar .button[data-icon-only]`, `.bar input[type="color"]` | Square at the control height |
 | `.bar .number-input input[type="number"]` | Fixed width and tabular figures so a long value can't resize the bar |
+| `.bar .field` | A field sized as a whole: bar height, zero vertical padding, the bar's surface and radius; its inner input is excluded from the height rule |
 | `.bar .divider--vertical` | Bar-scale margin instead of page-scale |
 | `.bar .form-toggle` | `min-height` at the control height |
 | `.bar .tabs` / `.bar .tab` | Stretch to bar height; indicator on the container's border |
@@ -6894,6 +6930,23 @@ Pass and fail differ in **shape**, not colour, so the distinction survives for a
 
 An unselected chip draws no mark at all, pass or fail. The judgement appears on the answer you chose, not on every option at once.
 
+### Two colours in one chip
+
+A chip can stand for a pair outright and show both colours. `data-split` paints `--chip-fill` on the start half and `--chip-fill-end` on the end half. Put the darker of the two in `--chip-fill`: the selected ring is drawn in it, and a pale ring vanishes against the ground. On the dark theme the ring swaps to `--chip-fill-end` for the same reason.
+
+The mark is dropped — a check straddling two fills never read clearly on either — so the ring alone says which pair is chosen. That means `data-contrast` does nothing on a split chip: it cannot show pass or fail, so show the verdict somewhere the reader can see it (Colour Pairing stamps it on the preview band) and carry it in the hidden label as before. The paint works on a bare `.chip-swatch` too, as `data-contrast` does.
+
+```html
+<label class="chip" data-variant="colour" data-split
+       >
+  <input type="radio" name="pairing" value="yellow-purple">
+  <span class="chip-swatch" aria-hidden="true"></span>
+  <span class="visually-hidden">Yellow on purple — passes contrast</span>
+</label>
+```
+
+Colour Pairing's Pairings panel is a group of these, one per pairing the brand lists, with the script deciding which colour is the darker.
+
 ### The swatch works outside a chip
 
 `.chip-swatch` is deliberately **not** scoped to `.chip`. A painted colour area that draws a pass/fail mark in an ink it works out for itself is useful to anything showing a colour, and a second copy of that logic is exactly what this variant exists to remove.
@@ -6904,7 +6957,7 @@ It brings its own paint, hairline, mark and ink. What it does not bring is a rea
 .my-tile:has(input:checked) .chip-swatch::after { opacity: 1; }
 ```
 
-Colour Pairing's grids are colour chips outright, and its Pairings panel draws a split swatch by adding a half-width gradient to `.chip-swatch`. A consumer that does compose a bare swatch puts `data-contrast="fail"` on the swatch itself, since that is the element reading `--chip-mark`.
+Colour Pairing's grids are colour chips outright. A consumer that does compose a bare swatch puts `data-contrast="fail"` on the swatch itself, since that is the element reading `--chip-mark`.
 
 Set `--chip-fill` on an **ancestor** and let it inherit. Do not redeclare it on the swatch: a custom property declared on an element shadows the value an ancestor set, which is why `.chip-swatch` states its defaults at the use site rather than as its own declarations.
 
@@ -6979,7 +7032,7 @@ Clearing is a DOM change, and assistive technology does not listen to DOM events
 - The rest border reads `--border-control`, not `--border-faded`. A chip's surface is transparent, so the border is the only thing saying it is pressable, and a control boundary needs 3:1. `--border-faded` is decorative at 1.4:1.
 - `Delete` and `Backspace` clear a `data-clearable` answer from the keyboard, so clearing is never pointer-only.
 - No `prefers-reduced-motion` guard, deliberately: a chip transitions colour and nothing else. There is no motion to reduce. The colour variant's paint does change size between rest, hover and selected, but that is applied instantly — `border-width` is kept out of the transition so no geometry animates.
-- A colour chip is 48px square, so it clears `--target-min` on **both** axes — the text chip's inline-padding caveat does not apply.
+- A colour chip is 48px square, so it clears `--target-min` on **both** axes — the text chip's inline-padding caveat does not apply. That holds at the default `--chip-colour-size`. A consumer that re-points the token smaller owns the target: 24px is the 2.5.8 floor, and Colour Pairing's grids stop shrinking at 32px for that reason.
 - A colour chip's name comes from a `.visually-hidden` span. Without it the control is unnamed, because the swatch is `aria-hidden`.
 - The selected ring is the swatch's own colour and is **not** contrast-corrected. On a pale swatch it reads near 1.05:1 and carries nothing; the mark is what satisfies 1.4.11, which is why its ink flips. This was chosen deliberately — do not "fix" the ring to a neutral.
 - **Hover is the exception.** It has no mark, so the ring is its only carrier and it uses `--border-control` (4.7:1) rather than the fill. Hover and selection therefore differ in colour as well as weight, which is correct: they are different states, not degrees of one.
@@ -7023,7 +7076,7 @@ Clearing is a DOM change, and assistive technology does not listen to DOM events
 | `--chip-gap` | `var(--space-xs)` | Gap between chips |
 | `--chip-scale-min` | `7rem` | Narrowest scale stop before the row wraps |
 | `--chip-duration` | `var(--duration-2xs)` | Colour transition |
-| `--chip-colour-size` | `3rem` | Colour chip's square size |
+| `--chip-colour-size` | `3rem` | Colour chip's square size. Clears `--target-min` only at this default |
 | `--chip-colour-gap` | `0.125rem` | Ground ring between the paint and the edge |
 | `--chip-colour-ground` | `var(--background-primary)` | That ring's colour. Must stay **opaque**, so the selected ring reads as separate from the paint |
 | `--chip-colour-ring` | `var(--border-l)` | Selected ring width |
@@ -7032,6 +7085,7 @@ Clearing is a DOM change, and assistive technology does not listen to DOM events
 | `--chip-swatch-border-width` | `var(--border-s)` | That hairline's width |
 | `--chip-colour-check` | `1.5rem` | Mark size |
 | `--chip-fill` | `var(--background-faded)` | The colour a colour chip shows. Set per chip |
+| `--chip-fill-end` | `var(--chip-fill)` | The second colour of a split chip, on the end half |
 | `--chip-mark` | check icon | The mark drawn when selected. `data-contrast="fail"` swaps it for a cross |
 | `--chip-check-ink` | computed | The mark's ink, flipped from `--chip-fill`'s brightness |
 
@@ -7051,6 +7105,8 @@ Clearing is a DOM change, and assistive technology does not listen to DOM events
 | `.chip-swatch` | The paint and the mark. Usable outside a chip |
 | `.chip-swatch[data-contrast="fail"]` | Swaps the mark for a cross |
 | `.chip[data-variant="colour"]:has(input:checked)` | Ring in the fill's own colour; reveals the mark |
+| `.chip[data-variant="colour"][data-split]`, `.chip-swatch[data-split]` | Two colours, `--chip-fill` on the start half and `--chip-fill-end` on the end; no mark, so `data-contrast` is inert. Mirrored for RTL with `:dir(rtl)` |
+| `[data-theme="dark"] .chip[data-split]:has(input:checked)` | The ring takes the end colour on the dark theme, where the darker fill would sink into the page. Named again for `.chip-group.is-error` and under forced colours |
 | `.chip-group.is-error .chip[data-variant="colour"]:has(input:checked)` | Names the winner over the group error, as the base does |
 
 ### Key rules
@@ -7199,7 +7255,7 @@ Copy</span>
     <div class="block gap-m">
       <p class="demo-eyebrow">Copied state</p>
       <div>
-        <button class="button is-small is-outline copy-btn is-copied" type="button">
+        <button class="button copy-btn is-copied" data-size="small" data-variant="outline" type="button">
           <span class="copy-btn-default"><div class="svg-icn" data-icon="copy"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z" fill="currentColor"/></svg></div> Copy</span>
           <span class="copy-btn-copied"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z" fill="currentColor"/></svg></div> Copied!</span>
         </button>
@@ -7209,7 +7265,7 @@ Copy</span>
 </div>
 
 ```html
-<button class="button is-small is-outline copy-btn" data-copy="value" type="button">
+<button class="button copy-btn" data-size="small" data-variant="outline" data-copy="value" type="button">
   <span class="copy-btn-default">{{icon:copy}} Copy</span>
   <span class="copy-btn-copied">{{icon:check}} Copied!</span>
 </button>
@@ -7219,7 +7275,7 @@ Copy</span>
 
 ## Icon Only
 
-`.is-icon-only` hides the text labels and shows only the icon. Best for compact UI: code blocks, table cells, and dense layouts. Always include `aria-label`.
+`data-icon-only` squares the button up and shows only the icon. Best for compact UI: code blocks, table cells, and dense layouts. Always include `aria-label`.
 
 </span>
           <span class="copy-btn-copied"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z" fill="currentColor"/></svg></div></span>
@@ -7229,7 +7285,7 @@ Copy</span>
     <div class="block gap-m">
       <p class="demo-eyebrow">Copied state</p>
       <div>
-        <button class="button is-small is-outline copy-btn is-icon-only is-copied" data-tooltip="Copied!" type="button" aria-label="Copy">
+        <button class="button copy-btn is-copied" data-size="small" data-variant="outline" data-icon-only data-tooltip="Copied!" type="button" aria-label="Copy">
           <span class="copy-btn-default"><div class="svg-icn" data-icon="copy"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z" fill="currentColor"/></svg></div></span>
           <span class="copy-btn-copied"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z" fill="currentColor"/></svg></div></span>
         </button>
@@ -7239,7 +7295,7 @@ Copy</span>
 </div>
 
 ```html
-<button class="button is-small is-outline copy-btn is-icon-only" data-copy="value" data-tooltip="Copy" type="button" aria-label="Copy">
+<button class="button copy-btn" data-size="small" data-variant="outline" data-icon-only data-copy="value" data-tooltip="Copy" type="button" aria-label="Copy">
   <span class="copy-btn-default">{{icon:copy}}</span>
   <span class="copy-btn-copied">{{icon:check}}</span>
 </button>
@@ -7247,9 +7303,9 @@ Copy</span>
 
 ---
 
-## Ghost
+## Transparent
 
-`.is-ghost` removes the background and border for a minimal, inline copy action. Best for use alongside content where a button would be too heavy.
+`data-variant="transparent"` removes the background and border for a minimal, inline copy action. Best for use alongside content where a button would be too heavy.
 
 </span>
           <span class="copy-btn-copied"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z" fill="currentColor"/></svg></div></span>
@@ -7259,7 +7315,7 @@ Copy</span>
     <div class="block gap-m">
       <p class="demo-eyebrow">Copied state</p>
       <div>
-        <button class="button copy-btn is-ghost is-copied" data-tooltip="Copied!" type="button" aria-label="Copy">
+        <button class="button copy-btn is-copied" data-variant="transparent" data-tooltip="Copied!" type="button" aria-label="Copy">
           <span class="copy-btn-default"><div class="svg-icn" data-icon="copy"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z" fill="currentColor"/></svg></div></span>
           <span class="copy-btn-copied"><div class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none"><path d="M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z" fill="currentColor"/></svg></div></span>
         </button>
@@ -7269,7 +7325,7 @@ Copy</span>
 </div>
 
 ```html
-<button class="button copy-btn is-ghost" data-copy="value" data-tooltip="Copy" type="button" aria-label="Copy">
+<button class="button copy-btn" data-variant="transparent" data-copy="value" data-tooltip="Copy" type="button" aria-label="Copy">
   <span class="copy-btn-default">{{icon:copy}}</span>
   <span class="copy-btn-copied">{{icon:check}}</span>
 </button>
@@ -7309,7 +7365,7 @@ The sprite must be same-origin and contain a `#check` symbol. Without config the
 
 ## Accessibility
 
-- Always include `aria-label="Copy"` on icon-only and ghost variants
+- Always include `aria-label="Copy"` on icon-only and transparent variants
 - The copied state provides visual feedback via the check icon and green colour
 
 ---
@@ -7318,9 +7374,276 @@ The sprite must be same-origin and contain a `#check` symbol. Without config the
 
 | Variant | Classes | Use For |
 | --- | --- | --- |
-| Icon + Text | `.copy-btn` | Standalone copy actions |
-| Icon Only | `.copy-btn.is-icon-only` | Code blocks, compact UI |
-| Ghost | `.copy-btn.is-ghost` | Inline, minimal contexts |
+| Icon + Text | `.button.copy-btn` | Standalone copy actions |
+| Icon Only | `.button.copy-btn[data-icon-only]` | Code blocks, compact UI |
+| Transparent | `.button.copy-btn[data-variant="transparent"]` | Inline, minimal contexts |
+
+Size and variant come from the [Button](button.html)'s own attributes — `data-size`, `data-variant`, `data-icon-only` — so a copy button takes any of them.
+
+**Deprecated:** `.copy-btn.is-icon-only` and `.copy-btn.is-ghost` predate the attributes and put variants in the state namespace. They still work for one release; use `data-icon-only` and `data-variant="transparent"` instead. The transparent variant is not a pixel match for ghost: it takes the button's own padding and hover wash, and its copied state fills with the success tint where ghost stayed bare.
+
+### Date Picker
+
+A date picker puts a calendar panel on a native `<input type="date">`. The input stays the field: the reader can type the date, the browser validates it, the form posts `YYYY-MM-DD`, and nothing works differently without the script. The panel is a [Dropdown](dropdown.html) — `dropdown.js` opens, places and closes it — and `date-picker.js` builds the month grid inside it. The `.date-picker` class goes on a `.dropdown`, with `data-mode` choosing one date or a range.
+
+---
+
+## Anatomy
+
+| Axis | Mechanism | Example |
+|---|---|---|
+| Mode | `data-mode` on the root | `data-mode="range"` — two inputs, one calendar |
+| Months shown | `data-months` on the root | `data-months="2"` — two months side by side |
+| Earliest / latest date | `min` / `max` on the input | `min="2026-10-01"` |
+| Refused weekdays | `data-disabled-days` on the root | `data-disabled-days="sat sun"` |
+| Refused dates | `data-disabled-dates` on the root | `data-disabled-dates="2026-12-25 2027-01-01"` |
+| Where it opens | `data-placement` on the root | `data-placement="bottom-end"` — the dropdown's own axis |
+| UI strings | `data-label-*` on the root | `data-label-today="Aujourd'hui"` — `dialog`, `previous`, `next`, `today`, `clear`, `selected` |
+
+The panel takes the dropdown surface tokens (`--dropdown-background`, `--dropdown-border`, `--dropdown-item-hover`) and defines one of its own, `--date-picker-cell-size`.
+
+---
+
+## Basic usage
+
+The root is a `.dropdown` carrying `.date-picker`. Inside it, a `.form-group` holds the label and a `.field` — the input and the calendar button, which is the `.dropdown-trigger`. The empty `.date-picker-panel` is the `.dropdown-menu`; the script fills it. The two `<template>`s carry the paging chevrons and go on the page once, anywhere.
+
+<div class="dropdown-menu date-picker-panel"></div>
+    </div>
+  </div>
+</div>
+
+```html
+<template data-date-picker-icon="prev"><div class="svg-icn" data-icon="chevron-left"><!-- svg --></div></template>
+<template data-date-picker-icon="next"><div class="svg-icn" data-icon="chevron-right"><!-- svg --></div></template>
+
+<div class="dropdown date-picker">
+  <div class="form-group">
+    <label for="checkin">Check-in</label>
+    <div class="field">
+      <input type="date" id="checkin" name="checkin">
+      <button type="button" class="dropdown-trigger" aria-label="Choose date" aria-haspopup="dialog" aria-expanded="false">
+        <div class="svg-icn" data-icon="calendar"><!-- svg --></div>
+      </button>
+    </div>
+  </div>
+  <div class="dropdown-menu date-picker-panel"></div>
+</div>
+```
+
+The calendar button is hidden until the script binds, and Chromium's own calendar button is hidden once it has — so the field never shows two buttons for one calendar. Before the script runs, the browser's picker is the working control.
+
+---
+
+## Range
+
+`data-mode="range"` takes two inputs — from and to — under one calendar. The one trigger sits in the last field. The first click sets the start, the second the end; an end before the start begins a new range there rather than swapping the two, so the reader always gets the range they aimed at. Add `data-months="2"` to show both ends at once.
+
+<div class="form-group">
+        <label for="demo-date-to">To</label>
+        <div class="field">
+          <input type="date" id="demo-date-to" name="to">
+          <button type="button" class="dropdown-trigger" aria-label="Choose dates" aria-haspopup="dialog" aria-expanded="false">{{icon:calendar}}</button>
+        </div>
+      </div>
+      <div class="dropdown-menu date-picker-panel"></div>
+    </div>
+  </div>
+</div>
+
+```html
+<div class="dropdown date-picker" data-mode="range" data-months="2">
+  <div class="form-group">
+    <label for="from">From</label>
+    <div class="field">
+      <input type="date" id="from" name="from">
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="to">To</label>
+    <div class="field">
+      <input type="date" id="to" name="to">
+      <button type="button" class="dropdown-trigger" aria-label="Choose dates" aria-haspopup="dialog" aria-expanded="false">
+        <div class="svg-icn" data-icon="calendar"><!-- svg --></div>
+      </button>
+    </div>
+  </div>
+  <div class="dropdown-menu date-picker-panel"></div>
+</div>
+```
+
+A range closed after one click keeps its start in the first input. That is what the reader did; the second input stays empty until they finish.
+
+The panel opens from the trigger's edge: a range picker takes `data-placement="bottom-end"` at bind, unless you set a placement yourself, because the [Dropdown](dropdown.html) hangs its panel off the root's start edge and the range trigger sits at the end.
+
+---
+
+## Constraints
+
+`min` and `max` go on the input, where the browser already enforces them. The calendar reads them too: days outside the bounds are muted and the arrow keys stop at the edge. In a range, the later `min` and the earlier `max` of the two inputs win.
+
+Weekdays and dates the calendar should refuse go on the root. A refused day stays in the arrow-key path — the [Dropdown](dropdown.html)'s disabled-item convention — and will not select.
+
+<div class="dropdown-menu date-picker-panel"></div>
+    </div>
+  </div>
+</div>
+
+```html
+<div class="dropdown date-picker" data-disabled-days="sat sun" data-disabled-dates="2026-12-25 2026-12-26 2027-01-01">
+  <div class="form-group">
+    <label for="delivery">Delivery day</label>
+    <div class="field">
+      <input type="date" id="delivery" name="delivery" min="2026-10-01" max="2027-03-31">
+      <button type="button" class="dropdown-trigger" aria-label="Choose date" aria-haspopup="dialog" aria-expanded="false">…</button>
+    </div>
+  </div>
+  <div class="dropdown-menu date-picker-panel"></div>
+</div>
+```
+
+---
+
+## Locale
+
+Month names, weekday names, the day labels read to a screen reader and the first day of the week all follow the page's `lang` attribute, through `Intl.DateTimeFormat` and `Intl.Locale`. Where the browser cannot say which day starts the week — Firefox at the time of writing — the week starts on Monday. The value the form posts is `YYYY-MM-DD` whatever the locale.
+
+Six strings are the script's own and default to English: the panel's name, the two paging buttons, Today, Clear, and the word "selected" that a chosen day's name carries. A deployment in another language sets them on the root, and the trigger's own `aria-label` is yours to write:
+
+```html
+<div class="dropdown date-picker" data-label-dialog="Choisir une date" data-label-previous="Mois précédent" data-label-next="Mois suivant" data-label-today="Aujourd'hui" data-label-clear="Effacer" data-label-selected="sélectionné">
+```
+
+---
+
+## JavaScript
+
+Include `assets/js/dropdown.js` and `assets/js/date-picker.js`. The first opens and closes the panel; the second builds the grid. Both auto-initialise: every `.date-picker` on the page binds on load, and again after a page transition.
+
+```html
+<script src="/assets/js/dropdown.js"></script>
+<script src="/assets/js/date-picker.js"></script>
+```
+
+**Late-mounted pickers.** A picker added to the page after load registers itself with the public init, which takes a scope to search or the picker itself:
+
+```js
+window.initDatePicker(pickerEl);
+```
+
+Mode, month count, locale and the disabled rules are read once at bind. To change them, clear `data-date-picker-bound` and call `initDatePicker` on the picker again.
+
+**Events.** Choosing a day writes the native input and dispatches `input` then `change` on it, so anything listening to the input — validation, a form library, a change handler — sees a user edit. Clearing does the same with an empty value. The root also dispatches `date-picker-change`:
+
+```js
+picker.addEventListener('date-picker-change', function (event) {
+  event.detail.value; // "2026-10-14", or "2026-10-14/2026-10-18" for a finished range, or ""
+  event.detail.from;  // "2026-10-14" or ""
+  event.detail.to;    // range only — "2026-10-18" or ""
+});
+```
+
+**Typing.** The panel follows the input: type a date while it is open and the calendar moves to that month. Typing an incomplete date changes nothing until the browser has a whole one.
+
+**Closing from your own code** goes through the dropdown, never by stripping `.is-open`:
+
+```js
+window.closeDropdown(pickerEl, true);
+```
+
+---
+
+## Keyboard interactions
+
+The grid follows the WAI-ARIA date picker pattern. The panel is a dropdown, not a modal dialog, so `Tab` leaves it the way it leaves any dropdown.
+
+| Key | Action |
+|-----|--------|
+| `Enter` / `Space` / `ArrowDown` / `ArrowUp` | On the calendar button: opens the panel and focuses the chosen day, or today |
+| `ArrowLeft` / `ArrowRight` | Previous or next day |
+| `ArrowUp` / `ArrowDown` | Same day the week before or after |
+| `Home` / `End` | First or last day of that week |
+| `PageUp` / `PageDown` | Same day the month before or after |
+| `Shift` + `PageUp` / `PageDown` | Same day the year before or after |
+| `Enter` / `Space` | Chooses the focused day. Single: closes and returns focus to the button. Range: sets the start and stays open, then sets the end and closes |
+| `Escape` | Closes and returns focus to the button |
+| `Tab` / `Shift` + `Tab` | Moves through the panel's buttons in order — previous month, next month, the focused day, Today, Clear — and closes the panel on the way out |
+
+Moving past the edge of the visible month turns the page. In a range, the days between the start and the focused day preview as the pointer does.
+
+---
+
+## Accessibility
+
+- The input must have a visible `<label>`. It is the field's name; the calendar button is a second way to fill it, not a replacement
+- The calendar button must carry `aria-label`, `aria-haspopup="dialog"` and `aria-expanded`. With more than one picker on a page, name the field in the label — "Choose check-in date" — so a list of buttons tells them apart. The dropdown keeps `aria-expanded` current and adds `aria-controls` on first open
+- The panel is `role="dialog"`, named from the button's label
+- Each month is `role="grid"`, labelled by its own month and year, with weekday column headers; each day is a `<button>` in a `role="gridcell"` with a full-date name — "Wednesday, 14 October 2026" — so a screen reader never has to infer the month from a bare number
+- One day at a time is in the tab order; the arrow keys move focus between the rest
+- Today carries `aria-current="date"`. A chosen day sets `aria-selected` on its cell and ends its own name with "selected", because a screen reader in focus mode reads the button, not the cell
+- A refused day carries `aria-disabled="true"` and stays focusable, so the keyboard can pass over it
+- Paging the month announces the new month through a polite live region
+- Focus never gets lost: a re-rendered month hands focus to the same date in the new grid, and choosing a day or pressing Escape returns it to the calendar button. Tabbing out or clicking elsewhere leaves focus where it went, as any dropdown does
+
+---
+
+## Usage rules
+
+**Do:**
+- Keep the native input as the field. Readers who know the date type it; the calendar is for the ones who need to see the month
+- Put `min` and `max` on the input, so a browser without the script enforces them too
+- Use `data-months="2"` for a range whose two ends usually fall in different months — a stay, a campaign flight
+- Give the field its own label, as every form field has
+
+**Don't:**
+- Don't use it for a date of birth or any date the reader knows outright — the native input alone is faster, and a picker paging back sixty years is a chore
+- Don't hide the input and leave only the button. The typed path is the accessible one and the one that works without the script
+- Don't open the panel on focus. A field that grows a calendar the moment the reader tabs into it covers what comes next
+- Don't set `data-months="2"` on a single-date picker without a reason — the wider panel is not a better one
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | What it controls |
+|---|---|---|
+| `--date-picker-cell-size` | `var(--target-min)` | The day cell's width and height — a square at the touch target minimum, so a month grid is seven targets wide |
+| `--dropdown-background` | `var(--background-primary)`, `var(--background-plain)` in dark | Panel background, from the dropdown |
+| `--dropdown-border` | `var(--border-faded)` | Panel border and the footer rule, from the dropdown |
+| `--dropdown-item-hover` | `var(--background-faded)` | Day hover, from the dropdown |
+| `--selected-background` / `--selected-text` | system pair | The chosen day, inverted — never a tint |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.dropdown.date-picker` | Root: a wrapping flex row of fields with `.form-group`'s bottom margin, which the groups inside give up |
+| `.field` | The bordered box around the input and the calendar button — the [Field](field.html) component, not the picker's own |
+| `.date-picker .dropdown-trigger` | The calendar button — hidden until `data-date-picker-bound` sits on the root, then a `--target-min` square in `--text-faded` |
+| `.date-picker[data-date-picker-bound] input::-webkit-calendar-picker-indicator` | Chromium's own calendar button, hidden once ours is live |
+| `.date-picker.is-open .dropdown-trigger` | The button's open state, restated because the dropdown's own rule cannot reach a nested trigger |
+| `.date-picker .dropdown-menu` | The panel: dropdown surface, no minimum width, `--space-m` padding |
+| `.date-picker-nav`, `.date-picker-title` | Previous, month title, next |
+| `.date-picker-months` | Row of one or two month grids |
+| `.date-picker-row`, `.date-picker-weekday` | Weekday header row, in the `.dropdown-label` voice |
+| `.date-picker-cell` | A grid cell, sized by `--date-picker-cell-size`; empty for the days before the 1st and after the last, so a month is always six rows |
+| `.date-picker-day` | A day: square, no radius, hover from the dropdown, focus ring from the global button rule |
+| `.date-picker-day.is-selected` | The chosen day, or a range end |
+| `.date-picker-day.is-range-inner`, `.is-range-preview` | The days inside a finished range, and the days a range would cover if the pointer or the focused day were its end |
+| `.date-picker-day[aria-current="date"]` | Today: semi-bold, with a dot in `--text-accent` that turns `currentColor` once selected |
+| `.date-picker-day[aria-disabled="true"]` | A refused or out-of-bounds day: faded, `not-allowed`, no hover |
+| `.date-picker-footer` | Today and Clear, above a `--dropdown-border` rule |
+
+### Key rules
+
+State hooks with no rule of their own: `.date-picker-cell.is-empty` on a padding cell, and `.is-range-start` / `.is-range-end` on a finished range's two ends — there for a product that wants end caps, unstyled here because the inverted `.is-selected` already marks both ends.
+Height is stable: six rows every month, so paging never moves the footer under the pointer or changes the placement flip.
+Selected beats hover: the selected rule is declared after the hover rule, so pointing at the chosen day cannot wash it out.
+Forced colours: the selected day takes `Highlight` / `HighlightText` with `forced-color-adjust: none`, range days an inset `CanvasText` outline, and the today dot `CanvasText`.
 
 ### Dialog
 
@@ -8358,9 +8681,27 @@ That means you no longer have to hand-place menus to avoid overflow. `.is-right`
 
 It resolves per axis, and only when the opposite side genuinely has more room. A menu taller than the viewport stays where you asked rather than trading one bad position for another — there is no placement that fits, so it keeps the one you chose.
 
+**A panel that still crosses an edge is nudged back inside.** Flipping cannot help a panel wider than the room on either side of its trigger — a form or an explanation opened from the middle of a phone-width row. After the flip, the script measures again and shifts whatever still overhangs back inside the viewport, with `--space-s` of clear space, by writing the overflow to `--dropdown-nudge` on the menu. The CSS applies it as a `translate`, so the placement rules stay the only thing that anchors the panel, and a menu that needed no nudge carries no transform at all. A menu laid out in place, such as a nested one inside the bar's overflow panel, moves with its host and is never nudged. When a panel is wider than the viewport, its left edge wins. The nudge is cleared on close and re-measured on resize and scroll.
+
 ### Inside a bar
 
 The [bar](bar.html) re-points placement for you, so don't hand-set it there. A dropdown directly inside `.bar-actions` becomes a full-height cell whose panel hangs off the bar's bottom border — the panel's own top border lands on the same pixel row as the bar's hairline and paints over it, so the two read as one line with no extra rules. Collision resolution still applies; the anchor moves, the logic does not.
+
+### Links between sibling pages
+
+A small set of sibling pages — two tools that share one job — can switch through a dropdown in a bar where tabs have no room at phone width. That is a **disclosure of links**, not a menu: no `role="menu"` on the panel, no `role="menuitem"` on the items, and **no `aria-haspopup`** on the trigger, because `aria-haspopup="true"` promises the menu keyboard contract. The items stay plain `<a class="dropdown-item">` links, and the current page carries `aria-current="page"`, which reveals its checkmark.
+
+```html
+<div class="dropdown">
+  <button class="dropdown-trigger" type="button" aria-expanded="false">Colour Pairing</button>
+  <div class="dropdown-menu">
+    <a class="dropdown-item" href="/tools/color-pairing.html" aria-current="page"><span class="dropdown-checkmark">…</span><span>Colour Pairing</span></a>
+    <a class="dropdown-item" href="/tools/color-palette.html"><span class="dropdown-checkmark">…</span><span>Colour Palette</span></a>
+  </div>
+</div>
+```
+
+Keep it to a handful of siblings. Anything that reads as site navigation still belongs in links or tabs.
 
 ### Nesting
 
@@ -8549,7 +8890,7 @@ For user menus showing the logged-in user's identity.
       </button>
       <button class="dropdown-item dropdown-item--danger" role="menuitem" type="button">
         <div class="svg-icn" data-icon="logout"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 21C4.45 21 3.97917 20.8042 3.5875 20.4125C3.19583 20.0208 3 19.55 3 19V5C3 4.45 3.19583 3.97917 3.5875 3.5875C3.97917 3.19583 4.45 3 5 3H12V5H5V19H12V21H5ZM16 17L14.625 15.55L17.175 13H9V11H17.175L14.625 8.45L16 7L21 12L16 17Z" fill="currentColor"/></svg></div>
-        <span>Log out</span>
+        <span>Sign out</span>
       </button>
       </div>
     </div>
@@ -8561,6 +8902,8 @@ The identity row is not a menu item, and `role="menu"` may only own menu items, 
 Both circles are the [avatar](/website/avatar.html) component — `.avatar`, sized with `data-size` rather than a one-off width. Both are `aria-hidden`: the name follows in the markup, so an announced stray "E" adds nothing.
 
 The menu opens left-aligned here, which is the default. In a real header the trigger sits at the far right, and the menu should be anchored to match — put `data-placement="bottom-end"` on the `.dropdown`, not on the menu. That is genuine intent rather than overflow avoidance, so it is one of the few places the attribute is worth reaching for.
+
+The trigger can also be the avatar alone — no name, no chevron — when the header has no room for a label. The button then carries the person in its `aria-label` ("Account, Erlen Masson"); the [Site Header](/website/site-header.html) does exactly this. The action is **Sign out**, the word the login and account pages use.
 
 ```html
 <div class="dropdown-menu">
@@ -8675,6 +9018,42 @@ document.querySelector('.dropdown').addEventListener('dropdown-select', (event) 
 
 ---
 
+## Content panel
+
+Sometimes what hangs off the trigger is not a list of things to choose but a piece of content: a sentence behind an info button, a form for a custom value, a set of controls. `data-variant="panel"` on `.dropdown-menu` makes the panel pad itself and size to its content, up to `--dropdown-panel-max-width` and never past the viewport; the menu's 250px floor does not apply. The panel is also its own [block](layout.html): its children stack with a `--space-m` gap and lose their default margins, so a single sentence needs no reset and several pieces of content need no wrapper.
+
+</div>
+</div>
+
+```html
+<div class="dropdown">
+  <button class="dropdown-trigger button" data-variant="transparent" data-icon-only data-size="xsmall"
+          type="button" aria-expanded="false" aria-label="About AA normal text">…</button>
+  <div class="dropdown-menu" data-variant="panel" tabindex="-1">
+    <p class="text-size-s">The floor for body copy. Text under 24px, or under 19px bold, needs 4.5:1.</p>
+  </div>
+</div>
+```
+
+Three things follow from it not being a menu. No `role="menu"` on the panel and no `aria-haspopup` on the trigger, for the reason given under [links between sibling pages](#links-between-sibling-pages): the menu role promises arrow-key navigation the panel does not have. The trigger keeps `aria-expanded` and a name. And the panel carries `tabindex="-1"`: the script closes a dropdown when focus leaves it, and a click on a paragraph moves focus to the page, so without it the panel would close behind the reader's own click.
+
+Several pieces of content stack on the panel's own gap. Group two pieces tighter than the rest by wrapping them in a `.block gap-xs`, as anywhere else.
+
+</div>
+</div>
+
+```html
+<div class="dropdown-menu" data-variant="panel" tabindex="-1">
+  <p class="label">Contrast checks</p>
+  <p class="text-size-s">Normal text needs 4.5:1 and large text 3:1…</p>
+  <a class="text-size-s" href="…">Read WCAG 1.4.3</a>
+</div>
+```
+
+A panel that mixes items with other rows — a preset list over a custom field, a swatch grid over a hex input — is still the base panel: its `.dropdown-item` rows stay full-bleed so their hover reaches the edge, and the rows that are not items borrow the item inset, `--space-m`. The Logo tool and the Icon Library do this.
+
+---
+
 ## When to use what
 
 | Pattern | When to use | Example |
@@ -8687,6 +9066,7 @@ document.querySelector('.dropdown').addEventListener('dropdown-select', (event) 
 | Description (`.dropdown-desc`) | Items that need explanation | "From template. Choose from pre-built..." |
 | Section label (`.dropdown-label`) | Grouping related items under a heading | "Switch Role", "Danger zone" |
 | Divider (`.dropdown-divider`) | Separating logical groups | Between actions and danger items |
+| Content panel (`data-variant="panel"`) | Prose, a form or controls behind a trigger — nothing to pick from | An info button's note, a custom-colour form |
 
 ---
 
@@ -8701,6 +9081,14 @@ Include `assets/js/dropdown.js` on any page. It auto-initialises all `.dropdown`
 Clicking a `.dropdown-trigger` toggles `.is-open` on the parent `.dropdown`. Clicking outside, moving focus away, or pressing Escape closes it.
 
 The script also wires the ARIA relationships you would otherwise repeat on every instance: `aria-controls` on the trigger, `aria-labelledby` on the menu, and `tabindex="-1"` on each item while the menu is open. You author the roles; the plumbing is applied for you.
+
+**Closing from your own code.** A panel that finishes its own job — a form submitted, a current-page link that goes nowhere — closes through the script, never by stripping `.is-open` by hand:
+
+```js
+window.closeDropdown(dropdownEl, returnFocus);
+```
+
+`dropdownEl` is the `.dropdown`. Pass `true` to hand focus back to the trigger, `false` when you are about to move focus somewhere else yourself. It clears the resolved placement and the nudge, resets `aria-expanded`, and closes any dropdown nested inside.
 
 ---
 
@@ -8743,6 +9131,7 @@ This is the WAI-ARIA menu button pattern in full. `role="menu"` commits a compon
 | Chevron | `.dropdown-chevron` | Rotating arrow indicator (on trigger) |
 | Menu | `.dropdown-menu` | The panel that appears |
 | Menu (right) | `.dropdown-menu .is-right` | Right-aligned from trigger |
+| Content panel | `.dropdown-menu[data-variant="panel"]` | A padded panel of content rather than items; no menu role |
 | Item | `.dropdown-item` | Clickable row |
 | Item (danger) | `.dropdown-item .dropdown-item--danger` | Destructive action |
 | Item (disabled) | `.dropdown-item[aria-disabled="true"]` | Unavailable action |
@@ -8768,7 +9157,7 @@ This is the WAI-ARIA menu button pattern in full. `role="menu"` commits a compon
 - Reach for `data-placement` for genuine intent — an account menu anchored to the right of a header — not to dodge an overflow the script already handles
 
 **Don't:**
-- Don't use dropdowns for primary navigation, use tabs or links
+- Don't use dropdowns for primary navigation, use tabs or links. The one exception is a switcher between a handful of sibling pages, built as a disclosure of links (see Links between sibling pages)
 - Don't nest dropdowns inside dropdowns
 - Don't use dropdowns for form field selection, use `<select>` instead
 - Don't put more than 10 items in a single dropdown, break into sections or use a different pattern
@@ -8786,6 +9175,8 @@ This section documents how the component is built. For usage, see the sections a
 | `--dropdown-background` | `var(--background-primary)` | Menu background |
 | `--dropdown-border` | `var(--border-faded)` | Menu and divider border |
 | `--dropdown-item-hover` | `var(--background-faded)` | Item hover background |
+| `--dropdown-panel-max-width` | `20rem` | Width cap of a content panel, otherwise as wide as its content |
+| `--dropdown-nudge` | unset, written by the script | Inline `translate` value, both axes (`-24px 0`), that keeps an overhanging panel inside the viewport. Not for authoring |
 
 ### Selectors
 
@@ -8800,10 +9191,13 @@ This section documents how the component is built. For usage, see the sections a
 | `.dropdown.is-open > .dropdown-trigger .dropdown-chevron` | Chevron rotated 180deg when open (child-combined so an outer open never rotates a nested one) |
 | `.dropdown-menu` | Absolutely positioned menu panel, hidden by default |
 | `.dropdown-menu.is-right` | Legacy right-alignment, read as `bottom-end` |
+| `.dropdown-menu[data-variant="panel"]` | Content panel: pads itself, `max-content` up to the cap and the viewport with no 250px floor, `--space-m` gap, stated ink |
+| `.dropdown-menu[data-variant="panel"] > *` | Zeroes children's block margins, as `.block` does, so the gap is the only spacing |
 | `.dropdown[data-resolved-placement$="-end"] > .dropdown-menu` | Right-aligned, after collision resolution |
 | `.dropdown[data-resolved-placement^="top"] > .dropdown-menu` | Opens upward, after collision resolution |
 | `.dropdown[data-resolved-placement$="-start"] > .dropdown-menu.is-right` | Flip overriding the legacy class |
 | `.dropdown.is-open > .dropdown-menu` | Visible menu state (child-combined for the same nesting reason) |
+| `.dropdown > .dropdown-menu` | Applies `--dropdown-nudge` as a `translate`, the shift that keeps an overhanging panel inside the viewport |
 | `.dropdown-item` | Clickable row: padding, hover background |
 | `.dropdown-item:hover` | Item hover, uses `var(--dropdown-item-hover)` |
 | `.dropdown-item:focus-visible` | Focus row tint. The ring itself comes from the global button rule |
@@ -8813,12 +9207,274 @@ This section documents how the component is built. For usage, see the sections a
 | `.dropdown-header` | Non-interactive panel row |
 | `.dropdown-checkmark` | Selection indicator, hidden with `visibility` so the row cannot reflow |
 | `.dropdown-item[aria-checked="true"] .dropdown-checkmark` | Revealed checkmark |
+| `.dropdown-item[aria-current="page"] .dropdown-checkmark` | Revealed checkmark on the current page in a panel of links |
 | `.dropdown-item--danger` | Destructive action, danger colour |
 | `.dropdown-item--danger:hover` | Danger item hover |
 | `.dropdown-divider` | Separator line between groups |
 | `.dropdown-label` | Non-interactive section header |
 | `.dropdown-desc` | Supporting text below item label |
 | `.dropdown-item-end` | Right-aligned trailing content inside an item |
+
+### Field
+
+A field is a text input with something beside it in the same box: an icon that says what the input is for, a button that clears it, a toggle that reveals a password. The `.field` class goes on a wrapper around the input; the wrapper owns the border, the surface and the focus ring, the input inside gives its own box up, and whatever sits beside it is a flex child that takes its own space — nothing is positioned over padding. A bare input needs none of this; wrap one only when something goes inside it.
+
+---
+
+## Anatomy
+
+| Axis | Mechanism | Example |
+|---|---|---|
+| Size | `data-size` on the field, or on a bare input | `data-size="small"` — the bar's 36px; `"large"` — 56px |
+| Icon | `.field-icon` before or after the input | `<div class="field-icon">` around a registry `.svg-icn` — decorative, never a button |
+| Clear | `.field-clear` after the input | Shown by `field.js` once the input has a value |
+| Toggle | `.field-toggle` after the input | The [password toggle](password-toggle.html) |
+| Colour | `input[type="color"]` before the input | A swatch leading a hex field |
+| State | `.is-error` on the input; `.is-filled` on the field | The wrapper reads the input's state through `:has()`; the script sets `.is-filled` |
+
+The field reads the `--field-*` tokens every text control reads, plus `--field-icon-size` for what sits inside it. The `<input>` is the field's direct child; every rule is written `.field > …`.
+
+---
+
+## Basic usage
+
+<input type="email" id="demo-field-email" name="email" autocomplete="email" placeholder="you@example.com">
+      </div>
+    </div>
+  </div>
+</div>
+
+```html
+<div class="form-group">
+  <label for="email">Email</label>
+  <div class="field">
+    <div class="field-icon"><div class="svg-icn" data-icon="mail"><!-- svg --></div></div>
+    <input type="email" id="email" name="email" autocomplete="email">
+  </div>
+</div>
+```
+
+---
+
+## Icons
+
+A `.field-icon` at the start names what the input takes; at the end it qualifies the value. Either way it is decoration: `pointer-events: none`, `aria-hidden` on the SVG, and a click on it lands on the input. An icon that does something is a button, not an icon — see the clear and the toggle below.
+
+</div>
+    <div class="form-group">
+      <label for="demo-field-key">Licence key</label>
+      <div class="field">
+        <div class="field-icon">{{icon:lock}}</div>
+        <input type="text" id="demo-field-key" name="key" placeholder="XXXX-XXXX-XXXX">
+        <div class="field-icon">{{icon:filter}}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+```html
+<div class="field">
+  <input type="text" id="handle" name="handle">
+  <div class="field-icon"><div class="svg-icn" data-icon="user"><!-- svg --></div></div>
+</div>
+
+<div class="field">
+  <div class="field-icon"><div class="svg-icn" data-icon="lock"><!-- svg --></div></div>
+  <input type="text" id="key" name="key">
+  <div class="field-icon"><div class="svg-icn" data-icon="filter"><!-- svg --></div></div>
+</div>
+```
+
+---
+
+## Clear button
+
+A `.field-clear` after the input empties it. It is hidden until the input has a value — `field.js` keeps `.is-filled` on the box — and stays hidden on a disabled or read-only input, which has nothing the reader may clear. Clearing dispatches `input` then `change` on the input, so validation and form code see a user edit, and hands focus back to the input. Its `aria-label` names the field: "Clear city", not "Clear".
+
+</div>
+</div>
+
+```html
+<div class="field">
+  <input type="text" id="city" name="city">
+  <button type="button" class="field-clear" aria-label="Clear city">
+    <div class="svg-icn" data-icon="close"><!-- svg --></div>
+  </button>
+</div>
+```
+
+The clear is in the tab order. Some systems keep it out and clear on Escape instead; this one has no Escape path a dialog would not take first, so the button is the keyboard's clear as well as the pointer's. Empty, it is `display: none` and adds no stop.
+
+---
+
+## Password toggle
+
+The [password toggle](password-toggle.html) is a `.field-toggle` in the same position. One box, one recipe; the toggle page has the markup and the script.
+
+</div>
+</div>
+
+---
+
+## Colour
+
+A hex field leads with the colour it holds: the native picker goes first in the box, as a swatch set in from the border, and the text input beside it takes the hex. The picker and the text stay two inputs, so a reader can type a value or pick one; keeping them in step is the page's script.
+
+</div>
+</div>
+
+```html
+<div class="form-group">
+  <label for="brand-hex">Brand colour</label>
+  <div class="field">
+    <input type="color" aria-label="Brand colour picker" value="#8a1ed8">
+    <input type="text" id="brand-hex" autocomplete="off" spellcheck="false" maxlength="7" size="7">
+  </div>
+</div>
+```
+
+The swatch is square at the box's inner height, its corners `--radius-s` inside the box's `--radius-m`, with a hairline so a colour close to the input's own surface still shows. `field.js` treats the text input as the field's input: a click on the box focuses it, and the swatch never counts as a value.
+
+---
+
+## Search bar
+
+The icon says what it is, the placeholder says what to type, the label is there for the reader who cannot see either. `type="search"` gives a soft keyboard its Search key; the field hides Chromium's own clear so the reader meets one clear, ours. Inside a dialog use `type="text"` with `enterkeyhint="search"` instead — Chromium's search input takes the first Escape for itself, and the dialog never sees it.
+
+<input type="search" id="demo-field-q" name="q" placeholder="Search products" autocomplete="off">
+        <button type="button" class="field-clear" aria-label="Clear search">{{icon:close}}</button>
+      </div>
+    </search>
+  </div>
+</div>
+
+```html
+<search>
+  <label for="q" class="visually-hidden">Search products</label>
+  <div class="field">
+    <div class="field-icon"><div class="svg-icn" data-icon="search"><!-- svg --></div></div>
+    <input type="search" id="q" name="q" placeholder="Search products" autocomplete="off">
+    <button type="button" class="field-clear" aria-label="Clear search">
+      <div class="svg-icn" data-icon="close"><!-- svg --></div>
+    </button>
+  </div>
+</search>
+```
+
+---
+
+## Sizes
+
+`data-size` on the field re-points the same tokens a bare input reads, so a small field and a small input are one height. In a [Bar](bar.html) the field takes the bar's height with no attribute — the height only; its type stays at the bar's size.
+
+<input type="search" id="demo-field-small" placeholder="Filter">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="demo-field-large">Large</label>
+      <div class="field" data-size="large">
+        <div class="field-icon">{{icon:search}}</div>
+        <input type="search" id="demo-field-large" placeholder="Search everything">
+      </div>
+    </div>
+  </div>
+</div>
+
+```html
+<div class="field" data-size="small">…</div>
+<div class="field" data-size="large">…</div>
+```
+
+---
+
+## JavaScript
+
+Include `assets/js/field.js` on any page with a clear button. The password toggle is `assets/js/password-toggle.js`; a field with only an icon needs no script.
+
+```html
+<script src="/assets/js/field.js"></script>
+```
+
+The script binds one set of listeners to the document — click, input, change and reset — so markup rendered at load, swapped in by a page transition or added later all works. It keeps `.is-filled` on every `.field` in step with its input, and a click on `.field-clear` empties the input, dispatches `input` then `change`, and focuses it. A click on the box's edge or on a decorative icon focuses the input too.
+
+**Values that arrive without typing.** A value set before any input event — a prefilled form, autofill, a reset, or `input.value = …` from your own script — fires no event, so the init paints it. It runs on load and after each page transition; call it yourself after a scripted write, with a scope to search or the field itself:
+
+```js
+window.initField(fieldEl);
+```
+
+**React.** The clear writes through the native value setter, not the instance property React watches, so a controlled `<input value onChange>` inside a `.field` receives the clear as a change. There is no adapter: render the contract markup and call `initField(fieldEl)` in an effect keyed on the value, so a state change that was not typed — a "reset filters" button — repaints `.is-filled` too.
+
+---
+
+## Accessibility
+
+- Every input must have a visible `<label for>`, or a `.visually-hidden` one where the icon and placeholder carry the meaning. The placeholder is never the label
+- A `.field-icon` is decoration: its SVG carries `aria-hidden="true"`, it is not a button, and it must not be the only thing that says what the input is for
+- The clear is a `<button type="button">` with an `aria-label` that names the field — "Clear search", "Clear city" — because a form may hold several
+- The clear leaves the tab order when empty (it is not rendered) and re-enters once there is something to clear; focus returns to the input after a clear, so the reader can type again
+- The box draws the focus ring on `:focus-within`, so the ring shows whether the input or a button inside it has focus; the buttons keep the global inset ring as well
+- The colour swatch needs its own `aria-label` — the `<label for>` names the text input, not the picker
+- State goes on the input: `.is-error` for an invalid value, `disabled`, `readonly`. The wrapper reads them; nothing is set on the wrapper by hand
+
+---
+
+## Usage rules
+
+**Do:**
+- Wrap an input only when something goes inside it — a bare input is the default and the simpler object
+- Use a start icon to say what the input takes (a mail icon, a search icon), an end icon to qualify the value
+- Name the clear after the field in its `aria-label`
+- Let a bar size the field; write `data-size` only outside one
+
+**Don't:**
+- Don't make the icon do something — an icon that acts is a button, and a button inside the box is `.field-clear` or `.field-toggle`
+- Don't put the label inside the box or replace it with the placeholder
+- Don't nest anything else between `.field` and its input — every rule is a direct-child rule, and a wrapper in between breaks them
+- Don't set the height or font size on the input directly; re-point the `--field-*` tokens on the field, so the box and the input never disagree
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | What it controls |
+|---|---|---|
+| `--field-height` | `var(--target-min)` | The box's minimum height — and the bare input's, since both read it |
+| `--field-height-s`, `--field-height-l` | `2.25rem`, `var(--5xl)` | What the two sizes re-point it to; the bar's control height reads the small one |
+| `--field-font` | `var(--body-size)` | Text size |
+| `--field-padding-x` | `var(--space-l)` | The input's edge padding; the icon takes it as its margin and hands the input `--space-m` |
+| `--field-padding-y` | `var(--space-m)` | The input's vertical padding; a bar and the small size zero it |
+| `--field-icon-size` | `1.25rem` | Icons and controls inside the box, via `--icon-size` |
+| `--field-swatch-box` | unset, falls back to `--field-height` | The box height a colour swatch sizes itself from; a bar points it at `--bar-control-height` |
+| `--field-swatch-radius` | unset, falls back to `--radius-s` | The swatch's corners; a bar drops it to `--radius-xs` to sit inside its own smaller corners |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.field` | The box: flex, `--field-height` floor, border, `--radius-m`, `--input-background`, `overflow: hidden` |
+| `.field:focus-within` | The text input's ring, on the box |
+| `.field:has(> input.is-error)`, `:has(> input:disabled)` | Error border and disabled surface, read from the input |
+| `.field > input` | The input gives its border, radius, surface, width and minimum height to the wrapper; no focus ring of its own |
+| `.field > input[type="search"]::-webkit-search-cancel-button` | Chromium's own clear, hidden |
+| `.field-icon` | Decorative glyph wrapper: flex, `--text-faded`, `pointer-events: none`, centred, `--field-padding-x` margin on its outer side; the `.svg-icn` inside takes `--field-icon-size` |
+| `.field-icon + input`, `.field > input:has(+ .field-icon)` | The input's padding beside an icon drops to `--space-m` |
+| `.field > input[type="color"]` | A leading swatch: square at the inner height, `--space-xs` inset, `--radius-s`, a `--border-faded` hairline, sized from `--field-height` (or `--field-swatch-box` in a bar); the input after it starts at `--space-m` |
+| `.field-clear`, `.field-toggle` | A `--target-min` square, transparent, `--text-faded` to `--text-primary` on hover |
+| `.field-clear` | `display: none` until `.field.is-filled` shows it — never on a disabled or read-only input |
+| `.field[data-size="small"]`, `.field[data-size="large"]` | Re-point the `--field-*` tokens; the same rule serves `input[data-size]` |
+| `.bar .field` | Bar height, zero vertical padding, the bar's surface and `--radius-s` |
+| `.password-field` | Deprecated alias of `.field` for the wrapper box, its focus, error and disabled states, and the input inside it — not for sizes, icons, clear, swatch or the bar. Until the next major |
+
+### Key rules
+
+The input gives its box to the wrapper: `.field > input` is written at the base list's own specificity and later in source, so it wins without a class on the input.
+Metrics live in tokens, never on the input: a size, a bar or a wrapper re-points `--field-*`, and custom properties inherit into the input.
+Icons are flow, not overlay: no absolute positioning and no reserved padding, so a box with two icons and a button still lays out.
 
 ### Footer
 
@@ -9074,7 +9730,7 @@ Form elements are styled globally using semantic tokens. All text inputs, textar
 
 ## Labels
 
-Labels are styled as block elements with medium weight:
+Every control has a `<label for>`. It sits above the control by default, as a block at medium weight:
 
 ```html
 <label for="name">Full name</label>
@@ -9082,6 +9738,51 @@ Labels are styled as block elements with medium weight:
 ```
 
 **Properties:** `display: block`, `font-size: var(--font-s)`, `font-weight: var(--font-weight-medium)`, bottom margin for spacing from the input.
+
+### Side label
+
+A dense settings form reads faster with the label beside the control. `data-layout="side"` on the `.form-group` puts it in a fixed, right-aligned column — `--form-label-width`, 10rem — with the control, its hint and its error in the column beside it. Below 768px the group stacks like any other. Set `--form-label-width` on the form to fit its longest label rather than letting the labels wrap.
+
+<div class="form-group" data-layout="side">
+    <label for="demo-vat">VAT number</label>
+    <input type="text" id="demo-vat">
+  </div>
+</div>
+
+```html
+<div class="form-group" data-layout="side">
+  <label for="org">Organisation</label>
+  <input type="text" id="org" aria-describedby="org-hint">
+  <p class="form-hint" id="org-hint">As it appears on invoices.</p>
+</div>
+```
+
+### Hidden label
+
+A field whose meaning is carried by an icon and a placeholder — a search bar — still has a label; it is not drawn. `.visually-hidden` keeps it for screen readers and for the click that focuses the input. The placeholder is never the label: it leaves as soon as the reader types. See the search bar in [Field](field.html).
+
+```html
+<label for="q" class="visually-hidden">Search products</label>
+<input type="search" id="q" name="q" placeholder="Search products">
+```
+
+### Required and optional
+
+Mark the minority. In a form where most fields are required, mark the optional ones with `.form-optional`; where most are optional, mark the required ones with `.form-required`. The asterisk is `aria-hidden` because `required` on the input already tells assistive technology; "(optional)" is read out, since nothing else says it.
+
+<div class="form-group">
+    <label for="demo-opt">Nickname <span class="form-optional">(optional)</span></label>
+    <input type="text" id="demo-opt">
+  </div>
+</div>
+
+```html
+<label for="name">Full name <span class="form-required" aria-hidden="true">*</span></label>
+<input type="text" id="name" required aria-required="true">
+
+<label for="nick">Nickname <span class="form-optional">(optional)</span></label>
+<input type="text" id="nick">
+```
 
 ---
 
@@ -9107,16 +9808,41 @@ All standard text input types are styled globally:
 <input type="tel" placeholder="Phone">
 ```
 
-**Properties:** full width, `font-size: var(--font-m)` (matches body text), `padding: var(--space-m) var(--space-l)`, border from `var(--input-border)`, `var(--radius-m)` corners, smooth focus transition.
+**Properties:** full width, `font-size: var(--field-font)` (`--body-size`), `padding: var(--field-padding-y) var(--field-padding-x)`, a `--field-height` floor of `--target-min`, border from `var(--input-border)`, `var(--radius-m)` corners, smooth focus transition.
+
+An input that carries something inside it — an icon, a clear button, a password toggle — is wrapped in a [Field](field.html). The bare input stays the answer everywhere else.
+
+### Sizes
+
+`data-size` on a bare input or select re-points the field tokens. Small shares its height with a [Bar](bar.html)'s controls — the bar reads the same token — though a bar keeps its own type size; large is a hero search or a one-field form. A bar sets its own height and needs no attribute. A side-labelled group takes the size on the `.form-group` instead, so the label's top padding follows the control. On a `fieldset` it sizes every text control inside, and — for small — every [checkbox](#small-checkbox), [radio](#small-radio) and [toggle](#small-toggle) too.
+
+<div class="form-group">
+    <label for="demo-size-m">Default</label>
+    <input type="text" id="demo-size-m" placeholder="44px floor, --body-size">
+  </div>
+  <div class="form-group">
+    <label for="demo-size-l">Large</label>
+    <input type="text" id="demo-size-l" data-size="large" placeholder="56px, --font-m">
+  </div>
+</div>
+
+```html
+<input type="text" data-size="small">
+<input type="text">
+<input type="text" data-size="large">
+```
+
+| Size | `--field-height` | `--field-font` | `--field-padding-x` |
+|---|---|---|---|
+| `small` | `--field-height-s` (36px) | `--font-xs` | `--space-m` |
+| default | `--target-min` (44px) | `--body-size` | `--space-l` |
+| `large` | `--field-height-l` (56px) | `--font-m` | `--space-xl` |
 
 ---
 
 ## Focus State
 
-All inputs share a consistent focus style:
-- Border color changes to `var(--input-focus)`
-- A subtle box-shadow ring appears (2px, 75% transparent)
-- No outline (replaced by box-shadow for consistency)
+All inputs share one focus style: a 1px `outline` in `var(--input-focus)` with a 2px offset, and no box-shadow. An input marked `.is-error` moves the outline to `var(--status-danger)`. A [Field](field.html) draws the same ring on the box, on `:focus-within`, because the input inside it has given its border up.
 
 This is accessibility-safe and keyboard-visible.
 
@@ -9235,16 +9961,48 @@ Icons are not limited to the selected row, and the checkmark is independent of t
 
 ## Colour Input
 
-The native colour picker is styled to match other form inputs. Browser chrome is removed so the colour swatch fills the entire element. Use alongside a text input for hex/named colour entry.
+The native colour picker is styled to match other form inputs. Browser chrome is removed so the colour swatch fills the entire element. Paired with a hex entry, it goes inside a [field](field.html#colour): the swatch leads the box and the text input takes the value.
+
+</div>
+</div>
 
 ```html
-<div class="block row gap-s align-center">
-  <input type="color" id="color-picker" value="#ffa500">
-  <input type="text" value="ffa500" placeholder="hex or name">
+<div class="form-group">
+  <label for="accent-hex">Accent colour</label>
+  <div class="field">
+    <input type="color" aria-label="Accent colour picker" value="#ffa500">
+    <input type="text" id="accent-hex" autocomplete="off" spellcheck="false" maxlength="7" size="7">
+  </div>
 </div>
 ```
 
-**Properties:** `appearance: none`, `aspect-ratio: 1 / 1`, `align-self: stretch` (matches sibling height), `padding: var(--space-xs)`, swatch wrapper padding removed. Same border and focus styles as text inputs.
+**Properties:** `appearance: none`, `aspect-ratio: 1 / 1`, `align-self: stretch` (matches sibling height), swatch wrapper padding removed. Same border and focus styles as text inputs; disabled, the swatch dims to half opacity, since the disabled background cannot show through it. Inside a field it gives up its own ring and is sized from the field's height instead — see [Field](field.html#colour).
+
+---
+
+## Date & Time
+
+Date and time inputs take the same box as text inputs. In Chromium the picker button shows the brand calendar icon, or the clock icon on `type="time"`, in the input's text colour. Firefox and Safari keep their own picker button; it follows the light or dark theme.
+
+<div class="form-group">
+    <label for="demo-time">Time</label>
+    <input type="time" id="demo-time" name="time">
+  </div>
+</div>
+
+```html
+<label for="from">From</label>
+<input type="date" id="from" name="from">
+
+<input type="time">
+<input type="datetime-local">
+<input type="month">
+<input type="week">
+```
+
+**Properties:** the text-input box (border, radius, padding, focus, disabled, `.is-error`), value left-aligned on iOS, and the picker button replaced with the brand calendar or clock icon as a `currentColor` mask at `--icon-size`.
+
+The calendar that opens is still the browser's. For one built from the system's tokens and icons, wrap the same input in the [Date Picker](date-picker.html) — the field, its value and its validation stay native.
 
 ---
 
@@ -9260,11 +10018,9 @@ Add the `disabled` attribute to any input, textarea, or select:
 
 ---
 
-## Checkbox & Radio
+## Checkbox
 
-Checkboxes and radios use `appearance: none` with custom styling. Wrap each in `.form-check` for inline label alignment.
-
-### Checkbox
+A checkbox uses `appearance: none` with custom styling. Wrap each in `.form-check` for inline label alignment.
 
 <div class="form-check">
     <input type="checkbox" id="demo-check-2" checked>
@@ -9283,9 +10039,55 @@ Checkboxes and radios use `appearance: none` with custom styling. Wrap each in `
 </div>
 ```
 
-**Properties:** `24px` size (`var(--space-xl)`), `var(--checkbox-background)` fill, `var(--border-m)` border with `var(--radius-xs)` corners. Checked state uses `var(--checkbox-selected)` fill with a white checkmark SVG.
+**Properties:** `24px` size (`--check-size`), `var(--checkbox-background)` fill, `var(--border-m)` border with `var(--radius-xs)` corners. Checked state uses `var(--checkbox-selected)` fill with a white checkmark SVG. Disabled, the box dims and its label fades to `--text-faded`; the same holds for a radio or a toggle.
 
-### Radio
+### Small checkbox
+
+`data-size="small"` shrinks the box to 16px, the tick with it, and the label to `--font-xs` — the size a small field uses. Put it on the input, its `.form-check`, a `.form-group`, or a `fieldset`: it re-points tokens rather than restyling the control, so one attribute on a filter panel's fieldset shrinks every checkbox, [radio](#small-radio) and [toggle](#small-toggle) inside it, and its text controls too.
+
+<div class="form-check">
+        <input type="checkbox" id="demo-check-default-2">
+        <label for="demo-check-default-2">Archived</label>
+      </div>
+    </div>
+    <div class="block gap-s">
+      <p class="demo-eyebrow">Small</p>
+      <div class="form-check" data-size="small">
+        <input type="checkbox" id="demo-check-small-1" checked>
+        <label for="demo-check-small-1">Drafts</label>
+      </div>
+      <div class="form-check" data-size="small">
+        <input type="checkbox" id="demo-check-small-2">
+        <label for="demo-check-small-2">Archived</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+```html
+<!-- One row -->
+<div class="form-check" data-size="small">
+  <input type="checkbox" id="drafts">
+  <label for="drafts">Drafts</label>
+</div>
+
+<!-- Everything in a group -->
+<fieldset data-size="small">
+  <legend>Show</legend>
+  <div class="form-check">…</div>
+  <div class="form-toggle">…</div>
+</fieldset>
+```
+
+The 16px box is under the 24px minimum target. It meets it by spacing — a check's label is always held at least 24px tall, so rows never sit closer than that — and a visible `<label for>` widens the click area to the words. Keep one, keep the label a sibling of the input inside `.form-check` (a label wrapped around the input is not a flex item, so the 24px floor does not apply), and never stack small checks tighter than 24px. Where a row cannot carry a label, use the default size.
+
+A small group has no per-control way back to the default size: if one control in a panel must stay default, put `data-size="small"` on the rows instead of the group. A group's `<legend>` keeps its own size.
+
+---
+
+## Radio
+
+A radio uses the same custom styling as a checkbox, in a `.form-check` of its own; radios sharing a `name` form one choice. For a labelled set, see [Radio Group](#radio-group).
 
 <div class="form-check">
     <input type="radio" name="demo-radio" id="demo-radio-2" checked>
@@ -9300,7 +10102,37 @@ Checkboxes and radios use `appearance: none` with custom styling. Wrap each in `
 </div>
 ```
 
-**Properties:** same as checkbox but with `border-radius: 50%` and a centered dot on checked.
+**Properties:** same as checkbox but with `border-radius: 50%` and a centered dot on checked, inset by `--radio-dot-inset`.
+
+### Small radio
+
+`data-size="small"` shrinks the circle to 16px and the dot with it, with the label at `--font-xs`. It is the same attribute and the same rule as a [small checkbox](#small-checkbox): on the input, its `.form-check`, a `.form-group` or a `fieldset`, with the same 24px target rule.
+
+<div class="form-check">
+        <input type="radio" name="demo-radio-default" id="demo-radio-default-2">
+        <label for="demo-radio-default-2">Oldest first</label>
+      </div>
+    </div>
+    <div class="block gap-s">
+      <p class="demo-eyebrow">Small</p>
+      <div class="form-check" data-size="small">
+        <input type="radio" name="demo-radio-small" id="demo-radio-small-1" checked>
+        <label for="demo-radio-small-1">Newest first</label>
+      </div>
+      <div class="form-check" data-size="small">
+        <input type="radio" name="demo-radio-small" id="demo-radio-small-2">
+        <label for="demo-radio-small-2">Oldest first</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+```html
+<div class="form-check" data-size="small">
+  <input type="radio" name="sort" id="newest" checked>
+  <label for="newest">Newest first</label>
+</div>
+```
 
 ---
 
@@ -9343,9 +10175,41 @@ Add `.is-label-right` to place the label after the toggle.
 </div>
 ```
 
+### Small toggle
+
+Add `data-size="small"` for a toggle in a dense row — a settings list or a filter panel. The track drops to 28 × 16px and the label to `--font-xs`, the same size a small field uses. It composes with `.is-label-right` and `disabled`. It is the same size as a [small checkbox](#small-checkbox) or [radio](#small-radio) and set the same way, so it can come from a `.form-group` or `fieldset` around it too.
+
+<div class="form-toggle is-label-right">
+        <input type="checkbox" role="switch" id="demo-toggle-default-2">
+        <label for="demo-toggle-default-2">Show grid</label>
+      </div>
+    </div>
+    <div class="block gap-s">
+      <p class="demo-eyebrow">Small</p>
+      <div class="form-toggle is-label-right" data-size="small">
+        <input type="checkbox" role="switch" id="demo-toggle-small-1" checked>
+        <label for="demo-toggle-small-1">Compact rows</label>
+      </div>
+      <div class="form-toggle is-label-right" data-size="small">
+        <input type="checkbox" role="switch" id="demo-toggle-small-2">
+        <label for="demo-toggle-small-2">Show grid</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+```html
+<div class="form-toggle" data-size="small">
+  <input type="checkbox" id="compact" role="switch">
+  <label for="compact">Compact rows</label>
+</div>
+```
+
+The 16px track is under the 24px minimum target, so the label carries it, as it does for a [small checkbox](#small-checkbox). A small toggle needs a visible `<label for>`; where a row cannot carry one, use the default size.
+
 ### Component tokens
 
-Re-point these to re-skin the toggle; never override the rules themselves.
+Re-point these to re-skin the toggle; never override the rules themselves. The size tokens are defined at `:root`, beside the [check tokens](#tokens), so a re-point on the toggle or on any ancestor reaches it.
 
 | Token | Default | Controls |
 |---|---|---|
@@ -9357,6 +10221,8 @@ Re-point these to re-skin the toggle; never override the rules themselves.
 
 The knob travel distance is derived from the first four, so changing the track
 width or knob size keeps the checked position correct without further edits.
+`data-size="small"` re-points them to `28px`, `var(--space-l)`, `10px` and
+`var(--space-2xs)`, in the same rule as the check tokens.
 
 ### Reduced motion
 
@@ -9402,7 +10268,7 @@ Use `.form-check` for inline checkbox/radio + label pairs:
 </div>
 ```
 
-**Properties:** `display: flex`, `align-items: center`, `gap` for spacing. The label inside `.form-check` is inline with regular weight.
+**Properties:** `display: flex`, `align-items: center`, `--check-gap` between box and label. The label is a flex item at regular weight and `--check-label-font`, held at least 24px tall with its line centred.
 
 ### Fieldset & Legend
 
@@ -9607,10 +10473,21 @@ This section documents how the component is built. For usage, see the sections a
 | Token | Default | What it controls |
 |---|---|---|
 | `--input-border` | `var(--border-secondary)` | Default border colour |
-| `--input-background` | `var(--background-primary)` | Input background |
+| `--input-background` | `var(--black-alpha-5)` | Input background |
 | `--input-text` | `var(--text-plain)` | Input text colour |
 | `--input-placeholder` | `var(--text-faded)` | Placeholder text colour |
-| `--input-focus` | `var(--green)` | Focus border and ring colour |
+| `--input-focus` | `var(--text-accent)` | Focus ring colour |
+| `--field-height` | `var(--target-min)` | Minimum height of every text control; `data-size` and the bar re-point it |
+| `--field-height-s`, `--field-height-l` | `2.25rem`, `var(--5xl)` | The small and large heights; the bar's control height reads the small one |
+| `--field-font` | `var(--body-size)` | Text size of every text control |
+| `--field-padding-x`, `--field-padding-y` | `var(--space-l)`, `var(--space-m)` | Inner padding; a `.field` hands the icon the horizontal one |
+| `--field-icon-size` | `1.25rem` | Icons and controls inside a `.field` |
+| `--form-label-width` | `10rem` | The side-label column |
+| `--check-size` | `var(--space-xl)` | Checkbox and radio box; small is `var(--space-l)` |
+| `--check-mark-size` | `14px` | The checkbox's tick; small is `11px`, so the stroke stays above 1.25px |
+| `--radio-dot-inset` | `5px` | Inset of the radio's checked dot; small is `3px` |
+| `--check-gap` | `var(--space-s)` | Box-to-label gap in `.form-check` and `.form-toggle`; small is `var(--space-xs)` |
+| `--check-label-font` | `var(--font-s)` | Label size in `.form-check` and `.form-toggle`; small is `var(--font-xs)` |
 | `--input-disabled-bg` | `var(--background-faded)` | Disabled background |
 | `--input-disabled-text` | `var(--text-faded)` | Disabled text colour |
 | `--checkbox-background` | `var(--neutral-100)` | Checkbox unchecked background |
@@ -9637,8 +10514,12 @@ The customizable select picker reuses `--dropdown-background`, `--dropdown-borde
 
 | Selector | Purpose |
 |---|---|
-| `input[type="text"]`, `input[type="email"]`, etc. | Global text input styling: width, padding, border, font |
-| `input:focus`, `textarea:focus`, `select:focus` | Focus state, border colour + box-shadow ring |
+| `input[type="text"]`, `input[type="email"]`, etc. | Global text input styling: width, padding, border, font — metrics from the `--field-*` tokens |
+| `input[data-size]`, `select[data-size]`, `.form-group[data-size]`, `fieldset[data-size]` | Sizes `small` / `large`: re-point the `--field-*` tokens; on the group they reach the label too |
+| `input:focus`, `textarea:focus`, `select:focus` | Focus state: 1px outline in `--input-focus`, 2px offset |
+| `.form-required`, `.form-optional` | The markers inside a label: danger colour; regular weight in `--text-secondary` |
+| `.form-group[data-layout="side"]` | Side label: a `--form-label-width` column, right-aligned, stacking under 768px |
+| `.field` | An input with something inside it — see [Field](field.html) |
 | `input:disabled`, `textarea:disabled`, `select:disabled` | Disabled state: muted background, not-allowed cursor |
 | `textarea` | Textarea: min-height, vertical resize |
 | `select` | Select: custom dropdown arrow, appearance reset |
@@ -9650,15 +10531,19 @@ The customizable select picker reuses `--dropdown-background`, `--dropdown-borde
 | `selectedcontent .svg-icn` | Icon cloned into the closed button, re-sized to match the row |
 | `optgroup`, `optgroup legend` | Group label: quiet heading over its rows |
 | `option::checkmark` | Selected marker, leads the row like `.dropdown-checkmark`; column reserved on every row |
+| `input[type="date"]`, `time`, `datetime-local`, `month`, `week` | Date & time inputs: the text-input box |
+| `::-webkit-calendar-picker-indicator` | Picker button: brand calendar icon (clock on `time`) as a `currentColor` mask |
 | `input[type="color"]` | Colour picker: appearance reset, aspect-ratio, swatch styling |
 | `input[type="checkbox"]`, `input[type="radio"]` | Custom checkbox/radio: appearance reset, checked state SVG |
 | `.form-check` | Inline checkbox/radio + label wrapper: flex, align-items, gap |
-| `.form-check label` | Label styling inside check wrapper: inline, regular weight |
-| `.form-toggle` | Toggle switch wrapper, grid layout for label + switch |
+| `.form-check:has(> input:disabled) label`, `.form-toggle:has(> input:disabled) label` | A disabled control's label: `--text-faded`, `cursor: not-allowed` |
+| `.form-check label` | Label inside the check wrapper: regular weight, `--check-label-font`, at least 24px tall with its line centred — the target a small box relies on |
+| `.form-toggle` | Toggle switch wrapper: flex row of label and switch, `--check-gap` between them |
 | `.form-toggle input[type="checkbox"]` | Toggle track: pill shape, colour transition |
 | `.form-toggle input[type="checkbox"]::after` | Toggle knob, circular pseudo-element |
 | `.form-toggle input[type="checkbox"]:checked` | Checked track, `var(--toggle-selected)` background |
 | `.form-toggle.is-label-right label` | Label-right variant, reorders grid column |
+| `input[type="checkbox"][data-size="small"]`, `input[type="radio"][data-size="small"]`, a `.form-check` or `.form-toggle` holding one, `.form-check[data-size="small"]`, `.form-toggle[data-size="small"]`, `.form-group[data-size="small"]`, `fieldset[data-size="small"]` | Small checks: one rule re-pointing the check and toggle tokens for everything inside |
 | `.form-group` | Label + input wrapper, bottom margin spacing |
 | `.form-hint` | Helper text below input |
 | `.form-error` | Error message: `--status-danger` at `--font-s`, a flex row with `--space-xs` gap so a leading `.svg-icn` (`--icon-size: 1.25em`) sits beside the words — use a `<span class="svg-icn">` inside the `<p>`, since a paragraph cannot hold a `<div>` |
@@ -9954,9 +10839,9 @@ Sign in with email and password. The pane's own gap owns the spacing between gro
       </div>
       <div class="form-group">
         <label for="demo-signin-password">Password</label>
-        <div class="password-field">
+        <div class="field">
           <input type="password" id="demo-signin-password" name="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" required aria-required="true">
-          <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+          <button type="button" class="field-toggle" aria-controls="demo-signin-password" aria-label="Show password" aria-pressed="false">
             <div class="svg-icn" data-icon="eye-off"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M16.1 13.3L14.65 11.85C14.8 11.07 14.57 10.33 13.97 9.65C13.38 8.97 12.6 8.7 11.65 8.85L10.2 7.4C10.48 7.27 10.77 7.17 11.06 7.1C11.35 7.03 11.67 7 12 7C13.25 7 14.31 7.44 15.19 8.31C16.06 9.19 16.5 10.25 16.5 11.5C16.5 11.83 16.47 12.15 16.4 12.44C16.33 12.73 16.23 13.02 16.1 13.3ZM19.3 16.45L17.85 15.05C18.48 14.57 19.05 14.04 19.54 13.46C19.83 13.12 20.1 12.75 20.34 12.36C20.66 11.83 20.65 11.17 20.33 10.65C19.54 9.36 18.5 8.31 17.21 7.49C15.65 6.5 13.92 6 12 6C11.52 6 11.04 6.03 10.57 6.1C10.11 6.17 9.65 6.27 9.2 6.4L7.65 4.85C8.33 4.57 9.03 4.35 9.75 4.21C10.47 4.07 11.22 4 12 4C14.52 4 16.76 4.7 18.73 6.09C20.69 7.48 22.12 9.28 23 11.5C22.62 12.48 22.11 13.4 21.49 14.24C20.86 15.08 20.13 15.82 19.3 16.45ZM19.8 22.6L15.6 18.45C15.02 18.63 14.43 18.77 13.84 18.86C13.25 18.95 12.63 19 12 19C9.48 19 7.24 18.3 5.28 16.91C3.31 15.52 1.88 13.72 1 11.5C1.35 10.62 1.79 9.8 2.33 9.04C2.86 8.28 3.47 7.6 4.15 7L1.4 4.2L2.8 2.8L21.2 21.2L19.8 22.6ZM6.22 9.05C5.84 8.69 5.24 8.67 4.88 9.05C4.65 9.3 4.43 9.56 4.22 9.82C4.02 10.09 3.83 10.36 3.66 10.65C3.34 11.17 3.35 11.83 3.67 12.35C4.46 13.64 5.5 14.69 6.79 15.51C8.35 16.5 10.08 17 12 17C12.33 17 12.66 16.98 12.97 16.94C13.39 16.88 13.56 16.39 13.27 16.09L13.05 15.85C12.87 15.9 12.69 15.94 12.53 15.96C12.36 15.99 12.18 16 12 16C10.75 16 9.69 15.56 8.81 14.69C7.94 13.81 7.5 12.75 7.5 11.5C7.5 11.32 7.51 11.14 7.54 10.97C7.56 10.81 7.6 10.63 7.65 10.45L6.22 9.05Z" fill="currentColor"/></svg></div>
             <div class="svg-icn" data-icon="eye"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M15.19 14.69C16.06 13.81 16.5 12.75 16.5 11.5C16.5 10.25 16.06 9.19 15.19 8.31C14.31 7.44 13.25 7 12 7C10.75 7 9.69 7.44 8.81 8.31C7.94 9.19 7.5 10.25 7.5 11.5C7.5 12.75 7.94 13.81 8.81 14.69C9.69 15.56 10.75 16 12 16C13.25 16 14.31 15.56 15.19 14.69ZM10.09 13.41C9.56 12.89 9.3 12.25 9.3 11.5C9.3 10.75 9.56 10.11 10.09 9.59C10.61 9.06 11.25 8.8 12 8.8C12.75 8.8 13.39 9.06 13.91 9.59C14.44 10.11 14.7 10.75 14.7 11.5C14.7 12.25 14.44 12.89 13.91 13.41C13.39 13.94 12.75 14.2 12 14.2C11.25 14.2 10.61 13.94 10.09 13.41ZM5.35 16.96C3.35 15.6 1.9 13.78 1 11.5C1.9 9.22 3.35 7.4 5.35 6.04C7.35 4.68 9.57 4 12 4C14.43 4 16.65 4.68 18.65 6.04C20.65 7.4 22.1 9.22 23 11.5C22.1 13.78 20.65 15.6 18.65 16.96C16.65 18.32 14.43 19 12 19C9.57 19 7.35 18.32 5.35 16.96ZM17.19 15.51C18.34 14.79 19.29 13.88 20.05 12.78C20.58 12.01 20.58 10.99 20.05 10.22C19.29 9.12 18.34 8.21 17.19 7.49C15.61 6.5 13.88 6 12 6C10.12 6 8.39 6.5 6.81 7.49C5.66 8.21 4.71 9.12 3.95 10.22C3.42 10.99 3.42 12.01 3.95 12.78C4.71 13.88 5.66 14.79 6.81 15.51C8.39 16.5 10.12 17 12 17C13.88 17 15.61 16.5 17.19 15.51Z" fill="currentColor"/></svg></div>
           </button>
@@ -9992,10 +10877,10 @@ Sign in with email and password. The pane's own gap owns the spacing between gro
     </div>
     <div class="form-group">
       <label for="login-password">Password</label>
-      <div class="password-field">
+      <div class="field">
         <input type="password" id="login-password" name="password"
                autocomplete="current-password" autocapitalize="none" spellcheck="false" required aria-required="true">
-        <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+        <button type="button" class="field-toggle" aria-controls="login-password" aria-label="Show password" aria-pressed="false">
           <div class="svg-icn" data-icon="eye-off"><!-- inline eye-off SVG --></div>
           <div class="svg-icn" data-icon="eye"><!-- inline eye SVG --></div>
         </button>
@@ -10033,9 +10918,9 @@ Sign-up swaps the field set: name, email, a new password with a hint. The footer
       </div>
       <div class="form-group">
         <label for="demo-signup-password">Password</label>
-        <div class="password-field">
+        <div class="field">
           <input type="password" id="demo-signup-password" name="password" autocomplete="new-password" autocapitalize="none" spellcheck="false" required aria-required="true" minlength="8" aria-describedby="demo-signup-hint">
-          <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+          <button type="button" class="field-toggle" aria-controls="demo-signup-password" aria-label="Show password" aria-pressed="false">
             <div class="svg-icn" data-icon="eye-off"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M16.1 13.3L14.65 11.85C14.8 11.07 14.57 10.33 13.97 9.65C13.38 8.97 12.6 8.7 11.65 8.85L10.2 7.4C10.48 7.27 10.77 7.17 11.06 7.1C11.35 7.03 11.67 7 12 7C13.25 7 14.31 7.44 15.19 8.31C16.06 9.19 16.5 10.25 16.5 11.5C16.5 11.83 16.47 12.15 16.4 12.44C16.33 12.73 16.23 13.02 16.1 13.3ZM19.3 16.45L17.85 15.05C18.48 14.57 19.05 14.04 19.54 13.46C19.83 13.12 20.1 12.75 20.34 12.36C20.66 11.83 20.65 11.17 20.33 10.65C19.54 9.36 18.5 8.31 17.21 7.49C15.65 6.5 13.92 6 12 6C11.52 6 11.04 6.03 10.57 6.1C10.11 6.17 9.65 6.27 9.2 6.4L7.65 4.85C8.33 4.57 9.03 4.35 9.75 4.21C10.47 4.07 11.22 4 12 4C14.52 4 16.76 4.7 18.73 6.09C20.69 7.48 22.12 9.28 23 11.5C22.62 12.48 22.11 13.4 21.49 14.24C20.86 15.08 20.13 15.82 19.3 16.45ZM19.8 22.6L15.6 18.45C15.02 18.63 14.43 18.77 13.84 18.86C13.25 18.95 12.63 19 12 19C9.48 19 7.24 18.3 5.28 16.91C3.31 15.52 1.88 13.72 1 11.5C1.35 10.62 1.79 9.8 2.33 9.04C2.86 8.28 3.47 7.6 4.15 7L1.4 4.2L2.8 2.8L21.2 21.2L19.8 22.6ZM6.22 9.05C5.84 8.69 5.24 8.67 4.88 9.05C4.65 9.3 4.43 9.56 4.22 9.82C4.02 10.09 3.83 10.36 3.66 10.65C3.34 11.17 3.35 11.83 3.67 12.35C4.46 13.64 5.5 14.69 6.79 15.51C8.35 16.5 10.08 17 12 17C12.33 17 12.66 16.98 12.97 16.94C13.39 16.88 13.56 16.39 13.27 16.09L13.05 15.85C12.87 15.9 12.69 15.94 12.53 15.96C12.36 15.99 12.18 16 12 16C10.75 16 9.69 15.56 8.81 14.69C7.94 13.81 7.5 12.75 7.5 11.5C7.5 11.32 7.51 11.14 7.54 10.97C7.56 10.81 7.6 10.63 7.65 10.45L6.22 9.05Z" fill="currentColor"/></svg></div>
             <div class="svg-icn" data-icon="eye"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M15.19 14.69C16.06 13.81 16.5 12.75 16.5 11.5C16.5 10.25 16.06 9.19 15.19 8.31C14.31 7.44 13.25 7 12 7C10.75 7 9.69 7.44 8.81 8.31C7.94 9.19 7.5 10.25 7.5 11.5C7.5 12.75 7.94 13.81 8.81 14.69C9.69 15.56 10.75 16 12 16C13.25 16 14.31 15.56 15.19 14.69ZM10.09 13.41C9.56 12.89 9.3 12.25 9.3 11.5C9.3 10.75 9.56 10.11 10.09 9.59C10.61 9.06 11.25 8.8 12 8.8C12.75 8.8 13.39 9.06 13.91 9.59C14.44 10.11 14.7 10.75 14.7 11.5C14.7 12.25 14.44 12.89 13.91 13.41C13.39 13.94 12.75 14.2 12 14.2C11.25 14.2 10.61 13.94 10.09 13.41ZM5.35 16.96C3.35 15.6 1.9 13.78 1 11.5C1.9 9.22 3.35 7.4 5.35 6.04C7.35 4.68 9.57 4 12 4C14.43 4 16.65 4.68 18.65 6.04C20.65 7.4 22.1 9.22 23 11.5C22.1 13.78 20.65 15.6 18.65 16.96C16.65 18.32 14.43 19 12 19C9.57 19 7.35 18.32 5.35 16.96ZM17.19 15.51C18.34 14.79 19.29 13.88 20.05 12.78C20.58 12.01 20.58 10.99 20.05 10.22C19.29 9.12 18.34 8.21 17.19 7.49C15.61 6.5 13.88 6 12 6C10.12 6 8.39 6.5 6.81 7.49C5.66 8.21 4.71 9.12 3.95 10.22C3.42 10.99 3.42 12.01 3.95 12.78C4.71 13.88 5.66 14.79 6.81 15.51C8.39 16.5 10.12 17 12 17C13.88 17 15.61 16.5 17.19 15.51Z" fill="currentColor"/></svg></div>
           </button>
@@ -10054,11 +10939,11 @@ Sign-up swaps the field set: name, email, a new password with a hint. The footer
 ```html
 <div class="form-group">
   <label for="signup-password">Password</label>
-  <div class="password-field">
+  <div class="field">
     <input type="password" id="signup-password" name="password"
            autocomplete="new-password" autocapitalize="none" spellcheck="false" required aria-required="true"
            minlength="8" aria-describedby="signup-hint">
-    <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+    <button type="button" class="field-toggle" aria-controls="signup-password" aria-label="Show password" aria-pressed="false">
       <div class="svg-icn" data-icon="eye-off"><!-- inline eye-off SVG --></div>
       <div class="svg-icn" data-icon="eye"><!-- inline eye SVG --></div>
     </button>
@@ -10096,9 +10981,9 @@ The set pane pairs two `new-password` fields, and carries a hidden `autocomplete
       <input type="email" name="email" autocomplete="username" hidden tabindex="-1">
       <div class="form-group">
         <label for="demo-setpw-new">New password</label>
-        <div class="password-field">
+        <div class="field">
           <input type="password" id="demo-setpw-new" name="new-password" autocomplete="new-password" autocapitalize="none" spellcheck="false" required aria-required="true" minlength="8">
-          <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+          <button type="button" class="field-toggle" aria-controls="demo-setpw-new" aria-label="Show password" aria-pressed="false">
             <div class="svg-icn" data-icon="eye-off"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M16.1 13.3L14.65 11.85C14.8 11.07 14.57 10.33 13.97 9.65C13.38 8.97 12.6 8.7 11.65 8.85L10.2 7.4C10.48 7.27 10.77 7.17 11.06 7.1C11.35 7.03 11.67 7 12 7C13.25 7 14.31 7.44 15.19 8.31C16.06 9.19 16.5 10.25 16.5 11.5C16.5 11.83 16.47 12.15 16.4 12.44C16.33 12.73 16.23 13.02 16.1 13.3ZM19.3 16.45L17.85 15.05C18.48 14.57 19.05 14.04 19.54 13.46C19.83 13.12 20.1 12.75 20.34 12.36C20.66 11.83 20.65 11.17 20.33 10.65C19.54 9.36 18.5 8.31 17.21 7.49C15.65 6.5 13.92 6 12 6C11.52 6 11.04 6.03 10.57 6.1C10.11 6.17 9.65 6.27 9.2 6.4L7.65 4.85C8.33 4.57 9.03 4.35 9.75 4.21C10.47 4.07 11.22 4 12 4C14.52 4 16.76 4.7 18.73 6.09C20.69 7.48 22.12 9.28 23 11.5C22.62 12.48 22.11 13.4 21.49 14.24C20.86 15.08 20.13 15.82 19.3 16.45ZM19.8 22.6L15.6 18.45C15.02 18.63 14.43 18.77 13.84 18.86C13.25 18.95 12.63 19 12 19C9.48 19 7.24 18.3 5.28 16.91C3.31 15.52 1.88 13.72 1 11.5C1.35 10.62 1.79 9.8 2.33 9.04C2.86 8.28 3.47 7.6 4.15 7L1.4 4.2L2.8 2.8L21.2 21.2L19.8 22.6ZM6.22 9.05C5.84 8.69 5.24 8.67 4.88 9.05C4.65 9.3 4.43 9.56 4.22 9.82C4.02 10.09 3.83 10.36 3.66 10.65C3.34 11.17 3.35 11.83 3.67 12.35C4.46 13.64 5.5 14.69 6.79 15.51C8.35 16.5 10.08 17 12 17C12.33 17 12.66 16.98 12.97 16.94C13.39 16.88 13.56 16.39 13.27 16.09L13.05 15.85C12.87 15.9 12.69 15.94 12.53 15.96C12.36 15.99 12.18 16 12 16C10.75 16 9.69 15.56 8.81 14.69C7.94 13.81 7.5 12.75 7.5 11.5C7.5 11.32 7.51 11.14 7.54 10.97C7.56 10.81 7.6 10.63 7.65 10.45L6.22 9.05Z" fill="currentColor"/></svg></div>
             <div class="svg-icn" data-icon="eye"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M15.19 14.69C16.06 13.81 16.5 12.75 16.5 11.5C16.5 10.25 16.06 9.19 15.19 8.31C14.31 7.44 13.25 7 12 7C10.75 7 9.69 7.44 8.81 8.31C7.94 9.19 7.5 10.25 7.5 11.5C7.5 12.75 7.94 13.81 8.81 14.69C9.69 15.56 10.75 16 12 16C13.25 16 14.31 15.56 15.19 14.69ZM10.09 13.41C9.56 12.89 9.3 12.25 9.3 11.5C9.3 10.75 9.56 10.11 10.09 9.59C10.61 9.06 11.25 8.8 12 8.8C12.75 8.8 13.39 9.06 13.91 9.59C14.44 10.11 14.7 10.75 14.7 11.5C14.7 12.25 14.44 12.89 13.91 13.41C13.39 13.94 12.75 14.2 12 14.2C11.25 14.2 10.61 13.94 10.09 13.41ZM5.35 16.96C3.35 15.6 1.9 13.78 1 11.5C1.9 9.22 3.35 7.4 5.35 6.04C7.35 4.68 9.57 4 12 4C14.43 4 16.65 4.68 18.65 6.04C20.65 7.4 22.1 9.22 23 11.5C22.1 13.78 20.65 15.6 18.65 16.96C16.65 18.32 14.43 19 12 19C9.57 19 7.35 18.32 5.35 16.96ZM17.19 15.51C18.34 14.79 19.29 13.88 20.05 12.78C20.58 12.01 20.58 10.99 20.05 10.22C19.29 9.12 18.34 8.21 17.19 7.49C15.61 6.5 13.88 6 12 6C10.12 6 8.39 6.5 6.81 7.49C5.66 8.21 4.71 9.12 3.95 10.22C3.42 10.99 3.42 12.01 3.95 12.78C4.71 13.88 5.66 14.79 6.81 15.51C8.39 16.5 10.12 17 12 17C13.88 17 15.61 16.5 17.19 15.51Z" fill="currentColor"/></svg></div>
           </button>
@@ -10106,9 +10991,9 @@ The set pane pairs two `new-password` fields, and carries a hidden `autocomplete
       </div>
       <div class="form-group">
         <label for="demo-setpw-confirm">Confirm password</label>
-        <div class="password-field">
+        <div class="field">
           <input type="password" id="demo-setpw-confirm" name="confirm-password" autocomplete="new-password" autocapitalize="none" spellcheck="false" required aria-required="true" minlength="8" class="is-error" aria-invalid="true" aria-describedby="demo-setpw-confirm-error">
-          <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+          <button type="button" class="field-toggle" aria-controls="demo-setpw-confirm" aria-label="Show password" aria-pressed="false">
             <div class="svg-icn" data-icon="eye-off"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M16.1 13.3L14.65 11.85C14.8 11.07 14.57 10.33 13.97 9.65C13.38 8.97 12.6 8.7 11.65 8.85L10.2 7.4C10.48 7.27 10.77 7.17 11.06 7.1C11.35 7.03 11.67 7 12 7C13.25 7 14.31 7.44 15.19 8.31C16.06 9.19 16.5 10.25 16.5 11.5C16.5 11.83 16.47 12.15 16.4 12.44C16.33 12.73 16.23 13.02 16.1 13.3ZM19.3 16.45L17.85 15.05C18.48 14.57 19.05 14.04 19.54 13.46C19.83 13.12 20.1 12.75 20.34 12.36C20.66 11.83 20.65 11.17 20.33 10.65C19.54 9.36 18.5 8.31 17.21 7.49C15.65 6.5 13.92 6 12 6C11.52 6 11.04 6.03 10.57 6.1C10.11 6.17 9.65 6.27 9.2 6.4L7.65 4.85C8.33 4.57 9.03 4.35 9.75 4.21C10.47 4.07 11.22 4 12 4C14.52 4 16.76 4.7 18.73 6.09C20.69 7.48 22.12 9.28 23 11.5C22.62 12.48 22.11 13.4 21.49 14.24C20.86 15.08 20.13 15.82 19.3 16.45ZM19.8 22.6L15.6 18.45C15.02 18.63 14.43 18.77 13.84 18.86C13.25 18.95 12.63 19 12 19C9.48 19 7.24 18.3 5.28 16.91C3.31 15.52 1.88 13.72 1 11.5C1.35 10.62 1.79 9.8 2.33 9.04C2.86 8.28 3.47 7.6 4.15 7L1.4 4.2L2.8 2.8L21.2 21.2L19.8 22.6ZM6.22 9.05C5.84 8.69 5.24 8.67 4.88 9.05C4.65 9.3 4.43 9.56 4.22 9.82C4.02 10.09 3.83 10.36 3.66 10.65C3.34 11.17 3.35 11.83 3.67 12.35C4.46 13.64 5.5 14.69 6.79 15.51C8.35 16.5 10.08 17 12 17C12.33 17 12.66 16.98 12.97 16.94C13.39 16.88 13.56 16.39 13.27 16.09L13.05 15.85C12.87 15.9 12.69 15.94 12.53 15.96C12.36 15.99 12.18 16 12 16C10.75 16 9.69 15.56 8.81 14.69C7.94 13.81 7.5 12.75 7.5 11.5C7.5 11.32 7.51 11.14 7.54 10.97C7.56 10.81 7.6 10.63 7.65 10.45L6.22 9.05Z" fill="currentColor"/></svg></div>
             <div class="svg-icn" data-icon="eye"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M15.19 14.69C16.06 13.81 16.5 12.75 16.5 11.5C16.5 10.25 16.06 9.19 15.19 8.31C14.31 7.44 13.25 7 12 7C10.75 7 9.69 7.44 8.81 8.31C7.94 9.19 7.5 10.25 7.5 11.5C7.5 12.75 7.94 13.81 8.81 14.69C9.69 15.56 10.75 16 12 16C13.25 16 14.31 15.56 15.19 14.69ZM10.09 13.41C9.56 12.89 9.3 12.25 9.3 11.5C9.3 10.75 9.56 10.11 10.09 9.59C10.61 9.06 11.25 8.8 12 8.8C12.75 8.8 13.39 9.06 13.91 9.59C14.44 10.11 14.7 10.75 14.7 11.5C14.7 12.25 14.44 12.89 13.91 13.41C13.39 13.94 12.75 14.2 12 14.2C11.25 14.2 10.61 13.94 10.09 13.41ZM5.35 16.96C3.35 15.6 1.9 13.78 1 11.5C1.9 9.22 3.35 7.4 5.35 6.04C7.35 4.68 9.57 4 12 4C14.43 4 16.65 4.68 18.65 6.04C20.65 7.4 22.1 9.22 23 11.5C22.1 13.78 20.65 15.6 18.65 16.96C16.65 18.32 14.43 19 12 19C9.57 19 7.35 18.32 5.35 16.96ZM17.19 15.51C18.34 14.79 19.29 13.88 20.05 12.78C20.58 12.01 20.58 10.99 20.05 10.22C19.29 9.12 18.34 8.21 17.19 7.49C15.61 6.5 13.88 6 12 6C10.12 6 8.39 6.5 6.81 7.49C5.66 8.21 4.71 9.12 3.95 10.22C3.42 10.99 3.42 12.01 3.95 12.78C4.71 13.88 5.66 14.79 6.81 15.51C8.39 16.5 10.12 17 12 17C13.88 17 15.61 16.5 17.19 15.51Z" fill="currentColor"/></svg></div>
           </button>
@@ -10124,11 +11009,11 @@ The set pane pairs two `new-password` fields, and carries a hidden `autocomplete
 ```html
 <div class="form-group">
   <label for="setpw-confirm">Confirm password</label>
-  <div class="password-field">
+  <div class="field">
     <input type="password" id="setpw-confirm" name="confirm-password"
            autocomplete="new-password" autocapitalize="none" spellcheck="false" required aria-required="true" minlength="8"
            class="is-error" aria-invalid="true" aria-describedby="setpw-confirm-error">
-    <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+    <button type="button" class="field-toggle" aria-controls="setpw-confirm" aria-label="Show password" aria-pressed="false">
       <div class="svg-icn" data-icon="eye-off"><!-- inline eye-off SVG --></div>
       <div class="svg-icn" data-icon="eye"><!-- inline eye SVG --></div>
     </button>
@@ -10477,9 +11362,9 @@ This section documents how each element is built. For usage, see the sections ab
 
 The element rule carries no theme selector. `--mark-background` resolves to `var(--yellow-light)` in light mode and `var(--yellow)` in dark; `--mark-color` is `var(--brown-dark)` in both.
 
-Both halves are opaque on purpose, and neither is mixed with the page surface. A highlight lands on whatever sits behind it — including the inverted `--selected-background` of an active search row — and a translucent surface or a surface-derived ink inverts its own contrast when it does.
+Both halves are opaque on purpose, and neither is mixed with the page surface. A highlight lands on whatever sits behind it — including the `--background-faded` wash of an active search row, or any inverted surface a component puts behind it — and a translucent surface or a surface-derived ink inverts its own contrast when it does.
 
-**The surface a highlight sits on makes no difference to its contrast, and that is the point.** Measured on a normal row and on the inverted active row of the search dialog, the numbers are identical to two decimal places. The rule this replaced mixed a translucent yellow with near-white ink, and measured 3.7:1 on a normal dark row against **1.5:1** on an active one — where the surface flips light underneath the highlight and takes the ink's contrast with it.
+**The surface a highlight sits on makes no difference to its contrast, and that is the point.** Measured on a normal search row and on the inverted active row the search dialog used before its 2026-09-30 restyle, the numbers are identical to two decimal places. The rule this replaced mixed a translucent yellow with near-white ink, and measured 3.7:1 on a normal dark row against **1.5:1** on an active one — where the surface flips light underneath the highlight and takes the ink's contrast with it.
 
 The ratios themselves are a brand's to set, because the pair resolves through `--yellow-light`, `--yellow` and `--brown-dark`, and a brand re-points those:
 
@@ -11257,9 +12142,13 @@ This section documents how the component is built. For usage, see the sections a
 
 ### Password Toggle
 
-The password toggle adds a show/hide button to a password input, letting a user reveal what they typed without a second confirmation field. It requires the `.password-field` wrapper around the input and toggle button, and the toggle button itself uses the `.password-toggle` class. The component requires JavaScript (`assets/js/password-toggle.js`).
+The password toggle adds a show/hide button to a password input, letting a user reveal what they typed without a second confirmation field. It is a [Field](field.html) with a `.field-toggle` button beside the input: the `.field` wrapper owns the box, the button sits inside it. The component requires JavaScript (`assets/js/password-toggle.js`).
 
 The button carries both state icons — `eye-off` while the password is hidden, `eye` once revealed. CSS swaps them off the button's `aria-pressed` attribute, so the script never touches the icon.
+
+<div class="callout" data-type="info">
+<p><strong>Renamed.</strong> The wrapper used to be <code>.password-field</code> and the button <code>.password-toggle</code>. Both still work this release, as aliases of <code>.field</code> and <code>.field-toggle</code>, and go at the next major. New markup takes the new names.</p>
+</div>
 
 ---
 
@@ -11281,9 +12170,9 @@ The script binds one delegated click listener to the document. No manual setup i
 </div>
 
 ```html
-<div class="password-field">
+<div class="field">
   <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Enter your password">
-  <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+  <button type="button" class="field-toggle" aria-label="Show password" aria-pressed="false" aria-controls="password">
     <div class="svg-icn" data-icon="eye-off">
       <!-- inline eye-off SVG -->
     </div>
@@ -11304,13 +12193,14 @@ Put `eye-off` first: it is the icon for the initial hidden state. Both drawings 
 
 On click, the toggle:
 
-- Resolves the clicked element to a `.password-toggle` via `closest()`, so clicking the icon inside the button counts as clicking the button
-- Finds its `.password-field` ancestor via `closest()`, then the first `input` inside it via `querySelector()`
+- Resolves the clicked element to a `.field-toggle` via `closest()`, so clicking the icon inside the button counts as clicking the button
+- Finds its `.field` ancestor via `closest()`, then the `input` that is the field's direct child
 - Flips that input's `type` between `password` and `text`
 - Sets `aria-pressed` to `"true"` when the password is now visible, `"false"` when it's hidden again
-- Sets `aria-label` to `"Hide password"` when visible, `"Show password"` when hidden
 
-The script never touches the icon. The visual swap — `eye-off` while hidden, `eye` while revealed — is pure CSS keyed on `aria-pressed`, which is why the markup carries both icons. Legacy markup with a single icon still works: the CSS scopes the swap to buttons that contain an `eye-off` icon, so a lone `eye` stays static rather than disappearing. Accessible state lives in `aria-pressed`, `aria-label`, and the revealed text either way.
+The name stays "Show password" throughout: a toggle button carries one name and moves its state, so a screen reader hears "Show password, pressed" while it is showing. Renaming it to "Hide password" as well gave a pressed "hide" — a double negative.
+
+The script never touches the icon. The visual swap — `eye-off` while hidden, `eye` while revealed — is pure CSS keyed on `aria-pressed`, which is why the markup carries both icons. Legacy markup with a single icon still works: the CSS scopes the swap to buttons that contain an `eye-off` icon, so a lone `eye` stays static rather than disappearing. Accessible state lives in `aria-pressed` and the revealed text either way.
 
 ### Late-arriving markup needs nothing
 
@@ -11318,14 +12208,15 @@ The listener sits on the document and resolves the target on each click, so it n
 
 `window.initPasswordToggle` is exposed because an exported init is part of the module contract — a consumer bundling this file rather than loading it with a `<script>` tag needs an entry point. It is guarded, so calling it twice binds nothing twice. It is deliberately **not** registered in `bd-site-init.js` and does not need to be: a delegated listener installs itself once and no navigation removes it. `dropdown.js` and `dialog.js` are absent from that dispatcher for the same reason.
 
-This replaced a version that queried every `.password-toggle` at load and bound each one directly. On a Barba site that shape is a trap: head scripts do not re-run on navigation, so a toggle worked on a full page load and was inert when the same page was reached by clicking a link — see `js-code-structure.md`.
+This replaced a version that queried every toggle at load and bound each one directly. On a Barba site that shape is a trap: head scripts do not re-run on navigation, so a toggle worked on a full page load and was inert when the same page was reached by clicking a link — see `js-code-structure.md`.
 
 ---
 
 ## Accessibility
 
-- The button must sit inside a `.password-field` wrapper alongside its `input` — the script locates the input via `closest('.password-field')` then `querySelector('input')`, and does nothing if either lookup fails
-- Set the initial `aria-label="Show password"` and `aria-pressed="false"` in markup — the script never sets them, it only updates them after a click
+- The button must sit inside a `.field` wrapper as a sibling of its `input` — the script locates the input via `closest('.field')` then its direct-child `input`, and does nothing if either lookup fails
+- Set `aria-label="Show password"` and `aria-pressed="false"` in markup — the script flips `aria-pressed` after a click and leaves the name alone
+- `aria-controls` on the button names the input it reveals
 - Use a `<button type="button">`, never a bare `<div>` or `<a>` — this gives native keyboard support (Enter/Space) and stops the button from submitting the form
 - Mark both icons `aria-hidden="true"` — they're decorative; the state information lives in `aria-pressed` and `aria-label`, and the icon swap only reinforces it visually
 - `autocomplete` on the input should still reflect its purpose (`current-password`, `new-password`) — the toggle changes the input's `type`, not its autofill behaviour
@@ -11336,13 +12227,13 @@ This replaced a version that queried every `.password-toggle` at load and bound 
 
 **Do:**
 - Use on password inputs where letting a user verify what they typed reduces failed submits — login, account settings, password reset forms
-- Give every password field its own `.password-field` wrapper — each toggle manages exactly one input independently
+- Give every password field its own `.field` wrapper — each toggle manages exactly one input independently
 - Keep the input's initial `type="password"` in markup; the script only flips it to `text` in response to a click
-- Set the toggle's starting `aria-label`/`aria-pressed` in the markup, since the script doesn't initialise them
+- Set the toggle's `aria-label` and starting `aria-pressed` in the markup, since the script doesn't initialise them
 - Include both icons, `eye-off` before `eye` — the swap needs both present, and putting the initial-state icon first keeps the fallback sensible where the CSS doesn't load
 
 **Don't:**
-- Don't place a `.password-toggle` outside a `.password-field` wrapper — the click handler can't locate the input and silently does nothing
+- Don't place a `.field-toggle` outside a `.field` wrapper — the click handler can't locate the input and silently does nothing
 - Don't swap the icon from JavaScript — the CSS already does it off `aria-pressed`; a script that also edits the icon fights the stylesheet
 - Don't add a second handler that also flips `input.type` — the delegated listener already does it, and the two would cancel each other out. Handlers that do something else on the same click (analytics, validation) are fine
 
@@ -11350,31 +12241,27 @@ This replaced a version that queried every `.password-toggle` at load and bound 
 
 ## CSS reference
 
-This section documents how the component is built. For usage, see the sections above.
+This section documents how the component is built. For usage, see the sections above. The box itself is the [Field](field.html); only the toggle's own rules are listed here.
 
 ### Styling
 
 | Property | Value |
 |---|---|
-| `.password-field` | `position: relative` — establishes the positioning context the toggle docks into |
-| `.password-field input` | `padding-right: var(--space-4xl)` — clears space so typed text doesn't run under the toggle |
-| `.password-toggle` | Absolutely positioned, vertically centred, `right: var(--space-m)`, no background or border |
-| `.password-toggle` colour | `var(--text-faded)`, shifting to `var(--text-primary)` on hover |
-| `.password-toggle .svg-icn` | 20×20px |
+| `.field-toggle` | A flex child of the box, `var(--target-min)` wide, stretched to the field's height; no background or border |
+| `.field-toggle` colour | `var(--text-faded)`, shifting to `var(--text-primary)` on hover |
+| `.field-toggle .svg-icn` | `var(--field-icon-size)`, set by the field |
 
 ### Selectors
 
 | Selector | Purpose |
 |---|---|
-| `.password-field` | Wrapper; positions the toggle relative to the input |
-| `.password-field input` | The password input; gets reserved right padding |
-| `.password-toggle` | The show/hide button |
-| `.password-toggle:hover` | Hover colour state |
-| `.password-toggle .svg-icn` | Icon sizing |
-| `.password-toggle:has(.svg-icn[data-icon="eye-off"]):not([aria-pressed="true"]) .svg-icn[data-icon="eye"]` | Hides the `eye` icon while the password is hidden — scoped by `:has()` to dual-icon toggles so legacy single-icon markup keeps its static icon |
-| `.password-toggle[aria-pressed="true"] .svg-icn[data-icon="eye-off"]` | Hides the `eye-off` icon once the password is revealed |
+| `.field-toggle` | The show/hide button, sharing one rule with `.field-clear` |
+| `.field-toggle:hover` | Hover colour state |
+| `.field-toggle:has(.svg-icn[data-icon="eye-off"]):not([aria-pressed="true"]) .svg-icn[data-icon="eye"]` | Hides the `eye` icon while the password is hidden — scoped by `:has()` to dual-icon toggles so legacy single-icon markup keeps its static icon |
+| `.field-toggle[aria-pressed="true"] .svg-icn[data-icon="eye-off"]` | Hides the `eye-off` icon once the password is revealed |
+| `.password-field`, `.password-toggle` | Deprecated aliases of `.field` and `.field-toggle`; every rule above lists both, until the next major |
 
-> These rules live in `design-system.css` (section 12, Forms), so a product installing `password-toggle.js` from the package gets a working control — behaviour and styling together.
+> These rules live in `design-system.css` (section 52, Field), so a product installing `password-toggle.js` from the package gets a working control — behaviour and styling together.
 
 ### Progress
 
@@ -11917,9 +12804,10 @@ header.site-header                     data-sticky="false" | data-layout="center
       a.site-header-logo
     nav.nav                            optional
     .site-header-end                   optional
-      button.button.header-search-btn  search trigger, on the docs site
-      .dropdown                        account, mode switch
-      button.button.header-action      theme toggle
+      a.button.header-action           contact — icon-only
+      button.button.header-action      search trigger — icon-only, on the docs site
+      button.button.header-action      theme toggle — icon-only
+      .dropdown.header-account         account: avatar trigger, identity row, Sign out
 ```
 
 Two things about this shape are deliberate.
@@ -12022,29 +12910,32 @@ Sticky is the default. Scroll the frame below — the header stays, and `data-st
 
 Everything in the end slot is an existing component. The header adds no new controls.
 
+On the docs site the end slot is four equal squares — contact, search, theme, account — each an icon-only action (`data-icon-only`, `aria-label`), sized to the 44px target minimum by §40 so an icon and an avatar sit in the same box. `nav.js` emits them; the account menu is emitted **hidden and empty**, and `assets/js/header-account.js` fills the avatars, the name and the email from the session and reveals it. A page served signed out — login, support, access denied — keeps the slot hidden: nothing says "sign in" there, because on those pages that is the page.
+
 ### Account dropdown
 
+The [Dropdown](/website/dropdown.html)'s avatar-item pattern: the trigger is the [avatar](/website/avatar.html) alone, wrapped in the button that carries the name; the panel opens with an identity row, a divider, and the one action. `data-placement="bottom-end"` because the trigger is the last thing on the right. With no name on the account the email is the label and the second line is dropped, so one person never reads as two.
+
 <div class="site-header-end">
-        <div class="dropdown" data-placement="bottom-end">
-          <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false">
-            <div class="svg-icn" data-icon="user"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M21 22H19V19C19 17.8954 18.1046 17 17 17H7C5.89543 17 5 17.8954 5 19V22H3V15H21V22Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12.5 2C15.5376 2 18 4.46243 18 7.5C18 10.5376 15.5376 13 12.5 13C9.46243 13 7 10.5376 7 7.5C7 4.46243 9.46243 2 12.5 2ZM12.5 4C10.567 4 9 5.567 9 7.5C9 9.433 10.567 11 12.5 11C14.433 11 16 9.433 16 7.5C16 5.567 14.433 4 12.5 4Z" fill="currentColor"/></svg></div>
-            Account
-            <div class="svg-icn dropdown-chevron" data-icon="chevron-down"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16.4L6 10.4L7.4 9L10.5858 12.1858C11.3668 12.9668 12.6332 12.9668 13.4142 12.1858L16.6 9L18 10.4L12 16.4Z" fill="currentColor"/></svg></div>
+        <div class="dropdown header-account" data-placement="bottom-end">
+          <button class="dropdown-trigger header-account-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Account, Erlen Masson">
+            <span class="avatar" aria-hidden="true">EM</span>
           </button>
-          <div class="dropdown-menu" role="menu">
-            <button class="dropdown-item" role="menuitem" type="button">
-              <span class="avatar" data-size="small" aria-hidden="true">E</span>
-              Profile
-            </button>
-            <button class="dropdown-item" role="menuitem" type="button">
-              <div class="svg-icn" data-icon="settings"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M11 15H22V17H11V19H5V17H2V15H5V13H11V15ZM7 17H9V15H7V17Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M19 7H22V9H19V11H13V9H2V7H13V5H19V7ZM15 9H17V7H15V9Z" fill="currentColor"/></svg></div>
-              Settings
-            </button>
+          <div class="dropdown-menu">
+            <div class="dropdown-header">
+              <span class="avatar" aria-hidden="true">EM</span>
+              <div>
+                <div>Erlen Masson</div>
+                <div class="dropdown-desc">erlen@bydefault.studio</div>
+              </div>
+            </div>
             <div class="dropdown-divider" role="separator"></div>
-            <button class="dropdown-item dropdown-item--danger" role="menuitem" type="button">
-              <div class="svg-icn" data-icon="logout"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18 13H7.23922C6.34831 13 5.90214 14.0771 6.53211 14.7071L8.425 16.6L7.025 18.025L1 12L7 5.99999L8.425 7.42499L6.54652 9.29043C5.91317 9.91938 6.35857 11 7.25116 11H18V13Z" fill="currentColor"/><path d="M10.0378 22V16H12.0378V18C12.0378 19.1046 12.9333 20 14.0378 20H18.0378C19.1424 20 20.0378 19.1046 20.0378 18V6C20.0378 4.89543 19.1424 4 18.0378 4H14.0378C12.9333 4 12.0378 4.89543 12.0378 6V8H10.0378V2H22.0378V22H10.0378Z" fill="currentColor"/></svg></div>
-              Sign out
-            </button>
+            <div class="dropdown-group" role="menu">
+              <button class="dropdown-item dropdown-item--danger" role="menuitem" type="button">
+                <div class="svg-icn" data-icon="logout"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 21C4.45 21 3.97917 20.8042 3.5875 20.4125C3.19583 20.0208 3 19.55 3 19V5C3 4.45 3.19583 3.97917 3.5875 3.5875C3.97917 3.19583 4.45 3 5 3H12V5H5V19H12V21H5ZM16 17L14.625 15.55L17.175 13H9V11H17.175L14.625 8.45L16 7L21 12L16 17Z" fill="currentColor"/></svg></div>
+                <span>Sign out</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -12095,10 +12986,10 @@ Below 768px the header changes in three ways, none of which needs authoring:
 
 | What | Behaviour |
 |---|---|
-| Action labels | `.header-action-label` is hidden; the accessible name stays on `aria-label` |
+| Action labels | `.header-action-label` is hidden; the accessible name stays on `aria-label`. The docs site's own actions are icon-only at every width, so nothing changes there |
 | Nav | Hidden **only** with `data-nav-collapse="drawer"` — see below |
 | Padding | Contents go flush to the viewport edge, so the first and last actions read as full-height tap targets |
-| Search trigger | Collapses to its icon with the other action labels, and the `kbd` hint goes with them — a touch device has no ⌘K to press |
+| Icon-only actions | Four 44px squares fit beside the menu button and logo at 375px; nothing collapses further |
 
 The frame below is a real 390px viewport, not a narrow box. Media queries resolve against an iframe's own viewport, so the header's responsive rules genuinely fire inside it; a narrow `<div>` on this page could not show them at all.
 
@@ -12127,8 +13018,10 @@ If thumb reach matters more than convention on a given product, move both: the b
 | Landmark | `<header>` is the element; it is a `banner` landmark at the top level |
 | Skip link | First in the DOM, revealed on focus, targeting the page's `<main>` |
 | Menu button | `aria-expanded`, `aria-controls`, and an `aria-label` that changes with state |
-| Icon-only actions | `aria-label` on every one; the visible label is decorative and may be hidden |
-| Touch targets | `.button.header-action` carries `min-block-size: 44px` |
+| Icon-only actions | `aria-label` on every one; the visible label is decorative and may be hidden. The avatar trigger's label carries the person: "Account, Erlen Masson" |
+| Touch targets | `.button.header-action` carries `min-block-size: 44px`; icon-only actions and the avatar trigger take `min-inline-size: 44px` from §40 — the trigger is not a `.button`, and gets its height from `align-self: stretch` |
+| Menu name | The account menu carries no `aria-labelledby`; `dropdown.js` names it from the trigger, so it is announced as "Account, Erlen Masson, menu" |
+| Signing out | The item stays focused and reads "Signing out…" with `aria-disabled` until the page changes; on failure it re-enables in place and a toast says why |
 | Focus | Inherited from the global focus rule |
 
 **The skip link's collapsed box is load-bearing.** It is hidden with a 1px box, `overflow: hidden`, `pointer-events: none` and `clip-path` — not `display: none` or `visibility: hidden`, which would take it out of the focus order and defeat the point. Clipping alone is not enough: a clipped element keeps its full layout box and still receives pointer events, so a padded, clipped skip link sits invisibly over the header and swallows clicks meant for the controls beneath it. The padding therefore lives in the focused state.

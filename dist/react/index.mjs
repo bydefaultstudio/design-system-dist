@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v5.0.0 */
+/* @bydefaultstudio/design-system v5.1.0 */
 /**
  * @bydefaultstudio/design-system/react — Tier 2 React adapters.
  *
@@ -31,3 +31,4 @@ export { showToast } from './toast.mjs';
 export { Rating } from './rating.mjs';
 export { CellInput } from './cell-input.mjs';
 export { ChipGroup } from './chip.mjs';
+export { DatePicker } from './date-picker.mjs';

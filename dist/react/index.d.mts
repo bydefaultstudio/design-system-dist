@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v5.0.0 */
+/* @bydefaultstudio/design-system v5.1.0 */
 export { Dialog } from './dialog.mjs';
 export type { DialogProps, DialogHideSource } from './dialog.mjs';
 
@@ -41,3 +41,6 @@ export type { RatingProps } from './rating.mjs';
 
 export { CellInput } from './cell-input.mjs';
 export type { CellInputProps } from './cell-input.mjs';
+
+export { DatePicker } from './date-picker.mjs';
+export type { DatePickerProps, DatePickerChangeDetail } from './date-picker.mjs';

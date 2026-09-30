@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v5.0.0 */
+/* @bydefaultstudio/design-system v5.1.0 */
 /**
  * BD Cursor — desktop custom cursor (native / label / badge / graphic / halo)
  * ONE overlay element (.cursor-overlay) becomes every author-driven render.
@@ -33,12 +33,12 @@
  * Content refresh: dispatch "bd-cursor:refresh" after mutating a hovered
  * element's data-cursor-* attributes (bd-video does this on play/pause).
  *
- * @version 6.1.0
+ * @version 6.1.1
  */
 (function () {
   "use strict";
 
-  var VERSION = "6.1.0";
+  var VERSION = "6.1.1";
 
   var DEFAULTS = {
     spritePath: "/assets/images/svg-icons/_sprite.svg",
@@ -364,6 +364,10 @@
       mouseX = e.clientX;
       mouseY = e.clientY;
 
+      // Backstop for any lost mouseup (native <select> popups, a listener
+      // that stops propagation): moving with the primary button up releases.
+      if (!(e.buttons & 1)) releaseHalo();
+
       // Resolve target/mode FIRST so the firstMove snap uses the right offset.
       transitionTo(getCursorTargetAtPoint(mouseX, mouseY));
 
@@ -378,8 +382,14 @@
       startAnimation();
     }
 
-    function onMouseDown() { halo.classList.add("cursor-pressed"); }
-    function onMouseUp() { halo.classList.remove("cursor-pressed"); }
+    // Halo is primary-button feedback only. A secondary press opens the
+    // context menu, which swallows the matching mouseup (and the click that
+    // dismisses it), so the halo would stick as if held. Anything that ends
+    // a press without a mouseup reaching the document releases it too.
+    function onMouseDown(e) {
+      if (e.button === 0) halo.classList.add("cursor-pressed");
+    }
+    function releaseHalo() { halo.classList.remove("cursor-pressed"); }
 
     // Scroll keeps target in sync when the mouse is still but elements move
     // beneath it. Skipped while the router's transition class is on <body> —
@@ -413,13 +423,19 @@
         fadeTimeoutId = null;
       }
       overlay.classList.remove("is-visible", "is-circle", "is-graphic");
+      halo.classList.remove("cursor-pressed");
       document.documentElement.classList.remove("bd-cursor-replacing");
     }
 
     window.__bdCursorInited = true;
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mousedown", onMouseDown);
-    document.addEventListener("mouseup", onMouseUp);
+    document.addEventListener("mouseup", releaseHalo);
+    // macOS ctrl+click is button 0 but still opens the menu; a native drag
+    // and a window switch mid-press both eat the mouseup.
+    document.addEventListener("contextmenu", releaseHalo);
+    document.addEventListener("dragend", releaseHalo);
+    window.addEventListener("blur", releaseHalo);
     window.addEventListener("scroll", onScroll, { passive: true });
     document.addEventListener("bd-cursor:refresh", onRefresh);
     document.addEventListener("bd:before-nav", resetCursorState);
@@ -433,7 +449,10 @@
       detach: function () {
         document.removeEventListener("mousemove", onMouseMove);
         document.removeEventListener("mousedown", onMouseDown);
-        document.removeEventListener("mouseup", onMouseUp);
+        document.removeEventListener("mouseup", releaseHalo);
+        document.removeEventListener("contextmenu", releaseHalo);
+        document.removeEventListener("dragend", releaseHalo);
+        window.removeEventListener("blur", releaseHalo);
         window.removeEventListener("scroll", onScroll);
         document.removeEventListener("bd-cursor:refresh", onRefresh);
         document.removeEventListener("bd:before-nav", resetCursorState);

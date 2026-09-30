@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v5.0.0 */
+/* @bydefaultstudio/design-system v5.1.0 */
 import * as React from 'react';
 
 export interface DropdownSelectDetail {
@@ -36,6 +36,10 @@ export interface DropdownMenuProps {
   /** Defaults to "menu". Pass null for the header pattern, where the role
    * moves inward onto a `<DropdownGroup menu>`. */
   role?: string | null;
+  /** "panel": the content panel — prose, a form or controls rather than
+   * items. Defaults `role` to none, and the trigger should carry
+   * `haspopup={false}` for the same reason. */
+  variant?: 'panel';
   className?: string;
   children?: React.ReactNode;
 }

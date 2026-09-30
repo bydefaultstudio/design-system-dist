@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v5.0.0 */
+/* @bydefaultstudio/design-system v5.1.0 */
 /**
  * <Dialog> — React adapter over the Dialog markup contract (cms/dialog.md).
  *

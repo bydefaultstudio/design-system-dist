@@ -321,6 +321,13 @@ function buildIconMap() {
 
 /**
  * Return icon wrapped in the standard .svg-icn container.
+ *
+ * The wrapper carries data-icon as well as the <svg> inside it: the wrapper
+ * is the documented hook (cms/iconography.md, `<div class="svg-icn"
+ * data-icon="name">`) and component CSS keys on it — the password toggle's
+ * eye swap reads `.svg-icn[data-icon="eye"]`, and without the attribute here
+ * every generated page showed both eyes. The <svg> keeps its own copy for
+ * docs-copy-chrome.js, which reads `.svg-icn svg[data-icon]`.
  * @param {string} name - kebab-case icon key
  * @returns {string} HTML string
  */
@@ -330,7 +337,7 @@ function getIcon(name) {
     console.warn(`⚠️  Unknown icon: "${name}"`);
     return `<!-- unknown icon: ${name} -->`;
   }
-  return `<div class="svg-icn">${entry.svg}</div>`;
+  return `<div class="svg-icn" data-icon="${name}">${entry.svg}</div>`;
 }
 
 /**
@@ -1213,7 +1220,7 @@ function markdownToHtml(markdown) {
 
     return `
       <div class="code-block-wrapper">
-        <button class="button copy-btn is-icon-only" data-size="xsmall" data-clipboard-target="#${codeId}" data-tooltip="Copy" type="button" aria-label="Copy code"><span class="copy-btn-default">${getIcon('copy')}</span><span class="copy-btn-copied">${getIcon('check')}</span></button>
+        <button class="button copy-btn" data-size="xsmall" data-icon-only data-clipboard-target="#${codeId}" data-tooltip="Copy" type="button" aria-label="Copy code"><span class="copy-btn-default">${getIcon('copy')}</span><span class="copy-btn-copied">${getIcon('check')}</span></button>
         <pre><code id="${codeId}"${attributes}>${code}</code></pre>
       </div>
     `;
@@ -2525,12 +2532,11 @@ function generateNavJs(filesBySection) {
   const logoHtml = CONFIG.logoHtml || `<span>${SITE.name}</span>`;
 
   // Contact link (config: contactHref / contactLabel) — omitted when unset.
-  // .header-action-label is what the header's mobile rules collapse away; the
-  // accessible name stays on aria-label, so nothing is lost when it goes.
+  // Icon-only at every width, like every action in the end slot since the
+  // 2026-09-30 header; the accessible name is the aria-label.
   const contactNavJs = CONFIG.contactHref ? `
-    + '<a href="${siteHref(CONFIG.contactHref)}" class="button header-action header-contact-link" aria-label="${CONFIG.contactLabel}">'
+    + '<a href="${siteHref(CONFIG.contactHref)}" class="button header-action header-contact-link" data-icon-only aria-label="${CONFIG.contactLabel}">'
     + '<div class="svg-icn">' + ICON_MAIL + '</div>'
-    + '<span class="header-action-label">${CONFIG.contactLabel}</span>'
     + '</a>'` : '';
 
   const script = `/**
@@ -2560,6 +2566,7 @@ function generateNavJs(filesBySection) {
   var ICON_SEARCH = '${esc(getRawIcon('search'))}';
   var ICON_CLOCK = '${esc(getRawIcon('clock'))}';
   var ICON_RETURN = '${esc(getRawIcon('return-arrow'))}';
+  var ICON_LOGOUT = '${esc(getRawIcon('logout'))}';
 
   // ── Build site header HTML ──
   var headerStart = '<div class="site-header-start">';
@@ -2610,24 +2617,52 @@ function generateNavJs(filesBySection) {
   // opts out with data-search="false" on its mount (hasSearch above).
   var isBrandInstance = document.documentElement.hasAttribute('data-space');
 
-  // Reads as a field on desktop and an icon on mobile — .header-action-label
-  // is what collapses, and the accessible name lives on aria-label either way.
-  // It is a button, not an input: the field is in the dialog, and two fields
-  // that both look like search is the confusion this avoids.
-  var searchTriggerJs = ${!CONFIG.search ? "''" : `(isBrandInstance || !hasSearch) ? '' : ('<button type="button" class="button header-action header-search-btn"'
+  // An icon-only button, not an input: the field is in the dialog, and two
+  // fields that both look like search is the confusion this avoids. The
+  // shortcut travels as aria-keyshortcuts; the visible ⌘K badge went with the
+  // field look, and the dialog's own footer lists the keys that work inside it.
+  var searchTriggerJs = ${!CONFIG.search ? "''" : `(isBrandInstance || !hasSearch) ? '' : ('<button type="button" class="button header-action header-search-btn" data-icon-only'
     + ' data-dialog-open="site-search" aria-controls="site-search"'
     + ' aria-haspopup="dialog" aria-keyshortcuts="Meta+K Control+K"'
     + ' aria-label="Search the system">'
     + '<div class="svg-icn">' + ICON_SEARCH + '</div>'
-    + '<span class="header-action-label header-search-placeholder">Search</span>'
-    + '<kbd class="header-search-kbd" aria-hidden="true"></kbd>'
     + '</button>')`};
 
-  var headerEnd = '<div class="site-header-end">' + searchTriggerJs${contactNavJs}
+  // The account menu: the Dropdown's avatar-item pattern (cms/dropdown.md),
+  // anchored bottom-end because the trigger is the last thing on the right.
+  // No aria-labelledby on the group: dropdown.js names the menu from its
+  // trigger, so a reader hears "Account, Erlen Masson, menu" — what it is as
+  // well as whose — rather than the bare name.
+  // Emitted hidden and empty — header-account.js fills the avatars, the name
+  // and the email from the session and reveals it; a page served signed out
+  // (login, support, access denied) keeps it hidden. Brand instances get it
+  // too: they sit behind the same gate.
+  var accountMenuJs = '<div class="dropdown header-account" data-placement="bottom-end" hidden>'
+    + '<button type="button" class="dropdown-trigger header-account-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Account">'
+    + '<span class="avatar" aria-hidden="true"></span>'
+    + '</button>'
+    + '<div class="dropdown-menu">'
+    + '<div class="dropdown-header">'
+    + '<span class="avatar" aria-hidden="true"></span>'
+    + '<div><div class="header-account-name"></div>'
+    + '<div class="dropdown-desc header-account-email"></div></div>'
+    + '</div>'
+    + '<div class="dropdown-divider" role="separator"></div>'
+    + '<div class="dropdown-group" role="menu">'
+    + '<button type="button" class="dropdown-item dropdown-item--danger" role="menuitem" data-account-sign-out>'
+    + '<div class="svg-icn">' + ICON_LOGOUT + '</div><span>Sign out</span>'
+    + '</button>'
+    + '</div>'
+    + '</div>'
+    + '</div>';
+
+  // Contact, search, theme, account — every one an icon-only square.
+  var headerEnd = '<div class="site-header-end">'${contactNavJs} + searchTriggerJs
     + '<button type="button" class="button header-action dark-mode-toggle" data-icon-only aria-label="Dark mode">'
     + '<div class="svg-icn dark-mode-icon-light">' + ICON_SUN + '</div>'
     + '<div class="svg-icn dark-mode-icon-dark">' + ICON_MOON + '</div>'
     + '</button>'
+    + accountMenuJs
     + '</div>';
 
   // The skip link is first in the DOM so it is the first thing Tab reaches.
@@ -2675,7 +2710,9 @@ function generateNavJs(filesBySection) {
     + '<div class="svg-icn">' + ICON_CLOSE + '</div>'
     + '</button>'
     + '</search>'
-    + '<div class="search-filters chip-group" role="radiogroup" aria-label="Show pages in section" hidden></div>'
+    // The Segmented control's flat form (cms/form.md). search.js fills it with
+    // one aria-pressed button per result type the query found, plus All.
+    + '<div class="search-filters segmented-control" role="group" aria-label="Filter results by type" hidden></div>'
     // In the DOM from first render and never display:none — a live region
     // revealed at announce time is not reliably announced (cms/login.md).
     + '<p class="search-status text-size-s text-faded" aria-live="polite"></p>'
@@ -2693,13 +2730,20 @@ function generateNavJs(filesBySection) {
     + '</div>'
     + '<footer class="search-dialog-footer">'
     + '<span class="search-hint"><kbd>&uarr;</kbd><kbd>&darr;</kbd> navigate</span>'
-    + '<span class="search-hint"><span class="svg-icn search-hint-icon">' + ICON_RETURN + '</span> open</span>'
+    // A key like the others, so the Enter glyph sits in a <kbd> too. The SVG
+    // is aria-hidden, so the key's name travels as hidden text — not as an
+    // aria-label, which a <kbd> (generic role) may not carry.
+    + '<span class="search-hint"><kbd><span class="svg-icn">' + ICON_RETURN + '</span><span class="visually-hidden">Enter</span></kbd> open</span>'
     + '<span class="search-hint"><kbd>esc</kbd> close</span>'
     // "See all results", matching the row at the end of the list. "Open full
     // search" invented a name for the page — it is titled Search, and calling
     // it "full search" implies the dialog is a lesser version of it.
     + '<a class="search-all" href="${siteHref('/search.html')}">See all results</a>'
     + '</footer>'
+    // Icons search.js draws into its own controls — the recent-search remove
+    // button — taken from the registry here like every other icon. Inert until
+    // cloned, and read by id so the results page's surface finds it too.
+    + '<template id="site-search-icons"><span data-icon="close">' + ICON_CLOSE + '</span></template>'
     + '</dialog>')`};
 
   // ── Build sidebar HTML (if needed) ──
@@ -3314,6 +3358,9 @@ function writeThemeConfig(themes) {
     }
     payload.colorPairings = pairs.map(pair => ({ fg: pair.fg, bg: pair.bg }));
   }
+  // The engine's own version, from the package this generator ships in, so
+  // the banner cannot freeze on the release it was first written in.
+  const engineVersion = require(path.join(__dirname, '..', '..', 'package.json')).version;
   const banner = `/**
  * Theme Configuration (GENERATED FILE, do not edit)
  *
@@ -3324,7 +3371,7 @@ function writeThemeConfig(themes) {
  * Tool access is managed via frontmatter in cms/*.md files (toolAccess field),
  * NOT here. See cms/access-control.md.
  *
- * @version 4.0.0
+ * @version ${engineVersion}
  */
 
 `;
@@ -4081,11 +4128,11 @@ function generateBrandBook(template, themes) {
             <div class="asset-card-footer">
               <p class="asset-card-title">${variantLabel}</p>
               <div class="asset-card-actions">
-                <button class="button copy-btn is-icon-only" data-size="small" type="button" data-copy="${svgEscapedAttr}" data-tooltip="Copy SVG" aria-label="Copy SVG">
+                <button class="button copy-btn" data-size="small" data-icon-only type="button" data-copy="${svgEscapedAttr}" data-tooltip="Copy SVG" aria-label="Copy SVG">
                   <span class="copy-btn-default">${getIcon('copy')}</span>
                   <span class="copy-btn-copied">${getIcon('check')}</span>
                 </button>
-                <a class="button" data-size="small" href="${downloadHref}" download="${file}" data-tooltip="Download" aria-label="Download SVG">
+                <a class="button" data-size="small" data-icon-only href="${downloadHref}" download="${file}" data-tooltip="Download" aria-label="Download SVG">
                   ${getIcon('download')}
                 </a>
               </div>
@@ -4322,7 +4369,7 @@ function generateBrandBook(template, themes) {
           <label for="bb-radio">Subscribe me to updates</label>
         </div>
         <div class="form-toggle">
-          <input type="checkbox" id="bb-toggle" checked>
+          <input type="checkbox" role="switch" id="bb-toggle" checked>
           <label for="bb-toggle">Email notifications</label>
         </div>
         <div class="button-group">

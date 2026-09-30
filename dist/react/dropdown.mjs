@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v5.0.0 */
+/* @bydefaultstudio/design-system v5.1.0 */
 /**
  * Dropdown — React adapters over the Dropdown markup contract
  * (cms/dropdown.md), as a composition: the contract is rich (icons,
@@ -92,10 +92,18 @@ export function DropdownMenu(props) {
   // role defaults to "menu". Pass role={null} for the header pattern,
   // where the role moves inward onto a <DropdownGroup menu> so the menu
   // owns only real items (see the avatar pattern in cms/dropdown.md).
-  var role = props.role === undefined ? 'menu' : props.role;
+  // A content panel is not a menu, so variant="panel" defaults it to no
+  // role rather than asking the consumer to remember role={null}.
+  var role = props.role === undefined ? (props.variant === 'panel' ? null : 'menu') : props.role;
   return h(
     'div',
-    { className: cx('dropdown-menu', props.className), role: role || undefined },
+    {
+      className: cx('dropdown-menu', props.className),
+      role: role || undefined,
+      // "panel": content rather than items — pads itself, wraps, capped
+      // width. Pair it with role={null}; a panel is not a menu.
+      'data-variant': props.variant,
+    },
     props.children
   );
 }

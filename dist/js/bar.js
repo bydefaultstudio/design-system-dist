@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v5.0.0 */
+/* @bydefaultstudio/design-system v5.1.0 */
 /**
  * Bar overflow
  * The bar (design-system.css §41) is always one row: items that do not fit

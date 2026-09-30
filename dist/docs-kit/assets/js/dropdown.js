@@ -39,6 +39,10 @@
  *     activated. detail: { value, item, checked }. `checked` is null for
  *     plain items.
  *
+ * Public close: window.closeDropdown(dropdown, returnFocus) shuts a panel
+ *   the way Escape does, for a consumer that finishes inside its own panel
+ *   (a form submitted, a link that navigates nowhere).
+ *
  * Nesting: a dropdown may contain another dropdown — the bar's overflow
  * panel (bar.js) demotes whole groups, dropdowns included. closeAll keeps
  * ancestors of the opening dropdown open, closing a panel closes anything
@@ -48,10 +52,13 @@
 (function () {
   "use strict";
 
-  var VERSION = "2.1.0";
+  var VERSION = "2.2.0";
   var ITEM_SELECTOR =
     '[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]';
   var TYPEAHEAD_RESET_MS = 500;
+  // The clear space a nudged panel keeps from the viewport edge: --space-s.
+  // A measurement in script, so the pixel value is restated here.
+  var EDGE_GUTTER_PX = 8;
 
   var typeaheadBuffer = "";
   var typeaheadTimer = null;
@@ -167,6 +174,9 @@
     var trigger = getTrigger(dropdown);
     if (!menu || !trigger) return;
 
+    // A nudge from the last resolve would shift the box being measured.
+    menu.style.removeProperty("--dropdown-nudge");
+
     var requested = dropdown.getAttribute("data-placement");
     if (!requested) {
       requested = menu.classList.contains("is-right") ? "bottom-end" : "bottom-start";
@@ -200,6 +210,27 @@
     }
 
     dropdown.setAttribute("data-resolved-placement", block + "-" + inline);
+    nudgeIntoView(menu, viewportW);
+  }
+
+  /**
+   * Flipping picks the better side; it cannot help a panel wider than the
+   * room on either side of its trigger, which is any panel opened from the
+   * middle of a phone-width row. What still crosses an edge after the flip is
+   * shifted back inside by the overflow, written to --dropdown-nudge and
+   * applied as a translate. The left edge wins when a panel is wider than the
+   * viewport, so its start — where reading begins — stays on screen.
+   * A menu laid out in place (a nested one inside the bar's overflow panel
+   * is position: static) moves with its host and is left alone. The value
+   * carries both axes, so an un-nudged menu has no transform at all.
+   */
+  function nudgeIntoView(menu, viewportW) {
+    if (window.getComputedStyle(menu).position === "static") return;
+    var box = menu.getBoundingClientRect();
+    var shift = 0;
+    if (box.right > viewportW - EDGE_GUTTER_PX) shift = viewportW - EDGE_GUTTER_PX - box.right;
+    if (box.left + shift < EDGE_GUTTER_PX) shift = EDGE_GUTTER_PX - box.left;
+    if (shift) menu.style.setProperty("--dropdown-nudge", Math.round(shift) + "px 0");
   }
 
   /**
@@ -262,6 +293,8 @@
     // Cleared so the next open measures fresh rather than inheriting a flip
     // decided at a different scroll position or viewport size.
     dropdown.removeAttribute("data-resolved-placement");
+    var menu = getMenu(dropdown);
+    if (menu) menu.style.removeProperty("--dropdown-nudge");
     var trigger = getTrigger(dropdown);
     if (trigger) {
       trigger.setAttribute("aria-expanded", "false");
@@ -601,6 +634,7 @@
   }
 
   window.initDropdown = initDropdown;
+  window.closeDropdown = closeDropdown;
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initDropdown);

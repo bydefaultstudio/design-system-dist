@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v5.0.0 */
+/* @bydefaultstudio/design-system v5.1.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -401,17 +401,21 @@
   /* The system's selected pair. A wash cannot carry state — the --bg-faded-*
      scale tops out near 1.4:1 where WCAG wants 3:1 of a state indicator — so
      selection is an inverted surface, never a tint. Shared by both segmented
-     forms, the chip group and the docs A-Z rail. */
+     forms, the chip group, the docs A-Z rail and the date picker's chosen day.
+     The one exception is the docs search's active row: it holds <mark>
+     highlights that an inverted surface would swallow, so it is a
+     --background-faded wash with a 1px --border-control outline carrying the
+     3:1 (docs-site.css, search). */
   --selected-background: var(--text-primary);
   --selected-text: var(--background-primary);
 
   /* -- Highlight -- */
   /* The <mark> pair, and the surface a brand re-skins to move every highlight at
      once. Both halves are opaque, and neither is mixed with the page surface: a
-     highlight lands on whatever is behind it — including the inverted
-     --selected-background of an active search row — and a translucent surface or
-     a surface-derived ink inverts its own contrast when it does. Search excerpts
-     are the heaviest consumer. */
+     highlight lands on whatever is behind it — a faded active search row, an
+     inverted selected surface — and a translucent surface or a surface-derived
+     ink inverts its own contrast when it does. Search excerpts are the
+     heaviest consumer. */
   --mark-background: var(--yellow-light);
   --mark-color: var(--brown-dark);
 
@@ -438,12 +442,51 @@
      because it is the one thing that overflows a 375px screen, so a narrow
      context needs to drop it rather than override the rule. */
   --dropdown-menu-min-width: 250px;
+  --dropdown-panel-max-width: 20rem;
 
   /* -- Select picker tokens -- */
   /* The customizable-select popup reuses the dropdown surface tokens above so
      a native select and a .dropdown read as the same object. Only the scroll
      ceiling is its own, because an option list has no item count limit. */
   --select-picker-max-height: 18rem;
+
+  /* -- Date picker tokens -- */
+  /* The panel reuses the dropdown surface tokens above. Only the day cell is
+     its own: a square at the touch target minimum, so a month grid is seven
+     targets wide and never narrower than a finger. */
+  --date-picker-cell-size: var(--target-min);
+
+  /* -- Field tokens -- */
+  /* The metrics every text control reads, bare or wrapped in .field. A size,
+     a bar or a wrapper re-points these; nothing sets height or font-size on
+     an input directly, so a control and the box around it can never disagree
+     about how tall the row is. Custom properties inherit, which is how a
+     data-size on the wrapper reaches the input inside it. */
+  --field-height: var(--target-min);
+  /* The two sizes. Small is also the bar's control height — the bar reads
+     this token, so the two can never drift apart. */
+  --field-height-s: 2.25rem;
+  --field-height-l: var(--5xl);
+  --field-font: var(--body-size);
+  --field-padding-x: var(--space-l);
+  --field-padding-y: var(--space-m);
+  --field-icon-size: 1.25rem;
+  /* The side-label column. A form re-points it to fit its longest label. */
+  --form-label-width: 10rem;
+
+  /* -- Check tokens: checkbox, radio, toggle -- */
+  /* Here rather than on the control, so a data-size="small" on any ancestor
+     that re-points them — a .form-check, .form-toggle, .form-group or
+     fieldset — reaches every control inside it, as the field tokens do. */
+  --check-size: var(--space-xl);
+  --check-mark-size: 14px;
+  --radio-dot-inset: 5px;
+  --check-gap: var(--space-s);
+  --check-label-font: var(--font-s);
+  --toggle-width: 44px; /* visual width that happens to equal 44 — not --target-min */
+  --toggle-height: var(--space-xl);
+  --toggle-knob-size: 18px;
+  --toggle-knob-offset: 3px;
 
   /* -- Tag tokens removed — uses semantic tokens directly -- */
 
@@ -519,7 +562,7 @@
   --input-border: #3a3a3a;
   --input-background: rgba(255, 255, 255, 0.08);
   --input-text: #f0eeeb;
-  --input-placeholder: rgba(255, 255, 255, 0.45);
+  --input-placeholder: var(--text-faded);
   --input-focus: var(--text-accent);
   --input-disabled-bg: rgba(255, 255, 255, 0.06);
   --input-disabled-text: rgba(255, 255, 255, 0.3);
@@ -589,7 +632,7 @@
     --input-border: #3a3a3a;
     --input-background: rgba(255, 255, 255, 0.08);
     --input-text: #f0eeeb;
-    --input-placeholder: rgba(255, 255, 255, 0.45);
+    --input-placeholder: var(--text-faded);
     --input-focus: var(--text-accent);
     --input-disabled-bg: rgba(255, 255, 255, 0.06);
     --input-disabled-text: rgba(255, 255, 255, 0.3);
@@ -2428,17 +2471,22 @@ input[type="number"],
 input[type="search"],
 input[type="url"],
 input[type="tel"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
 textarea,
 select {
   font-family: var(--font-primary);
-  font-size: var(--body-size);
+  font-size: var(--field-font);
   line-height: var(--line-height-l);
   color: var(--input-text);
   background-color: var(--input-background);
   border: var(--border-s) solid var(--input-border);
   border-radius: var(--radius-m);
-  padding: var(--space-m) var(--space-l);
-  min-height: var(--target-min);
+  padding: var(--field-padding-y) var(--field-padding-x);
+  min-height: var(--field-height);
   width: 100%;
   display: block;
   transition: border-color 0.2s ease;
@@ -2451,6 +2499,11 @@ input[type="number"]:focus,
 input[type="search"]:focus,
 input[type="url"]:focus,
 input[type="tel"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="datetime-local"]:focus,
+input[type="month"]:focus,
+input[type="week"]:focus,
 textarea:focus,
 select:focus {
   outline: 1px solid var(--input-focus);
@@ -2496,10 +2549,87 @@ textarea::placeholder {
   color: var(--input-placeholder);
 }
 
+/* -- Sizes -- */
+/* The same attribute on a bare control, on a .field, or on a .form-group,
+   re-pointing the field tokens. Small shares its height with the bar's
+   controls; large is a hero search or a one-field form. A bar sets its own
+   height and needs no attribute. On the group the tokens reach the label
+   too, which is what a side label's top padding needs to stay on the
+   control's first line. */
+input[data-size="small"],
+select[data-size="small"],
+.field[data-size="small"],
+.form-group[data-size="small"],
+fieldset[data-size="small"] {
+  --field-height: var(--field-height-s);
+  --field-font: var(--font-xs);
+  --field-padding-y: 0;
+  --field-padding-x: var(--space-m);
+}
+
+input[data-size="large"],
+select[data-size="large"],
+.field[data-size="large"],
+.form-group[data-size="large"],
+fieldset[data-size="large"] {
+  --field-height: var(--field-height-l);
+  --field-font: var(--font-m);
+  --field-padding-x: var(--space-xl);
+}
+
 /* -- Textarea -- */
 textarea {
   min-height: 120px;
   resize: vertical;
+}
+
+/* -- Date & time inputs -- */
+/* The field takes the text-input box above; these rules reach the parts the
+   browser draws inside it. Chromium exposes the picker button as a
+   pseudo-element, so it gets the brand calendar (or clock) glyph as a mask
+   painted in the input's own colour. Firefox draws its icon with no hook to
+   restyle it, and desktop Safari draws none — both still follow the theme
+   through color-scheme on :root. */
+input[type="date"]::-webkit-datetime-edit,
+input[type="time"]::-webkit-datetime-edit,
+input[type="datetime-local"]::-webkit-datetime-edit,
+input[type="month"]::-webkit-datetime-edit,
+input[type="week"]::-webkit-datetime-edit {
+  padding: 0;
+}
+
+/* iOS Safari centres the value and collapses the box when it is empty. */
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value,
+input[type="month"]::-webkit-date-and-time-value,
+input[type="week"]::-webkit-date-and-time-value {
+  text-align: start;
+  min-height: 1lh;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="week"]::-webkit-calendar-picker-indicator {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  padding: 0;
+  background-image: none;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11.0184 14V12H13.0184V14H11.0184ZM7.01843 14V12H9.01843V14H7.01843ZM15.0184 14V12H17.0184V14H15.0184ZM11.0184 18V16H13.0184V18H11.0184ZM7.01843 18V16H9.01843V18H7.01843ZM15.0184 18V16H17.0184V18H15.0184ZM3.01843 22V4H5.01843C5.57072 4 6.01843 3.55228 6.01843 3V2H8.01843V3C8.01843 3.55228 8.46615 4 9.01843 4H15.0184C15.5707 4 16.0184 3.55228 16.0184 3V2H18.0184V3C18.0184 3.55228 18.4661 4 19.0184 4H21.0184V22H3.01843ZM5.01843 19C5.01843 19.5523 5.46615 20 6.01843 20H18.0184C18.5707 20 19.0184 19.5523 19.0184 19V11C19.0184 10.4477 18.5707 10 18.0184 10H6.01843C5.46615 10 5.01843 10.4477 5.01843 11V19ZM5.01843 7C5.01843 7.55228 5.46615 8 6.01843 8H18.0184C18.5707 8 19.0184 7.55228 19.0184 7C19.0184 6.44772 18.5707 6 18.0184 6H6.01843C5.46615 6 5.01843 6.44772 5.01843 7Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11.0184 14V12H13.0184V14H11.0184ZM7.01843 14V12H9.01843V14H7.01843ZM15.0184 14V12H17.0184V14H15.0184ZM11.0184 18V16H13.0184V18H11.0184ZM7.01843 18V16H9.01843V18H7.01843ZM15.0184 18V16H17.0184V18H15.0184ZM3.01843 22V4H5.01843C5.57072 4 6.01843 3.55228 6.01843 3V2H8.01843V3C8.01843 3.55228 8.46615 4 9.01843 4H15.0184C15.5707 4 16.0184 3.55228 16.0184 3V2H18.0184V3C18.0184 3.55228 18.4661 4 19.0184 4H21.0184V22H3.01843ZM5.01843 19C5.01843 19.5523 5.46615 20 6.01843 20H18.0184C18.5707 20 19.0184 19.5523 19.0184 19V11C19.0184 10.4477 18.5707 10 18.0184 10H6.01843C5.46615 10 5.01843 10.4477 5.01843 11V19ZM5.01843 7C5.01843 7.55228 5.46615 8 6.01843 8H18.0184C18.5707 8 19.0184 7.55228 19.0184 7C19.0184 6.44772 18.5707 6 18.0184 6H6.01843C5.46615 6 5.01843 6.44772 5.01843 7Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  cursor: pointer;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15.3 16.7L16.7 15.3L13 11.6V7H11V12.4L15.3 16.7ZM12 22C10.6167 22 9.31667 21.7375 8.1 21.2125C6.88333 20.6875 5.825 19.975 4.925 19.075C4.025 18.175 3.3125 17.1167 2.7875 15.9C2.2625 14.6833 2 13.3833 2 12C2 10.6167 2.2625 9.31667 2.7875 8.1C3.3125 6.88333 4.025 5.825 4.925 4.925C5.825 4.025 6.88333 3.3125 8.1 2.7875C9.31667 2.2625 10.6167 2 12 2C13.3833 2 14.6833 2.2625 15.9 2.7875C17.1167 3.3125 18.175 4.025 19.075 4.925C19.975 5.825 20.6875 6.88333 21.2125 8.1C21.7375 9.31667 22 10.6167 22 12C22 13.3833 21.7375 14.6833 21.2125 15.9C20.6875 17.1167 19.975 18.175 19.075 19.075C18.175 19.975 17.1167 20.6875 15.9 21.2125C14.6833 21.7375 13.3833 22 12 22ZM12 20C14.2167 20 16.1042 19.2208 17.6625 17.6625C19.2208 16.1042 20 14.2167 20 12C20 9.78333 19.2208 7.89583 17.6625 6.3375C16.1042 4.77917 14.2167 4 12 4C9.78333 4 7.89583 4.77917 6.3375 6.3375C4.77917 7.89583 4 9.78333 4 12C4 14.2167 4.77917 16.1042 6.3375 17.6625C7.89583 19.2208 9.78333 20 12 20Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15.3 16.7L16.7 15.3L13 11.6V7H11V12.4L15.3 16.7ZM12 22C10.6167 22 9.31667 21.7375 8.1 21.2125C6.88333 20.6875 5.825 19.975 4.925 19.075C4.025 18.175 3.3125 17.1167 2.7875 15.9C2.2625 14.6833 2 13.3833 2 12C2 10.6167 2.2625 9.31667 2.7875 8.1C3.3125 6.88333 4.025 5.825 4.925 4.925C5.825 4.025 6.88333 3.3125 8.1 2.7875C9.31667 2.2625 10.6167 2 12 2C13.3833 2 14.6833 2.2625 15.9 2.7875C17.1167 3.3125 18.175 4.025 19.075 4.925C19.975 5.825 20.6875 6.88333 21.2125 8.1C21.7375 9.31667 22 10.6167 22 12C22 13.3833 21.7375 14.6833 21.2125 15.9C20.6875 17.1167 19.975 18.175 19.075 19.075C18.175 19.975 17.1167 20.6875 15.9 21.2125C14.6833 21.7375 13.3833 22 12 22ZM12 20C14.2167 20 16.1042 19.2208 17.6625 17.6625C19.2208 16.1042 20 14.2167 20 12C20 9.78333 19.2208 7.89583 17.6625 6.3375C16.1042 4.77917 14.2167 4 12 4C9.78333 4 7.89583 4.77917 6.3375 6.3375C4.77917 7.89583 4 9.78333 4 12C4 14.2167 4.77917 16.1042 6.3375 17.6625C7.89583 19.2208 9.78333 20 12 20Z'/%3E%3C/svg%3E");
+}
+
+input:disabled::-webkit-calendar-picker-indicator {
+  cursor: not-allowed;
 }
 
 /* -- Colour input -- */
@@ -2532,6 +2662,12 @@ input[type="color"]:focus {
   outline: none;
   border-color: var(--input-focus);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+}
+
+/* The disabled background cannot show through the swatch, so dim it */
+input[type="color"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* -- Select -- */
@@ -2816,8 +2952,8 @@ input[type="checkbox"],
 input[type="radio"] {
   -webkit-appearance: none;
   appearance: none;
-  width: var(--space-xl);
-  height: var(--space-xl);
+  width: var(--check-size);
+  height: var(--check-size);
   margin: 0;
   cursor: pointer;
   background-color: var(--checkbox-background);
@@ -2835,7 +2971,7 @@ input[type="checkbox"]:checked {
   background-color: var(--checkbox-selected);
   border-color: var(--checkbox-selected);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
-  background-size: 14px 14px;
+  background-size: var(--check-mark-size) var(--check-mark-size);
   background-position: center;
   background-repeat: no-repeat;
 }
@@ -2848,14 +2984,16 @@ input[type="radio"]:checked {
 input[type="radio"]:checked::after {
   content: "";
   position: absolute;
-  inset: 5px;
+  inset: var(--radio-dot-inset);
   border-radius: 50%;
   background-color: var(--checkbox-checkmark);
 }
 
+/* Transparent, not none: invisible here, and the ring forced colours draw
+   when they strip the box-shadow */
 input[type="checkbox"]:focus-visible,
 input[type="radio"]:focus-visible {
-  outline: none;
+  outline: 2px solid transparent;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
 }
 
@@ -2892,14 +3030,30 @@ input[type="radio"]:disabled:checked {
 .form-check {
   display: flex;
   align-items: center;
-  gap: var(--space-s);
+  gap: var(--check-gap);
 }
 
+/* A flex item, so the label is a block box: min-height holds it at the 24px
+   target even when a small box and small text leave the row shorter, and
+   align-content centres the line inside it. The for= label takes the click,
+   which is what keeps a 16px box usable. */
 .form-check label {
   display: inline;
+  min-height: var(--space-xl);
+  align-content: center;
   margin-bottom: 0;
+  font-size: var(--check-label-font);
   font-weight: var(--font-weight-regular);
   cursor: pointer;
+}
+
+/* A disabled control's label fades with it, so a locked row reads as locked
+   before the pointer finds out. :has rather than +, so it holds whichever
+   side of the input the label sits. */
+.form-check:has(> input:disabled) label,
+.form-toggle:has(> input:disabled) label {
+  color: var(--text-faded);
+  cursor: not-allowed;
 }
 
 /* -- Segmented control (single-select button group) --
@@ -3205,20 +3359,20 @@ input[type="radio"]:disabled:checked {
 
 /* -- Toggle / switch -- */
 .form-toggle {
-  --toggle-width: 44px; /* visual width that happens to equal 44 — not --target-min */
-  --toggle-height: var(--space-xl);
-  --toggle-knob-size: 18px;
-  --toggle-knob-offset: 3px;
   --toggle-transition-duration: var(--duration-xs);
 
   display: flex;
   align-items: center;
-  gap: var(--space-s);
+  gap: var(--check-gap);
 }
 
+/* Same target floor as .form-check label */
 .form-toggle label {
   display: inline;
+  min-height: var(--space-xl);
+  align-content: center;
   margin-bottom: 0;
+  font-size: var(--check-label-font);
   font-weight: var(--font-weight-regular);
   cursor: pointer;
   order: -1;
@@ -3227,6 +3381,34 @@ input[type="radio"]:disabled:checked {
 
 .form-toggle.is-label-right label {
   order: 1;
+}
+
+/* -- Small: checkbox, radio and toggle together --
+   On the control, its row, a .form-group or a fieldset; one attribute on a
+   filter panel's fieldset shrinks every check inside it, and the field rule
+   above shrinks its text controls. Only tokens move, so the toggle knob's
+   travel follows from its calc with no second rule. The 16px box and track
+   sit under the 24px target floor and meet it by spacing: each label holds
+   its row at 24px (see .form-check label). */
+input[type="checkbox"][data-size="small"],
+input[type="radio"][data-size="small"],
+.form-check[data-size="small"],
+.form-toggle[data-size="small"],
+.form-group[data-size="small"],
+fieldset[data-size="small"],
+/* A row takes the size from its own input too, so the label and gap follow
+   a box sized on the input alone. Forgiving :is(), so a browser without
+   :has() drops this one selector rather than the whole rule. */
+:is(.form-check, .form-toggle):is(:has(> input[data-size="small"])) {
+  --check-size: var(--space-l);
+  --check-mark-size: 11px;
+  --radio-dot-inset: 3px;
+  --check-gap: var(--space-xs);
+  --check-label-font: var(--font-xs);
+  --toggle-width: 28px;
+  --toggle-height: var(--space-l);
+  --toggle-knob-size: 10px;
+  --toggle-knob-offset: var(--space-2xs);
 }
 
 .form-toggle input[type="checkbox"] {
@@ -3265,7 +3447,7 @@ input[type="radio"]:disabled:checked {
 }
 
 .form-toggle input[type="checkbox"]:focus-visible {
-  outline: none;
+  outline: 2px solid transparent;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
 }
 
@@ -3274,9 +3456,6 @@ input[type="radio"]:disabled:checked {
   cursor: not-allowed;
 }
 
-.form-toggle input[type="checkbox"]:disabled + label {
-  cursor: not-allowed;
-}
 
 /* -- Reduced motion -- */
 /* Re-points the token rather than disabling the transition, matching .dialog,
@@ -3314,8 +3493,11 @@ input[type="radio"]:disabled:checked {
     background-color: #888;
   }
 
+  /* background-image: the system-dark checkbox checkmark outranks the base
+     toggle's `none`, so it has to be cleared again at this specificity. */
   :root:not([data-theme]) .form-toggle input[type="checkbox"]:checked {
     background-color: #e8e6e3;
+    background-image: none;
   }
 
   :root:not([data-theme]) .form-toggle input[type="checkbox"]:checked::after {
@@ -3326,6 +3508,53 @@ input[type="radio"]:disabled:checked {
 /* -- Form group (label + input pair) -- */
 .form-group {
   margin-bottom: var(--space-l);
+}
+
+/* -- Required and optional markers -- */
+/* Real text in a span, not generated content: it survives a copy and a
+   screen reader reads it the same way everywhere. The asterisk is
+   aria-hidden in the markup — `required` on the input already says it. */
+.form-required {
+  color: var(--status-danger);
+}
+
+.form-optional {
+  font-weight: var(--font-weight-regular);
+  color: var(--text-secondary);
+}
+
+/* -- Side label -- */
+/* A fixed, right-aligned label column beside the control; hint and error
+   stay in the control's column. The label's top padding matches the input's,
+   so its line sits on the input's first line. Below 768px it stacks like a
+   plain group, the same line the layout grid releases on. */
+.form-group[data-layout="side"] {
+  display: grid;
+  grid-template-columns: var(--form-label-width) minmax(0, 1fr);
+  column-gap: var(--space-l);
+}
+
+.form-group[data-layout="side"] > label {
+  grid-column: 1;
+  margin-bottom: 0;
+  padding-block-start: var(--field-padding-y);
+  text-align: end;
+}
+
+.form-group[data-layout="side"] > :not(label) {
+  grid-column: 2;
+}
+
+@media (max-width: 767px) {
+  .form-group[data-layout="side"] {
+    display: block;
+  }
+
+  .form-group[data-layout="side"] > label {
+    margin-bottom: var(--space-xs);
+    padding-block-start: 0;
+    text-align: start;
+  }
 }
 
 /* -- Form hint text -- */
@@ -3367,42 +3596,172 @@ input[type="radio"]:disabled:checked {
   margin-top: var(--space-s);
 }
 
-/* -- Password field -- */
-/* Behaviour ships as password-toggle.js; these styles ship with it so a
-   package consumer gets a working control, not a bare button. */
+/* ------ 52. FIELD ------ */
+
+/* -- Field (an input with something inside it) -- */
+/* One box for every input that carries an icon, a clear or a toggle: the
+   wrapper owns the border, radius, surface and focus ring, the input inside
+   gives its own box up, and whatever sits beside it is a flex child that
+   reserves its space in flow — never absolutely positioned over padding.
+   The date picker's field and the password field are this same object;
+   .password-field stays as an alias for one release.
+   Behaviour: field.js (clear, .is-filled), password-toggle.js (toggle). */
+.field,
 .password-field {
-  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-height: var(--field-height);
+  border: var(--border-s) solid var(--input-border);
+  border-radius: var(--radius-m);
+  background-color: var(--input-background);
+  overflow: hidden;
+  --icon-size: var(--field-icon-size);
+  transition: border-color var(--duration-2xs) var(--ease-out);
 }
 
-.password-field input {
-  padding-right: var(--space-4xl);
+/* The text input's own ring, moved to the box because the input no longer
+   draws a border */
+.field:focus-within,
+.password-field:focus-within {
+  outline: 1px solid var(--input-focus);
+  outline-offset: 2px;
 }
 
-.password-toggle {
-  position: absolute;
-  right: var(--space-m);
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
+.field:has(> input.is-error),
+.password-field:has(> input.is-error) {
+  border-color: var(--status-danger);
+}
+
+.field:has(> input.is-error):focus-within,
+.password-field:has(> input.is-error):focus-within {
+  outline-color: var(--status-danger);
+}
+
+.field:has(> input:disabled),
+.password-field:has(> input:disabled) {
+  background-color: var(--input-disabled-bg);
+}
+
+/* The input gives its box to the wrapper. Same specificity as the base
+   list, later in source, so it wins without a class on the input. */
+.field > input,
+.password-field > input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  min-height: 0;
   border: none;
-  cursor: pointer;
+  border-radius: 0;
+  background-color: transparent;
+}
+
+.field > input:focus,
+.password-field > input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Our clear, not Chromium's — two affordances for one action is a lie */
+.field > input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  display: none;
+}
+
+/* A decorative glyph: a wrapper around a registry .svg-icn, which takes its
+   size from the field's --icon-size. It takes the input's edge padding and
+   hands the input a smaller gap, so the text starts where it would beside
+   the border. Not a target: a click on it lands on the input (field.js). */
+.field-icon {
+  flex: none;
+  display: flex;
+  align-self: center;
+  margin-inline-start: var(--field-padding-x);
   color: var(--text-faded);
-  padding: var(--space-xs);
-  min-width: var(--target-min);
-  min-height: var(--target-min);
+  pointer-events: none;
+}
+
+.field > input ~ .field-icon {
+  margin-inline-start: 0;
+  margin-inline-end: var(--field-padding-x);
+}
+
+.field-icon + input {
+  padding-inline-start: var(--space-m);
+}
+
+.field > input:has(+ .field-icon) {
+  padding-inline-end: var(--space-m);
+}
+
+/* A colour swatch leading a hex field: the native picker, set in from the
+   border so it reads as the colour inside the input rather than a second
+   control beside it. Square at the box's inner height, its radius the
+   field's less the inset so the two corners run parallel. A hairline keeps
+   a colour close to the input's own surface visible. No ring of its own:
+   the field's :focus-within ring already marks it. Sized from the height
+   token rather than stretched: the UA fixes a colour input's height, and a
+   stretched one does not carry its height across an aspect ratio. A bar
+   re-points --field-swatch-box to its own control height, and
+   --field-swatch-radius down a step to match its smaller corners. */
+.field > input[type="color"] {
+  --field-swatch-size: calc(var(--field-swatch-box, var(--field-height)) - 2 * (var(--border-s) + var(--space-xs)));
+
+  flex: none;
+  align-self: center;
+  width: var(--field-swatch-size);
+  height: var(--field-swatch-size);
+  margin: var(--space-xs);
+  border: var(--border-s) solid var(--border-faded);
+  border-radius: var(--field-swatch-radius, var(--radius-s));
+}
+
+.field > input[type="color"]::-webkit-color-swatch {
+  border-radius: calc(var(--field-swatch-radius, var(--radius-s)) - var(--border-s));
+}
+
+.field > input[type="color"]::-moz-color-swatch {
+  border-radius: calc(var(--field-swatch-radius, var(--radius-s)) - var(--border-s));
+}
+
+.field > input[type="color"] + input {
+  padding-inline-start: var(--space-m);
+}
+
+/* Controls inside the box: a --target-min square, transparent, like the date
+   picker's trigger. The global button:focus-visible ring is inset, so it
+   survives the wrapper's overflow: hidden. */
+.field-clear,
+.field-toggle,
+.password-toggle {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: var(--target-min);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--text-faded);
+  cursor: pointer;
   transition: color var(--duration-xs) var(--ease-out);
 }
 
+.field-clear:hover,
+.field-toggle:hover,
 .password-toggle:hover {
   color: var(--text-primary);
 }
 
-.password-toggle .svg-icn {
-  width: 1.25rem;
-  height: 1.25rem;
+/* The clear exists only while there is something to clear. field.js sets
+   .is-filled from the value; a disabled or read-only input has nothing the
+   reader may clear, so the button stays away there too. */
+.field-clear {
+  display: none;
+}
+
+.field.is-filled:not(:has(> input:disabled, > input[readonly])) > .field-clear {
+  display: flex;
 }
 
 /* Icon state: eye-off while the password is hidden, eye once revealed.
@@ -3412,10 +3771,12 @@ input[type="radio"]:disabled:checked {
    icon rather than ending up with an empty button. Two rules, not one
    selector list — a browser without :has() drops only the rule it cannot
    parse, keeping the pressed-state half working. */
+.field-toggle:has(.svg-icn[data-icon="eye-off"]):not([aria-pressed="true"]) .svg-icn[data-icon="eye"],
 .password-toggle:has(.svg-icn[data-icon="eye-off"]):not([aria-pressed="true"]) .svg-icn[data-icon="eye"] {
   display: none;
 }
 
+.field-toggle[aria-pressed="true"] .svg-icn[data-icon="eye-off"],
 .password-toggle[aria-pressed="true"] .svg-icn[data-icon="eye-off"] {
   display: none;
 }
@@ -4617,6 +4978,39 @@ hr.xl {
   flex-direction: column;
 }
 
+/* -- Content panel --
+   The same dropdown holding content rather than items: a sentence behind an
+   info button, a form for a custom value, a set of controls. No role="menu",
+   so dropdown.js gives it Escape, the outside click and focus-out and leaves
+   the arrow keys alone. The base panel carries no inset because every item
+   brings its own; content does not, so the panel pads itself. Sized to its
+   content up to a cap, and never past the viewport: the menu's 250px floor
+   is re-pointed to 0 the way the bar does it, or the cap would be dead on a
+   phone. Ink is stated rather than inherited: a trigger on a coloured band
+   passes currentColor down, and the panel paints its own ground. Wrapping is
+   stated too: a panel opened from a nowrap context (a table cell, a bar)
+   would otherwise run its prose past the cap on one line. */
+.dropdown-menu[data-variant="panel"] {
+  --dropdown-menu-min-width: 0;
+
+  width: max-content;
+  max-width: min(var(--dropdown-panel-max-width), calc(100vw - 2 * var(--space-l)));
+  /* The callout's inset, not the item's: a sentence needs more room than a
+     row does, and the item inset read cramped around prose. */
+  padding: var(--space-l);
+  gap: var(--space-m);
+  color: var(--text-primary);
+  white-space: normal;
+}
+
+/* The panel is its own block: the open menu is already a flex column, so a
+   gap spaces its children and their default margins are zeroed, exactly as
+   .block does. One sentence sits centred in the inset with no trailing
+   margin; a note, a list and a link stack on one rhythm with no wrapper. */
+.dropdown-menu[data-variant="panel"] > * {
+  margin-block: 0;
+}
+
 /* -- Placement --
    Authored intent goes on the dropdown as data-placement; dropdown.js measures
    on open and writes the placement it actually resolved to into
@@ -4644,6 +5038,16 @@ hr.xl {
 
 .dropdown.is-open > .dropdown-menu {
   display: flex;
+}
+
+/* A panel still crossing a viewport edge after the flip is shifted back by
+   the overflow dropdown.js measures. translate, not left/right, so the
+   placement rules above stay the only thing that anchors the panel. The
+   script writes both axes and the fallback is none, so a menu that was not
+   nudged carries no transform and never becomes a containing block for
+   fixed-position content inside it. */
+.dropdown > .dropdown-menu {
+  translate: var(--dropdown-nudge, none);
 }
 
 /* -- Items -- */
@@ -4804,6 +5208,12 @@ hr.xl {
    applied alongside for consistency with the shared state-class convention,
    but the ARIA state is the single source of truth. */
 .dropdown-item[aria-checked="true"] .dropdown-checkmark {
+  visibility: visible;
+}
+
+/* A panel of links between sibling pages cannot carry aria-checked, so the
+   current page reveals the same mark through aria-current. */
+.dropdown-item[aria-current="page"] .dropdown-checkmark {
   visibility: visible;
 }
 
@@ -5750,12 +6160,14 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   background-color: color-mix(in srgb, var(--status-success), var(--alpha-10));
 }
 
-/* -- Variant: icon only -- */
+/* -- Deprecated variants: icon only and ghost --
+   Variants in the state namespace, from before the button's data attributes.
+   New markup uses data-icon-only and data-variant="transparent"; these stay
+   for one release so older markup keeps working. */
 .copy-btn.is-icon-only {
   padding: var(--space-s);
 }
 
-/* -- Variant: ghost (no background, no border) -- */
 .copy-btn.is-ghost {
   background: none;
   border: none;
@@ -7021,6 +7433,37 @@ section[id] {
   --dropdown-trigger-padding-x: var(--space-m);
 }
 
+/* -- Icon-only actions are equal squares --
+ * An icon-only header action and an avatar trigger sit in one row and must
+ * read as one row: the same 44px square each, whatever is inside. The width
+ * comes from the target minimum, not from padding, so the icon and the
+ * avatar both centre in the same box.
+ *
+ * The trigger is written as .dropdown-trigger.header-account-trigger on
+ * purpose: a consumer's header re-points `.site-header .dropdown-trigger`
+ * padding for its text triggers (the docs site does, under 768px), and at
+ * (0,2,0) that would beat this rule on source order and widen the square. */
+.site-header .button.header-action[data-icon-only],
+.site-header .dropdown-trigger.header-account-trigger {
+  --button-padding-x: 0;
+  --dropdown-trigger-padding-x: 0;
+  min-inline-size: var(--target-min);
+  justify-content: center;
+}
+
+/* The three buttons ring in the header's text colour through .button; the
+   trigger is not a .button and would ring in the status blue beside them. */
+.site-header .dropdown-trigger.header-account-trigger:focus-visible {
+  outline-color: var(--site-header-text);
+}
+
+/* The account slot ships hidden and is revealed once a session is confirmed.
+   `.dropdown` sets display, and the UA's [hidden] rule loses to any authored
+   display — so without this the empty slot still holds its 44px signed out. */
+.site-header .header-account[hidden] {
+  display: none;
+}
+
 /* -- Header action: a Button role class --
  * Kept here rather than in the Button role-class block because it belongs to
  * this component, the same reasoning that puts `.toast .button.close-btn` in
@@ -7190,7 +7633,7 @@ section[id] {
      19px line box at the 16px body size, and clears the 24px WCAG 2.5.8 AA
      target with room. Page forms keep their own 44px — dense chrome and a form
      on a phone are not the same problem. */
-  --bar-control-height: 36px;
+  --bar-control-height: var(--field-height-s);
   /* Wide enough for four digits and a unit without the field resizing the bar. */
   --bar-number-input-width: 4.5rem;
   /* Ceiling for a menu opened from the bar on a narrow screen. */
@@ -7555,8 +7998,12 @@ section[id] {
    segmented control (cms/form.md). */
 .bar .segmented-control:not([data-variant="thumb"]),
 .bar .number-input,
+/* A .field is sized as a whole; the input inside it is excluded, or this
+   rule would force it to 36px inside a 36px bordered box and no field rule
+   could out-rank it. */
+.bar .field,
 .bar select,
-.bar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]) {
+.bar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]):not(.field > input) {
   height: var(--bar-control-height);
   min-height: 0;
 }
@@ -7572,8 +8019,16 @@ section[id] {
   --dropdown-trigger-padding-x: var(--space-s);
 }
 
+/* Height and surface only: the type stays at the bar's own size, beside the
+   bar's bare inputs, so this is not the small size. */
+.bar .field {
+  --field-padding-y: 0;
+  --field-swatch-box: var(--bar-control-height);
+  --field-swatch-radius: var(--radius-xs);
+}
+
 .bar select,
-.bar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]) {
+.bar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]):not(.field > input) {
   padding-top: 0;
   padding-bottom: 0;
 }
@@ -7597,7 +8052,8 @@ section[id] {
    so a bordered field reads as a well rather than a grey slab. */
 .bar select,
 .bar input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
-.bar .number-input {
+.bar .number-input,
+.bar .field {
   --input-background: var(--bar-background);
   border-radius: var(--radius-s);
 }
@@ -7621,7 +8077,7 @@ section[id] {
   padding: 0;
 }
 
-.bar input[type="color"] {
+.bar input[type="color"]:not(.field > input) {
   height: var(--bar-control-height);
   width: var(--bar-control-height);
   align-self: center;
@@ -8446,7 +8902,7 @@ section[id] {
 
 /* ------ 46. LOGIN ------
    An authentication stack: header, one or more form panes, trailing text
-   actions. Thin by design — it composes .card, .form-group, .password-field
+   actions. Thin by design — it composes .card, .form-group, .field
    and .button rather than restyling them. Page centering belongs to the
    consuming layout, not the component. Pane switching (sign in vs reset vs
    one-time code) is consumer JavaScript toggling .is-hidden; the component
@@ -9537,6 +9993,47 @@ section[id] {
   opacity: 1;
 }
 
+/* -- Split: two colours in one chip --
+   A chip that stands for a pair shows both: --chip-fill paints the start
+   half, --chip-fill-end the end half. The darker of the two goes in
+   --chip-fill, because the selected ring is drawn in it and a pale ring
+   vanishes against the ground; the dark theme swaps the ring to the end
+   colour, where a dark ring would sink into the page. The mark is dropped —
+   a check straddling two fills never read clearly on either — so the ring
+   alone says which pair is chosen. That makes data-contrast inert here: a
+   split chip cannot show pass or fail, so its consumer shows the verdict
+   elsewhere (Colour Pairing stamps it on the band) and the hidden label
+   carries it as it already must. Like data-contrast, the paint works on a
+   bare swatch too. */
+.chip-swatch[data-split],
+.chip[data-variant="colour"][data-split] .chip-swatch {
+  background-image: linear-gradient(to right, transparent 50%, var(--chip-fill-end, var(--chip-fill, var(--chip-colour-empty))) 50%);
+}
+
+.chip-swatch[data-split]:dir(rtl),
+.chip[data-variant="colour"][data-split] .chip-swatch:dir(rtl) {
+  background-image: linear-gradient(to left, transparent 50%, var(--chip-fill-end, var(--chip-fill, var(--chip-colour-empty))) 50%);
+}
+
+.chip-swatch[data-split]::after,
+.chip[data-variant="colour"][data-split] .chip-swatch::after {
+  display: none;
+}
+
+/* The error group's rule below is (0,5,1) and would otherwise hand the ring
+   back to the dark fill, so it is named in both dark blocks. */
+[data-theme="dark"] .chip[data-split]:has(input:checked),
+[data-theme="dark"] .chip-group.is-error .chip[data-split]:has(input:checked) {
+  border-color: var(--chip-fill-end, var(--chip-fill, var(--chip-colour-empty)));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .chip[data-split]:has(input:checked),
+  :root:not([data-theme]) .chip-group.is-error .chip[data-split]:has(input:checked) {
+    border-color: var(--chip-fill-end, var(--chip-fill, var(--chip-colour-empty)));
+  }
+}
+
 /* A swatch used outside a chip has no radio to read, so its consumer reveals
    the mark itself — see cms/chip.md. */
 
@@ -9624,12 +10121,242 @@ section[id] {
     background-color: Canvas;
     border-color: CanvasText;
   }
+
+  .chip-swatch[data-split],
+  .chip[data-variant="colour"][data-split] .chip-swatch {
+    background-image: none;
+  }
+
+  /* The dark-theme ring rules above out-rank the Highlight ring at (0,3,1),
+     so a forced-colours user on a dark scheme is named here. */
+  [data-theme="dark"] .chip[data-split]:has(input:checked),
+  [data-theme="dark"] .chip-group.is-error .chip[data-split]:has(input:checked),
+  :root:not([data-theme]) .chip[data-split]:has(input:checked),
+  :root:not([data-theme]) .chip-group.is-error .chip[data-split]:has(input:checked) {
+    border-color: Highlight;
+  }
 }
 
 /* No prefers-reduced-motion guard: what transitions here is colour and opacity
    only. The paint does change size between rest, hover and selected, but that
    is a state change applied instantly, not an animation — which is exactly why
    border-width is kept out of the transition above. */
+
+/* ------ 51. DATE PICKER ------ */
+
+/* A calendar panel over the native date input. The root is a .dropdown, so
+   dropdown.js opens, places and closes the panel; date-picker.js builds the
+   grid inside .date-picker-panel. The native input's own box rules live in
+   section 12 with the other form fields. */
+.dropdown.date-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-m);
+  /* The root takes over .form-group's rhythm, so the groups inside carry none */
+  margin-bottom: var(--space-l);
+}
+
+.date-picker > .form-group {
+  flex: 1 1 10rem;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+/* -- Date picker: trigger -- */
+/* The box around the input is .field (section 12); only the calendar button
+   is the picker's own. Hidden until the script binds: without it the
+   browser's own calendar button is the working control, and two buttons for
+   one calendar is a lie. Bound, the roles swap — ours shows and Chromium's
+   indicator goes. */
+.date-picker .dropdown-trigger {
+  display: none;
+}
+
+.date-picker[data-date-picker-bound] .dropdown-trigger {
+  --dropdown-trigger-padding-y: 0;
+  --dropdown-trigger-padding-x: 0;
+  display: flex;
+  justify-content: center;
+  width: var(--target-min);
+  flex-shrink: 0;
+  color: var(--text-faded);
+}
+
+.date-picker[data-date-picker-bound] input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+/* The open state, restated for a trigger nested inside the field — the
+   dropdown's own rule is child-combined to the root and cannot reach it */
+.date-picker.is-open .dropdown-trigger {
+  background-color: var(--background-faded);
+  color: var(--text-primary);
+}
+
+/* -- Date picker: panel -- */
+.date-picker .dropdown-menu {
+  min-width: auto;
+  padding: var(--space-m);
+  gap: var(--space-s);
+}
+
+.date-picker-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-s);
+}
+
+.date-picker-title {
+  flex: 1 1 auto;
+  margin-bottom: 0;
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-semi-bold);
+  text-align: center;
+}
+
+.date-picker-months {
+  display: flex;
+  gap: var(--space-l);
+}
+
+.date-picker-row {
+  display: flex;
+}
+
+/* The .dropdown-label recipe: quiet, small, above the rows it names */
+.date-picker-weekday {
+  width: var(--date-picker-cell-size);
+  padding: var(--space-xs) 0;
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-semi-bold);
+  color: var(--text-faded);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.date-picker-cell {
+  width: var(--date-picker-cell-size);
+  height: var(--date-picker-cell-size);
+}
+
+/* Square, no radius: the panel family has a square edge, and a run of range
+   days reads as one bar only when the cells butt up. The focus ring is the
+   global button rule's; nothing here overrides it. */
+.date-picker-day {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+  font-size: var(--font-s);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color var(--duration-2xs) var(--ease-out),
+              color var(--duration-2xs) var(--ease-out);
+}
+
+.date-picker-day:hover {
+  background-color: var(--dropdown-item-hover);
+}
+
+.date-picker-day.is-range-inner,
+.date-picker-day.is-range-preview {
+  background-color: var(--background-faded);
+}
+
+/* The system's selected pair — an inverted surface, never a tint — declared
+   after hover so pointing at the chosen day cannot wash it out */
+.date-picker-day.is-selected {
+  background-color: var(--selected-background);
+  color: var(--selected-text);
+}
+
+/* The global ring is inset and --status-info, which reads at 1.6:1 on the
+   inverted fill. Same move as .button:focus-visible: the ring takes the
+   surface's own text colour. */
+.date-picker-day.is-selected:focus-visible {
+  outline-color: var(--selected-text);
+}
+
+/* No prefers-reduced-motion block, deliberately: the only transitions here
+   are colour, at --duration-2xs, and the panel is a display toggle. */
+
+/* Today: a weight change and a dot in the current-item accent, the same hue
+   the nav uses for the current page. The dot takes the text colour once the
+   day is selected, so it survives the inversion. */
+.date-picker-day[aria-current="date"] {
+  font-weight: var(--font-weight-semi-bold);
+}
+
+.date-picker-day[aria-current="date"]::after {
+  content: "";
+  position: absolute;
+  bottom: var(--space-xs);
+  left: 50%;
+  translate: -50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: var(--text-accent);
+}
+
+.date-picker-day.is-selected[aria-current="date"]::after {
+  background-color: currentColor;
+}
+
+/* Disabled days stay focusable so the arrows can pass over them — the
+   dropdown's disabled-item convention — and refuse activation in the script */
+.date-picker-day[aria-disabled="true"] {
+  color: var(--text-faded);
+  cursor: not-allowed;
+}
+
+.date-picker-day[aria-disabled="true"]:hover {
+  background-color: transparent;
+}
+
+.date-picker-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-s);
+  padding-top: var(--space-s);
+  border-top: var(--border-s) solid var(--dropdown-border);
+}
+
+/* Forced colours drop every background, so the inverted selected surface
+   and the today dot would both vanish. Hand them the system highlight pair;
+   forced-color-adjust: none also stops the mode forcing the focus outline on
+   the selected day, so its colour is declared explicitly. */
+@media (forced-colors: active) {
+  .date-picker-day.is-selected {
+    forced-color-adjust: none;
+    background-color: Highlight;
+    color: HighlightText;
+  }
+
+  .date-picker-day.is-selected:focus-visible {
+    outline-color: CanvasText;
+  }
+
+  .date-picker-day.is-range-inner,
+  .date-picker-day.is-range-preview {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+
+  .date-picker-day[aria-current="date"]::after {
+    background-color: CanvasText;
+  }
+}
 
 /* ------ 15. COMPONENTS IN PROGRESS ------ */
 /*

@@ -2329,12 +2329,12 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
     display: inline-flex;
   }
 
-  /* Token re-point only — the button's own padding rule reads --button-padding-*,
-     so restating `padding` here would be a class override of a core component
-     (§17 Rule 3) and would make the token line dead weight. */
-  .site-header .header-action,
+  /* Token re-point only, for a text dropdown trigger in the header — the
+     trigger's own padding rule reads the token, so restating `padding` here
+     would be a class override of a core component (§17 Rule 3). Every header
+     action is icon-only now and sized as a square by §40; the account trigger
+     is excluded by §40's own specificity. */
   .site-header .dropdown-trigger {
-    --button-padding-x: var(--space-l);
     --dropdown-trigger-padding-x: var(--space-l);
     gap: var(--space-xs);
   }
@@ -3020,8 +3020,11 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
 /* ------ 28. SITE SEARCH ------
  * Composes the Dialog component (design-system.css §29). .search-dialog is a
  * role class on .dialog, the way .feedback-modal above it is — it re-points
- * dialog tokens and adds the parts the component has no opinion about: the
- * field row, the result list, the group headings and the key-hint footer.
+ * dialog tokens and lays out the parts. The parts themselves are the design
+ * system's own wherever one exists: the field is a native text input, the
+ * section filter is the Segmented control, the close and remove buttons are
+ * .button.close-btn, the footer keys are <kbd>, the empty states are callouts.
+ * What is left here is layout, the result row, and the group headings.
  *
  * Three things it deliberately does differently from a dialog:
  *   - It sits high rather than centred. A result list grows downward, and a
@@ -3032,78 +3035,119 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
  *     keyboard, a card, and no results visible.
  *
  * The markup is emitted by cms/generator/generate-docs.js into nav.js, beside
- * the site header and outside the Barba container; assets/js/search.js is
- * behaviour only. Sizing tokens are declared here rather than inline so a
- * consuming product can re-skin search without touching a rule. */
+ * the site header and outside the Barba container; assets/js/search.js draws
+ * the rows. Restyled 2026-09-30 from the owner's Figma frame (Website file,
+ * page Search). */
+
+/* -- Host tokens --
+ * Declared on both hosts so a rule can use them without knowing which it is in.
+ * The inset is the gap between the host's edge and a row; the row padding is
+ * the gap between a row's edge and its text. Everything that has to line up
+ * with the row text — the status line, the section filter, the group headings
+ * — uses their sum, so the page reads as one left edge. */
+.search-dialog,
+.search-page {
+  --search-inset: var(--space-l);
+  --search-row-padding: var(--space-l);
+  --search-text-inset: calc(var(--search-inset) + var(--search-row-padding));
+  --search-field-icon-size: 1.5rem;
+  --search-row-icon-size: 1.5rem;
+  --search-swatch-size: 1.25rem;
+}
+
+/* The page has its own container; its rows run to the container's edge. */
+.search-page {
+  --search-inset: 0px;
+}
 
 .search-dialog {
   --search-width: 640px;
   --search-top: 10vh;
-  --search-field-height: 64px;
+  --search-max-height: 70vh;
 
   --dialog-max-width: var(--search-width);
   --dialog-padding: 0;
   /* The component centres with margin:auto; search is anchored near the top. */
   margin: var(--search-top) auto auto auto;
-  max-height: min(70vh, calc(100dvh - var(--search-top) - var(--space-2xl)));
+  max-height: min(var(--search-max-height), calc(100dvh - var(--search-top) - var(--space-2xl)));
   gap: 0;
 }
 
 /* -- Field --
- * Shared by both hosts. The row is the control: the input inside it is
- * stripped of its own border and background, so the box and the focus ring
- * belong to the row or they belong to nothing. Each host then says how the
- * row is drawn — edge-to-edge and underlined in the dialog, as an ordinary
- * input in the page. */
-
+ * A native text input, looking like every other input on the site, with the
+ * search icon and (in the dialog) the close button laid over it. The three
+ * share one grid cell rather than being positioned absolutely, so the
+ * wrapper's own padding needs no arithmetic. The input reserves room for
+ * them with its inline padding, the way .field does for its toggle. */
 .search-field {
-  display: flex;
+  display: grid;
   align-items: center;
-  gap: var(--space-s);
 }
 
-.search-dialog .search-field {
-  padding: 0 var(--space-m) 0 var(--space-l);
-  min-height: var(--search-field-height);
-  border-bottom: var(--border-s) solid var(--border-faded);
+.search-field > * {
+  grid-area: 1 / 1;
 }
 
 .search-field-icon {
-  flex: none;
-  width: var(--icon-size);
-  height: var(--icon-size);
-  color: var(--text-faded);
+  position: relative; /* paints above the input's fill */
+  justify-self: start;
+  width: var(--search-field-icon-size);
+  height: var(--search-field-icon-size);
+  margin-left: var(--space-m);
+  color: var(--text-primary);
+  pointer-events: none;
 }
 
 /* input.search-input, not .search-input: the base rules are element selectors
-   at (0,1,1) — `input[type="text"]` in design-system.css §12 — so a bare
-   class at (0,1,0) loses to them and the field silently keeps body sizing.
-   The same trap is recorded for the glossary field in §4, which is still a
-   search input: the whole text-input family shares one selector list, so the
-   specificity is the same either way and only the type name differs. */
+   at (0,1,1) — `input[type="text"]` in design-system.css §12 — so a bare class
+   at (0,1,0) loses to them. Only the left padding changes; every other value
+   is the native input's. */
 input.search-input {
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  font-size: var(--font-l);
+  padding-left: calc(var(--space-m) + var(--search-field-icon-size) + var(--space-s));
 }
 
-input.search-input:focus,
-input.search-input:focus-visible {
+.search-close {
+  justify-self: end;
+  margin-right: var(--space-xs);
+}
+
+.search-dialog input.search-input {
+  padding-right: calc(var(--target-min) + var(--space-xs));
+}
+
+/* The dialog field holds focus whenever the dialog opens or a result is
+   chosen, so the native ring was on almost all the time and read as a
+   validation box (issue 7 in handovers/HANDOVER-search-restyle.md). The ring
+   goes; the border darkens to --border-control (4.74:1) instead, which with
+   the caret still says where focus is — and, being a border, survives
+   forced colours. The page host keeps the native ring. */
+.search-dialog input.search-input:focus {
   outline: none;
+  border-color: var(--border-control);
 }
 
-/* The focus ring belongs on the field row: the input has no border of its own,
-   so a ring drawn on it would trace bare text. Shared — both hosts strip the
-   input, so both need the ring one level out. */
-.search-field:focus-within {
-  outline: var(--border-m) solid var(--input-focus);
-  outline-offset: calc(var(--border-m) * -1);
+.search-dialog .search-field {
+  padding: var(--space-l) var(--search-inset) var(--space-m);
+  border-bottom: var(--border-s) solid var(--border-faded);
 }
 
-/* -- Filters -- */
+/* One rule between the controls and the results, whichever controls are
+   showing: when the section row is up, the line moves under it. */
+.search-dialog .search-field:has(+ .search-filters:not([hidden])) {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* -- Filters --
+ * The Segmented control (design-system.css, cms/form.md). It is an inline-flex
+ * that never wraps; here it is a full-width row that wraps above 768px and
+ * scrolls below it. A deliberate host override of the control's layout, not
+ * its skin — the way .bar lays one out — and qualified to (0,2,0) so it wins
+ * on specificity rather than on which stylesheet loads last. */
+.search-filters.segmented-control {
+  display: flex;
+  flex-wrap: wrap;
+}
 
 /* [hidden] is the module's own signal and has to beat whatever display the
    host sets — including the dialog's `display: flex` under 768px, which is
@@ -3116,18 +3160,8 @@ input.search-input:focus-visible {
 }
 
 .search-dialog .search-filters {
-  padding: var(--space-m) var(--space-l) 0 var(--space-l);
-}
-
-/* Says what the chips act on. The row filters pages only — names are not
-   section-scoped — so without this it reads as a filter the results ignore. */
-.search-filters-label {
-  flex: none;
-  align-self: center;
-  font-size: var(--font-2xs);
-  letter-spacing: var(--letter-spacing-l);
-  text-transform: uppercase;
-  color: var(--text-faded);
+  padding: var(--space-m) var(--search-text-inset);
+  border-bottom: var(--border-s) solid var(--border-faded);
 }
 
 /* -- Status line --
@@ -3136,7 +3170,7 @@ input.search-input:focus-visible {
  * for its error region — so this collapses by height instead. */
 .search-status {
   margin: 0;
-  padding: var(--space-s) var(--space-l) 0 var(--space-l);
+  padding: var(--space-s) var(--search-text-inset) 0;
   min-height: 1lh;
 }
 
@@ -3151,7 +3185,7 @@ input.search-input:focus-visible {
   flex: 1 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: var(--space-s) 0 var(--space-m) 0;
+  padding: var(--space-s) var(--search-inset) var(--space-m);
 }
 
 /* .search-results is the scroll container and holds two halves: .search-listbox
@@ -3160,155 +3194,154 @@ input.search-input:focus-visible {
 
    Both are plain blocks with no padding or border of their own. That is a
    constraint, not just a description: it is what lets the empty one collapse to
-   no height without display:none, and what lets the callout's own top margin
-   collapse with this one instead of adding to it. Give either a padding and the
-   prose-failed gap silently doubles.
-
-   TWO states paint both halves — Loading prose (rows + skeleton) and Prose
-   unavailable (rows + callout) — so this rule is load-bearing for both. So is
-   the value: the skeleton used to be a .search-group sibling and took its gap
-   from the rule below, so anything other than --space-m here is a silent
-   change to the loading state.
+   no height without display:none. TWO states paint both halves — Loading prose
+   (rows + skeleton) and Prose unavailable (rows + callout) — and this rule is
+   the gap between them.
 
    :empty means no child nodes at all, and a single space is a text node, so
    paint() is passed '' or a .join('') and never an indented template literal
-   (same trap as icon-library.css). */
+   (same trap as icon-library.css).
+
+   The panel is second in the DOM and, in one state, first on screen: Pages
+   is the first group, so while the panel holds the loading skeleton it is
+   ordered above the rows, where the pages will land. Flex column with no
+   gap — an empty half is a zero-height item, and a gap would show beside it. */
+.search-results {
+  display: flex;
+  flex-direction: column;
+}
+
 .search-listbox:not(:empty) + .search-panel {
   margin-top: var(--space-m);
+}
+
+.search-listbox:not(:empty) + .search-panel:has(.search-skeleton) {
+  order: -1;
+  margin-top: 0;
+  margin-bottom: var(--space-m);
 }
 
 .search-group + .search-group {
   margin-top: var(--space-m);
 }
 
+/* The count carries the heading's own style: it is part of the heading, and a
+   second tone or case three characters later read as a separate label. */
 .search-group-label {
   margin: 0;
-  padding: var(--space-xs) var(--space-l);
+  padding: var(--space-m) var(--search-row-padding);
   font-size: var(--font-2xs);
+  font-weight: var(--font-weight-medium);
   letter-spacing: var(--letter-spacing-l);
   text-transform: uppercase;
   color: var(--text-faded);
 }
 
-.search-group-count {
-  text-transform: none;
-  letter-spacing: normal;
-}
+/* -- Result row -- */
 
 .search-result {
   display: flex;
   align-items: center;
-  /* Default at the point of use, so a host that declares nothing still gets a
-     gap. A host only sets --search-row-gap when it wants a different one. */
-  gap: var(--search-row-gap, var(--space-m));
+  gap: var(--space-m);
   width: 100%;
   min-height: var(--target-min);
-  padding: var(--space-s) var(--space-l);
-  text-align: left;
-  color: var(--text-primary);
-  text-decoration: none;
-  background: none;
+  padding: var(--search-row-padding);
   border: none;
+  border-radius: var(--radius-s);
+  background: none;
+  text-align: left;
+  text-decoration: none;
+  color: var(--text-primary);
   cursor: pointer;
 }
 
-/* The active row is an inverted surface, not a tint. The --background-faded
-   scale tops out around 1.4:1 against the page, which reads as "slightly
-   different" rather than "this is the one Enter will open" — and a keyboard
-   user has nothing else telling them where they are. */
-.search-result[aria-selected="true"],
-.search-result:hover {
-  background-color: var(--selected-background);
-  color: var(--selected-text);
+/* Hover and the active row share the faded wash, the Segmented control's
+   hover grammar. The wash alone measures about 1.13:1 against the page —
+   under the 3:1 a state indicator needs (WCAG 1.4.11) — so the active row,
+   the one Enter opens, also takes an inset outline in --border-control
+   (4.24:1 on the wash in light, 3.88:1 in dark). An outline, not a
+   box-shadow: forced-colours mode strips shadows and flattens the wash, and
+   the outline is then the only thing left marking the row.
+
+   a.search-result:hover is named as well because the global
+   a:not(.button):hover is (0,2,1) and repaints every link in --text-link; at
+   (0,2,0) the row lost to it and hovered rows turned blue (issue 1). At
+   (0,2,1) it TIES that rule and wins only because docs-site.css loads after
+   design-system.css — keep it in this file. */
+.search-result:hover,
+a.search-result:hover,
+.search-result[aria-selected="true"] {
+  background-color: var(--background-faded);
+  color: var(--text-primary);
 }
 
-.search-result[aria-selected="true"] .search-result-meta,
-.search-result[aria-selected="true"] .search-result-excerpt,
-.search-result:hover .search-result-meta,
-.search-result:hover .search-result-excerpt {
-  color: var(--selected-text);
-  opacity: 0.75;
+.search-result[aria-selected="true"] {
+  outline: var(--border-s) solid var(--border-control);
+  outline-offset: calc(var(--border-s) * -1);
 }
 
 .search-result-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2xs);
   min-width: 0;
   flex: 1 1 auto;
 }
 
+/* One face for every name. Tokens and classes carry their own sigil, which
+   says "code" without a second typeface beside the page titles. */
 .search-result-name {
-  font-size: var(--font-m);
+  font-size: var(--font-s);
   overflow-wrap: anywhere;
 }
 
-.search-result[data-type="token"] .search-result-name,
-.search-result[data-type="class"] .search-result-name {
-  font-family: var(--font-quaternary);
-  font-size: var(--font-s);
-}
-
-.search-result-meta,
-.search-result-excerpt {
-  font-size: var(--font-xs);
+.search-result-meta {
+  font-size: var(--font-2xs);
   color: var(--text-secondary);
 }
 
-/* Two lines, and the clamp is load-bearing now rather than decorative: the
-   excerpt is the row's promise about where the link opens, and it is the
-   option's aria-describedby target. It clamps what the eye sees and nothing
-   that a screen reader hears, which is the right way round. `line-clamp`
-   beside the prefixed one, matching design-system.css. */
+/* Two lines. The clamp is load-bearing: the excerpt is the row's promise about
+   where the link opens, and it is the option's aria-describedby target. It
+   clamps what the eye sees and nothing a screen reader hears, which is the
+   right way round. `line-clamp` beside the prefixed one, matching
+   design-system.css. */
 .search-result-excerpt {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
 }
 
+/* search.js fills this with the icon the row names (fetchIcon). */
 .search-result-icon {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: var(--search-row-icon-size);
+  height: var(--search-row-icon-size);
 }
 
 /* Ringed, because a token that resolves to the page's own background would
-   otherwise be an invisible swatch in an empty box. currentColor rather than a
-   border token: on the selected row the surface inverts, and a fixed faint ring
-   would disappear against it exactly when the row is the one being looked at. */
+   otherwise be an invisible swatch in an empty box. */
 .search-result-swatch {
   flex: none;
-  width: 20px;
-  height: 20px;
+  width: var(--search-swatch-size);
+  height: var(--search-swatch-size);
   border: var(--border-s) solid currentColor;
-  opacity: 0.999; /* isolates the ring from the row's own opacity shifts */
 }
 
-
 /* A recent query is two controls side by side — run it, or forget it. They are
-   siblings rather than nested because the remove button used to be a span
-   inside the row button, which no keyboard could reach and no button may
-   legally contain. The row keeps the full width; the remove sits on top of its
-   trailing edge so the layout is unchanged. */
+   siblings rather than nested because a button may not contain a button. The
+   remove control is the design system's .button.close-btn. */
 .search-recent {
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  gap: var(--space-xs);
 }
 
 .search-recent .search-result {
   flex: 1 1 auto;
-}
-
-.search-result-remove {
-  flex: none;
-  padding: 0 var(--space-m);
-  color: var(--text-faded);
-}
-
-.search-result-remove:hover {
-  color: var(--text-primary);
 }
 
 .search-skeleton {
@@ -3320,27 +3353,32 @@ input.search-input:focus-visible {
   width: 60%;
 }
 
-/* The inset is the dialog's edge padding, not the callout's own. On the page
-   it left the callout starting 16px right of the field, the chips and every
-   result row. */
-.search-dialog .search-empty {
-  margin: var(--space-m) var(--space-l);
+/* The results area already carries the inset, so the callout adds none. */
+.search-results .search-empty {
+  margin: 0;
 }
 
 /* -- See all --
  * The last row of the list, and on a phone the only route to the results page:
- * the footer that used to carry that link is display:none under 768px. It is
+ * the footer that also carries that link is display:none under 768px. It is
  * an ordinary .search-result so the arrow keys and Enter reach it like any
- * other row — the rule above it is what marks it as the end of the list rather
- * than one more result. */
-
-/* .search-result.search-see-all, not a bare .search-see-all: the row carries
-   both classes and `.search-result` also sets `color`, so at (0,1,0) each the
-   link colour would win only on source order — and the natural place to add a
-   `.search-result` rule is below this block. (0,2,0) settles it. */
+ * other row. The rule above it marks the end of the list.
+ *
+ * (0,2,0) and (0,3,1) so the link colour beats the row's own colour rules
+ * above, including the hover one. */
 .search-result.search-see-all {
+  margin-top: var(--space-s);
   border-top: var(--border-s) solid var(--border-faded);
+  border-radius: 0;
   color: var(--text-link);
+}
+
+a.search-result.search-see-all:hover {
+  color: var(--text-link);
+}
+
+.search-see-all .search-result-name {
+  font-size: var(--font-m);
 }
 
 /* -- Footer -- */
@@ -3349,55 +3387,41 @@ input.search-input:focus-visible {
   display: flex;
   align-items: center;
   gap: var(--space-l);
-  padding: var(--space-s) var(--space-l);
+  padding: var(--space-l);
   border-top: var(--border-s) solid var(--border-faded);
-  font-size: var(--font-2xs);
+  background-color: var(--background-faded);
+  font-size: var(--font-xs);
   color: var(--text-faded);
 }
 
 .search-hint {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2xs);
+  gap: var(--space-xs);
 }
 
-.search-hint-icon {
-  width: 14px;
-  height: 14px;
+/* The Enter glyph inside its <kbd>, sized to the key's own text. */
+.search-hint kbd {
+  --icon-size: 1em;
 }
 
 .search-all {
   margin-left: auto;
+  color: var(--text-link);
 }
 
 /* -- Page host --
- * /search.html. The same parts as the dialog, in a page: no close button,
- * no key-hint footer, no "see all" link in the footer — this is the see-all.
+ * /search.html. The same parts as the dialog, in a page: no close button, no
+ * key-hint footer, no see-all row — this is the see-all. Layout comes from
+ * `.block gap-l` on the element itself, per the layout hierarchy.
  *
- * The dialog is an overlay that owns its own box, so it strips the field to
- * bare text on a bordered surface. A page has no such box, so the field has
- * to look like a field: the row takes back the design system's input border
- * and background, and the ring drawn on :focus-within above lands on that
- * border rather than on nothing.
- *
- * Layout comes from `.block gap-l` on the element itself, per the layout
- * hierarchy — this class carries host identity and nothing else. */
-
-/* The design system's text inputs carry no radius (design-system.css §12), so
-   neither does this: a rounded field here would be the only one on the site.
-   Padding and min-height are the base input's exactly. The glossary field is
-   the same idea on the same page type, and it changes font-size alone. */
-.search-page .search-field {
-  padding: var(--space-m) var(--space-l);
-  min-height: var(--target-min);
-  border: var(--border-s) solid var(--input-border);
-  background-color: var(--input-background);
+ * The list scrolls inside the dialog because the dialog has a fixed height. A
+ * page has none: the page itself is the scroll container, and leaving
+ * overflow-y:auto here gives a scrollbar inside a scrollbar. */
+.search-page .search-filters {
+  padding: var(--space-xs);
 }
 
-/* The list scrolls inside the dialog because the dialog has a fixed height.
-   A page has none: the page itself is the scroll container, and leaving
-   overflow-y:auto here gives a scrollbar inside a scrollbar and strands the
-   last results in a box nobody thinks to scroll. */
 .search-page .search-results {
   flex: none;
   overflow: visible;
@@ -3405,38 +3429,16 @@ input.search-input:focus-visible {
 }
 
 /* -- Header trigger --
- * Reads as a field on desktop and an icon on mobile. .header-action-label is
- * what collapses (design-system.css §40), so the kbd hint collapses with it and
- * the accessible name stays on aria-label either way. */
-
-.header-search-btn {
-  --button-padding-x: var(--space-m);
-  gap: var(--space-s);
-}
-
-.header-search-kbd:empty {
-  display: none;
-}
-
-@media (min-width: 769px) {
-  .header-search-btn {
-    min-width: 200px;
-    justify-content: flex-start;
-    border: var(--border-s) solid var(--border-faded);
-  }
-
-  .header-search-placeholder {
-    color: var(--text-faded);
-  }
-
-  .header-search-kbd {
-    margin-left: auto;
-  }
-}
+ * An icon-only header action like its neighbours (design-system.css §40).
+ * The shortcut is announced through aria-keyshortcuts and shown in the
+ * dialog footer; nothing here to size. */
 
 @media (max-width: 768px) {
+  /* 0px, not 0: --search-top is read inside calc() by the base max-height,
+     and a unitless 0 there invalidates the whole declaration. Harmless while
+     this rule also sets max-height; a trap the moment it stops. */
   .search-dialog {
-    --search-top: 0;
+    --search-top: 0px;
     width: 100vw;
     max-width: none;
     max-height: 100dvh;
@@ -3460,12 +3462,11 @@ input.search-input:focus-visible {
     flex: none;
   }
 
-  /* Shared: a chip row that wraps to three lines on a phone pushes the first
-     result below the fold, on both hosts. nowrap on the chip itself is what
-     makes the row actually scroll instead of wrapping — without it the chips
-     shrink, and `overflow-x: auto` forces overflow-y to compute to auto, so
-     the clipped row gains a silent second scroll axis that shifts every chip
-     when one is tabbed to. */
+  /* Shared: a filter row that wraps to three lines on a phone pushes the
+     first result below the fold, on both hosts. flex:none on each button is
+     what makes the row actually scroll instead of squeezing — without it the
+     buttons shrink, and `overflow-x: auto` forces overflow-y to compute to
+     auto, so the clipped row gains a silent second scroll axis. */
   .search-dialog .search-filters,
   .search-page .search-filters {
     display: flex;
@@ -3475,19 +3476,13 @@ input.search-input:focus-visible {
     scrollbar-width: none;
   }
 
-  .search-dialog .search-filters .chip,
-  .search-page .search-filters .chip {
+  .search-dialog .search-filters .segmented-control-btn,
+  .search-page .search-filters .segmented-control-btn {
     flex: none;
-    white-space: nowrap;
   }
 
   .search-dialog .search-filters::-webkit-scrollbar,
   .search-page .search-filters::-webkit-scrollbar {
     display: none;
-  }
-
-  .search-result[data-type="token"] .search-result-text,
-  .search-result[data-type="class"] .search-result-text {
-    gap: var(--space-2xs);
   }
 }

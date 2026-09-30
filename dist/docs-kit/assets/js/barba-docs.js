@@ -27,6 +27,8 @@
  *      scrollTo(0,0) runs synchronously in leave() BEFORE the animation starts.
  *      The leaving container receives a negative translateY offset so it
  *      visually stays put at the reader's prior scroll position.
+ *      Sticky elements in the leaving page are pinned separately — see
+ *      "Sticky compensation".
  *
  * Consumer contract (see the docs-kit README, "Page transitions"):
  *   - Every page must load the full script/style set — head scripts and
@@ -461,7 +463,9 @@
       leave: function slideUpLeave(el, motion, opts) {
         var offset = (opts && opts.scrollOffset) || 0;
         var startY = offset + 'px';
-        el.style.transformOrigin = INDEX_TRANSFORM_ORIGIN;
+        // Scale around the top of the viewport, not the top of the container
+        // (scrollY above it), or the visible page drifts up as it recedes.
+        el.style.transformOrigin = '50% ' + (-offset) + 'px';
         return animate(el,
           [
             { transform: 'translateY(' + startY + ') scale(1)',                                opacity: 1 },
@@ -564,9 +568,14 @@
     // -- fade --
     // Crossfade fallback for unknown or same-page navigations.
     'fade': {
-      leave: function fadeLeave(el, motion) {
+      leave: function fadeLeave(el, motion, opts) {
+        var offset = (opts && opts.scrollOffset) || 0;
+        var startY = offset + 'px';
         return animate(el,
-          [{ opacity: 1 }, { opacity: 0 }],
+          [
+            { transform: 'translateY(' + startY + ')', opacity: 1 },
+            { transform: 'translateY(' + startY + ')', opacity: 0 }
+          ],
           { duration: motion.duration, easing: motion.easing, fill: 'forwards' }
         );
       },
@@ -604,6 +613,41 @@
     return transition.enter(el, motionFor(scenario), {});
   }
 
+  // ── Sticky compensation ──
+  // leave() resets scroll to 0, so a bar or TOC that was stuck in the leaving
+  // page unsticks — it drops back to its in-flow position and rides the
+  // container's -scrollY offset off screen. Record where each sits on screen
+  // before is-animating goes on, then translate it back afterwards. The
+  // leaving container is discarded, so the inline `translate` needs no
+  // cleanup. It composes with a transform but replaces any stylesheet
+  // `translate` — no sticky element sets one today.
+
+  function measureStickyElements(container) {
+    var stuck = [];
+    var nodes = container.querySelectorAll('*');
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      if (getComputedStyle(el).position !== 'sticky') continue;
+      if (!el.getClientRects().length) continue;
+      stuck.push({ el: el, top: el.getBoundingClientRect().top });
+    }
+    return stuck;
+  }
+
+  // Call after is-animating and the scroll reset, before the leave animation
+  // applies scrollOffset — the delta accounts for that offset arithmetically.
+  // Read and write stay interleaved on purpose: a sticky element nested in
+  // another is measured after its parent has moved, so it corrects only the
+  // remainder. Batching all reads first would correct it twice.
+  function holdStickyElements(stuck, scrollOffset) {
+    for (var i = 0; i < stuck.length; i++) {
+      var item = stuck[i];
+      var delta = item.top - item.el.getBoundingClientRect().top - scrollOffset;
+      if (Math.abs(delta) < 0.5) continue;
+      item.el.style.translate = '0 ' + delta + 'px';
+    }
+  }
+
   // ── Barba transition ──
 
   var bdTransition = {
@@ -623,11 +667,13 @@
       // collapse the wrapper's layout row and clamp scroll to 0 — so scrollY
       // must be read before the class is added.
       var scrollY = window.scrollY || 0;
+      var stuck = scrollY > 0 ? measureStickyElements(data.current.container) : [];
       document.body.classList.add('is-animating');
       if (scrollY > 0) {
         window.scrollTo(0, 0);
       }
       var scrollOffset = -scrollY;
+      holdStickyElements(stuck, scrollOffset);
 
       return runLeave(data.current.container, scenario, scrollOffset);
     },

@@ -1,15 +1,19 @@
-/* @bydefaultstudio/design-system v5.0.0 */
+/* @bydefaultstudio/design-system v5.1.0 */
 /**
  * Script Purpose: Password show/hide toggle for auth forms
  * Author: By Default Studio
- * Version: 1.1.0
- * Last Updated: 2026-08-09
+ * Version: 1.2.0
+ * Last Updated: 2026-09-30
+ *
+ * The toggle is a .field-toggle inside a .field (cms/field.md). The older
+ * .password-toggle / .password-field pair is accepted as an alias for one
+ * release and goes at the next major.
  */
 
 (function () {
   'use strict';
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
 
   /**
    * One delegated listener rather than a listener per button.
@@ -26,19 +30,22 @@
   function handleClick(event) {
     if (!(event.target instanceof Element)) return;
 
-    var btn = event.target.closest('.password-toggle');
+    var btn = event.target.closest('.field-toggle, .password-toggle');
     if (!btn) return;
 
-    var field = btn.closest('.password-field');
+    var field = btn.closest('.field, .password-field');
     if (!field) return;
 
-    var input = field.querySelector('input');
+    // The input is the box's direct child; one nested deeper is not this field's
+    var input = field.querySelector(':scope > input');
     if (!input) return;
 
+    // A toggle button keeps one name and moves its state: "Show password,
+    // pressed" reads as showing. Renaming it to "Hide password" as well made
+    // a pressed "hide", which is a double negative in a screen reader.
     var isShowing = input.type === 'text';
     input.type = isShowing ? 'password' : 'text';
     btn.setAttribute('aria-pressed', String(!isShowing));
-    btn.setAttribute('aria-label', isShowing ? 'Show password' : 'Hide password');
   }
 
   function initPasswordToggle() {

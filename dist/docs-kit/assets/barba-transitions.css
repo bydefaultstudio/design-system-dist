@@ -48,10 +48,14 @@
   background: var(--background-primary, #fff);
 }
 
-/* Lock interaction + clip overflow during animation */
+/* Lock interaction + clip overflow during animation. clip, not hidden:
+   hidden makes the wrapper the scroll container for every sticky descendant,
+   so a bar docked at the top of either page would measure its inset from the
+   wrapper's edge instead of the viewport's and drop by the header's height.
+   Under clip the viewport stays the sticky scroller throughout. */
 body.is-animating [data-barba="wrapper"] {
   pointer-events: none;
-  overflow: hidden;
+  overflow: clip;
 }
 
 /* Pull both containers out of flow so they overlay at the same origin */
