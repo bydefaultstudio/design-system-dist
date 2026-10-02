@@ -2796,10 +2796,12 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
  * nobody can review, and the index at the top of this file is what makes the
  * order navigable anyway.
  *
- * Scope: this is `docs-site`, not `core` (§17 Rule 7). It has one consumer and
- * its regions are this shell's regions — a second product wanting a wireframe
- * of its own layout would need different ones, and that is the point at which
- * it earns a move.
+ * Scope: this is `docs-site`, not `core` (§17 Rule 7). It has two consumers,
+ * both in this product: Page Layouts draws the docs shell, and the Tool Canvas
+ * doc draws the tool canvas. A map's own regions are keyed on its data-map
+ * (`[data-map="tool-canvas"]`); the docs-shell map is the unkeyed default. A
+ * second product wanting a wireframe of its own layout would need regions of
+ * its own, and that is the point at which it earns a move.
  *
  * Every value is a token declared on .wireframe and consumed below —
  * proportions, spacing, type, the focus ring. Colour is the one thing set per
@@ -2861,6 +2863,18 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
   --wireframe-main-track: 1160fr;
   --wireframe-article-track: 780fr;
   --wireframe-aside-track: 220fr;
+  /* Tool canvas map: the Sidebar layout's columns, the --tool-panel-width
+     sidebar (28rem, 448px) against the rest of a 1440px CONTENT area — the
+     canvas's own width, not the viewport the shell tokens above read. 448
+     restates --tool-panel-width (tools.css): docs-site cannot read that
+     token and fr cannot take rem, so a change there is mirrored here. The
+     Narrow drawing is a phone's width, so the shape reads as one. */
+  --wireframe-tool-work-track: 992fr;
+  --wireframe-tool-panel-track: 448fr;
+  --wireframe-phone-width: 22rem;
+  /* A region drawn as a control on another — the panels toggle on the
+     preview — is a chip, not a card. */
+  --wireframe-chip-padding: var(--space-2xs) var(--space-s);
 
   /* -- Row heights --
    * The shape of a page, not its measurements. Named steps rather than a value
@@ -3128,6 +3142,153 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
   white-space: normal;
 }
 
+/* -- Controls for a map with more than one axis --
+ * Page Layouts drives its map with one chip group; the tool canvas map has
+ * four. They sit in a wrapping row above the map, each a caption over its
+ * chips. Outside .wireframe in the page, as the single group is, so the gaps
+ * are declared here rather than read from the map's tokens. */
+.wireframe-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-l) var(--space-2xl);
+}
+
+.wireframe-control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.wireframe-control > p {
+  margin: 0;
+}
+
+/* A note on the controls as a whole — which groups apply when — runs the
+   full width under them rather than wrapping in beside a group. */
+.wireframe-controls > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* -- The tool canvas map --
+ * The shell a full-space tool is built on (tools.css, Tool canvas), drawn in
+ * the state wireframe.js writes onto the map: data-layout, data-width,
+ * data-panels and data-actions. Named grid areas, with one template per
+ * state listing only the areas drawn in it — a hidden region in a named row
+ * leaves an empty track and pays the gap twice, which is why the shell map
+ * above is flex. The base template is Band, and every stacked state.
+ *
+ * data-layout and data-width here describe the TOOL being drawn, not the
+ * map. "band" is the map's name for a canvas with no data-layout at all.
+ * Wide stays two columns on a phone on purpose: the chip says which layout
+ * to draw, and the map's own narrow breakpoint (below) only collapses the
+ * docs-shell map, whose two columns are the reader's sidebar. */
+.wireframe-map[data-map="tool-canvas"] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "bar" "preview" "panels" "footer";
+}
+
+.wireframe-map[data-map="tool-canvas"] > [data-area="bar"] { grid-area: bar; }
+.wireframe-map[data-map="tool-canvas"] > [data-area="preview"] { grid-area: preview; }
+.wireframe-map[data-map="tool-canvas"] > [data-area="panels"] { grid-area: panels; }
+.wireframe-map[data-map="tool-canvas"] > [data-area="actions"] { grid-area: actions; }
+.wireframe-map[data-map="tool-canvas"] > [data-area="footer"] { grid-area: footer; }
+
+/* Sidebar, wide: the preview beside the sidebar, the actions pinned under
+   the panels in the sidebar's column. */
+.wireframe-map[data-map="tool-canvas"][data-layout="sidebar"][data-width="wide"][data-panels="shown"] {
+  grid-template-columns: minmax(0, var(--wireframe-tool-work-track)) minmax(0, var(--wireframe-tool-panel-track));
+  grid-template-areas: "bar bar" "preview panels" "footer footer";
+}
+
+.wireframe-map[data-map="tool-canvas"][data-layout="sidebar"][data-width="wide"][data-panels="shown"][data-actions="pinned"] {
+  grid-template-areas: "bar bar" "preview panels" "preview actions" "footer footer";
+}
+
+/* Sidebar, narrow: the actions pinned under the scrolling panels. */
+.wireframe-map[data-map="tool-canvas"][data-layout="sidebar"][data-width="narrow"][data-panels="shown"][data-actions="pinned"] {
+  grid-template-areas: "bar" "preview" "panels" "actions" "footer";
+}
+
+/* Sidebar hidden, either width: the preview takes the canvas. */
+.wireframe-map[data-map="tool-canvas"][data-panels="hidden"] {
+  grid-template-areas: "bar" "preview" "footer";
+}
+
+/* Narrow is drawn at a phone's proportion, centred under the controls. */
+.wireframe-map[data-map="tool-canvas"][data-width="narrow"] {
+  align-self: center;
+  width: 100%;
+  max-width: var(--wireframe-phone-width);
+}
+
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="bar"],
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="actions"],
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="footer"] {
+  min-height: var(--wireframe-row-s);
+}
+
+/* The preview holds the toggle in its bottom-right corner, where the real
+   one sits; out of flow, so the label stays centred on the band. */
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="preview"] {
+  position: relative;
+  min-height: var(--wireframe-row-xl);
+}
+
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="toggle"] {
+  position: absolute;
+  inset-block-end: var(--wireframe-padding);
+  inset-inline-end: var(--wireframe-padding);
+  min-height: 0;
+  padding: var(--wireframe-chip-padding);
+}
+
+/* Panels holds panels, as Content holds the article: its label a caption
+   at the start, its children laid out on its surface. Stacked by default —
+   the sidebar, and Band on a phone. */
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="panels"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  /* stretch, not the centre a leaf region sets: two panels side by side are
+     one height, as the real ones are. */
+  align-items: stretch;
+  gap: var(--wireframe-gap);
+  padding: var(--wireframe-padding);
+  text-align: start;
+}
+
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="panels"] > .wireframe-label {
+  justify-self: start;
+}
+
+/* Band, wide: two up. */
+.wireframe-map[data-map="tool-canvas"][data-layout="band"][data-width="wide"] .wireframe-region[data-area="panels"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wireframe-map[data-map="tool-canvas"][data-layout="band"][data-width="wide"] .wireframe-region[data-area="panels"] > .wireframe-label {
+  grid-column: 1 / -1;
+}
+
+/* A panel is a row of settings; a closed one in the sidebar is only its
+   header. One holding the verbs stacks its label over them. */
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="panel"] {
+  flex-direction: column;
+  gap: var(--wireframe-gap);
+  min-height: var(--wireframe-row-l);
+}
+
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="panel"][data-open="false"] {
+  min-height: var(--wireframe-row-s);
+}
+
+/* Last in the block, at the specificity of the display rules above, so a
+   region the state does not draw is hidden whatever it would otherwise be. */
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[hidden] {
+  display: none;
+}
+
 /* -- Narrow --
  * The map's own breakpoint, kept with the component rather than in §25: the
  * columns collapse on the component's width, not the shell's. */
@@ -3162,8 +3323,11 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
   line-height: var(--line-height-2xl);
 }
 
+/* --text-secondary, not --text-faded: faded measured 4.18:1 on the code
+   block's ground in dark mode at this size (WCAG 1.4.3). The stand-in parts
+   still read as quieter than the markup round them, by tone. */
 .wf-markup .wf-dim {
-  color: var(--text-faded);
+  color: var(--text-secondary);
 }
 
 /* ------ 28. SITE SEARCH ------

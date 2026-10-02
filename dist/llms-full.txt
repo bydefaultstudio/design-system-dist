@@ -1,16 +1,16 @@
-<!-- @bydefaultstudio/design-system v6.0.0 -->
+<!-- @bydefaultstudio/design-system v6.0.1 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 6.0.0 (package)**
+**Version: 6.0.1 (package)**
 
 ## Getting the System
 
 The system ships as one CSS file plus an icon sprite, distributed through the public artefact repo:
 
 ```bash
-npm install github:bydefaultstudio/design-system-dist#semver:^5.1.1
+npm install github:bydefaultstudio/design-system-dist#semver:^6.0.1
 ```
 
 - Link `design-system.css` before any site or theme CSS.
@@ -1103,7 +1103,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--section-m` | `var(--space-6xl)` |  |
 | `--section-l` | `var(--space-10xl)` |  |
 | `--section-xl` | `var(--space-14xl)` |  |
-| **Accordion spacing variables** | | |
+| **Accordion variables** | | |
 | `--accordion-padding-x` | `var(--space-l)` |  |
 | `--accordion-padding-y` | `var(--space-l)` |  |
 | **Border width tokens** | | |
@@ -2645,6 +2645,9 @@ Arrow key navigation is scoped to each accordion level. Nested accordions naviga
 - `.accordion-content` uses `role="region"` as a landmark for assistive technology
 - The icon `.svg-icn` has `aria-hidden="true"`. It's decorative, not informational
 - Focus-visible ring appears on keyboard navigation, suppressed on mouse click
+- Where each section should appear in the page's heading outline, wrap the header button in a heading of the right level — `<h2><button class="accordion-header" …>…</button></h2>`, the WAI accordion pattern. The script finds the button inside the heading, and the icon turns on the button's own `aria-expanded`.
+- Under `prefers-reduced-motion: reduce` the panel opens and the icon turns without a transition
+- A closed panel's `.accordion-content` is `inert`, so Tab skips the controls inside it and assistive technology does not read them. The panel collapses to a zero-height row but stays in the DOM; without this, focus walked into fields nobody could see. The script sets it from the markup's own `.is-open` at init and on every toggle, so author `.is-open` and `aria-expanded="true"` together on a panel that starts open. Open and close panels through their header; code that adds `.is-open` itself must also clear `inert` on the content, or the panel shows but cannot be used
 
 ---
 
@@ -2654,36 +2657,47 @@ The design system provides sensible defaults so accordions work visually out of 
 
 | Element | Default style |
 |---------|--------------|
-| `.accordion` | `border-top` using `--border-faded` |
+| `.accordion` | `border-top`: a `--border-s` rule in `--border-faded`, unless `--accordion-border-top` is set. Set it to `none` where something above already draws a rule |
 | `.accordion-item` | `border-bottom` using `--border-faded` |
 | `.accordion-header` | `padding: var(--space-m) 0`, `color: var(--text-primary)` |
-| `.accordion-header .svg-icn` | 24x24, rotates 45deg when open (turns `+` into `x`) |
+| `.accordion-header .svg-icn` | 24x24, turns 180deg when open |
 | `.accordion-body` | `padding-bottom: var(--space-l)` |
 
 All values use semantic tokens, so they flip automatically in dark mode.
 
 ### Icon
 
-The accordion uses a `.svg-icn` wrapper with an inline SVG. The default icon is `add` (a plus sign) which rotates 45 degrees to form an `x` when the panel opens. To use a different icon, swap the SVG inside the wrapper. No CSS changes needed.
+The accordion uses a `.svg-icn` wrapper with an inline SVG. The examples use `add` (a plus sign); the icon turns 180 degrees when the panel opens, which flips a chevron to point the other way. To use a different icon, swap the SVG inside the wrapper. No CSS changes needed.
 
 ### Overriding defaults
 
-Use a wrapper class to adjust styles for a specific context:
+Re-point the tokens on a wrapper for a specific context:
 
 ```css
-.compact-accordion .accordion-header {
-  padding: var(--space-s) 0;
+.compact-accordion {
+  --accordion-padding-x: var(--space-s);
+  --accordion-padding-y: var(--space-s);
 }
 
-.compact-accordion .accordion-body {
-  padding-bottom: var(--space-m);
+.borderless-accordion {
+  --accordion-border-top: none;
 }
 
-.borderless-accordion,
+/* The items' rules have no token yet (ROADMAP) */
 .borderless-accordion .accordion-item {
-  border: none;
+  border-bottom: none;
 }
 ```
+
+### Tokens
+
+| Token | Default | Purpose |
+|-------|---------|---------|
+| `--accordion-padding-x` | `var(--space-l)` | Inline padding of the header and body |
+| `--accordion-padding-y` | `var(--space-l)` | Block padding of the header, bottom padding of the body |
+| `--accordion-border-top` | unset — falls back to `var(--border-s) solid var(--border-faded)` | The rule over the first item; `none` where something above already draws one |
+
+The padding tokens are declared in `:root`. `--accordion-border-top` is not: it is read with a fallback on `.accordion`, so `--border-faded` resolves on the accordion itself and a context that re-points it locally (a coloured page header) is followed.
 
 ---
 
@@ -2695,7 +2709,7 @@ Use a wrapper class to adjust styles for a specific context:
 | `.accordion-item` | Individual panel wrapper. Border-bottom (direct child of `.accordion`) |
 | `.accordion-header` | `<button>` trigger. Flex layout, padding, colour |
 | `.accordion-title` | Optional `<span>` for heading text inside the header |
-| `.accordion-header .svg-icn` | Icon. 24x24, rotates 45deg on open. Swap the SVG for a different icon |
+| `.accordion-header .svg-icn` | Icon. 24x24, turns 180deg on open. Swap the SVG for a different icon |
 | `.accordion-content` | Grid container. Animates `grid-template-rows: 0fr → 1fr` |
 | `.accordion-inner` | Overflow clipper. `overflow: hidden`, `min-height: 0`. Never apply padding here |
 | `.accordion-body` | Content wrapper. Padding-bottom, consumer content lives here |
@@ -12231,8 +12245,8 @@ Package consumers control which icons they ship via `icons.manifest.json` at the
 
 ### When to Subset
 
-Most sites reference 15–45 of the 176 icons in the registry. The sprite carries
-178 symbols — the extra two are deprecated names kept resolving for consumers
+Most sites reference 15–45 of the 177 icons in the registry. The sprite carries
+179 symbols — the extra two are deprecated names kept resolving for consumers
 (`icons.aliases.json`) and deliberately hidden from the registry. The master sprite — every icon, unfiltered — is roughly 115KB; a subset sprite trims that to just what the site uses.
 
 | Situation | What to do |
@@ -12404,7 +12418,7 @@ echo '<svg>...</svg>' | npx svg-cleaner --current-color --icon --icon-name arrow
 
 The full brand icon set. This table is generated at build time from `assets/images/svg-icons/`, so it always matches the source directory. The `data-icon` value is the name to use with the wrapper, the shorthand, and the sprite. For a categorised view with copy and download, see the [Brand Book iconography page](/brand/iconography.html).
 
-`3d`, `accessibility`, `ad-left`, `ad-right`, `ad-top`, `add`, `ai`, `ai-chat`, `ai-large`, `ar`, `archive`, `arrow-down`, `arrow-left`, `arrow-right`, `arrow-top`, `arrow-top-right`, `arrow-up`, `back-arrow`, `bolt`, `book`, `book-open`, `bookmark`, `browser`, `calendar`, `catalog`, `chart`, `chat`, `check`, `check-circled`, `check-squared`, `checklist`, `chevron-down`, `chevron-down-large`, `chevron-left`, `chevron-left-large`, `chevron-right`, `chevron-right-large`, `chevron-up`, `chevron-up-large`, `circled`, `click-2`, `clock`, `close`, `close-circled`, `close-large`, `code`, `cog`, `copy`, `credit-card`, `cursor`, `cursor-pointer-1`, `cursor-pointer-2`, `cursor-pointer-4`, `design`, `design-system`, `desktop`, `docs`, `download`, `drag`, `exclamation`, `eye`, `eye-off`, `fast-forward`, `file`, `file-audio`, `file-css`, `file-doc`, `file-font`, `file-html`, `file-img`, `file-json`, `file-md`, `file-txt`, `file-video`, `filter`, `flame`, `flame-spark`, `folder`, `folder-open`, `font-size`, `frame`, `full-screen`, `game`, `gamepad`, `globe`, `headphones`, `heart`, `home`, `info`, `instagram`, `link`, `linkedin`, `list`, `lock`, `login`, `logout`, `loop`, `loop-reverse`, `mail`, `map`, `menu`, `minus`, `mobile`, `moon`, `more-horizontal`, `more-vertical`, `news`, `open-full`, `paintbrush`, `partner`, `pause`, `pencil`, `pencil-draw`, `percentage`, `photo`, `photos`, `pin`, `play`, `play-2`, `play-outline`, `present`, `question`, `reddit`, `refresh`, `return-arrow`, `rewind`, `scroll-down`, `search`, `search-large`, `send`, `settings`, `share`, `share-1`, `shop`, `shopping-bag`, `sidebar-close-2`, `sidebar-left-close`, `sidebar-left-open`, `sidebar-right-close`, `sidebar-right-open`, `smiling`, `sound`, `sound-off`, `sound-on`, `spotify`, `squared`, `stack`, `status-0`, `status-10`, `status-100`, `status-20`, `status-50`, `status-75`, `status-check`, `sticky-bottom`, `sticky-top`, `sun`, `sun-2`, `swap`, `t-shirt`, `tablet`, `tap-3`, `target`, `thumbs-down`, `thumbs-up`, `tiktok`, `trash`, `trending`, `unlock`, `user`, `users`, `video`, `warning`, `weapon`, `widgets`, `youtube`
+`3d`, `accessibility`, `ad-left`, `ad-right`, `ad-top`, `add`, `ai`, `ai-chat`, `ai-large`, `ar`, `archive`, `arrow-down`, `arrow-left`, `arrow-right`, `arrow-top`, `arrow-top-right`, `arrow-up`, `back-arrow`, `bolt`, `book`, `book-open`, `bookmark`, `browser`, `calendar`, `catalog`, `chart`, `chat`, `check`, `check-circled`, `check-squared`, `checklist`, `chevron-down`, `chevron-down-large`, `chevron-left`, `chevron-left-large`, `chevron-right`, `chevron-right-large`, `chevron-up`, `chevron-up-large`, `circled`, `click-2`, `clock`, `close`, `close-circled`, `close-large`, `code`, `cog`, `copy`, `credit-card`, `cursor`, `cursor-pointer-1`, `cursor-pointer-2`, `cursor-pointer-4`, `design`, `design-system`, `desktop`, `docs`, `download`, `drag`, `exclamation`, `eye`, `eye-off`, `fast-forward`, `file`, `file-audio`, `file-css`, `file-doc`, `file-font`, `file-html`, `file-img`, `file-json`, `file-md`, `file-txt`, `file-video`, `filter`, `flame`, `flame-spark`, `folder`, `folder-open`, `font-size`, `frame`, `full-screen`, `game`, `gamepad`, `globe`, `headphones`, `heart`, `home`, `info`, `instagram`, `link`, `linkedin`, `list`, `lock`, `login`, `logout`, `loop`, `loop-reverse`, `mail`, `map`, `menu`, `minus`, `mobile`, `moon`, `more-horizontal`, `more-vertical`, `news`, `open-full`, `paintbrush`, `partner`, `pause`, `pencil`, `pencil-draw`, `percentage`, `photo`, `photos`, `pin`, `play`, `play-2`, `play-outline`, `present`, `question`, `reddit`, `refresh`, `return-arrow`, `rewind`, `scroll-down`, `search`, `search-large`, `section`, `send`, `settings`, `share`, `share-1`, `shop`, `shopping-bag`, `sidebar-close-2`, `sidebar-left-close`, `sidebar-left-open`, `sidebar-right-close`, `sidebar-right-open`, `smiling`, `sound`, `sound-off`, `sound-on`, `spotify`, `squared`, `stack`, `status-0`, `status-10`, `status-100`, `status-20`, `status-50`, `status-75`, `status-check`, `sticky-bottom`, `sticky-top`, `sun`, `sun-2`, `swap`, `t-shirt`, `tablet`, `tap-3`, `target`, `thumbs-down`, `thumbs-up`, `tiktok`, `trash`, `trending`, `unlock`, `user`, `users`, `video`, `warning`, `weapon`, `widgets`, `youtube`
 
 ---
 

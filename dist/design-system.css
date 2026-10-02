@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.0 */
+/* @bydefaultstudio/design-system v6.0.1 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -990,7 +990,7 @@
   --section-xl: var(--space-14xl);
 
 
-  /* -- Accordion spacing variables -- */
+  /* -- Accordion variables -- */
   --accordion-padding-x: var(--space-l);
   --accordion-padding-y: var(--space-l);
 
@@ -4202,8 +4202,12 @@ details .disclosure-content {
 
 /* ------ 14. ACCORDION ------ */
 
+/* --accordion-border-top is the rule over the first item; a context that
+   already draws one there sets it to none. Unset by default and given as a
+   fallback here, not on :root, so --border-faded resolves on the accordion —
+   a coloured context that re-points it locally is followed. */
 .accordion {
-  border-top: var(--border-s) solid var(--border-faded);
+  border-top: var(--accordion-border-top, var(--border-s) solid var(--border-faded));
 }
 
 .accordion-item {
@@ -4232,7 +4236,13 @@ details .disclosure-content {
   transition: transform var(--duration-m) var(--ease-out);
 }
 
-.accordion-item.is-open > .accordion-header .svg-icn {
+/* The second selector reads the button's own state, so the icon still turns
+   when the header sits inside a heading (h2 > .accordion-header) — the WAI
+   accordion pattern, which keeps each section in the heading outline — and
+   the child combinator on the first no longer reaches it. accordion.js keeps
+   aria-expanded and .is-open in step. */
+.accordion-item.is-open > .accordion-header .svg-icn,
+.accordion-header[aria-expanded="true"] .svg-icn {
   transform: rotate(180deg);
 }
 
@@ -4265,6 +4275,15 @@ details .disclosure-content {
 
 .accordion-body {
   padding:  0 var(--accordion-padding-x) var(--accordion-padding-y) var(--accordion-padding-x);
+}
+
+/* The panel opens and the icon turns at once: the state changes, nothing
+   travels. */
+@media (prefers-reduced-motion: reduce) {
+  .accordion-header .svg-icn,
+  .accordion-content {
+    transition: none;
+  }
 }
 
 

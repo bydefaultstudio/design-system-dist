@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.0 */
+/* @bydefaultstudio/design-system v6.0.1 */
 /**
  * Accordion component
  * Initialises all .accordion containers on the page.
@@ -30,9 +30,25 @@
  *   End       — focus last header
  *   Enter/Space — toggle panel (native button behaviour)
  *
- * @version 1.3.0
+ * @version 1.4.0
  */
 (function () {
+  // One item's state, in all three places it lives: the class the CSS
+  // animates on, the header's aria-expanded, and whether the content can be
+  // reached. A closed panel collapses to a zero-height row but its controls
+  // stay in the DOM, so without `inert` Tab walks into fields nobody can
+  // see (WCAG 2.4.3, 2.4.7). inert rather than CSS visibility: a nested
+  // accordion's open panel would set visibility back to visible inside a
+  // closed outer one, and inert on the outer content holds for everything
+  // under it. It also leaves the visuals alone, so the close still animates.
+  function setOpen(item, open) {
+    var trigger = item.querySelector(".accordion-header");
+    var content = item.querySelector(":scope > .accordion-content");
+    item.classList.toggle("is-open", open);
+    if (trigger) trigger.setAttribute("aria-expanded", open ? "true" : "false");
+    if (content) content.inert = !open;
+  }
+
   function initAccordion(scopeOrEl) {
     var root = scopeOrEl || document;
     var bound = 0;
@@ -62,24 +78,18 @@
         trigger.dataset.accordionBound = "true";
         bound++;
 
+        // The markup's own state, so a panel authored open (.is-open) or
+        // closed starts with its content in or out of reach to match.
+        setOpen(item, item.classList.contains("is-open"));
+
         trigger.addEventListener("click", function () {
           var wasOpen = item.classList.contains("is-open");
 
           if (mode === "single") {
-            items.forEach(function (other) {
-              other.classList.remove("is-open");
-              var t = other.querySelector(".accordion-header");
-              if (t) t.setAttribute("aria-expanded", "false");
-            });
+            items.forEach(function (other) { setOpen(other, false); });
           }
 
-          if (!wasOpen) {
-            item.classList.add("is-open");
-            trigger.setAttribute("aria-expanded", "true");
-          } else {
-            item.classList.remove("is-open");
-            trigger.setAttribute("aria-expanded", "false");
-          }
+          setOpen(item, !wasOpen);
         });
 
         trigger.addEventListener("keydown", function (e) {
@@ -112,7 +122,7 @@
 
     // Only when something was actually wired. This runs on every arrival and on
     // hard load, and most pages have no accordion at all.
-    if (bound) console.log("[accordion] v1.3.0 — init (" + bound + ")");
+    if (bound) console.log("[accordion] v1.4.0 — init (" + bound + ")");
   }
 
   // Exposed for parity with the other components; the after-nav listener below

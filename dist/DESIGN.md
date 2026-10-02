@@ -78,7 +78,7 @@ rounded:
   surface: '0px'
   detail: '0px'
 ---
-<!-- @bydefaultstudio/design-system v6.0.0 -->
+<!-- @bydefaultstudio/design-system v6.0.1 -->
 
 # By Default Design System
 
