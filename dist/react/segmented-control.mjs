@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v5.1.1 */
+/* @bydefaultstudio/design-system v6.0.0 */
 /**
  * <SegmentedControl> — React adapter over both segmented contracts
  * (cms/form.md): the flat button group and the thumb variant's

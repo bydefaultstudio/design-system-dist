@@ -37,8 +37,17 @@
          sidebar paints open first and the content area (a query container)
          reflows visibly. Runs before first paint; key matches SIDEBAR_KEY
          in assets/js/nav.js. The per-page data-sidebar-default case stays
-         with nav.js. Same pattern as the studio repo's chrome template. -->
-    <script>try{if(localStorage.getItem('docs-sidebar-collapsed')==='true')document.body.classList.add('sidebar-collapsed');}catch(e){}</script>
+         with nav.js. Same pattern as the studio repo's chrome template.
+         It also paints a public page locked (body.is-signed-out, starting
+         collapsed) unless the last session check in this browser said
+         signed in: the check itself lands after paint, and a sidebar
+         dropping from full width to the rail would be a visible shift.
+         header-account.js writes bd-session-hint; nav.js applies the lock.
+         A gated page never starts locked: the gate already proved a
+         session. Neither branch writes the stored collapse preference.
+         With storage blocked there is no hint, so a signed-in reader sees
+         a public page paint locked and then open once the check lands. -->
+    <script>(function(){var b=document.body,h=null,c=null;try{h=localStorage.getItem('bd-session-hint');c=localStorage.getItem('docs-sidebar-collapsed');}catch(e){}var l=b.getAttribute('data-access')==='public'&&h!=='in';if(l)b.classList.add('is-signed-out');if(l||c==='true')b.classList.add('sidebar-collapsed');})();</script>
 
     <!-- Design system missing banner (shown by JS if CSS variables fail to load) -->
     <div id="ds-missing-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#fffbea;border-bottom:1px solid #f0c040;padding:12px 20px;font-family:sans-serif;font-size:14px;color:#7a5c00;align-items:center;gap:12px;">

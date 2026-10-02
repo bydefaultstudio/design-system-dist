@@ -1,8 +1,8 @@
 // Docs-site copy chrome — the copy behaviours that belong to the docs
 // site, not the portable copy button component (assets/js/copy-button.js):
 // token-table copy chips (.token-copy), the page bar's copy-URL action
-// (.js-copy-url), colour-palette copy buttons (.color-copy-btn), and the
-// auto-generated icon-table Copy + Download columns.
+// (.js-copy-url), and the auto-generated icon-table Copy + Download
+// columns. Colour swatches copy through the core Swatch component.
 (function () {
   'use strict';
 
@@ -147,72 +147,6 @@
       }, FEEDBACK_DURATION);
     }).catch(warnCopyFailed);
   });
-
-  // ── Color swatch copy — .color-copy-btn with data-format="hex" or "css" ──
-  function toHexPair(value) {
-    var hex = value.toString(16);
-    return hex.length === 1 ? '0' + hex : hex;
-  }
-
-  // Alpha matters here: several palette rows resolve to --*-alpha-* tokens
-  // (--background-faded, --text-faded). Dropping the alpha channel would copy
-  // #000000 for a near-white swatch — a wrong value delivered silently, which
-  // is worse than no value. Emit 8-digit hex whenever the colour is not opaque.
-  function getComputedHex(element) {
-    var rgb = getComputedStyle(element).backgroundColor;
-    var match = rgb.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)\s*(?:[,/]\s*([\d.]+)\s*)?\)/);
-    if (!match) return null;
-
-    var hex = '#' + toHexPair(parseInt(match[1], 10))
-      + toHexPair(parseInt(match[2], 10))
-      + toHexPair(parseInt(match[3], 10));
-
-    var alpha = match[4] === undefined ? 1 : parseFloat(match[4]);
-    if (isNaN(alpha) || alpha >= 1) return hex;
-    return hex + toHexPair(Math.round(alpha * 255));
-  }
-
-  document.addEventListener('click', function (e) {
-    var btn = e.target.closest('.color-copy-btn');
-    if (!btn) return;
-
-    var row = btn.closest('.color-row');
-    if (!row) return;
-
-    var format = btn.getAttribute('data-format');
-    var token = row.getAttribute('data-token');
-    var text;
-
-    if (format === 'css') {
-      if (!token) return;
-      text = 'var(' + token + ')';
-    } else {
-      text = getComputedHex(row);
-    }
-
-    if (!text) return;
-
-    copyToClipboard(text).then(function () {
-      btn.classList.add('is-copied');
-      announceCopied(text);
-      clearTimeout(btn.bdRevertTimer);
-      btn.bdRevertTimer = setTimeout(function () {
-        btn.classList.remove('is-copied');
-      }, FEEDBACK_DURATION);
-    }).catch(warnCopyFailed);
-  });
-
-  // Initialize color copy buttons with icon structure
-  function initColorCopyButtons() {
-    getLiveRegion();
-    var buttons = document.querySelectorAll('.color-copy-btn');
-    buttons.forEach(function (btn) {
-      if (btn.querySelector('.copy-btn-default')) return;
-      var label = btn.textContent;
-      btn.innerHTML = '<span class="copy-btn-default"><div class="svg-icn">' + ICON_COPY + '</div> ' + label + '</span>'
-        + '<span class="copy-btn-copied"><div class="svg-icn">' + ICON_CHECK + '</div> Copied</span>';
-    });
-  }
 
   // ── Icon table — auto-generate Copy + Download buttons ──
   // Auto-detects tables whose first <td> contains .svg-icn[data-icon].
@@ -401,8 +335,8 @@
   }
 
   function initAll() {
+    getLiveRegion();
     initIconTables();
-    initColorCopyButtons();
     initSpecimenCopy();
   }
 

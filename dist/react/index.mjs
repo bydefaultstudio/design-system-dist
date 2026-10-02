@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v5.1.1 */
+/* @bydefaultstudio/design-system v6.0.0 */
 /**
  * @bydefaultstudio/design-system/react — Tier 2 React adapters.
  *

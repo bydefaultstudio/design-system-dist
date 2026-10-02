@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v5.1.1 */
+/* @bydefaultstudio/design-system v6.0.0 */
 /**
  * Cell Input component — fixed-shape text entry rendered as per-character cells
  * Initialises all .cell-input elements that have a data-format and an <input>.

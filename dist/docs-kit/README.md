@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^5.1.1"
+npm install "github:bydefaultstudio/design-system-dist#semver:^6.0.0"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -120,7 +120,7 @@ automatically — external URLs pass through untouched.
 | `logoHtml` | site name as text | raw HTML for the site-header logo |
 | `contactHref` / `contactLabel` | none | site-header contact link |
 | `sectionIcons` | `{}` | map of section label → icon key for the sidebar |
-| `uiScripts` | kit-bundled copy-button + dropdown | script list for docs UI behaviours |
+| `uiScripts` | kit-bundled copy-button, swatch + dropdown | script list for docs UI behaviours |
 | `markdownSourceBase` | none | serve path of the .md sources; enables "view as markdown" menu items |
 | `search` | `false` | the header search button and dialog. The kit ships no `search.js` or indexer, so leave it off unless the project supplies both |
 | `validateLayers` | `false` | require a valid `layer:` field in every file's frontmatter |

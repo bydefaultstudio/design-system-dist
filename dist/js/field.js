@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v5.1.1 */
+/* @bydefaultstudio/design-system v6.0.0 */
 /**
  * Field — the controls inside a text input
  * Gives every .field its .is-filled state and makes its clear button work.

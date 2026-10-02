@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v5.1.1 */
+/* @bydefaultstudio/design-system v6.0.0 */
 /* ============================================================
    BD Video player — component-scoped CSS
    ============================================================
@@ -9,10 +9,12 @@
      --bd-video-* with a design-system fallback chain.
      Inside the design system: tokens flow through.
      Outside the design system: hard-coded fallbacks apply.
-   - Incidental primitives (overlay opacities, white text, pill
-     radius, focus ring) are inlined directly as literal values
-     rather than tokenized. They aren't themable; tokenizing them
-     would just add bureaucratic indirection.
+   - Incidental primitives (overlay opacities, white text, focus
+     ring) are inlined directly as literal values rather than
+     tokenized. They aren't themable; tokenizing them would just add
+     bureaucratic indirection. Corners read the system's radius roles
+     with the designed sizes as fallbacks, so they square with the rest
+     where the system is present and keep their shape where it is not.
    - .svg-icn is defined locally (scoped to .bd-video) so the
      component doesn't depend on the design system's global rule.
    - All classes are namespaced (.bd-video-*) — no leakage.
@@ -81,9 +83,9 @@
   --bd-video-font-xs: var(--font-xs, 0.875rem);
   --bd-video-font-m: var(--font-m, 1.125rem);
 
-  /* RADIUS — design system scale (pill is inlined as 999px in the rules) */
-  --bd-video-radius-s: var(--radius-s, 8px);
-  --bd-video-radius-m: var(--radius-m, 12px);
+  /* RADIUS — the system's roles, designed sizes as fallbacks */
+  --bd-video-radius-s: var(--radius-control, 8px);
+  --bd-video-radius-m: var(--radius-surface, 12px);
 
   position: relative;
   width: 100%;
@@ -145,7 +147,7 @@
   padding: 0;
   background: rgba(0, 0, 0, 0.5);
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-full, 999px);
   color: #fff;
   cursor: pointer;
   z-index: 2;
@@ -372,7 +374,7 @@
   color: #fff;
   background: rgba(0, 0, 0, 0.5);
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-full, 999px);
   cursor: pointer;
   transition: background-color var(--bd-video-duration-fast) var(--bd-video-ease);
 }
@@ -515,7 +517,7 @@
   width: 64px;
   height: 64px;
   object-fit: cover;
-  border-radius: 4px;
+  border-radius: var(--radius-detail, 4px);
   flex-shrink: 0;
 }
 

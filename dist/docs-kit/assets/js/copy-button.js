@@ -187,7 +187,6 @@
     var buttons = document.querySelectorAll('.copy-btn');
     buttons.forEach(function (btn) {
       if (btn.querySelector('.copy-btn-default')) return;
-      if (btn.classList.contains('color-row')) return;
       var content = btn.innerHTML;
       btn.innerHTML = '<span class="copy-btn-default">' + content + '</span>'
         + '<span class="copy-btn-copied"><div class="svg-icn">' + iconCheck() + '</div> Copied</span>';

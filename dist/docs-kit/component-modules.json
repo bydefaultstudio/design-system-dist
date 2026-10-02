@@ -16,6 +16,7 @@
     "number-input.js",
     "password-toggle.js",
     "rating.js",
+    "swatch.js",
     "tabs.js",
     "toast.js"
   ],
@@ -23,6 +24,9 @@
     "bd-cursor.css",
     "bd-video.css"
   ],
+  "moduleDependencies": {
+    "swatch": ["copy-button.js"]
+  },
   "moduleAliases": {
     "drawer": "dialog.js",
     "login": "password-toggle.js"

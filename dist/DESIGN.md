@@ -68,15 +68,17 @@ spacing:
   13xl: '7.5rem'
   14xl: '10rem'
 rounded:
-  2xs: '2px'
   xs: '4px'
   s: '8px'
   m: '12px'
   l: '16px'
   xl: '24px'
-  pill: '999px'
+  full: '999px'
+  control: '0px'
+  surface: '0px'
+  detail: '0px'
 ---
-<!-- @bydefaultstudio/design-system v5.1.1 -->
+<!-- @bydefaultstudio/design-system v6.0.0 -->
 
 # By Default Design System
 
@@ -171,7 +173,7 @@ Two token families sit beside the scale and are not distances:
 
 ## Shapes
 
-Corner radius comes from a seven-step token scale, `--radius-2xs` ({rounded.2xs}) through `--radius-xl` ({rounded.xl}), plus `--radius-pill` ({rounded.pill}) for fully rounded chips and pills. Interactive surfaces (buttons, inputs) sit in the middle of the scale; cards and dialogs sit higher. Never hardcode a radius.
+Corner radius is a five-step scale, `--radius-xs` ({rounded.xs}) through `--radius-xl` ({rounded.xl}), plus `--radius-full` ({rounded.full}) for a capsule or circle. Components never read a step: they read one of three roles, `--radius-control` ({rounded.control}) for things you operate, `--radius-surface` ({rounded.surface}) for things that contain, `--radius-detail` ({rounded.detail}) for small finishing corners — each the step multiplied by `--radius-scale`, so one value on `:root` squares or rounds every stylistic corner at once. The engine ships `--radius-scale: 0`, every stylistic corner square; a brand sets `1` on `:root` in its `theme.css` for the designed rounding. Geometric shapes (`--radius-full`, `50%`) never follow it. Never hardcode a radius.
 
 ## Components
 

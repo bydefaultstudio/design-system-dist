@@ -117,6 +117,13 @@ const BRANDS_DIR = CONFIG.brandsDir ? path.resolve(ROOT, CONFIG.brandsDir) : nul
 // Site-relative brands path for markdown-source links in brand doc pages
 const BRANDS_REL = BRANDS_DIR ? path.relative(ROOT, BRANDS_DIR).split(path.sep).join('/') : '';
 
+// Pages that opted out of the access gate (access-plan.md §12.4). Each emitter
+// adds its output URL as it writes a page whose frontmatter says exactly
+// access: "public"; writePublicPages() serialises the set at the end of a full
+// build. Only the literal string counts — a missing field, a typo or any other
+// value leaves the page gated (fail closed, §4.2).
+const publicPages = new Set();
+
 // Root-site manifest (config: brandManifest): the site's admin values — name,
 // description, footer, favicons, fonts — come from a brand.json when one is
 // configured. docs.config.js keys are the fallback for projects without one.
@@ -1697,15 +1704,16 @@ function buildPageChrome(footerText) {
 //
 // Matched on the class, not on attribute order: `<div data-theme="dark"
 // class="demo-preview">` is as valid as the other way round, and an
-// order-sensitive rewrite silently misses it.
-const SEARCH_IGNORED_BLOCKS = ['demo-preview', 'color-list'];
+// order-sensitive rewrite silently misses it. A swatch grid is a <ul>, so
+// the element is matched as well as the class.
+const SEARCH_IGNORED_BLOCKS = ['demo-preview', 'swatch-grid'];
 const SEARCH_IGNORE_RE = new RegExp(
-  `<div(?![^>]*data-pagefind-ignore)((?:\\s[^>]*)?\\sclass="[^"]*\\b(?:${SEARCH_IGNORED_BLOCKS.join('|')})\\b)`,
+  `<(div|ul)(?![^>]*data-pagefind-ignore)((?:\\s[^>]*)?\\sclass="[^"]*\\b(?:${SEARCH_IGNORED_BLOCKS.join('|')})\\b)`,
   'g'
 );
 
 function markSearchIgnoredBlocks(html) {
-  return html.replace(SEARCH_IGNORE_RE, '<div data-pagefind-ignore$1');
+  return html.replace(SEARCH_IGNORE_RE, '<$1 data-pagefind-ignore$2');
 }
 
 function tocAside(tableOfContents) {
@@ -2115,6 +2123,13 @@ function generatePageNav(file, pageOrder) {
    * @param {object} target    - the page being linked to
    * @param {string} label     - visible eyebrow ("Previous" / "Next")
    * @param {string} arrow     - rendered arrow icon
+   *
+   * On a public page, a link to a page the gate keeps closed gets
+   * data-gated and a lock icon, hidden until nav.js marks the link
+   * .is-locked for a signed-out reader. Only public pages: nobody signed out
+   * ever sees any other. The test is each page's own access field, the same
+   * one that writes worker/public-pages.mjs, so a link never looks open and
+   * then bounces to the login screen.
    */
   function renderLink(direction, target, label, arrow) {
     // Truthiness matters as well as inequality: a page with no `section` in
@@ -2123,8 +2138,9 @@ function generatePageNav(file, pageOrder) {
     const sectionLabel = target.section && target.section !== file.section
       ? `<span class="page-nav-section">${target.section}</span>`
       : '';
-    return `<a href="${relativeHref(target)}" class="page-nav-link" data-direction="${direction}" rel="${direction}">
-      ${arrow}
+    const gated = file.ownAccess === 'public' && target.ownAccess !== 'public';
+    return `<a href="${relativeHref(target)}" class="page-nav-link" data-direction="${direction}" rel="${direction}"${gated ? ' data-gated' : ''}>
+      ${arrow}${gated ? lock : ''}
       <span class="page-nav-text">
         <span class="page-nav-label">${label}</span>
         ${sectionLabel}
@@ -2135,6 +2151,7 @@ function generatePageNav(file, pageOrder) {
 
   const arrowLeft = `<div class="svg-icn page-nav-arrow">${getRawIcon('chevron-left-large')}</div>`;
   const arrowRight = `<div class="svg-icn page-nav-arrow">${getRawIcon('chevron-right-large')}</div>`;
+  const lock = `<div class="svg-icn page-nav-lock" data-icon="lock" aria-hidden="true">${getRawIcon('lock')}</div>`;
 
   // No placeholder for a missing neighbour: grid-column pins each link to its
   // own half, so the surviving link keeps its side on its own.
@@ -2312,6 +2329,16 @@ for (const [slug, moduleName] of Object.entries(COMPONENT_MODULES.moduleAliases 
   }
 }
 
+// A dependency the package does not ship would be a <script> tag that 404s
+// on the page that tells a product what to include. Fail loudly here too.
+for (const [slug, deps] of Object.entries(COMPONENT_MODULES.moduleDependencies || {})) {
+  for (const dep of deps) {
+    if (!COMPONENT_MODULES.modules.includes(dep)) {
+      throw new Error(`component-modules.json: moduleDependencies "${slug}" → "${dep}" is not in modules[]`);
+    }
+  }
+}
+
 // The React adapter names are advertised as importable on each component
 // page, so an entry naming an export the package does not have would ship a
 // copy-pasteable import that throws. Check against react/index.mjs.
@@ -2356,11 +2383,17 @@ function buildComponentUsage(file) {
       ? `This component ships no CSS — it is behaviour only.`
       : `This component's styles ship in \`design-system.css\`.`;
 
+  // A component whose behaviour leans on another module (Swatch's copy
+  // actions are copy-button.js) lists that one first, so the include block a
+  // product copies is complete.
+  const deps = (COMPONENT_MODULES.moduleDependencies || {})[slug] || [];
+  const scripts = deps.concat(moduleName);
+  const shipsAs = scripts.map((name) => `\`dist/js/${name}\``).join(' and ');
   const jsPart = hasJs
-    ? `${stylesPart} Its behaviour ships as \`dist/js/${moduleName}\` — copy it into the product's served assets and include it once per page:
+    ? `${stylesPart} Its behaviour ships as ${shipsAs} — copy ${scripts.length > 1 ? 'them' : 'it'} into the product's served assets and include ${scripts.length > 1 ? 'each' : 'it'} once per page:
 
 \`\`\`html
-<script src="assets/js/${moduleName}" defer></script>
+${scripts.map((name) => `<script src="assets/js/${name}" defer></script>`).join('\n')}
 \`\`\``
     : `${stylesPart} No JavaScript, nothing else to include.`;
 
@@ -2567,6 +2600,7 @@ function generateNavJs(filesBySection) {
   var ICON_CLOCK = '${esc(getRawIcon('clock'))}';
   var ICON_RETURN = '${esc(getRawIcon('return-arrow'))}';
   var ICON_LOGOUT = '${esc(getRawIcon('logout'))}';
+  var ICON_LOCK = '${esc(getRawIcon('lock'))}';
 
   // ── Build site header HTML ──
   var headerStart = '<div class="site-header-start">';
@@ -2768,9 +2802,15 @@ function generateNavJs(filesBySection) {
       + '</button>'
       + '</div>'
       + '<div class="site-sidebar-content">'
+      // Shown only while the sidebar is locked (body.is-signed-out), and only
+      // where labels show — the expanded sidebar and the mobile drawer. Every
+      // locked item points at it with aria-describedby, which reads hidden
+      // text too, so the reason reaches a screen reader on the rail as well.
+      + '<p class="sidebar-lock-note" id="sidebar-lock-note">Log in to access the rest of the system.</p>'
       + '<a href="${siteHref('/index.html')}" class="sidebar-nav-link sidebar-nav-home" data-access="team" aria-label="Home" data-tooltip="Home" data-tooltip-position="right">'
       + '<div class="svg-icn">' + ICON_HOME + '</div>'
       + '<span>Home</span>'
+      + '<div class="svg-icn sidebar-nav-lock" data-icon="lock" aria-hidden="true">' + ICON_LOCK + '</div>'
       + '</a>'
       + \`${esc(navSectionsHtml)}\`
       + '</div>'
@@ -2828,6 +2868,9 @@ function generateNavJs(filesBySection) {
         if (currentNorm === resolvedNorm) {
           link.classList.add('sidebar-nav-link-active');
           link.setAttribute('aria-current', 'page');
+          // A locked sidebar keeps every section shut; applySessionLock
+          // re-runs this on unlock, which opens them then.
+          if (document.body.classList.contains('is-signed-out')) continue;
           // Open parent details section and subsection dropdown
           var parentDetails = link.closest('.sidebar-nav-section');
           if (parentDetails) {
@@ -2856,19 +2899,38 @@ function generateNavJs(filesBySection) {
   if (hasSidebar) {
     var sidebarToggle = mount.querySelector('.site-sidebar-toggle');
 
-    // Restore saved state (respect page-level default when no user preference saved)
-    var savedCollapsed = localStorage.getItem(SIDEBAR_KEY);
-    var defaultCollapsed = mount.getAttribute('data-sidebar-default') === 'collapsed';
-    if (savedCollapsed === 'true' || (savedCollapsed === null && defaultCollapsed)) {
-      document.body.classList.add('sidebar-collapsed');
-      if (sidebarToggle) sidebarToggle.setAttribute('aria-label', 'Expand sidebar');
+    function syncToggleLabel() {
+      if (!sidebarToggle) return;
+      var isCollapsed = document.body.classList.contains('sidebar-collapsed');
+      sidebarToggle.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
     }
+
+    // The reader's own state: their saved choice, else the page's default.
+    // Also what an unlock returns to, since a locked sidebar starts
+    // collapsed without that ever being saved.
+    function restoreCollapsed() {
+      var savedCollapsed = null;
+      try { savedCollapsed = localStorage.getItem(SIDEBAR_KEY); } catch (e) { /* storage unavailable */ }
+      var defaultCollapsed = mount.getAttribute('data-sidebar-default') === 'collapsed';
+      var collapsed = savedCollapsed === 'true' || (savedCollapsed === null && defaultCollapsed);
+      // Additive on first load: the pre-paint script may already have
+      // collapsed a locked page, and that must stand.
+      if (collapsed) document.body.classList.add('sidebar-collapsed');
+      else if (!document.body.classList.contains('is-signed-out')) document.body.classList.remove('sidebar-collapsed');
+      syncToggleLabel();
+    }
+
+    restoreCollapsed();
 
     if (sidebarToggle) {
       sidebarToggle.addEventListener('click', function() {
-        var isCollapsed = document.body.classList.toggle('sidebar-collapsed');
-        localStorage.setItem(SIDEBAR_KEY, isCollapsed);
-        this.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+        document.body.classList.toggle('sidebar-collapsed');
+        // A locked reader may expand and collapse, but that is not a
+        // preference worth keeping: it would outlive the lock.
+        if (!document.body.classList.contains('is-signed-out')) {
+          try { localStorage.setItem(SIDEBAR_KEY, document.body.classList.contains('sidebar-collapsed')); } catch (e) { /* state still applies for this page */ }
+        }
+        syncToggleLabel();
       });
     }
 
@@ -2890,6 +2952,149 @@ function generateNavJs(filesBySection) {
     if (sidebarEl) {
       sidebarEl.addEventListener('mouseover', rearmSidebarTooltips);
       sidebarEl.addEventListener('focusin', rearmSidebarTooltips);
+    }
+
+    // ── Session lock ──
+    // A signed-out reader (only ever on a public page — the gate turns them
+    // away from the rest) gets the sidebar locked: every section shut, every
+    // link and toggle aria-disabled and described by the lock note, the
+    // rail's tooltips keeping the item's name and adding LOCK_TOOLTIP.
+    // Presentation only. The gate is the control, the links keep
+    // their hrefs, and data-access is never read (access-plan.md §4.9).
+    // header-account.js owns the page's one session check and publishes it
+    // as window.bdSession and the bd:session event; the template's pre-paint
+    // script has already set body.is-signed-out from the last answer, so the
+    // rail is in place before this runs. Declared in this block because it
+    // needs restoreCollapsed and syncToggleLabel, which are block-scoped.
+    var LOCK_TOOLTIP = 'Log in to access';
+    var LOCK_NOTE_ID = 'sidebar-lock-note';
+    var LOCKABLE = 'a[href], summary';
+
+    // The reason, for assistive tech: the name stays exactly the visible
+    // label, aria-disabled says unavailable, and this says why.
+    function describeLock(el, locked) {
+      if (locked) el.setAttribute('aria-describedby', LOCK_NOTE_ID);
+      else if (el.getAttribute('aria-describedby') === LOCK_NOTE_ID) el.removeAttribute('aria-describedby');
+    }
+
+    function lockItem(item, locked) {
+      if (locked) item.setAttribute('aria-disabled', 'true');
+      else item.removeAttribute('aria-disabled');
+      // The section icon is a link inside its own section's <summary>: two
+      // stops with one name, and locked neither does anything. The summary
+      // stays the one stop.
+      if (item.classList.contains('sidebar-nav-section-icon')) {
+        if (locked) item.setAttribute('tabindex', '-1');
+        else item.removeAttribute('tabindex');
+      }
+      // The originals are parked on the element so an unlock can restore
+      // them exactly, and a second lock does not park the locked text.
+      if (item.hasAttribute('data-tooltip')) {
+        if (locked && !item.hasAttribute('data-tooltip-default')) {
+          item.setAttribute('data-tooltip-default', item.getAttribute('data-tooltip'));
+          item.setAttribute('data-tooltip', item.getAttribute('data-tooltip') + ' \u00b7 ' + LOCK_TOOLTIP);
+        } else if (!locked && item.hasAttribute('data-tooltip-default')) {
+          item.setAttribute('data-tooltip', item.getAttribute('data-tooltip-default'));
+          item.removeAttribute('data-tooltip-default');
+        }
+      }
+      describeLock(item, locked);
+    }
+
+    // The pager sits inside the Barba container, so it is re-marked on every
+    // swap (bd:after-nav) as well as here. data-gated is the generator's
+    // record that the target is not public; .is-locked is the component's
+    // own state (design-system.css §38).
+    function lockPager(locked) {
+      var links = document.querySelectorAll('.page-nav-link[data-gated]');
+      for (var pl = 0; pl < links.length; pl++) {
+        links[pl].classList.toggle('is-locked', locked);
+        if (locked) links[pl].setAttribute('aria-disabled', 'true');
+        else links[pl].removeAttribute('aria-disabled');
+        describeLock(links[pl], locked);
+      }
+    }
+
+    function applySessionLock(locked) {
+      var body = document.body;
+      var wasLocked = body.classList.contains('is-signed-out');
+      body.classList.toggle('is-signed-out', locked);
+
+      var items = sidebarEl.querySelectorAll(LOCKABLE);
+      for (var li = 0; li < items.length; li++) lockItem(items[li], locked);
+      lockPager(locked);
+
+      if (locked) {
+        var open = sidebarEl.querySelectorAll('details[open]');
+        for (var od = 0; od < open.length; od++) {
+          // A late lock can shut the section holding focus; hand focus to
+          // its toggle rather than let it fall to <body>.
+          if (open[od].contains(document.activeElement)) {
+            var openToggle = open[od].querySelector(':scope > summary');
+            if (openToggle) openToggle.focus();
+          }
+          open[od].open = false;
+        }
+        // A lock that lands after paint (the hint said signed in, the
+        // session did not) starts collapsed like one that painted locked.
+        if (!wasLocked) {
+          body.classList.add('sidebar-collapsed');
+          syncToggleLabel();
+        }
+      } else if (wasLocked) {
+        restoreCollapsed();
+        if (window.refreshNavActive) window.refreshNavActive();
+      }
+    }
+
+    // Stops the native follow and the <details> toggle. The router is
+    // stopped by its own prevent rule (shouldPrevent in barba-init.js), not
+    // here: stopPropagation would also hide the click from document-level
+    // listeners like dropdown.js's outside-click close. auxclick covers
+    // middle-click; Enter on a link and Enter or Space on a summary arrive
+    // as click.
+    //
+    // Only once the session is confirmed signed out. A page painted locked
+    // from a missing hint whose check then fails (rate limit, outage,
+    // offline) keeps the look but not the block: a signed-in reader there
+    // still gets through, and a signed-out one meets the gate, which is the
+    // control anyway. [data-gated] rather than .is-locked for the pager,
+    // which is marked only after a Barba swap has made it clickable.
+    function guardLockedClick(e) {
+      if (!document.body.classList.contains('is-signed-out') || !e.target.closest) return;
+      if (!window.bdSession || window.bdSession.signedIn !== false) return;
+      var item = e.target.closest(LOCKABLE);
+      if (!item) return;
+      if (!sidebarEl.contains(item) && !item.matches('.page-nav-link[data-gated]')) return;
+      e.preventDefault();
+    }
+
+    // Find-in-page and similar can open a <details> without a click.
+    // toggle does not bubble, hence capture. Only <details>: the sidebar is
+    // itself a <dialog>, which fires toggle as the mobile drawer opens.
+    function keepLockedSectionsShut(e) {
+      // Confirmed signed out only, for the reason guardLockedClick gives.
+      if (!document.body.classList.contains('is-signed-out')) return;
+      if (!window.bdSession || window.bdSession.signedIn !== false) return;
+      if (e.target.tagName === 'DETAILS' && e.target.open) e.target.open = false;
+    }
+
+    function onSessionChange(e) {
+      applySessionLock(!(e.detail && e.detail.signedIn));
+    }
+
+    function relockPager() {
+      lockPager(document.body.classList.contains('is-signed-out'));
+    }
+
+    if (sidebarEl) {
+      window.addEventListener('click', guardLockedClick, true);
+      window.addEventListener('auxclick', guardLockedClick, true);
+      sidebarEl.addEventListener('toggle', keepLockedSectionsShut, true);
+      document.addEventListener('bd:session', onSessionChange);
+      document.addEventListener('bd:after-nav', relockPager);
+      var knownSession = window.bdSession;
+      applySessionLock(knownSession ? !knownSession.signedIn : document.body.classList.contains('is-signed-out'));
     }
   }
 
@@ -2919,8 +3124,66 @@ function generateNavJs(filesBySection) {
       }
     }
 
+    // Closing a pinned (sticky) toggle would drop it back to its place in
+    // the flow, above the visible area, with keyboard focus on it. Close it
+    // here instead and scroll the list by the distance it was pinned, so the
+    // toggle stays exactly where it was on screen. On click rather than
+    // \`toggle\`: toggle does not bubble and fires a task later, after the
+    // jump has painted. Enter and Space on a summary fire click too.
+    function keepClosedSummaryInView(e) {
+      if (e.defaultPrevented || !e.target.closest) return;
+      var summary = e.target.closest('.sidebar-nav-section-toggle, .sidebar-nav-subsection-toggle');
+      if (!summary) return;
+      var details = summary.parentElement;
+      var scroller = summary.closest('.site-sidebar-content');
+      if (!details || !details.open || !scroller) return;
+      var summaryTop = summary.getBoundingClientRect().top;
+      var pinnedBy = summaryTop - details.getBoundingClientRect().top;
+      if (pinnedBy < 1) return;
+      // A header mid-release sits partly above the edge; land it at the edge.
+      var overshoot = Math.min(0, summaryTop - scroller.getBoundingClientRect().top);
+      // Read before closing: the list collapsing clamps scrollTop, and
+      // subtracting from the clamped value would jump the wrong way.
+      var target = scroller.scrollTop - pinnedBy + overshoot;
+      e.preventDefault();
+      details.open = false;
+      scroller.scrollTop = target;
+    }
+
+    // Marks a toggle .is-pinned while sticky holds it away from its place in
+    // the flow, which is what draws its bottom rule (docs-site.css §1D) — a
+    // line only while links are passing under it. Measured rather than left
+    // to CSS scroll-state queries, which Safari and Firefox do not support.
+    // Capture listeners: neither scroll nor toggle bubbles. One frame per
+    // burst of events, and only open toggles are measured.
+    var pinnedFrame = 0;
+
+    function markPinnedToggles() {
+      pinnedFrame = 0;
+      var marked = sidebarClickRoot.querySelectorAll('.is-pinned');
+      for (var i = 0; i < marked.length; i++) {
+        if (!marked[i].parentElement.open) marked[i].classList.remove('is-pinned');
+      }
+      var toggles = sidebarClickRoot.querySelectorAll(
+        'details[open] > .sidebar-nav-section-toggle, details[open] > .sidebar-nav-subsection-toggle'
+      );
+      for (var j = 0; j < toggles.length; j++) {
+        var pinnedBy = toggles[j].getBoundingClientRect().top
+          - toggles[j].parentElement.getBoundingClientRect().top;
+        toggles[j].classList.toggle('is-pinned', pinnedBy >= 1);
+      }
+    }
+
+    function schedulePinnedCheck() {
+      if (!pinnedFrame) pinnedFrame = requestAnimationFrame(markPinnedToggles);
+    }
+
     if (sidebarClickRoot) {
       sidebarClickRoot.addEventListener('click', guardSummaryClick);
+      sidebarClickRoot.addEventListener('click', keepClosedSummaryInView);
+      sidebarClickRoot.addEventListener('scroll', schedulePinnedCheck, { capture: true, passive: true });
+      sidebarClickRoot.addEventListener('toggle', schedulePinnedCheck, true);
+      window.addEventListener('resize', schedulePinnedCheck, { passive: true });
     }
   }
 
@@ -3024,6 +3287,13 @@ function generateNavJs(filesBySection) {
 function buildNavSectionsHtml(filesBySection) {
   let html = '';
 
+  // Shown only while the sidebar is locked (body.is-signed-out, see
+  // applySessionLock in generateNavJs): before the chevron on a section, at
+  // the trailing edge of a root link. Hidden from the accessibility tree —
+  // aria-disabled carries the state and the lock note (aria-describedby)
+  // the reason.
+  const navLock = `<div class="svg-icn sidebar-nav-lock" data-icon="lock" aria-hidden="true">${getRawIcon('lock')}</div>`;
+
   // Shared chevron for section and subsection toggles
   const navChevron = `<span class="sidebar-nav-toggle-icon">
           <svg width="6" height="6" viewBox="0 0 6 6" fill="none" aria-hidden="true">
@@ -3063,7 +3333,7 @@ function buildNavSectionsHtml(filesBySection) {
     // gated in the emitted script rather than here.
     const engineOnly = link.requires === 'search' ? ' data-engine-only' : '';
     const rootIconHtml = link.icon ? `<div class="svg-icn">${getRawIcon(link.icon)}</div>` : '';
-    html += `<a href="${siteHref(link.href)}" class="sidebar-nav-link sidebar-nav-root-link" data-access="${escapeAttr(link.access || 'team')}"${engineOnly} aria-label="${escapeAttr(link.title)}" data-tooltip="${escapeAttr(link.title)}" data-tooltip-position="right">${rootIconHtml}<span>${escapeAttr(link.title)}</span></a>`;
+    html += `<a href="${siteHref(link.href)}" class="sidebar-nav-link sidebar-nav-root-link" data-access="${escapeAttr(link.access || 'team')}"${engineOnly} aria-label="${escapeAttr(link.title)}" data-tooltip="${escapeAttr(link.title)}" data-tooltip-position="right">${rootIconHtml}<span>${escapeAttr(link.title)}</span>${navLock}</a>`;
   }
 
   // Read ordering from _defaults.md (configurable per directory)
@@ -3106,7 +3376,7 @@ function buildNavSectionsHtml(filesBySection) {
     html += `<details class="sidebar-nav-section">
       <summary class="sidebar-nav-section-toggle" aria-label="${escapeAttr(sectionLabel)}" data-tooltip="${escapeAttr(sectionLabel)}" data-tooltip-position="right">
         ${iconHtml}<span>${sectionLabel}</span>
-        ${navChevron}
+        ${navLock}${navChevron}
       </summary>
       <ul class="sidebar-nav-list">`;
 
@@ -3380,6 +3650,39 @@ function writeThemeConfig(themes) {
   fs.mkdirSync(path.dirname(themeConfigPath), { recursive: true });
   fs.writeFileSync(themeConfigPath, js);
   console.log('📄 Generated: assets/js/theme-config.js');
+}
+
+/**
+ * worker/public-pages.mjs — the pages half of the access gate's public list
+ * (access-plan.md §5, §12.4). Serialised once, sorted, so two builds of the
+ * same tree are byte-identical. The Worker imports it (worker/gate.mjs) at
+ * build time, never runtime: the middleware serves static assets and must not
+ * parse frontmatter. Infrastructure routes — /assets/, /image/, the login —
+ * stay in gate.mjs's own static lists; this file holds pages and nothing else.
+ * A project with no worker/ directory has no gate to feed, so nothing is
+ * written there. Brand pages (cms/brands/**) never reach the set, whatever
+ * their frontmatter says: the gate opens pages of this deployment's own site,
+ * and a brand page that needs to be public is a decision for §11, not a flag.
+ */
+function writePublicPages() {
+  const workerDir = path.join(ROOT, 'worker');
+  if (!fs.existsSync(workerDir)) return;
+  const paths = [...publicPages].sort();
+  const banner = `/**
+ * public-pages.mjs — GENERATED by cms/generator/generate-docs.js, do not edit.
+ *
+ * Every page whose own frontmatter declares access: "public", quoted or not
+ * (access-plan.md §12.4), by output URL. _defaults.md cannot open a page. worker/gate.mjs imports it as the pages half of the
+ * public list; the infrastructure half is gate.mjs's own static lists. To open
+ * a page, set the field and re-run: cd cms/generator && npm run docgen.
+ * Anything else — a missing field, a typo, another value — leaves it gated.
+ */
+`;
+  const body = paths.length
+    ? `export const PUBLIC_PAGES = new Set([\n${paths.map(p => `  ${JSON.stringify(p)},`).join('\n')}\n]);\n`
+    : 'export const PUBLIC_PAGES = new Set();\n';
+  fs.writeFileSync(path.join(workerDir, 'public-pages.mjs'), banner + body);
+  console.log(`📄 Generated: worker/public-pages.mjs (${paths.length} public page${paths.length === 1 ? '' : 's'})`);
 }
 
 function copyBrandAssets(brandKey) {
@@ -3798,6 +4101,11 @@ function generateSourceDirPages(template, {
     fs.writeFileSync(path.join(dir, `${slug}.html`), html);
     console.log(`📄 Generated: ${folder}/${slug}.html`);
     generated.push(`${folder}/${slug}.html`);
+    // The examples are specimens of the page types, not pages anyone reads,
+    // so they cannot opt out of the gate whatever their frontmatter says.
+    if (frontmatter.access === 'public' && dirName !== 'examples') {
+      publicPages.add(`/${folder}/${slug}.html`);
+    }
   }
 
   if (closeErrors.length > 0) {
@@ -4168,9 +4476,9 @@ function generateBrandBook(template, themes) {
         { token: '--background-secondary' },
         { token: '--text-primary' },
         { token: '--text-secondary' },
-        { token: '--button-primary' },
-        { token: '--button-secondary' },
         { token: '--text-accent' },
+        { token: '--text-link' },
+        { token: '--border-primary' },
         { token: '--border-secondary' },
       ];
     }
@@ -4180,17 +4488,27 @@ function generateBrandBook(template, themes) {
     const colorColLeft = brandColorTokens.slice(0, half);
     const colorColRight = brandColorTokens.slice(half);
 
-    // Click the row → copies the var(--token) reference. Hover reveals the
-    // ::after copy icon defined in docs-site.css. Check icon swap on .is-copied.
-    const renderColorRow = (c) => `<button class="color-row copy-btn" type="button" style="background-color: var(${c.token});" data-copy="var(${c.token})" aria-label="Copy var(${c.token})">
-      <span class="color-row-name">var(${c.token})</span>
-    </button>`;
+    // Each colour is a strip swatch (cms/swatch.md): swatch.js reads the hex
+    // live from this brand's theme, picks the ink and names the actions;
+    // copy-button.js copies. The CSS action ships its own data-copy, the Hex
+    // action ships hidden until the hex is read.
+    const renderColorRow = (c) => `<li class="swatch" data-variant="strip" data-token="${c.token}" style="--swatch-fill: var(${c.token})">`
+      + `<div class="swatch-text"><p class="swatch-name">${c.token.replace(/^--/, '')}</p><p class="swatch-value"></p></div>`
+      + `<div class="swatch-actions">`
+      + `<button type="button" class="copy-btn swatch-copy" data-format="hex" hidden><span class="copy-btn-default">${getIcon('copy')}<span>Hex</span></span><span class="copy-btn-copied">${getIcon('check')}<span>Copied</span></span></button>`
+      + `<button type="button" class="copy-btn swatch-copy" data-format="css" data-copy="var(${c.token})"><span class="copy-btn-default">${getIcon('code')}<span>CSS</span></span><span class="copy-btn-copied">${getIcon('check')}<span>Copied</span></span></button>`
+      + `</div></li>`;
+    // An empty column (a brand with one colour) renders nothing, not an
+    // empty outlined box.
+    const renderColorList = (tokens) => tokens.length
+      ? `<ul class="swatch-grid border border-faded" role="list" data-pagefind-ignore>${tokens.map(renderColorRow).join('')}</ul>`
+      : '';
 
     contentHtml += `<section class="brand-book-section block gap-l">
       <h2>Colours</h2>
       <div class="grid cols-2 gap-l">
-        <div class="color-list border border-faded" data-pagefind-ignore>${colorColLeft.map(renderColorRow).join('')}</div>
-        <div class="color-list border border-faded" data-pagefind-ignore>${colorColRight.map(renderColorRow).join('')}</div>
+        ${renderColorList(colorColLeft)}
+        ${renderColorList(colorColRight)}
       </div>
     </section>`;
 
@@ -4214,8 +4532,8 @@ function generateBrandBook(template, themes) {
     contentHtml += `<section class="brand-book-section block gap-l">
       <h2>Backgrounds</h2>
       <div class="grid cols-2 gap-l">
-        <div class="color-list border border-faded" data-pagefind-ignore>${bgColLeft.map(renderColorRow).join('')}</div>
-        <div class="color-list border border-faded" data-pagefind-ignore>${bgColRight.map(renderColorRow).join('')}</div>
+        ${renderColorList(bgColLeft)}
+        ${renderColorList(bgColRight)}
       </div>
     </section>`;
 
@@ -4576,8 +4894,9 @@ function applyTemplateChrome(rawTemplate) {
   // kit-bundled pair copied into the output
   let uiScripts = CONFIG.uiScripts;
   if (uiScripts === null) {
-    uiScripts = ['assets/docs-kit/copy-button.js', 'assets/docs-kit/docs-copy-chrome.js', 'assets/docs-kit/dropdown.js'];
+    uiScripts = ['assets/docs-kit/copy-button.js', 'assets/docs-kit/swatch.js', 'assets/docs-kit/docs-copy-chrome.js', 'assets/docs-kit/dropdown.js'];
     copyKitAsset('js/copy-button.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'copy-button.js'));
+    copyKitAsset('js/swatch.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'swatch.js'));
     copyKitAsset('js/docs-copy-chrome.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'docs-copy-chrome.js'));
     copyKitAsset('js/dropdown.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'dropdown.js'));
   }
@@ -4834,6 +5153,10 @@ async function generateDocs() {
       htmlName,
       markdownPath,
       frontmatter,
+      // The page's own access value, before _defaults.md is merged in. Only a
+      // page's own field may open it (access-plan.md §12.4): a default of
+      // "public" would otherwise open every page that says nothing.
+      ownAccess: parsed.frontmatter.access,
       content: markdownContent
     };
 
@@ -4963,6 +5286,7 @@ async function generateDocs() {
     const outputPath = path.join(OUTPUT_DIR, file.htmlPath);
     fs.writeFileSync(outputPath, pageContent);
     console.log(`📄 Generated: ${file.htmlPath}`);
+    if (file.ownAccess === 'public') publicPages.add('/' + file.htmlPath);
   }
 
   // Section index pages — only during full build
@@ -5016,6 +5340,10 @@ async function generateDocs() {
     generateBrandIndexPages(template, themes);
     writeThemeConfig(themes);
   }
+
+  // After every emitter has run. Never on a single-file build: a partial set
+  // written here would gate every page the filter left out.
+  if (!isSingleFile) writePublicPages();
 
   if (isSingleFile) {
     console.log(`✅ Done — regenerated ${filesToWrite.length} page(s) + nav.js`);

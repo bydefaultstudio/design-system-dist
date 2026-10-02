@@ -120,6 +120,14 @@
     var el = opts && opts.el;
     if (el) {
       if (el.hasAttribute && el.hasAttribute('data-barba-prevent')) return true;
+      // A locked link (see nav.js applySessionLock) neither navigates nor
+      // prefetches once the session is confirmed signed out. nav.js stops the
+      // native follow; this stops the router, which does not look at
+      // defaultPrevented. [data-gated], not .is-locked: the pager is marked
+      // on bd:after-nav, after the new container is already clickable.
+      if (el.closest && document.body.classList.contains('is-signed-out')
+          && window.bdSession && window.bdSession.signedIn === false
+          && el.closest('.site-sidebar, .page-nav-link[data-gated]')) return true;
       if (el.hasAttribute && el.hasAttribute('download')) return true;
       if (el.target === '_blank') return true;
 
@@ -219,6 +227,12 @@
     } else {
       mount.removeAttribute('data-sidebar-default');
     }
+
+    // A locked sidebar (signed out, see nav.js applySessionLock) keeps the
+    // state it has: it painted collapsed, and anything since is the reader's
+    // own toggling. This hook also runs on the first load, so without the
+    // guard it would open the rail a signed-out reader is meant to start on.
+    if (document.body.classList.contains('is-signed-out')) return;
 
     var saved = null;
     try {

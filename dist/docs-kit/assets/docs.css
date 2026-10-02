@@ -144,13 +144,6 @@
  * button and the auto-generated icon table columns.
  */
 
-/* -- Colour palette copy button -- */
-.color-copy-btn .copy-btn-default { display: inline-flex; align-items: center; gap: var(--space-s); }
-.color-copy-btn .copy-btn-copied  { display: none; }
-
-.color-copy-btn.is-copied .copy-btn-default { display: none; }
-.color-copy-btn.is-copied .copy-btn-copied  { display: inline-flex; align-items: center; gap: var(--space-s); }
-
 /* -- Icon table: auto-generated Copy + Download columns -- */
 .icon-table td:first-child {
   text-align: center;
@@ -168,10 +161,9 @@
  * becomes one click away from the clipboard. Adds an inline swatch for hex values.
  */
 
-/* Both of these have little or no padding, so the design system's inset
-   focus ring would be drawn through their own text. Push it outside. */
-.token-copy:focus-visible,
-.color-copy-btn:focus-visible {
+/* It has little or no padding, so the design system's inset focus ring
+   would be drawn through its own text. Push it outside. */
+.token-copy:focus-visible {
   outline-offset: 2px;
 }
 
@@ -299,7 +291,7 @@
 
   color: var(--text-secondary);
   background-color: var(--bg-faded-5);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-detail);
 
   transition:
     background-color var(--duration-xs) var(--ease-out),
@@ -337,16 +329,6 @@
  * letter-grouped book-contents lists of details rows (design-system.css §37).
  * Structure is authored in cms/glossary.md; behaviour is assets/js/glossary.js.
  */
-
-/* A lookup box rather than a form control in a column of controls, so it
-   reads a step up from body size. Everything else comes from the design
-   system's input[type="search"] rules — and the element selector is what
-   makes this win: those rules are input[type="search"] at (0,1,1), so a bare
-   .glossary-search at (0,1,0) loses on specificity and the size never lands.
-   input.glossary-search ties at (0,1,1) and wins on source order. */
-input.glossary-search {
-  font-size: var(--font-l);
-}
 
 /* Jumping to a letter has to clear the header, any docked bar, AND the sticky
    rail itself. --scroll-offset covers the first two plus breathing room; the
@@ -739,145 +721,8 @@ hr {
 }
 
 
-/* ------ COLOR PALETTE (STYLEGUIDE) ------ */
-
-.color-list {
-  overflow: hidden;
-}
-
-.color-row {
-  display: flex;
-  align-items: center;
-  padding: var(--space-xl) var(--space-xl);
-  font-size: var(--font-m);
-  font-weight: var(--font-weight-medium);
-  cursor: default;
-  position: relative;
-  height: 80px;
-}
-
-.color-row-name {
-  pointer-events: none;
-}
-
-.color-row.is-text-dark .color-row-name,
-.color-row.is-text-dark .color-copy-btn {
-  color: var(--black);
-}
-
-.color-row.is-text-light .color-row-name,
-.color-row.is-text-light .color-copy-btn {
-  color: var(--white);
-}
-
-/* The two above hardcode black and white, which is right for a primitive
-   swatch — a primitive does not flip with the theme. A row painted in a
-   *semantic* token does, so a fixed label colour inverts with it and vanishes.
-   This one tracks the theme instead: on a row whose background is the text
-   colour, the label takes the background colour. */
-.color-row.is-inverted .color-row-name,
-.color-row.is-inverted .color-copy-btn {
-  color: var(--text-inverted);
-}
-
-/* Hidden with opacity, not display.
- *
- * `display: none` was the original, paired with a `:focus-within` rule that
- * could never fire: a display:none child is not focusable, so focus can never
- * land inside the row to reveal it. That made the Hex and CSS buttons on every
- * colour row pointer-only — WCAG 2.1.1 Keyboard, Level A. Opacity keeps them
- * in the layout and in the tab order, so tabbing into the row reveals them the
- * same way hovering does. */
-.color-row-actions {
-  display: flex;
-  gap: var(--space-s);
-  margin-left: auto;
-  opacity: 0;
-  transition: opacity var(--duration-2xs) var(--ease-out);
-}
-
-.color-row:hover .color-row-actions,
-.color-row:focus-within .color-row-actions {
-  opacity: 1;
-}
-
-/* Focus has to be visible before the reveal transition has run, or the first
-   Tab into a row shows a ring on something still fading in. */
-.color-copy-btn:focus-visible {
-  opacity: 1;
-}
-
-.color-copy-btn {
-  color: inherit;
-  background: none;
-  border: none;
-  font-size: var(--font-xs);
-  font-weight: var(--font-weight-semi-bold);
-  cursor: pointer;
-  padding: var(--space-2xs) var(--space-s);
-
-}
-
-.color-copy-btn:hover {
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 2.5px;
-}
-
-/* -- Button-flavoured color row (used in the brand book) --
- * The whole row is the copy target. Hover reveals an ::after copy icon
- * (CSS mask of the copy SVG); on .is-copied the icon swaps to a check.
- * Inline background-color always wins over the .copy-btn.is-copied reset. */
-button.color-row {
-  width: 100%;
-  border: none;
-  text-align: left;
-  font-family: var(--font-quaternary);
-  font-size: var(--font-s);
-  cursor: pointer;
-  justify-content: space-between;
-  transition: filter 0.15s;
-}
-
-button.color-row:hover {
-  filter: brightness(0.96);
-}
-
-button.color-row::after {
-  content: "";
-  display: inline-block;
-  flex-shrink: 0;
-  width: 1.25rem;
-  height: 1.25rem;
-  background-color: currentColor;
-  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z' fill='black'/></svg>");
-          mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z' fill='black'/></svg>");
-  -webkit-mask-repeat: no-repeat;
-          mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-          mask-position: center;
-  -webkit-mask-size: contain;
-          mask-size: contain;
-  opacity: 0.6;
-  transition: opacity 0.15s;
-}
-
-button.color-row:hover::after,
-button.color-row:focus-visible::after {
-  opacity: 1;
-}
-
-button.color-row.is-copied::after {
-  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z' fill='black'/></svg>");
-          mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z' fill='black'/></svg>");
-  opacity: 1;
-}
-
-/* Don't let .copy-btn.is-copied global reset bleed into our coloured row */
-button.color-row.is-copied {
-  color: inherit;
-  border-color: inherit;
-}
+/* The colour rows that lived here are the core Swatch component now
+   (design-system.css §53, cms/swatch.md). */
 
 
 /* NOTE: .table moved to design-system.css §25 — see CLAUDE.md §17 (Layer Discipline) */
@@ -1155,6 +1000,20 @@ body.no-sidebar .docs-layout {
   overflow-x: hidden;
   color: var(--text-sidebar);
   flex-direction: column;
+
+  /* Sticky nav headers (§1D) read these. Heights are derived from the same
+     tokens the toggles are built from, never measured, so they cannot drift
+     from the padding they describe. The surface is what the panel actually
+     paints: the drawer's colour below 769px (--background-secondary in dark
+     mode, not the page background), re-pointed to --background-sidebar by the desktop reset. */
+  --sidebar-nav-icon-size: 1.5rem;
+  --sidebar-nav-lock-size: 1rem;
+  --sidebar-nav-locked-color: var(--text-faded);
+  --sidebar-nav-row-height: calc(2 * var(--space-l) + var(--font-m) * var(--line-height-l));
+  --sidebar-nav-section-toggle-pad: var(--space-l);
+  --sidebar-nav-section-toggle-height: calc(2 * var(--sidebar-nav-section-toggle-pad) + var(--sidebar-nav-icon-size));
+  --sidebar-nav-list-pad: var(--space-m);
+  --sidebar-surface: var(--drawer-background);
 }
 
 /* Desktop mode — see the section note. Every declaration here exists to undo
@@ -1178,7 +1037,8 @@ body.no-sidebar .docs-layout {
     gap: 0;
     opacity: 1;
     translate: none;
-    background: var(--background-sidebar);
+    --sidebar-surface: var(--background-sidebar);
+    background: var(--sidebar-surface);
     border-right: var(--border-s) solid var(--border-faded);
     border-radius: 0;
     box-shadow: none;
@@ -1252,17 +1112,29 @@ body.sidebar-collapsed .sidebar-icon-close { display: block; }
 /* The collapsed width comes from the grid track narrowing (.docs-layout above),
    not from a width here — a width declaration at this specificity loses to the
    desktop reset's `inline-size: auto`. Padding is handled in that same block
-   for the same reason. */
-body.sidebar-collapsed .site-sidebar {
-  overflow: visible;
+   for the same reason.
+
+   The two overflow rules are desktop only. sidebar-collapsed persists in
+   localStorage whatever the viewport, and unscoped they reached the mobile
+   drawer too: neither the dialog nor its content could scroll, so the menu
+   was cut off at the bottom of the screen for anyone who had once collapsed
+   the rail — and the sticky nav headers (§1D) had no scroller to pin to. */
+@media (min-width: 769px) {
+  body.sidebar-collapsed .site-sidebar {
+    overflow: visible;
+  }
+
+  body.sidebar-collapsed .site-sidebar-content {
+    overflow: visible;
+  }
 }
 
-body.sidebar-collapsed .site-sidebar-header {
-  justify-content: center;
-}
-
-body.sidebar-collapsed .site-sidebar-content {
-  overflow: visible;
+/* Desktop only: in the mobile drawer the close button keeps its place, and a
+   locked sidebar (body.is-signed-out) reaches the drawer collapsed. */
+@media (min-width: 769px) {
+  body.sidebar-collapsed .site-sidebar-header {
+    justify-content: center;
+  }
 }
 
 /* Collapsed: hide text, lists, toggle chevrons, labels */
@@ -1283,9 +1155,20 @@ body.sidebar-collapsed .sidebar-nav-home {
   gap: 0;
 }
 
-/* Collapsed: remove open section background */
+/* Collapsed: remove open section background. Clearing the tint variable, not
+   only the background, keeps the section's own toggle (which paints the tint
+   as a layer, §1D) from showing it on the rail. */
 body.sidebar-collapsed .sidebar-nav-section[open] {
-  background: none;
+  --sidebar-section-tint: transparent;
+}
+
+/* Collapsed rail: the list is hidden, so the sticky release padding (§1D)
+   would only grow the row. Desktop only — the class persists in the mobile
+   drawer, where the list is shown and the padding is needed. */
+@media (min-width: 769px) {
+  body.sidebar-collapsed .sidebar-nav-section[open] {
+    padding-bottom: 0;
+  }
 }
 
 /* Sidebar tooltips: only visible when collapsed. Esc dismisses them
@@ -1322,14 +1205,59 @@ body.sidebar-collapsed .site-sidebar .sidebar-nav-section-toggle[data-tooltip]::
 }
 
 
-/* ------ 1D. NAV SECTIONS & LINKS ------ */
+/* ------ 1D. NAV SECTIONS & LINKS ------
+ * Sticky headers. An open section's toggle pins to the top of the sidebar's
+ * scroll area and an open subsection's toggle pins beneath it, so whatever
+ * link is in view, its parents are too. No JS and no extra markup: each
+ * toggle is the <summary> of its own <details>, and sticky never leaves its
+ * containing block, so each header hands off to the next on its own.
+ *
+ * Four things hold this up, and each fails silently:
+ *
+ * 1. The scroller is .site-sidebar-content, in both modes. That is only true
+ *    because a flex parent caps its height (§1C, and §30's drawer). Remove
+ *    `flex: 1`, or put overflow: hidden on anything between it and a toggle
+ *    (the usual way to animate details::details-content), and nothing pins.
+ *    overflow: clip is safe.
+ *
+ * 2. Pinned toggles paint an opaque background: the section tint layered
+ *    over the panel's own surface. The tint is a variable so the section fill
+ *    and its pinned header cannot drift, and the surface is a variable
+ *    because the drawer is not the desktop sidebar's colour (§1C). A
+ *    color-mix with black would be right in light mode and wrong in dark,
+ *    where the tint is white. Gradient layers do not transition, so the hover
+ *    on a pinned toggle swaps instead of fading.
+ *
+ * 3. Release. Sticky stays inside the parent's content box, so padding on the
+ *    <details> plus the same negative margin on its list moves that box's
+ *    bottom up without moving anything on screen. Sized to the last row plus
+ *    the list's own bottom padding, the header lets go as the last row
+ *    reaches it and the two leave together, rather than the header sitting
+ *    over it. [open] only: a closed row has no list to cancel the padding.
+ *    The maths assume a one-line last link; one that wraps is covered by a
+ *    line until they leave together. Links are left to wrap — truncating
+ *    them would be worse.
+ *
+ * nav.js adds .is-pinned while a toggle is held away from its place, and
+ * that alone draws the bottom rule: an inset shadow, so it takes no space
+ * and the heights above stay exact.
+ *
+ * 4. No sidebar-collapsed gate. The class persists in localStorage on mobile,
+ *    where the drawer shows everything; on the desktop rail the list is
+ *    hidden, the <details> is as tall as its toggle, and sticky has nowhere
+ *    to go. Only the release padding needs switching off there (§1C).
+ */
 
 /* Desktop: Toggle styling */
 .sidebar-nav-section-toggle {
   display: flex;
   align-items: center;
   gap: var(--space-l);
-  padding: var(--space-l);
+  padding: var(--sidebar-nav-section-toggle-pad) var(--space-l);
+  /* Holds the height the subsection pin offset assumes, whatever the
+     padding or icon: a section without an icon, or the mobile drawer with a
+     leftover sidebar-collapsed class, would otherwise come up short. */
+  min-block-size: var(--sidebar-nav-section-toggle-height);
   margin-bottom: 0;
   color: var(--text-primary);
   font-family: var(--font-primary);
@@ -1365,9 +1293,23 @@ body.sidebar-collapsed .site-sidebar .sidebar-nav-section-toggle[data-tooltip]::
 
 /* Toggle + link shared icon sizing */
 .sidebar-nav-section-toggle .svg-icn {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: var(--sidebar-nav-icon-size);
+  height: var(--sidebar-nav-icon-size);
   flex-shrink: 0;
+}
+
+/* One line while it can pin. A section label that wraps in the 75vw drawer
+   would outgrow the height the subsection's pin offset is calculated from.
+   Subsection labels keep wrapping: a taller subsection row only overlaps
+   its own links a little, and truncating would hide text from readers on
+   large type (WCAG 1.4.4). Below 25em nothing pins, so labels wrap again. */
+@media not all and (max-height: 25em) {
+  .sidebar-nav-section-toggle > span:not(.sidebar-nav-toggle-icon) {
+    min-inline-size: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
 }
 
 /* Toggle icon styling */
@@ -1396,8 +1338,18 @@ body.sidebar-collapsed .site-sidebar .sidebar-nav-section-toggle[data-tooltip]::
   display: none;
 }
 
+/* Release padding and its cancelling margin (note 3 above). (0,2,0) and
+   higher on purpose: the mobile block's `.sidebar-nav-section { padding: 0 }`
+   is (0,1,0) and later in the file, and losing to it would leave the negative
+   margin pulling the next section up over this one. */
 .sidebar-nav-section[open] {
-  background: var(--bg-faded-3);
+  --sidebar-section-tint: var(--bg-faded-3);
+  background: var(--sidebar-section-tint);
+  padding-bottom: calc(var(--sidebar-nav-row-height) + var(--sidebar-nav-list-pad));
+}
+
+.sidebar-nav-section[open] > .sidebar-nav-list {
+  margin-bottom: calc(-1 * (var(--sidebar-nav-row-height) + var(--sidebar-nav-list-pad)));
 }
 
 body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
@@ -1408,7 +1360,7 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   list-style: none;
   /* breathing room lives on the container, not li:last-child — with nested
      subsection sublists, last-child would over-match and stagger the rhythm */
-  padding: 0 0 var(--space-m);
+  padding: 0 0 var(--sidebar-nav-list-pad);
   margin: 0;
 }
 
@@ -1443,8 +1395,8 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
 }
 
 .sidebar-nav-link .svg-icn {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: var(--sidebar-nav-icon-size);
+  height: var(--sidebar-nav-icon-size);
   flex-shrink: 0;
 }
 
@@ -1456,6 +1408,62 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
 
 .sidebar-nav-list .sidebar-nav-link {
   padding: var(--space-l) var(--space-l) var(--space-l) var(--space-4xl);
+}
+
+/* --- Locked sidebar (signed out on a public page) ---
+   nav.js sets body.is-signed-out and aria-disabled on every link and toggle
+   (applySessionLock); the template paints the class before first paint. The
+   lock sits before a section's chevron and at the trailing edge of a root
+   link, and takes the chevron's auto margin so the pair stays right-aligned.
+   No hover: a row that lights up reads as one that opens. */
+.sidebar-nav-lock {
+  display: none;
+}
+
+body.is-signed-out .site-sidebar .sidebar-nav-lock {
+  display: flex;
+  width: var(--sidebar-nav-lock-size);
+  height: var(--sidebar-nav-lock-size);
+  margin-left: auto;
+}
+
+body.is-signed-out .site-sidebar .sidebar-nav-lock + .sidebar-nav-toggle-icon {
+  margin-left: 0;
+}
+
+body.is-signed-out .site-sidebar [aria-disabled="true"],
+body.is-signed-out .site-sidebar [aria-disabled="true"]:hover {
+  color: var(--sidebar-nav-locked-color);
+  background: none;
+  cursor: not-allowed;
+}
+
+/* The reason, once, above the rows. Hidden rather than removed when the
+   sidebar is open to all: locked items reference it by id (aria-describedby),
+   which still reads hidden text. */
+.sidebar-lock-note {
+  display: none;
+  margin: 0;
+  padding: var(--space-m) var(--space-l);
+  /* Text to read, not a disabled control: it needs 4.5:1, so not the faded
+     colour the locked rows use. */
+  color: var(--text-secondary);
+  font-family: var(--font-primary);
+  font-size: var(--font-s);
+  line-height: var(--line-height-l);
+}
+
+body.is-signed-out .sidebar-lock-note {
+  display: block;
+}
+
+/* The rail shows icons only. Desktop only: the collapsed class persists in
+   the mobile drawer, where labels, locks and the note all show. */
+@media (min-width: 769px) {
+  body.is-signed-out.sidebar-collapsed .site-sidebar .sidebar-nav-lock,
+  body.is-signed-out.sidebar-collapsed .sidebar-lock-note {
+    display: none;
+  }
 }
 
 /* Subsection dropdowns — nested <details> inside a section's sidebar-nav-list.
@@ -1505,6 +1513,115 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+/* Subsection release (note 3). The sublist has no bottom padding, so the
+   last row alone. */
+.sidebar-nav-subsection[open] {
+  padding-bottom: var(--sidebar-nav-row-height);
+}
+
+.sidebar-nav-subsection[open] > .sidebar-nav-sublist {
+  margin-bottom: calc(-1 * var(--sidebar-nav-row-height));
+}
+
+/* -- Pinned toggles -- */
+.sidebar-nav-section[open] > .sidebar-nav-section-toggle,
+.sidebar-nav-subsection[open] > .sidebar-nav-subsection-toggle {
+  position: sticky;
+  background: linear-gradient(var(--sidebar-section-tint) 0 0), var(--sidebar-surface);
+}
+
+.sidebar-nav-section[open] > .sidebar-nav-section-toggle {
+  top: 0;
+  z-index: 2;
+}
+
+.sidebar-nav-subsection[open] > .sidebar-nav-subsection-toggle {
+  top: var(--sidebar-nav-section-toggle-height);
+  z-index: 1;
+}
+
+/* The rule under a pinned toggle, so links read as passing beneath it. */
+.sidebar-nav-section-toggle.is-pinned,
+.sidebar-nav-subsection-toggle.is-pinned {
+  box-shadow: inset 0 calc(-1 * var(--border-s)) 0 var(--border-faded);
+}
+
+/* Today's translucent hover, laid over the tint and the surface so it stays
+   opaque while links scroll underneath. */
+.sidebar-nav-section[open] > .sidebar-nav-section-toggle:hover,
+.sidebar-nav-subsection[open] > .sidebar-nav-subsection-toggle:hover {
+  background:
+    linear-gradient(var(--background-faded) 0 0),
+    linear-gradient(var(--sidebar-section-tint) 0 0),
+    var(--sidebar-surface);
+}
+
+/* -- Focus never lands under a pinned toggle (WCAG 2.4.11) --
+   The padding reserves both pinned rows, which over-reserves by one row
+   inside a section with no open subsection; harmless. Each toggle then takes
+   the same amount back as a negative scroll-margin, so a toggle's target is
+   its own pin position — without that, focusing a pinned toggle counts as
+   obscured by the padding and scrolls it away from where it sits. */
+.site-sidebar-content {
+  scroll-padding-top: calc(var(--sidebar-nav-section-toggle-height) + var(--sidebar-nav-row-height));
+}
+
+.sidebar-nav-section-toggle {
+  scroll-margin-top: calc(-1 * (var(--sidebar-nav-section-toggle-height) + var(--sidebar-nav-row-height)));
+}
+
+/* The icon sits one toggle-pad below its summary's top, so it takes that
+   back, or a focused icon would land flush and crop its row. */
+.sidebar-nav-section-icon {
+  scroll-margin-top: calc(var(--sidebar-nav-section-toggle-pad) - var(--sidebar-nav-section-toggle-height) - var(--sidebar-nav-row-height));
+}
+
+.sidebar-nav-subsection-toggle {
+  scroll-margin-top: calc(-1 * var(--sidebar-nav-row-height));
+}
+
+/* -- Short screens and zoom --
+   em, not px, so the thresholds follow the reader's font size. Pinned rows
+   should take no more than about a quarter of the scroll area: below 600px
+   only the section pins, below 400px (a phone on its side, 400% zoom)
+   nothing does. */
+@media (max-height: 37.5em) {
+  .sidebar-nav-subsection[open] > .sidebar-nav-subsection-toggle {
+    position: static;
+  }
+
+  .site-sidebar-content {
+    scroll-padding-top: var(--sidebar-nav-section-toggle-height);
+  }
+
+  .sidebar-nav-section-toggle {
+    scroll-margin-top: calc(-1 * var(--sidebar-nav-section-toggle-height));
+  }
+
+  .sidebar-nav-section-icon {
+    scroll-margin-top: calc(var(--sidebar-nav-section-toggle-pad) - var(--sidebar-nav-section-toggle-height));
+  }
+
+  .sidebar-nav-subsection-toggle {
+    scroll-margin-top: 0;
+  }
+}
+
+@media (max-height: 25em) {
+  .sidebar-nav-section[open] > .sidebar-nav-section-toggle {
+    position: static;
+  }
+
+  .site-sidebar-content {
+    scroll-padding-top: 0;
+  }
+
+  .sidebar-nav-section-toggle,
+  .sidebar-nav-section-icon {
+    scroll-margin-top: 0;
+  }
 }
 
 /* ------ 2. DOCS FOOTER ------
@@ -1731,10 +1848,37 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
    above — the rule was identical to the TOC's calc and is no longer repeated
    in two places. */
 
-/* -- Page header --
+/* -- Page header: scroll-under --
  *
- * Nothing here. `.page-header` is a core component (design-system.css §44) and
- * every page the generator writes now emits its documented anatomy —
+ * On a page with a content grid, the header docks under the site header and
+ * the bar and grid scroll up over it. Placement only — the component itself is
+ * core (design-system.css §44), and a docked header is this shell's choice,
+ * not the component's.
+ *
+ * Everything after the header is the cover — the grid and the pager below it
+ * both. A docked header is positioned, so it paints over any later sibling
+ * that is not; and at the foot of the page <main> pushes it up onto the pager.
+ * The grid is a centred 1080px column, so the cover draws its background
+ * full-bleed with a border-image outset: ink overflow, which adds no scrollbar
+ * and no layout. The sidebar (z-index 50) still stacks above the outset. The
+ * bar is left out — it is opaque, already sits above (--bar-z), and
+ * `position: relative` would undock it.
+ *
+ * Keyed on the grid rather than the page type: a `tool` body has no grid and
+ * lays itself out, so it has nothing to cover the header with and keeps the
+ * component's default flow. barba-init.js holdStickyElements pins the docked
+ * header through a page transition along with every other sticky element. */
+main > .page-header:has(~ .docs-content-grid) {
+  position: sticky;
+  top: var(--top-nav-height);
+}
+
+main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
+  position: relative;
+  border-image: linear-gradient(var(--background-primary) 0 0) fill 0 / / 0 100vw;
+}
+
+/* Every page the generator writes emits the component's documented anatomy —
  * `<header class="page-header" data-align="center">` with
  * `.page-header-container`, `.page-header-title`, `.page-header-subtitle` and
  * `.page-header-actions` — from one builder, `buildPageHeaderHtml`.
@@ -1748,8 +1892,9 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
  * match, and `data-align="center"` in the markup does what the centring rules
  * did.
  *
- * The docs site now owns no page-header rule at all — the mobile height went
- * with it, for the reasons in the note in the responsive section. */
+ * The scroll-under rules above are the docs site's only page-header rules —
+ * the mobile height went with the shim, for the reasons in the note in the
+ * responsive section. */
 
 /* -- Brand book section spacing -- */
 .brand-book-section {
@@ -1793,7 +1938,7 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   display: none;
   margin-bottom: var(--space-l);
   border: var(--border-s) solid var(--border-faded);
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-surface);
   padding: var(--space-s) var(--space-l);
   background-color: var(--background-primary);
 }
@@ -1909,7 +2054,7 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   max-height: 240px;
   overflow-y: auto;
   border: var(--border-s) solid var(--border-faded);
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-surface);
 }
 
 .demo-scroll-filler {
@@ -1926,7 +2071,7 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   max-width: 100%;
   height: 320px;
   border: var(--border-s) solid var(--border-faded);
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-surface);
 }
 
 /* Format preview — placeholder or template image shown at its intrinsic
@@ -2366,6 +2511,8 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   .site-sidebar {
     --drawer-size: 75vw;
     --drawer-padding: 0 0 var(--space-l);
+    --sidebar-nav-section-toggle-pad: var(--space-xl);
+    --sidebar-nav-list-pad: var(--space-s);
     z-index: 101;
   }
 
@@ -2404,8 +2551,10 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
     gap: var(--space-s);
   }
 
+  /* Re-points the tint rather than the background, so the pinned toggle
+     (§1D) follows the section. */
   body.sidebar-collapsed .sidebar-nav-section[open] {
-    background: var(--background-faded);
+    --sidebar-section-tint: var(--background-faded);
   }
 
   body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list,
@@ -2452,13 +2601,14 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   }
 
   .sidebar-nav-section:hover {
+    --sidebar-section-tint: transparent;
     background: none;
   }
 
-  /* Toggle takes full width */
+  /* Toggle takes full width. Its taller padding comes from
+     --sidebar-nav-section-toggle-pad above, which the pin offset reads too. */
   .sidebar-nav-section-toggle {
     width: 100%;
-    padding: var(--space-xl) var(--space-l);
   }
 
   /* Show/hide sidebar-nav-list based on details open state */
@@ -2469,7 +2619,6 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   .sidebar-nav-section[open] .sidebar-nav-list {
     display: block;
     margin-top: 0;
-    padding-bottom: var(--space-s);
   }
 
   /* Child links: full-width, no borders */
@@ -2482,7 +2631,7 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
     margin: 0;
   }
 
-  /* NOTE: the docs site has no page-header rule here any more, on mobile or
+  /* NOTE: the docs site has no mobile page-header rule here any more, or
    * anywhere else. It used to force `--section-l` padding and a `min-height:
    * 30vh` hero below 768px.
    *
@@ -2678,12 +2827,12 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
      --border-faded is right here: a frame is decoration, not a control
      boundary (design-system.css §2b), so it carries no contrast duty. */
   --wireframe-border: var(--border-s) solid var(--border-faded);
-  --wireframe-radius: var(--radius-s);
+  --wireframe-radius: var(--radius-surface);
   --wireframe-padding: var(--space-s);
   --wireframe-gap: var(--space-s);
 
   /* -- A region -- */
-  --wireframe-region-radius: var(--radius-xs);
+  --wireframe-region-radius: var(--radius-detail);
   --wireframe-region-padding: var(--space-s) var(--space-m);
   --wireframe-region-font: var(--font-primary);
   /* Every label on the component, not just a region's: the detail panel's
@@ -3247,7 +3396,7 @@ input.search-input {
   min-height: var(--target-min);
   padding: var(--search-row-padding);
   border: none;
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-control);
   background: none;
   text-align: left;
   text-decoration: none;

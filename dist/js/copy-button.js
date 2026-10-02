@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v5.1.1 */
+/* @bydefaultstudio/design-system v6.0.0 */
 // Copy button — unified handler for all .copy-btn variants
 // Supports data-copy (static value), data-clipboard-target (element text
 // content) and data-download (fetch-free file download via a temporary link).
@@ -188,7 +188,6 @@
     var buttons = document.querySelectorAll('.copy-btn');
     buttons.forEach(function (btn) {
       if (btn.querySelector('.copy-btn-default')) return;
-      if (btn.classList.contains('color-row')) return;
       var content = btn.innerHTML;
       btn.innerHTML = '<span class="copy-btn-default">' + content + '</span>'
         + '<span class="copy-btn-copied"><div class="svg-icn">' + iconCheck() + '</div> Copied</span>';

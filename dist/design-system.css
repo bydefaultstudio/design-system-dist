@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v5.1.1 */
+/* @bydefaultstudio/design-system v6.0.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -231,6 +231,20 @@
   }
 }
 
+/* -- Artwork rules --
+   The brand's rules for its artwork, read by the layer engine
+   (assets/js/layer-stack.js) when it draws guides and zones: the Icon
+   Library's Guides, the Logo Tool's Safe Zone and every Artwork Layers spec
+   bound to them. Unitless, in the artwork's own measure: an icon's padding
+   and grid cell in the units of its 24 viewBox, a logo's clear space as a
+   multiple of X (the glyph width each logo's manifest entry names). A brand
+   sets them in its theme.css; every layer bound to one redraws. */
+:root {
+  --artwork-icon-padding: 2;
+  --artwork-icon-grid: 1;
+  --artwork-logo-clear-space: 1;
+}
+
 /* ------ 2. SYSTEM TOKENS - COLORS ------ */
 
 :root {
@@ -377,7 +391,7 @@
   --status-danger-bg: var(--red-lighter);
   /* -- Form semantic tokens -- */
   --input-border: var(--border-secondary);
-  --input-background: var(--black-alpha-5);
+  --input-background: var(--background-primary);
   --input-text: var(--text-plain);
   --input-placeholder: var(--text-faded);
   --input-focus: var(--text-accent);
@@ -471,6 +485,7 @@
   --field-padding-x: var(--space-l);
   --field-padding-y: var(--space-m);
   --field-icon-size: 1.25rem;
+  --field-radius: var(--radius-control);
   /* The side-label column. A form re-points it to fit its longest label. */
   --form-label-width: 10rem;
 
@@ -486,7 +501,19 @@
   --toggle-width: 44px; /* visual width that happens to equal 44 — not --target-min */
   --toggle-height: var(--space-xl);
   --toggle-knob-size: 18px;
-  --toggle-knob-offset: 3px;
+  /* Measured from inside the 1px border, not the outer edge — an absolute
+     knob is placed against the padding box. Keep it at
+     (height − knob) / 2 − border and the knob sits the same distance from
+     the side as from the top and bottom: 2px here reads as 3px all round. */
+  --toggle-knob-offset: var(--space-2xs);
+  /* How much longer the mono track is than a plain one, so its state word
+     has room either side instead of crowding the track's rounded end. */
+  --toggle-mono-extra-width: 6px;
+  /* The mono toggle's two colours. Ink is the knob and text when off and the
+     track when on; paper is the reverse. They default to the selected pair,
+     so they flip with the theme and need no dark-mode rule of their own. */
+  --toggle-mono-ink: var(--selected-background);
+  --toggle-mono-paper: var(--selected-text);
 
   /* -- Tag tokens removed — uses semantic tokens directly -- */
 
@@ -497,6 +524,23 @@
 
   /* -- Rating tokens -- */
   --rating-size: 1.5rem;
+
+  /* -- Swatch tokens -- */
+  /* Each variant's height when nothing sets --swatch-height. That one is
+     left undeclared on purpose: a grid or a page sets it for every swatch
+     inside, and declaring it here would flatten the four defaults below. */
+  --swatch-cell-height: 9rem;
+  --swatch-column-height: 20rem;
+  --swatch-band-height: 7rem;  /* also the narrow container query's width */
+  --swatch-strip-height: 3.5rem;
+  /* The ink pair. Named for the side, not the theme: a swatch's ink depends
+     on its fill, so the pair never flips. swatch.js measures these. */
+  --swatch-ink-light: var(--background-white);
+  --swatch-ink-dark: var(--background-black);
+  --swatch-icon-size: 1rem;
+  /* The copy actions' height: WCAG 2.5.8's 24px minimum target. */
+  --swatch-target: 1.5rem;
+  --swatch-columns: 2;
   /* -- Rating color tokens removed — uses values directly on component -- */
 
   /* -- Mark tokens removed — uses values directly on component -- */
@@ -961,13 +1005,37 @@
   --border-color: var(--border-primary);
 
   /* -- Border radius tokens -- */
-  --radius-2xs: 2px;
+  /* The scale. Components never read a step directly; they read a role. */
   --radius-xs: 4px;
   --radius-s: 8px;
   --radius-m: 12px;
   --radius-l: 16px;
   --radius-xl: 24px;
-  --radius-pill: 999px;
+  --radius-full: 999px; /* a capsule or circle: outside the scale, never multiplied */
+
+  /* The switch. 1 draws every stylistic corner at its designed size, 0 squares
+     them all; geometric shapes (--radius-full, 50%) are unaffected. Resolved
+     here on :root — a custom property takes its value where it is declared —
+     so override it on :root (theme.css) and nowhere else: set on a component
+     it does nothing. A component opts out by re-pointing its own
+     --<component>-radius instead. */
+  --radius-scale: 0;
+
+  /* The roles. Every component's --<component>-radius points at one of
+     these, so a corner's size says what kind of thing it is on. */
+  --radius-control: calc(var(--radius-s) * var(--radius-scale));  /* things you operate: button, field, chip, tag */
+  --radius-surface: calc(var(--radius-m) * var(--radius-scale));  /* things that contain: card, dialog, tooltip */
+  --radius-detail: calc(var(--radius-xs) * var(--radius-scale));  /* small finishing corners: code, kbd, badge, skeleton */
+
+  /* Component corners declared here, on :root, so a brand re-points them in
+     theme.css. A component whose other tokens live on its own element (button,
+     badge, tag, dialog, drawer) keeps its radius token beside them and is
+     re-pointed with its selector instead — see cms/border.md. */
+  --card-radius: var(--radius-surface);
+  --tooltip-radius: var(--radius-surface); /* [data-tooltip] and .progress-tooltip */
+  --code-radius: var(--radius-detail);
+  --kbd-radius: var(--radius-detail);
+  --number-input-radius: var(--field-radius);
 
   /* -- Interaction sizing -- */
   /* Minimum hit area for standalone pointer targets: WCAG 2.5.5 Target Size
@@ -1668,6 +1736,7 @@ button.button {
   --button-padding-y: var(--space-l);
   --button-padding-x: var(--space-xl);
   --button-gap: var(--space-m);
+  --button-radius: var(--radius-control);
 
   /* -- Layout -- */
   display: inline-flex;
@@ -1681,7 +1750,7 @@ button.button {
   /* -- Visual -- */
   background-color: var(--button-bg);
   border: var(--border-m) solid var(--button-border);
-  border-radius: var(--radius-s);
+  border-radius: var(--button-radius);
   
 
   /* -- Typography -- */
@@ -1767,13 +1836,13 @@ button.button {
 /* -- Size exceptions -- */
 
 .button[data-size="small"] {
-  --button-padding-y: var(--space-s);
-  --button-padding-x: var(--space-m);
+  --button-padding-y: var(--space-m);
+  --button-padding-x: var(--space-l);
   --button-text-size: var(--font-xs);
 }
 
 .button[data-size="xsmall"] {
-  --button-padding-y: var(--space-xs);
+  --button-padding-y: var(--space-s);
   --button-padding-x: var(--space-s);
   --button-text-size: var(--font-2xs);
 }
@@ -2483,8 +2552,8 @@ select {
   line-height: var(--line-height-l);
   color: var(--input-text);
   background-color: var(--input-background);
-  border: var(--border-s) solid var(--input-border);
-  border-radius: var(--radius-m);
+  border: var(--border-m) solid var(--input-border);
+  border-radius: var(--field-radius);
   padding: var(--field-padding-y) var(--field-padding-x);
   min-height: var(--field-height);
   width: 100%;
@@ -2636,7 +2705,7 @@ input:disabled::-webkit-calendar-picker-indicator {
 input[type="color"] {
   appearance: none;
   -webkit-appearance: none;
-  border: var(--border-s) solid var(--input-border);
+  border: var(--border-m) solid var(--input-border);
   background-color: var(--input-background);
   padding: 0;
   width: auto;
@@ -2678,7 +2747,6 @@ select {
   background-position: right var(--space-m) center;
   padding-right: var(--space-2xl);
   cursor: pointer;
-  border-radius: 0;
 }
 
 /* -- Select: customizable picker -- */
@@ -2734,8 +2802,15 @@ select {
     transform: rotate(180deg);
   }
 
-  /* Mirrors .dropdown-menu — same surface tokens, same square edge. */
+  /* Mirrors .dropdown-menu — same surface tokens, same square edge.
+
+     position-try-order: normal opens the list below the select, and flips it
+     above only when it does not fit there — the order .dropdown-menu follows.
+     Chromium's own default is most-block-size, which opens toward whichever
+     side has more room: a select in the lower half of a tall window opened
+     upwards with the whole list's worth of room below it. */
   select::picker(select) {
+    position-try-order: normal;
     border: var(--border-s) solid var(--dropdown-border);
     background-color: var(--dropdown-background);
     padding: 0;
@@ -3082,7 +3157,7 @@ input[type="radio"]:disabled:checked {
   padding: var(--space-s) var(--space-m);
   font-size: var(--font-s);
   font-weight: var(--font-weight-regular);
-  border-radius: var(--radius-s);
+  border-radius: var(--segmented-radius);
   border: none;
   background: transparent;
   color: var(--text-faded);
@@ -3162,7 +3237,8 @@ input[type="radio"]:disabled:checked {
 :root {
   --segmented-track-background: var(--background-faded);
   --segmented-track-padding: 3px; /* visual inset, same register as --toggle-knob-offset */
-  --segmented-track-radius: var(--radius-m);
+  --segmented-radius: var(--radius-control);
+  --segmented-track-radius: var(--segmented-radius);
   /* Selection now speaks the system-wide pair (see System Tokens). These two
      names stay as published aliases so a brand that already re-points them
      keeps working; new components read --selected-* directly. */
@@ -3171,8 +3247,9 @@ input[type="radio"]:disabled:checked {
   --segmented-thumb-border: transparent;
   /* Inner radius follows the outer one minus the inset, so the thumb's
      corners stay concentric with the track's when a brand re-points the
-     track radius. */
-  --segmented-thumb-radius: calc(var(--segmented-track-radius) - var(--segmented-track-padding));
+     track radius. Floored at 0: border-radius would clamp a negative result
+     itself, but the token is a length other rules may read. */
+  --segmented-thumb-radius: max(0px, calc(var(--segmented-track-radius) - var(--segmented-track-padding)));
   --segmented-thumb-duration: var(--duration-xs);
 }
 
@@ -3408,7 +3485,6 @@ fieldset[data-size="small"],
   --toggle-width: 28px;
   --toggle-height: var(--space-l);
   --toggle-knob-size: 10px;
-  --toggle-knob-offset: var(--space-2xs);
 }
 
 .form-toggle input[type="checkbox"] {
@@ -3416,7 +3492,7 @@ fieldset[data-size="small"],
   height: var(--toggle-height);
   background-color: var(--black-alpha-3);
   border: var(--border-s) solid var(--border-faded);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-full);
   position: relative;
   transition: background-color var(--toggle-transition-duration) ease;
 }
@@ -3456,6 +3532,94 @@ fieldset[data-size="small"],
   cursor: not-allowed;
 }
 
+/* -- Mono toggle --
+   data-variant="mono": two colours and no accent, for tool panels whose
+   preview carries the brand colour — a blue track beside the artwork reads as
+   part of it. Off is a paper track with an ink border and knob; on swaps
+   them. Colour comes from --toggle-mono-ink and --toggle-mono-paper only; the
+   theme overrides further down skip this variant, since the tokens flip
+   themselves. The track is --toggle-mono-extra-width longer than a plain
+   one, and the knob's travel is recomputed from that width. Its border is
+   heavier too, so the knob offset is derived here rather than read from the
+   root token: (height − knob) / 2 − border keeps the knob equidistant from
+   every edge at any size. */
+.form-toggle[data-variant="mono"] input[type="checkbox"] {
+  --toggle-mono-track-width: calc(var(--toggle-width) + var(--toggle-mono-extra-width));
+  --toggle-mono-border-width: var(--border-m);
+  --toggle-knob-offset: calc((var(--toggle-height) - var(--toggle-knob-size)) / 2 - var(--toggle-mono-border-width));
+
+  width: var(--toggle-mono-track-width);
+  border-width: var(--toggle-mono-border-width);
+  background-color: var(--toggle-mono-paper);
+  border-color: var(--toggle-mono-ink);
+  color: var(--toggle-mono-ink);
+}
+
+.form-toggle[data-variant="mono"] input[type="checkbox"]::after {
+  background-color: var(--toggle-mono-ink);
+}
+
+/* Matches the system-dark checkmark rule's specificity and comes after it,
+   so the checkmark image is cleared in every theme. */
+.form-toggle[data-variant="mono"] input[type="checkbox"]:checked {
+  background-color: var(--toggle-mono-ink);
+  background-image: none;
+  color: var(--toggle-mono-paper);
+}
+
+.form-toggle[data-variant="mono"] input[type="checkbox"]:checked::after {
+  transform: translateY(-50%) translateX(calc(var(--toggle-mono-track-width) - var(--toggle-knob-size) - var(--toggle-knob-offset) * 2 - var(--toggle-mono-border-width) * 2));
+  background-color: var(--toggle-mono-paper);
+}
+
+/* The state word sits in the space the knob leaves free. The empty alt text
+   keeps it out of the accessibility tree — the <label> names the switch and
+   role="switch" already announces on/off; a browser without the alt syntax
+   drops that declaration and keeps the first, which the label still
+   outranks. Its size follows the track height (10px at 24px), so it scales
+   with any re-point of --toggle-height. */
+.form-toggle[data-variant="mono"] input[type="checkbox"]::before {
+  content: "Off";
+  content: "Off" / "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--toggle-knob-offset) + var(--toggle-knob-size));
+  right: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-primary); /* a checkbox keeps the UA control font */
+  font-size: calc(var(--toggle-height) / 2.4);
+  font-weight: var(--font-weight-semi-bold);
+  line-height: 1;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.form-toggle[data-variant="mono"] input[type="checkbox"]:checked::before {
+  content: "On";
+  content: "On" / "";
+  left: 0;
+  /* Optical nudge: centred in its slot, the shorter word reads as hugging
+     the track's end, so its slot runs 3px under the knob's edge. */
+  right: calc(var(--toggle-knob-offset) + var(--toggle-knob-size) - 3px);
+}
+
+/* A small track leaves no legible room for the word; the knob position
+   carries the state on its own, as it does on every other toggle. With no
+   word the extra length has no job, so a small mono track is plain width. */
+.form-toggle[data-variant="mono"][data-size="small"] input[type="checkbox"],
+.form-toggle[data-variant="mono"] input[type="checkbox"][data-size="small"],
+:is(.form-group, fieldset)[data-size="small"] .form-toggle[data-variant="mono"] input[type="checkbox"] {
+  --toggle-mono-extra-width: 0px;
+}
+
+.form-toggle[data-variant="mono"][data-size="small"] input[type="checkbox"]::before,
+.form-toggle[data-variant="mono"] input[type="checkbox"][data-size="small"]::before,
+:is(.form-group, fieldset)[data-size="small"] .form-toggle[data-variant="mono"] input[type="checkbox"]::before {
+  content: none;
+}
+
 
 /* -- Reduced motion -- */
 /* Re-points the token rather than disabling the transition, matching .dialog,
@@ -3468,39 +3632,40 @@ fieldset[data-size="small"],
 }
 
 /* -- Toggle dark mode -- */
-[data-theme="dark"] .form-toggle input[type="checkbox"] {
+/* The mono variant is excluded: its two tokens flip with the theme. */
+[data-theme="dark"] .form-toggle:not([data-variant="mono"]) input[type="checkbox"] {
   background-color: #444;
 }
 
-[data-theme="dark"] .form-toggle input[type="checkbox"]::after {
+[data-theme="dark"] .form-toggle:not([data-variant="mono"]) input[type="checkbox"]::after {
   background-color: #888;
 }
 
-[data-theme="dark"] .form-toggle input[type="checkbox"]:checked {
+[data-theme="dark"] .form-toggle:not([data-variant="mono"]) input[type="checkbox"]:checked {
   background-color: #e8e6e3;
 }
 
-[data-theme="dark"] .form-toggle input[type="checkbox"]:checked::after {
+[data-theme="dark"] .form-toggle:not([data-variant="mono"]) input[type="checkbox"]:checked::after {
   background-color: #1a1a1a;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .form-toggle input[type="checkbox"] {
+  :root:not([data-theme]) .form-toggle:not([data-variant="mono"]) input[type="checkbox"] {
     background-color: #444;
   }
 
-  :root:not([data-theme]) .form-toggle input[type="checkbox"]::after {
+  :root:not([data-theme]) .form-toggle:not([data-variant="mono"]) input[type="checkbox"]::after {
     background-color: #888;
   }
 
   /* background-image: the system-dark checkbox checkmark outranks the base
      toggle's `none`, so it has to be cleared again at this specificity. */
-  :root:not([data-theme]) .form-toggle input[type="checkbox"]:checked {
+  :root:not([data-theme]) .form-toggle:not([data-variant="mono"]) input[type="checkbox"]:checked {
     background-color: #e8e6e3;
     background-image: none;
   }
 
-  :root:not([data-theme]) .form-toggle input[type="checkbox"]:checked::after {
+  :root:not([data-theme]) .form-toggle:not([data-variant="mono"]) input[type="checkbox"]:checked::after {
     background-color: #1a1a1a;
   }
 }
@@ -3579,6 +3744,14 @@ fieldset[data-size="small"],
   --icon-size: 1.25em;
 }
 
+/* display: flex above is an author rule and beats the UA's [hidden], so a
+   message toggled with the attribute — the tools' pattern — still rendered
+   an empty box and its margin under every field. Same restatement as
+   .bar-overflow[hidden]. */
+.form-error[hidden] {
+  display: none;
+}
+
 /* -- Access support form states -- */
 .access-support-success {
   text-align: center;
@@ -3608,11 +3781,15 @@ fieldset[data-size="small"],
    Behaviour: field.js (clear, .is-filled), password-toggle.js (toggle). */
 .field,
 .password-field {
+  /* The colour swatch's corner: the field's less its inset, floored at 0 so
+     the token stays a usable length when the field is square. */
+  --field-swatch-radius: max(0px, calc(var(--field-radius) - var(--border-m) - var(--space-xs)));
+
   display: flex;
   align-items: stretch;
   min-height: var(--field-height);
-  border: var(--border-s) solid var(--input-border);
-  border-radius: var(--radius-m);
+  border: var(--border-m) solid var(--input-border);
+  border-radius: var(--field-radius);
   background-color: var(--input-background);
   overflow: hidden;
   --icon-size: var(--field-icon-size);
@@ -3702,9 +3879,11 @@ fieldset[data-size="small"],
    token rather than stretched: the UA fixes a colour input's height, and a
    stretched one does not carry its height across an aspect ratio. A bar
    re-points --field-swatch-box to its own control height, and
-   --field-swatch-radius down a step to match its smaller corners. */
+   --field-swatch-radius to the detail role to match its smaller corners.
+   The default is declared on the box, not here: declaring it on the input
+   would shadow the bar's value. */
 .field > input[type="color"] {
-  --field-swatch-size: calc(var(--field-swatch-box, var(--field-height)) - 2 * (var(--border-s) + var(--space-xs)));
+  --field-swatch-size: calc(var(--field-swatch-box, var(--field-height)) - 2 * (var(--border-m) + var(--space-xs)));
 
   flex: none;
   align-self: center;
@@ -3712,15 +3891,15 @@ fieldset[data-size="small"],
   height: var(--field-swatch-size);
   margin: var(--space-xs);
   border: var(--border-s) solid var(--border-faded);
-  border-radius: var(--field-swatch-radius, var(--radius-s));
+  border-radius: var(--field-swatch-radius);
 }
 
 .field > input[type="color"]::-webkit-color-swatch {
-  border-radius: calc(var(--field-swatch-radius, var(--radius-s)) - var(--border-s));
+  border-radius: max(0px, calc(var(--field-swatch-radius) - var(--border-s)));
 }
 
 .field > input[type="color"]::-moz-color-swatch {
-  border-radius: calc(var(--field-swatch-radius, var(--radius-s)) - var(--border-s));
+  border-radius: max(0px, calc(var(--field-swatch-radius) - var(--border-s)));
 }
 
 .field > input[type="color"] + input {
@@ -3728,10 +3907,12 @@ fieldset[data-size="small"],
 }
 
 /* Controls inside the box: a --target-min square, transparent, like the date
-   picker's trigger. The global button:focus-visible ring is inset, so it
+   picker's trigger. .field-action is any other verb on the value — a copy
+   button beside a read-only value, say — and is always shown. The global button:focus-visible ring is inset, so it
    survives the wrapper's overflow: hidden. */
 .field-clear,
 .field-toggle,
+.field-action,
 .password-toggle {
   flex: none;
   display: flex;
@@ -3749,6 +3930,7 @@ fieldset[data-size="small"],
 
 .field-clear:hover,
 .field-toggle:hover,
+.field-action:hover,
 .password-toggle:hover {
   color: var(--text-primary);
 }
@@ -3758,6 +3940,15 @@ fieldset[data-size="small"],
    reader may clear, so the button stays away there too. */
 .field-clear {
   display: none;
+}
+
+/* A copy button in the box keeps its icon swap but not the copied fill:
+   .copy-btn.is-copied outranks .field-action and would paint a square wash
+   against the input. Same restatement as .swatch-copy. */
+.field-action.is-copied,
+.field-action.is-copied:hover {
+  background: none;
+  border: 0;
 }
 
 .field.is-filled:not(:has(> input:disabled, > input[readonly])) > .field-clear {
@@ -3861,6 +4052,7 @@ details .disclosure-content {
 .badge {
   --badge-case: uppercase;
   --badge-tracking: var(--letter-spacing-l);
+  --badge-radius: var(--radius-detail);
 
   display: inline-flex;
   align-items: center;
@@ -3870,7 +4062,7 @@ details .disclosure-content {
   text-transform: var(--badge-case);
   letter-spacing: var(--badge-tracking);
   padding: var(--space-2xs) var(--space-s);
-  border-radius: 0;
+  border-radius: var(--badge-radius);
   background-color: var(--background-darker);
   color: var(--text-primary);
   white-space: nowrap;
@@ -3912,6 +4104,7 @@ details .disclosure-content {
 /* ------ 17. CARD ------ */
 
 .card {
+  border-radius: var(--card-radius);
   background-color: var(--background-primary);
   border: var(--border-s) solid var(--border-faded);
   padding: var(--space-xl);
@@ -3958,7 +4151,7 @@ details .disclosure-content {
 }
 
 .card-image {
-  border-radius: var(--radius-m) var(--radius-m) 0 0;
+  border-radius: var(--card-radius) var(--card-radius) 0 0;
 }
 
 /* -- Card dark mode -- */
@@ -4141,7 +4334,7 @@ a.tab:hover {
   --progress-track: var(--background-darker);
   --progress-fill: var(--text-primary);
   --progress-height: var(--space-s);
-  --progress-radius: 0px;
+  --progress-radius: 0px; /* square by design, whatever the scale — a bar is a measure, not a control */
   --progress-duration: var(--duration-s); /* one knob times both shapes */
   --progress-ring-size: 48px;
   --progress-ring-thickness: 4px;
@@ -4276,7 +4469,7 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
   bottom: calc(100% + var(--space-xs));
   background-color: var(--brown-dark);
   color: var(--off-white);
-  border-radius: var(--radius-s);
+  border-radius: var(--tooltip-radius);
   padding: var(--space-xs) var(--space-s);
   white-space: nowrap;
   pointer-events: none;
@@ -4306,7 +4499,7 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
   transform: translateX(-50%);
   background-color: var(--brown-dark);
   color: var(--off-white);
-  border-radius: var(--radius-s);
+  border-radius: var(--tooltip-radius);
   padding: var(--space-xs) var(--space-s);
   white-space: nowrap;
   pointer-events: none;
@@ -4333,6 +4526,15 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
 
 [data-tooltip]:hover::before,
 [data-tooltip]:focus-visible::before {
+  opacity: 1;
+}
+
+/* A tooltip on a wrapper whose focus lands on a control inside it — a
+   colour chip is a <label> around a covered radio — never matches
+   :focus-visible on the wrapper itself, so a keyboard user got the ring
+   and not the name. Its own rule, not a third selector in the list above,
+   so a browser without :has() drops this line alone. */
+[data-tooltip]:has(:focus-visible)::before {
   opacity: 1;
 }
 
@@ -4498,7 +4700,7 @@ code {
   font-size: calc(var(--body-size) - .2em);
   background-color: color-mix(in srgb, var(--text-primary), var(--alpha-5));
   padding: var(--space-2xs) var(--space-xs);
-  border-radius: var(--radius-xs);
+  border-radius: var(--code-radius);
   color: var(--text-primary);
   white-space: nowrap;
 }
@@ -4533,7 +4735,7 @@ kbd {
   vertical-align: middle;
   background-color: var(--background-faded);
   border: var(--border-s) solid var(--border-secondary);
-  border-radius: var(--radius-xs);
+  border-radius: var(--kbd-radius);
   box-shadow: 0 1px 0 var(--border-secondary);
   white-space: nowrap;
 }
@@ -5223,6 +5425,7 @@ hr.xl {
 .tag {
   --tag-case: uppercase;
   --tag-tracking: var(--letter-spacing-m);
+  --tag-radius: var(--radius-control);
 
   display: inline-flex;
   align-items: center;
@@ -5237,7 +5440,7 @@ hr.xl {
   color: var(--text-secondary);
   white-space: nowrap;
   line-height: var(--line-height-xs);
-  border-radius: 3px;
+  border-radius: var(--tag-radius);
 }
 
 /* Sentence-case variant — customize case via the tokens above or this
@@ -5293,7 +5496,7 @@ hr.xl {
   padding: var(--space-2xs);
   transition: opacity 0.15s ease, background-color 0.15s ease;
   flex-shrink: 0;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-full);
 }
 
 .tag-remove .svg-icn {
@@ -5324,7 +5527,7 @@ hr.xl {
   /* -- Component tokens (re-point these to re-skin; never override the rules) -- */
   --dialog-background: var(--background-primary);
   --dialog-shadow: 0 8px 32px var(--black-alpha-20);
-  --dialog-radius: 0;
+  --dialog-radius: var(--radius-surface);
   --dialog-padding: var(--space-xl);
   --dialog-backdrop: var(--background-modal);
 
@@ -5521,7 +5724,7 @@ hr.xl {
   /* -- Component tokens (re-point these to re-skin; never override the rules) -- */
   --drawer-background: var(--background-primary);
   --drawer-shadow: 0 8px 32px var(--black-alpha-20);
-  --drawer-radius: 0;
+  --drawer-radius: var(--radius-surface);
   --drawer-padding: var(--space-xl);
   --drawer-backdrop: var(--background-modal);
   /* Width when docked to an inline edge, height when docked to a block edge.
@@ -5754,7 +5957,7 @@ body:has(.drawer[open]) {
 .drawer-handle::before {
   content: "";
   display: block;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-full);
   background-color: var(--drawer-handle-color, var(--text-faded));
 }
 
@@ -6002,7 +6205,7 @@ input[type="range"] {
   width: 100%;
   height: 4px;
   background-color: var(--background-darker);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-full);
   outline: none;
   cursor: pointer;
   border: none;
@@ -6040,7 +6243,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
 
 input[type="range"]:focus-visible {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-full);
 }
 
 input[type="range"]:disabled {
@@ -6113,7 +6316,7 @@ input[type="range"]:disabled::-webkit-slider-thumb {
 
 .rating-star:focus-visible {
   outline: none;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-detail);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
 }
 
@@ -6200,8 +6403,8 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   display: inline-flex;
   align-items: stretch;
   width: fit-content;
-  border: var(--border-s) solid var(--input-border);
-  border-radius: var(--radius-s);
+  border: var(--border-m) solid var(--input-border);
+  border-radius: var(--number-input-radius);
   overflow: hidden;
   background-color: var(--input-background);
 }
@@ -7061,6 +7264,11 @@ details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn
  *     </div>
  *   </nav>
  *
+ * Locked: a link to a page the reader cannot open carries .is-locked and a
+ * .page-nav-lock icon after its arrow; the lock takes the arrow's place and
+ * the row mutes. The class styles only — pair it with aria-disabled="true"
+ * and stop the click in script, since the href stays.
+ *
  * The section line appears only when the neighbour sits in a different
  * section — it marks leaving one book for the next, so showing it on every
  * page would turn a signpost into chrome.
@@ -7082,6 +7290,7 @@ details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn
   --page-nav-title-size: var(--font-2xl);
   --page-nav-arrow-color: var(--text-secondary);
   --page-nav-arrow-color-hover: var(--text-link);
+  --page-nav-locked-color: var(--text-faded);
 
   border-top: var(--page-nav-border);
 }
@@ -7179,6 +7388,33 @@ details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn
 
 .page-nav-link:hover .page-nav-arrow {
   color: var(--page-nav-arrow-color-hover);
+}
+
+/* Locked (.is-locked): the lock replaces the arrow, and the row neither
+   lights up nor changes colour on hover — a row that responds reads as one
+   that goes somewhere. */
+.page-nav-lock {
+  display: none;
+  flex-shrink: 0;
+}
+
+.page-nav-link.is-locked .page-nav-arrow {
+  display: none;
+}
+
+.page-nav-link.is-locked .page-nav-lock {
+  display: flex;
+  color: var(--page-nav-locked-color);
+}
+
+.page-nav-link.is-locked,
+.page-nav-link.is-locked:hover {
+  background-color: var(--page-nav-background);
+  cursor: not-allowed;
+}
+
+.page-nav-link.is-locked .page-nav-title {
+  color: var(--page-nav-locked-color);
 }
 
 /* Single column: both directions collapse into column 1 and stack as rows.
@@ -7485,10 +7721,10 @@ section[id] {
   --button-padding-y: 0;
   --button-padding-x: var(--space-m);
   --button-text-size: var(--font-s);
+  --button-radius: 0; /* flush with the header's edge whatever the scale */
   align-self: stretch;
   flex-shrink: 0;
   min-block-size: var(--target-min);
-  border-radius: 0;
 }
 
 .button.header-action:hover {
@@ -7522,7 +7758,7 @@ section[id] {
   background: var(--background-primary);
   color: var(--text-primary);
   border: var(--site-header-border);
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-control);
   font-family: var(--font-primary);
   font-size: var(--font-s);
   text-decoration: none;
@@ -8024,7 +8260,7 @@ section[id] {
 .bar .field {
   --field-padding-y: 0;
   --field-swatch-box: var(--bar-control-height);
-  --field-swatch-radius: var(--radius-xs);
+  --field-swatch-radius: var(--radius-detail);
 }
 
 .bar select,
@@ -8039,9 +8275,8 @@ section[id] {
  * things you can type into, so an edge in the bar carries meaning instead of
  * being decoration. This is the other half of what makes a dense bar read —
  * matching the heights alone is not enough. */
-.bar .dropdown-trigger,
-.bar .button[data-variant="transparent"] {
-  border-radius: var(--radius-s);
+.bar .dropdown-trigger {
+  border-radius: var(--radius-control);
 }
 
 .bar .dropdown-trigger:hover {
@@ -8055,7 +8290,6 @@ section[id] {
 .bar .number-input,
 .bar .field {
   --input-background: var(--bar-background);
-  border-radius: var(--radius-s);
 }
 
 /* A toggle is a compound — a 24px switch and its label — so left alone it sits
@@ -8081,7 +8315,7 @@ section[id] {
   height: var(--bar-control-height);
   width: var(--bar-control-height);
   align-self: center;
-  border-radius: var(--radius-s);
+  border-radius: var(--field-radius);
 }
 
 /* Fixed rather than fluid: a four-digit value must not resize the whole bar. */
@@ -8183,7 +8417,7 @@ section[id] {
 
 :root {
   --avatar-size: 2rem;
-  --avatar-radius: var(--radius-pill);
+  --avatar-radius: var(--radius-full);
   --avatar-background: var(--background-secondary);
   --avatar-color: var(--text-primary);
   --avatar-icon-scale: 0.55;
@@ -8273,7 +8507,7 @@ section[id] {
 /* Shape re-points the radius token rather than setting border-radius, so a
    context that already re-pointed --avatar-radius is not silently overridden. */
 .avatar[data-shape="circle"] {
-  --avatar-radius: var(--radius-pill);
+  --avatar-radius: var(--radius-full);
 }
 
 .avatar[data-shape="square"] {
@@ -8281,7 +8515,7 @@ section[id] {
 }
 
 .avatar[data-shape="rounded"] {
-  --avatar-radius: var(--radius-s);
+  --avatar-radius: var(--radius-control);
 }
 
 /* Avatar group — the same component, not a second one. It has no meaning
@@ -9032,12 +9266,11 @@ section[id] {
    lands at flex-start — a 212px row hard against the left edge under a
    centred header. Centred for the case where it is not full-width; with
    [data-full-width] on the block it fills the measure like the email field.
-   Corner and gap are re-pointed, not overridden: the cells take the email
-   field's --radius-m so the two panes share one field shape, and the wider
-   gap keeps six grown cells reading as six boxes rather than a strip. */
+   The gap is re-pointed, not overridden: wider, it keeps six grown cells
+   reading as six boxes rather than a strip. The corner needs nothing — the
+   cells and the email field both read --field-radius. */
 .login-form .cell-input {
   align-self: center;
-  --cell-input-radius: var(--radius-m);
   --cell-input-gap: var(--space-s);
 }
 
@@ -9127,7 +9360,7 @@ section[id] {
      re-point these for a brand that wants cells styled apart from its inputs. */
   --cell-input-background: var(--input-background);
   --cell-input-border-color: var(--input-border);
-  --cell-input-radius: var(--radius-s);
+  --cell-input-radius: var(--field-radius);
   /* Separators are punctuation, not entry — narrower so they read as marks
      between cells rather than empty cells. */
   --cell-input-separator-width: 1.25rem;
@@ -9456,7 +9689,7 @@ section[id] {
   min-inline-size: var(--app-nav-badge-size);
   block-size: var(--app-nav-badge-size);
   padding-inline: var(--space-2xs);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-full);
   background-color: var(--app-nav-badge-background);
   color: var(--app-nav-badge-color);
   font-size: var(--app-nav-badge-font-size);
@@ -9535,7 +9768,7 @@ section[id] {
 
 :root {
   --skeleton-background: var(--background-faded);
-  --skeleton-radius: var(--radius-xs);
+  --skeleton-radius: var(--radius-detail);
   --skeleton-duration: var(--duration-2xl);
 }
 
@@ -9607,7 +9840,7 @@ section[id] {
      --selected-* note in System Tokens for why. */
   --chip-selected-background: var(--selected-background);
   --chip-selected-text: var(--selected-text);
-  --chip-radius: var(--radius-pill);
+  --chip-radius: var(--radius-control);
   --chip-padding-x: var(--space-xl);
   --chip-gap: var(--space-xs);
   /* Narrowest a scale stop may be before the row wraps. Sized so five stops
@@ -9839,6 +10072,9 @@ section[id] {
  * low-contrast case on the table.
  */
 .chip[data-variant="colour"] {
+  /* A circle is the shape, not a style: on the host, because the swatch
+     inherits, and never through the scale. */
+  --chip-radius: var(--radius-full);
 
   inline-size: var(--chip-colour-size);
   block-size: var(--chip-colour-size);
@@ -10358,6 +10594,289 @@ section[id] {
   }
 }
 
+/* ------ 53. SWATCH ------
+ * One colour at full size: its fill, its name and value in an ink that reads
+ * on it, and two copy actions (the hex, the token). Documented in
+ * cms/swatch.md. CUBE: .swatch is the block, data-variant says where the
+ * text and actions sit, data-ink picks the ink, .swatch-grid composes many.
+ *
+ * Tokens live in :root (Swatch tokens). --swatch-fill, --swatch-ink and
+ * --swatch-height are per-instance and never declared there, so a swatch,
+ * its grid or a page sets them and everything inside takes them.
+ * assets/js/swatch.js fills the hex from the live fill and picks the ink;
+ * without it the swatch still paints and its CSS action still copies.
+ * Never transition the fill: the script reads it the moment the theme
+ * changes, and a fill mid-transition would give a hex that is neither.
+ */
+
+/* -- Block -- */
+.swatch {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-m);
+  min-width: 0;
+  min-block-size: var(--swatch-height, var(--swatch-cell-height));
+  /* The base li carries a top margin for running lists; a swatch is a cell. */
+  margin: 0;
+  padding: var(--space-l);
+  background-color: var(--swatch-fill, transparent);
+  color: var(--swatch-ink, var(--text-primary));
+  container: swatch / inline-size;
+}
+
+.swatch-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+  min-width: 0;
+}
+
+.swatch-text p {
+  margin: 0;
+  color: inherit;
+  overflow-wrap: anywhere;
+}
+
+.swatch-name {
+  font-size: var(--font-xs);
+  line-height: var(--line-height-l);
+}
+
+.swatch-value {
+  font-size: var(--font-2xs);
+  line-height: var(--line-height-m);
+}
+
+/* An empty value — no script, or a colour it cannot read — takes no line. */
+.swatch-value:empty {
+  display: none;
+}
+
+/* -- Actions --
+   Hidden until the swatch is pointed at or holds focus, and always in the
+   tab order: a keyboard reader reaches them and the reveal follows. */
+.swatch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-m);
+  opacity: 0;
+  transition: opacity var(--duration-xs) var(--ease-out);
+}
+
+.swatch:hover .swatch-actions,
+.swatch:focus-within .swatch-actions {
+  opacity: 1;
+}
+
+/* A bare text action in the swatch's ink, deliberately not a .button: the
+   copied state keeps the ink, because the system's success green would be a
+   third colour on a swatch whose point is the one colour it shows. The word
+   and the check are the feedback. The three selectors restate the base
+   .copy-btn copied and hover rules at equal weight and win on order. */
+.swatch-copy,
+.swatch-copy.is-copied,
+.swatch-copy.is-copied:hover {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--swatch-target);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: var(--font-xs);
+  line-height: var(--line-height-m);
+  cursor: pointer;
+}
+
+.swatch-copy {
+  --icon-size: var(--swatch-icon-size);
+}
+
+/* The script hides the hex action while the fill cannot be read. */
+.swatch-copy[hidden] {
+  display: none;
+}
+
+/* The label is a span inside .copy-btn-default: a flex item does not take
+   its parent's text decoration, so the span carries it. */
+.swatch-copy:hover .copy-btn-default > span {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.swatch-copy:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* -- Ink --
+   Omitted, swatch.js picks the side that contrasts more. A --swatch-ink set
+   anywhere (inline, a class, an ancestor) beats both, and the script leaves
+   that swatch's ink alone. */
+.swatch[data-ink="light"] {
+  --swatch-ink: var(--swatch-ink-light);
+}
+
+.swatch[data-ink="dark"] {
+  --swatch-ink: var(--swatch-ink-dark);
+}
+
+/* -- Centred variants: column, band, strip --
+   Three tracks: the text, the actions, and an empty one matching the first.
+   While the text fits in its share the two outer tracks are equal and the
+   actions sit dead centre; when it does not, its track grows and the
+   actions move along rather than cover it. Column and band take a definite
+   height, never under their content: with only a minimum, the grid would
+   size both outer tracks to the text and the swatch would grow by a second
+   text's height instead of sharing the room it has. */
+.swatch[data-variant="column"],
+.swatch[data-variant="band"] {
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  /* The block's space-between is for its flex layout; on a grid it would
+     stop the one column stretching and pull the actions off centre. */
+  justify-content: stretch;
+  align-content: stretch;
+}
+
+.swatch[data-variant="column"] .swatch-text,
+.swatch[data-variant="band"] .swatch-text {
+  align-self: start;
+}
+
+.swatch[data-variant="column"] .swatch-actions,
+.swatch[data-variant="band"] .swatch-actions {
+  justify-self: center;
+  justify-content: center;
+}
+
+/* Column: tall and narrow, the actions one above the other. */
+.swatch[data-variant="column"] {
+  block-size: var(--swatch-height, var(--swatch-column-height));
+  min-block-size: min-content;
+}
+
+.swatch[data-variant="column"] .swatch-actions {
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Band: wide and short, the actions side by side. */
+.swatch[data-variant="band"] {
+  block-size: var(--swatch-height, var(--swatch-band-height));
+  min-block-size: min-content;
+}
+
+/* Strip: one line — name, then value — the actions centred along it. For a
+   long list, where each step needs a row and no more. The text never wraps:
+   its track is at least as wide as it is. */
+.swatch[data-variant="strip"] {
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) auto 1fr;
+  justify-content: stretch;
+  align-items: center;
+  min-block-size: var(--swatch-height, var(--swatch-strip-height));
+  padding-block: var(--space-s);
+}
+
+.swatch[data-variant="strip"] .swatch-text {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--space-l);
+}
+
+/* -- Narrow --
+   Under 7rem, the band height (--swatch-band-height; a container query
+   cannot read a token), a swatch cannot hold both actions with their icons
+   on one line. The words carry the meaning; the icons go. */
+@container swatch (inline-size < 7rem) {
+  .swatch-actions {
+    gap: var(--space-s);
+  }
+
+  .swatch-copy .svg-icn {
+    display: none;
+  }
+}
+
+/* -- Grid --
+   Swatches edge to edge, no gaps; set role="list" on the ul, because
+   Safari drops list semantics from a list with no bullets. One column by
+   default. Rows are auto, so each takes its swatches' height and grows
+   rather than letting wrapped content spill. */
+.swatch-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* grid: a fixed number of columns, --swatch-columns. */
+.swatch-grid[data-layout="grid"] {
+  grid-template-columns: repeat(var(--swatch-columns), minmax(0, 1fr));
+}
+
+/* row: every swatch a column of equal width, side by side. */
+.swatch-grid[data-layout="row"] {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+/* -- Responsive --
+   Kept in the section: the variants cannot work without it. A row of
+   columns has no room on a phone, so the row stacks and a column swatch
+   takes a band's height and lays its actions side by side. */
+@media (max-width: 768px) {
+  .swatch-grid[data-layout="row"] {
+    grid-auto-flow: row;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .swatch[data-variant="column"] {
+    block-size: var(--swatch-height, var(--swatch-band-height));
+  }
+
+  .swatch[data-variant="column"] .swatch-actions {
+    flex-direction: row;
+  }
+}
+
+/* With no hovering pointer, or a coarse one beside it (a touch laptop has
+   both, and a finger cannot hover), the actions are always there. */
+@media (hover: none), (any-pointer: coarse) {
+  .swatch-actions {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swatch-actions {
+    transition: none;
+  }
+}
+
+/* The fill is the subject, so the OS must not repaint it. The text and the
+   actions take system colours on a system backplate, so they read whatever
+   the fill is. */
+@media (forced-colors: active) {
+  .swatch {
+    forced-color-adjust: none;
+  }
+
+  .swatch-text,
+  .swatch-actions {
+    forced-color-adjust: auto;
+    align-self: start;
+    justify-self: start;
+    padding-inline: var(--space-2xs);
+    background-color: Canvas;
+    color: CanvasText;
+  }
+}
+
 /* ------ 15. COMPONENTS IN PROGRESS ------ */
 /*
  * The following components are actively being built.
@@ -10404,5 +10923,6 @@ section[id] {
  * - [x] Login (.login)
  * - [x] Cell Input (.cell-input)
  * - [x] App Navigation (.app-nav)
+ * - [x] Swatch (.swatch, .swatch-grid)
  */
 
