@@ -429,7 +429,10 @@
 
 /* Compact icon-only buttons inside the actions slot */
 .asset-card-actions .button {
-  padding: var(--space-s);
+  /* Tokens, not the padding shorthand: a shorthand would replace the
+     button's leading trim and leave labelled buttons half an em taller. */
+  --button-padding-y: var(--space-s);
+  --button-padding-x: var(--space-s);
 }
 
 /* Logo preview — constrains the rendered logo width inside an asset card.

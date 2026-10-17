@@ -1,16 +1,16 @@
-<!-- @bydefaultstudio/design-system v6.0.1 -->
+<!-- @bydefaultstudio/design-system v6.0.2 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 6.0.1 (package)**
+**Version: 6.0.2 (package)**
 
 ## Getting the System
 
 The system ships as one CSS file plus an icon sprite, distributed through the public artefact repo:
 
 ```bash
-npm install github:bydefaultstudio/design-system-dist#semver:^6.0.1
+npm install github:bydefaultstudio/design-system-dist#semver:^6.0.2
 ```
 
 - Link `design-system.css` before any site or theme CSS.
@@ -5191,7 +5191,7 @@ This section documents how the component is built. For usage, see the sections a
 | `--button-text-color` | `var(--text-inverted)` | Text colour |
 | `--button-font` | `var(--font-secondary)` | Font family |
 | `--button-text-size` | `var(--body-size)` | Text size |
-| `--button-leading` | `var(--line-height-xs)` | Line height. The text variant re-points it to `--line-height-l`: with no padding to build the box, 0.7 leaves the label in a box shorter than its glyphs |
+| `--button-leading` | `var(--line-height-m)` | Line height. The block padding gives back everything above `--line-height-xs`, so a one-line button is the same height whatever this is set to. The text variant re-points it to `--line-height-l` |
 | `--button-padding-y` | `var(--space-m)` | Vertical padding |
 | `--button-padding-x` | `var(--space-xl)` | Horizontal padding |
 | `--button-radius` | `var(--radius-control)` | Corner radius — the control role, so it follows `--radius-scale` |
@@ -5208,11 +5208,11 @@ This section documents how the component is built. For usage, see the sections a
 | `.button[data-variant="faded"]` | 15% alpha bg, no border, text inherits `--button-color` |
 | `.button[data-variant="outline-faded"]` | Transparent bg, faded border, text inherits `--button-color` |
 | `.button[data-variant="transparent"]` | No bg, no border, text inherits `--button-color` |
-| `.button[data-variant="text"]` | No bg, no border, zero padding, underline on hover |
+| `.button[data-variant="text"]` | No bg, no border, zero padding (untrimmed), underline on hover |
 | `.button[data-variant="outline"]:hover`, etc. | Unfilled hover, `color-mix(in srgb, var(--button-color), var(--alpha-10))` fill |
 | `.button[data-size="small"]` | Reduced padding and font size |
 | `.button[data-size="xsmall"]` | Further reduced padding and font size |
-| `.button[data-icon-only]` | Equal padding (square/circle shape) |
+| `.button[data-icon-only]` | Equal padding (square/circle shape), untrimmed: no label, so no leading to take back |
 | `.button[data-full-width]` | `width: 100%` |
 | `.button[data-color="danger"]` / `[data-color="red"]` | Sets `--button-color` to `var(--status-danger)` |
 | `.button[data-color="success"]` / `[data-color="green"]` | Sets `--button-color` to `var(--status-success)` |
@@ -5224,6 +5224,7 @@ This section documents how the component is built. For usage, see the sections a
 
 ### Key rules
 
+- **Labels can wrap:** the label sets at `--line-height-m`, so a label that runs to two lines shows two separate lines. The leading above `--line-height-xs` (0.7) comes back off the block padding, half each side: `padding-block: max(0px, calc(var(--button-padding-y) - (var(--button-leading) - var(--line-height-xs)) * 0.5em))`. A one-line button is exactly the height the old 0.7 leading gave it, at every size. Icon-only and text buttons skip the trim and keep `--button-padding-y` as it is. A context that zeroes `--button-padding-y` (the bar, the header action) stays at zero rather than going negative. Keep `--button-leading` a unitless number: a length makes the calc invalid and the padding drops to zero. To change a button's padding in a role class, re-point `--button-padding-y` and `--button-padding-x`; the `padding` shorthand replaces the trim and leaves a labelled button half an em taller. An icon taller than 0.7em (a dropdown chevron) no longer adds height: the label's line box covers it, so a chevron trigger is as tall as a plain button of the same size.
 - **Colour cascade:** `--button-color` is the single source. It feeds `--button-bg`, `--button-border`, and `--button-faded` automatically. `data-color` attributes only override `--button-color`. Every variant picks it up without extra selectors.
 - **Hover formula (filled):** `--button-color: color-mix(in srgb, var(--text-primary), var(--background-primary) 10%)` on `.button:hover`.
 - **Hover formula (unfilled):** `background-color: color-mix(in srgb, var(--button-color), var(--alpha-10))`, applies to outline, faded, outline-faded, transparent variants.
@@ -6677,10 +6678,14 @@ Re-point these to re-skin the dialog for a brand. Never override the `.dialog` r
 | `.dialog.is-pulsing` | Blocked-close feedback, shared with Drawer |
 | `.dialog-header` | Flex row for title + close button |
 | `.dialog-title` | Dialog heading |
-| `.dialog-body` | Scrolling content area (`min-height: 0` so the footer can't be pushed out) |
+| `.dialog-body` | Scrolling content area: `flex: 1 1 auto` so it sizes to its content, and `min-height: 0` so it shrinks and scrolls rather than pushing the footer out |
 | `.dialog-footer` | Footer with flex-end alignment for action buttons |
 | `.dialog-close` | Deprecated bespoke close button, kept for existing markup. Use `.button.close-btn` |
 | `[data-theme="dark"] .dialog` | Dark mode: re-points `--dialog-background` and `--dialog-shadow` |
+
+### Body sizing
+
+The dialog has no fixed height. It is as tall as its content, up to `85dvh`. So the body's flex basis has to be `auto`, never `0%`. `flex: 1` sets a 0% basis, and iOS Safari resolves that to zero inside a content-sized column, which collapses the body and leaves only the header and footer showing. Chrome happens to recover, so the bug is invisible on desktop. With `flex: 1 1 auto` a short body takes its own height and a long one grows until `max-height` stops the dialog, then shrinks (`min-height: 0`) and scrolls (`overflow-y: auto`) with the footer still in view.
 
 The close button is the shared `.close-btn` role class, documented in [Button](/website/button.html). It is not a dialog-specific component.
 

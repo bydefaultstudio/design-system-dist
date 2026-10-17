@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.1 */
+/* @bydefaultstudio/design-system v6.0.2 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -1730,9 +1730,12 @@ button.button {
   --button-font: var(--font-primary);
   --button-text-size: var(--font-m);
   /* Leading is a token because the filled button and the text variant need
-     different values: 0.7 is right when 32px of padding builds the box, and
-     wrong when the padding is zero (see [data-variant="text"]). */
-  --button-leading: var(--line-height-xs);
+     different values. It was 0.7, an optical trim that only holds on one line:
+     a label that wrapped stacked its lines on top of each other. The padding
+     rule below takes the extra half-leading back off the block padding, so a
+     one-line button keeps the height 0.7 gave it (see [data-variant="text"]
+     for the zero-padding case). */
+  --button-leading: var(--line-height-m);
   --button-padding-y: var(--space-l);
   --button-padding-x: var(--space-xl);
   --button-gap: var(--space-m);
@@ -1746,6 +1749,15 @@ button.button {
 
   /* -- Box model -- */
   padding: var(--button-padding-y) var(--button-padding-x);
+  /* Height stays 2 x padding + 0.7em at any leading: the half-leading above
+     0.7 comes back off each side. max() floors a small padding-y at 0. Where
+     padding-y is a unitless 0 (text variant, bar, header action) the calc is
+     invalid and padding-block falls back to its initial 0, the same result.
+     --button-leading must stay a unitless number for the same reason: a
+     length makes the calc invalid and the padding drops to 0. An icon taller
+     than the 0.7em line it used to sit beside (a dropdown chevron) no longer
+     adds height; the label's 1.2em line box covers it. */
+  padding-block: max(0px, calc(var(--button-padding-y) - (var(--button-leading) - var(--line-height-xs)) * 0.5em));
 
   /* -- Visual -- */
   background-color: var(--button-bg);
@@ -1816,6 +1828,10 @@ button.button {
   /* No padding to build the box, so the line box IS the box: at 0.7 an
      18px label sat in 12.6px and stacked text buttons collided. */
   --button-leading: var(--line-height-l);
+  /* Keeps its padding untrimmed: zero here, so there is no half-leading to
+     take back, and a size exception that restores padding-y must not lose
+     the trim's worth of it either. */
+  padding-block: var(--button-padding-y);
 }
 .button[data-variant="text"]:hover {
   text-decoration: underline;
@@ -1852,6 +1868,8 @@ button.button {
 .button[data-icon-only] {
   --button-padding-x: var(--button-padding-y);
   --icon-size: 1.3rem;
+  /* No text, so no leading to take back: the trim above would shrink it. */
+  padding-block: var(--button-padding-y);
 }
 
 .button[data-full-width] {
@@ -5681,7 +5699,11 @@ hr.xl {
 
 .dialog-body {
   overflow-y: auto;
-  flex: 1;
+  /* auto, not flex: 1. The dialog is sized by its content, and flex: 1 is a
+     0% basis, which iOS Safari resolves to zero: the body collapsed and only
+     the header and footer showed. An auto basis sizes the body to its content;
+     min-height: 0 still lets it shrink and scroll once max-height is hit. */
+  flex: 1 1 auto;
   /* Column flex items default to min-height: auto, which stops the body
      shrinking and pushes the footer actions out of the dialog. */
   min-height: 0;
