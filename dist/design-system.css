@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -54,9 +54,9 @@
 
   /* -- Accent colours (generic) -- */
   --red-lighter: #FEE2E2;
-  --red-light: #FECACA;
+  --red-light: #F76969;
   --red: #DC2626;
-  --red-dark: #7F1D1D;
+  --red-dark: #991B1B;
   --blue-lighter: #DBEAFE;
   --blue-light: #BFDBFE;
   --blue: #2563EB;
@@ -66,9 +66,9 @@
   --yellow: #D97706;
   --yellow-dark: #78350F;
   --green-lighter: #DCFCE7;
-  --green-light: #BBF7D0;
+  --green-light: #6DD995;
   --green: #16A34A;
-  --green-dark: #14532D;
+  --green-dark: #155F31;
   --purple-lighter: #F3E8FF;
   --purple-light: #E9D5FF;
   --purple: #9333EA;
@@ -197,6 +197,21 @@
 
   /* Icon Size */
   --icon-size: 1.3rem;
+  /* The steps a component or a tool sets --icon-size to, so a hint, a
+     row's thumb and an empty state's icon land on the same few sizes
+     instead of each picking its own. */
+  --icon-size-xs: 1rem;
+  --icon-size-s: 1.25rem;
+  --icon-size-m: 1.5rem;
+  --icon-size-l: 2rem;
+  --icon-size-xl: 2.5rem;
+  --icon-size-2xl: 3rem;
+  /* The optical trim: a negative margin that pulls an icon into the text
+     beside it, so a nav link, a button or a callout keeps its rhythm with
+     the icon in it. A full-site screenshot pass (2026-10-13) showed it
+     holds nearly everywhere an icon sits next to words; an icon standing
+     alone (a tile, an empty state, a thumbnail) sets it to 0. */
+  --icon-trim: -0.175em;
 
 }
 
@@ -234,8 +249,8 @@
 /* -- Artwork rules --
    The brand's rules for its artwork, read by the layer engine
    (assets/js/layer-stack.js) when it draws guides and zones: the Icon
-   Library's Guides, the Logo Tool's Safe Zone and every Artwork Layers spec
-   bound to them. Unitless, in the artwork's own measure: an icon's padding
+   Library's Guides, the Logo Tool's Safe Zone and every Layout Spec bound
+   to them. Unitless, in the artwork's own measure: an icon's padding
    and grid cell in the units of its 24 viewBox, a logo's clear space as a
    multiple of X (the glyph width each logo's manifest entry names). A brand
    sets them in its theme.css; every layer bound to one redraws. */
@@ -257,11 +272,23 @@
   --neutral-400: #8a8a8a;
   --neutral-500: #737373;
   --neutral-600: #5c5c5c;
+  --neutral-650: #555555;
   --neutral-700: #474747;
+  --neutral-750: #3a3a3a;
   --neutral-800: #333333;
+  --neutral-850: #2a2a2a;
+  --neutral-875: #222222;
   --neutral-900: #1f1f1f;
+  --neutral-925: #1a1a1a;
   --neutral-950: #141414;
   --neutral-990: #0a0a0a;
+
+  /* -- Warm -- */
+  /* The warm off-whites dark mode sets its text in. Three steps, named on the
+     neutral scale's numbering so they line up with it. */
+  --warm-50: #f0eeeb;
+  --warm-100: #e8e6e3;
+  --warm-400: #a8a5a2;
 
   /* -- Black & White Alpha Tokens -- */
   --black: #000000;
@@ -283,8 +310,11 @@
   --white: #ffffff;
   --white-alpha-3: #ffffff08;
   --white-alpha-5: #ffffff0d;
+  --white-alpha-6: #ffffff0f;
   --white-alpha-7: #ffffff12;
+  --white-alpha-8: #ffffff14;
   --white-alpha-10: #ffffff1a;
+  --white-alpha-12: #ffffff1f;
   --white-alpha-15: #ffffff26;
   --white-alpha-20: #ffffff33;
   --white-alpha-30: #ffffff4d;
@@ -329,6 +359,9 @@
   --text-accent: var(--blue);
   --text-link: var(--text-accent);
   --text-inverted: var(--off-white);
+  /* The surface --text-inverted reads on: the theme's ink as a ground, so a
+     curtain or a toast is the page turned inside out in either theme. */
+  --background-inverted: var(--text-primary);
   --text-sidebar: var(--text-primary);
   --text-top-nav: var(--text-primary);
 
@@ -393,8 +426,12 @@
   --input-border: var(--border-secondary);
   --input-background: var(--background-primary);
   --input-text: var(--text-plain);
+  /* The select's closed-state caret. A data URI cannot read a custom
+     property, so each theme carries its own artwork. Light keeps the
+     original #666; dark is --warm-400, its --text-secondary. */
+  --select-caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23666' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E");
   --input-placeholder: var(--text-faded);
-  --input-focus: var(--text-accent);
+  --input-focus: var(--text-primary);
   --input-disabled-bg: var(--background-faded);
   --input-disabled-text: var(--text-faded);
   --checkbox-background: var(--neutral-100);
@@ -540,6 +577,8 @@
   --swatch-icon-size: 1rem;
   /* The copy actions' height: WCAG 2.5.8's 24px minimum target. */
   --swatch-target: 1.5rem;
+  /* The breadcrumb's ⋯ trigger: WCAG 2.5.8's 24px minimum target. */
+  --breadcrumb-overflow-target: 1.5rem;
   --swatch-columns: 2;
   /* -- Rating color tokens removed — uses values directly on component -- */
 
@@ -549,27 +588,32 @@
 }
 
 /* ------ 2b. THEME TOKENS - DARK MODE ------ */
-/* Set data-theme="dark" on <html> for page-level, or on any element for scoped theming */
+/* Set data-theme="dark" on <html> for page-level, or on any element for scoped theming.
+   Every value here points at a primitive, the same as light mode: each
+   semantic token has a light value in :root and a dark value here (Figma's
+   Light and Dark modes). A brand re-skins dark mode by re-pointing the
+   primitives, or a token's dark value, never with a raw colour. */
 
 [data-theme="dark"] {
   /* -- Text -- */
-  --text-primary: #e8e6e3;
-  --text-secondary: #a8a5a2;
-  --text-plain: #f0eeeb;
+  --text-primary: var(--warm-100);
+  --text-secondary: var(--warm-400);
+  --text-plain: var(--warm-50);
   /* a11y: 0.5 → ~5.0:1 on --neutral-900; 0.45 was 4.4:1, marginal for AA */
-  --text-faded: rgba(255, 255, 255, 0.5);
+  --text-faded: var(--white-alpha-50);
   --text-accent: var(--yellow);
   --text-link: var(--text-accent);
-  --text-inverted: #1a1a1a;
+  --text-inverted: var(--neutral-925);
+  --background-inverted: var(--text-primary);
   --text-sidebar: var(--text-primary);
   --text-top-nav: var(--text-primary);
 
   /* -- Background -- */
   --background-primary: var(--neutral-900);
-  --background-secondary: #222222;
-  --background-plain: #2a2a2a;
-  --background-faded: rgba(255, 255, 255, 0.06);
-  --background-darker: rgba(255, 255, 255, 0.12);
+  --background-secondary: var(--neutral-875);
+  --background-plain: var(--neutral-850);
+  --background-faded: var(--white-alpha-6);
+  --background-darker: var(--white-alpha-12);
   --background-modal: var(--black-alpha-50);
   --background-sidebar: var(--background-primary);
   --background-top-nav: var(--background-primary);
@@ -580,8 +624,8 @@
   --bg-faded-15: var(--white-alpha-15);
 
   /* -- Border -- */
-  --border-primary: #e8e6e3;
-  --border-secondary: #3a3a3a;
+  --border-primary: var(--warm-100);
+  --border-secondary: var(--neutral-750);
   --border-faded: var(--white-alpha-20);
   /* Lighter than the light-theme value, not darker — contrast runs the other
      way against a dark ground. 4.77:1 on --background-primary. */
@@ -595,25 +639,27 @@
   /* The pair flips as a pair: light text over the page ground pulled 15%
      toward the hue. Anchored to --background-primary rather than --brown-dark
      (a toast-local colour), so a rethemed dark ground carries these surfaces
-     with it. Holds every variant above 6.6:1 (danger is the floor, since
-     --red-light carries more chroma than the other three). */
+     with it. Danger is the floor at 4.54:1 — --red-light is a mid red, not a
+     pastel, so it sits close to its own surface. Do not lighten the mix or
+     darken --red-light without re-measuring. */
   --status-info-bg: color-mix(in srgb, var(--status-info), var(--background-primary) 85%);
   --status-success-bg: color-mix(in srgb, var(--status-success), var(--background-primary) 85%);
   --status-warning-bg: color-mix(in srgb, var(--status-warning), var(--background-primary) 85%);
   --status-danger-bg: color-mix(in srgb, var(--status-danger), var(--background-primary) 85%);
 
   /* -- Form -- */
-  --input-border: #3a3a3a;
-  --input-background: rgba(255, 255, 255, 0.08);
-  --input-text: #f0eeeb;
+  --input-border: var(--neutral-750);
+  --input-background: var(--white-alpha-8);
+  --input-text: var(--warm-50);
+  --select-caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23a8a5a2' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E"); /* --warm-400 */
   --input-placeholder: var(--text-faded);
-  --input-focus: var(--text-accent);
-  --input-disabled-bg: rgba(255, 255, 255, 0.06);
-  --input-disabled-text: rgba(255, 255, 255, 0.3);
-  --checkbox-background: #3a3a3a;
-  --checkbox-selected: #e8e6e3;
-  --checkbox-border: #555;
-  --checkbox-checkmark: #1a1a1a;
+  --input-focus: var(--text-primary);
+  --input-disabled-bg: var(--white-alpha-6);
+  --input-disabled-text: var(--white-alpha-30);
+  --checkbox-background: var(--neutral-750);
+  --checkbox-selected: var(--warm-100);
+  --checkbox-border: var(--neutral-650);
+  --checkbox-checkmark: var(--neutral-925);
 
   /* -- Highlight -- */
   /* The full-strength step, not the pale one: --yellow-light is a wash built for
@@ -634,21 +680,22 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --text-primary: #e8e6e3;
-    --text-secondary: #a8a5a2;
-    --text-plain: #f0eeeb;
-    --text-faded: rgba(255, 255, 255, 0.5); /* AA — see [data-theme="dark"] above */
+    --text-primary: var(--warm-100);
+    --text-secondary: var(--warm-400);
+    --text-plain: var(--warm-50);
+    --text-faded: var(--white-alpha-50); /* AA — see [data-theme="dark"] above */
     --text-accent: var(--yellow);
     --text-link: var(--text-accent);
-    --text-inverted: #1a1a1a;
+    --text-inverted: var(--neutral-925);
+    --background-inverted: var(--text-primary);
     --text-sidebar: var(--text-primary);
     --text-top-nav: var(--text-primary);
 
     --background-primary: var(--neutral-900);
-    --background-secondary: #222222;
-    --background-plain: #2a2a2a;
-    --background-faded: rgba(255, 255, 255, 0.06);
-    --background-darker: rgba(255, 255, 255, 0.12);
+    --background-secondary: var(--neutral-875);
+    --background-plain: var(--neutral-850);
+    --background-faded: var(--white-alpha-6);
+    --background-darker: var(--white-alpha-12);
     --background-modal: var(--black-alpha-50);
     --background-sidebar: var(--background-primary);
     --background-top-nav: var(--background-primary);
@@ -658,8 +705,8 @@
     --bg-faded-10: var(--white-alpha-10);
     --bg-faded-15: var(--white-alpha-15);
 
-    --border-primary: #e8e6e3;
-    --border-secondary: #3a3a3a;
+    --border-primary: var(--warm-100);
+    --border-secondary: var(--neutral-750);
     --border-faded: var(--white-alpha-20);
     --border-control: var(--neutral-400);
 
@@ -673,17 +720,18 @@
     --status-warning-bg: color-mix(in srgb, var(--status-warning), var(--background-primary) 85%);
     --status-danger-bg: color-mix(in srgb, var(--status-danger), var(--background-primary) 85%);
 
-    --input-border: #3a3a3a;
-    --input-background: rgba(255, 255, 255, 0.08);
-    --input-text: #f0eeeb;
+    --input-border: var(--neutral-750);
+    --input-background: var(--white-alpha-8);
+    --input-text: var(--warm-50);
+    --select-caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23a8a5a2' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E"); /* --warm-400 */
     --input-placeholder: var(--text-faded);
-    --input-focus: var(--text-accent);
-    --input-disabled-bg: rgba(255, 255, 255, 0.06);
-    --input-disabled-text: rgba(255, 255, 255, 0.3);
-    --checkbox-background: #3a3a3a;
-    --checkbox-selected: #e8e6e3;
-    --checkbox-border: #555;
-    --checkbox-checkmark: #1a1a1a;
+    --input-focus: var(--text-primary);
+    --input-disabled-bg: var(--white-alpha-6);
+    --input-disabled-text: var(--white-alpha-30);
+    --checkbox-background: var(--neutral-750);
+    --checkbox-selected: var(--warm-100);
+    --checkbox-border: var(--neutral-650);
+    --checkbox-checkmark: var(--neutral-925);
 
     /* -- Highlight -- */
     --mark-background: var(--yellow);
@@ -716,7 +764,7 @@
  * against the page and a shade band stays loud, in either theme. base holds
  * its colour in both, which is what it is for.
  *
- * NOTHING HERE PAINTS. These four layers only declare custom properties, so
+ * NOTHING HERE PAINTS. These five layers only declare custom properties, so
  * a stray data-color on a div changes no pixels. Painting happens in the
  * per-component assignment rules, each next to its own component below.
  * That is deliberate: .badge[data-color="danger"] and .button[data-color="red"]
@@ -733,13 +781,18 @@
    for the colour family — the thing data-color selects — and one word cannot
    carry two axes on the same element.
 
-   The house ramp's fourth step, --<hue>-light, has no stage in a three-stage
-   map and nothing ever read it, so it is gone rather than carried unnamed.
+   The house ramp's fourth step, --<hue>-light, is --color-light. It is not a
+   stage — data-step never selects it — and only os-illustrations read it, as
+   the field their art is drawn on (layer 5). It was dropped once because
+   nothing read it, and came back when something did.
+
+   Brown is the ninth hue. It joined with os-illustrations, and like the other
+   eight it works on every component that paints from data-color.
 
    --color-on-base is not a step. It is which of black or white sits ON the base
    colour. It is never a free choice: take the better of the two and the answer
-   is forced by the hue. Today that is white on blue, purple, green and red, and
-   black on yellow, aqua, pink and peach — every one of them the higher figure,
+   is forced by the hue. Today that is white on blue, purple, green, red and
+   brown, and black on yellow, aqua, pink and peach — every one of them the higher figure,
    with no compromise anywhere. Section 1 prints the measurement next to each
    base step rather than asserting it here, so this comment cannot go stale.
 
@@ -753,14 +806,15 @@
    --color-off-base is simply the other one, and it is what gives the base
    step a raised surface — see section 4. */
 
-[data-color="blue"]   { --color-tint: var(--blue-lighter);   --color-base: var(--blue);   --color-shade: var(--blue-dark);   --color-on-base: var(--white); --color-off-base: var(--black); }
-[data-color="purple"] { --color-tint: var(--purple-lighter); --color-base: var(--purple); --color-shade: var(--purple-dark); --color-on-base: var(--white); --color-off-base: var(--black); }
-[data-color="green"]  { --color-tint: var(--green-lighter);  --color-base: var(--green);  --color-shade: var(--green-dark);  --color-on-base: var(--white); --color-off-base: var(--black); }
-[data-color="yellow"] { --color-tint: var(--yellow-lighter); --color-base: var(--yellow); --color-shade: var(--yellow-dark); --color-on-base: var(--black); --color-off-base: var(--white); }
-[data-color="red"]    { --color-tint: var(--red-lighter);    --color-base: var(--red);    --color-shade: var(--red-dark);    --color-on-base: var(--white); --color-off-base: var(--black); }
-[data-color="aqua"]   { --color-tint: var(--aqua-lighter);   --color-base: var(--aqua);   --color-shade: var(--aqua-dark);   --color-on-base: var(--black); --color-off-base: var(--white); }
-[data-color="pink"]   { --color-tint: var(--pink-lighter);   --color-base: var(--pink);   --color-shade: var(--pink-dark);   --color-on-base: var(--black); --color-off-base: var(--white); }
-[data-color="peach"]  { --color-tint: var(--peach-lighter);  --color-base: var(--peach);  --color-shade: var(--peach-dark);  --color-on-base: var(--black); --color-off-base: var(--white); }
+[data-color="blue"]   { --color-tint: var(--blue-lighter);   --color-light: var(--blue-light);   --color-base: var(--blue);   --color-shade: var(--blue-dark);   --color-on-base: var(--white); --color-off-base: var(--black); }
+[data-color="purple"] { --color-tint: var(--purple-lighter); --color-light: var(--purple-light); --color-base: var(--purple); --color-shade: var(--purple-dark); --color-on-base: var(--white); --color-off-base: var(--black); }
+[data-color="green"]  { --color-tint: var(--green-lighter);  --color-light: var(--green-light);  --color-base: var(--green);  --color-shade: var(--green-dark);  --color-on-base: var(--white); --color-off-base: var(--black); }
+[data-color="yellow"] { --color-tint: var(--yellow-lighter); --color-light: var(--yellow-light); --color-base: var(--yellow); --color-shade: var(--yellow-dark); --color-on-base: var(--black); --color-off-base: var(--white); }
+[data-color="red"]    { --color-tint: var(--red-lighter);    --color-light: var(--red-light);    --color-base: var(--red);    --color-shade: var(--red-dark);    --color-on-base: var(--white); --color-off-base: var(--black); }
+[data-color="aqua"]   { --color-tint: var(--aqua-lighter);   --color-light: var(--aqua-light);   --color-base: var(--aqua);   --color-shade: var(--aqua-dark);   --color-on-base: var(--black); --color-off-base: var(--white); }
+[data-color="pink"]   { --color-tint: var(--pink-lighter);   --color-light: var(--pink-light);   --color-base: var(--pink);   --color-shade: var(--pink-dark);   --color-on-base: var(--black); --color-off-base: var(--white); }
+[data-color="peach"]  { --color-tint: var(--peach-lighter);  --color-light: var(--peach-light);  --color-base: var(--peach);  --color-shade: var(--peach-dark);  --color-on-base: var(--black); --color-off-base: var(--white); }
+[data-color="brown"]  { --color-tint: var(--brown-lighter);  --color-light: var(--brown-light);  --color-base: var(--brown);  --color-shade: var(--brown-dark);  --color-on-base: var(--white); --color-off-base: var(--black); }
 
 /* -- 2. Roles. Step picks which end of the ramp is the ground. --------- */
 
@@ -831,8 +885,8 @@
    muted — a second, quieter text colour, for a subtitle or a caption.
 
    On the base step the raise changes DIRECTION, and that is the whole
-   trick. The base step is the tightest ground in the set — white on --red is 4.87:1, the lowest
-   of the eight — so moving the surface toward the text costs contrast it cannot
+   trick. The base step is the tightest ground in the set — white on --red is 4.87:1,
+   and on the engine's brown (--neutral-500) 4.74:1, the lowest of the nine — so moving the surface toward the text costs contrast it cannot
    spare, measured 4.33:1 on red at a 10% raise toward the ink.
    Moving it AWAY instead spends nothing: it widens the gap. Because the ink on the base
    step is always literally black or white, "away" has an exact name, which
@@ -851,12 +905,18 @@
    ramps whose text-on-ground sits at 9.5-13.5:1, and it had 4.65:1 of headroom
    at its tightest. aqua and pink are shallower — 7.03:1 and 7.90:1 — because
    their dark steps (#15605A, #7F2B56) are lighter than the other five
-   (#001F64, #3A005F, #003E37, #583800, #4E0100). At 80% that put muted at
+   (#001F64, #3A005F, #003E37, #583800, #4E0100 when this was measured). At 80% that put muted at
    4.37:1 on aqua and muted-on-raised at 3.76:1, both under AA. 90% clears every
    hue in both themes and costs the deep ramps nothing they need: blue's muted
    moves 7.59 -> 10.22 against a 13.11 ground, still visibly quieter than the
    text. The alternative fix is deeper dark steps on the two new ramps, which is
    a change to theme.css rather than to the mode.
+
+   Since then red and green lightened their dark steps so the status colours
+   read as red and green rather than maroon and bottle (#991B1B, #155F31, now
+   inherited by By Default too). Those two are the new floor: muted on raised
+   measures 4.85:1 on red and 4.61:1 on green. #166534 was the first pick for
+   green and measured 4.31:1 here, which is why it sits a step darker.
 
    border-faded — a decorative boundary, not a control boundary. The system's own
    --border-faded is an alpha wash of black (--black-alpha-15) or, in dark, of
@@ -865,8 +925,8 @@
    at 15% is invisible on a shade ground. Mixing toward --color-text instead
    keeps the wash but takes its polarity from the mode. 25% was picked to sit on
    the system's own band — the root token measures 1.41:1 in light and 1.89:1 in
-   dark, and 25% spans 1.40-2.02 across all thirty hue x step x theme
-   combinations. It is deliberately below the 3:1 of WCAG 1.4.11: this is the
+   dark, and 25% spans 1.40-2.02 across the thirty hue x step x theme
+   combinations measured before brown joined the scope. It is deliberately below the 3:1 of WCAG 1.4.11: this is the
    decorative border, and 1.4.11 governs control boundaries, which take
    --border-control. */
 
@@ -880,6 +940,53 @@
   --color-raised: color-mix(in srgb, var(--color-off-base) 15%, var(--color-background));
   --color-text-muted: var(--color-text);
   --color-hover-mix: 95%;
+}
+
+/* -- 5. OS illustration roles. data-field picks the steps. ---------------
+   An os-illustration (section 55) carries roles, never steps: the import
+   writes data-fill / data-stroke="ink" and so on, and these tokens say which
+   step of the ramp fills each one. They read layer 1 only, which never swaps
+   with the theme, so an os-illustration stays light in dark mode.
+
+   data-field picks the field: light (the default, so omit it), lighter or
+   dark. A new field is one more rule here and no re-export. It only counts on
+   the element that also carries data-color.
+
+   --os-illustration-text is for text set on the field — a page header's title
+   beside its art. It is the ink, except where the ink fails as text. On their
+   light field, red's and green's dark steps measure 2.84:1 and 4.43:1, so
+   their text is off-black: 5.64 / 4.92 on red and 9.43 / 7.65 on green
+   (title / 90% subtitle). The art keeps its ink, because it is decorative and
+   the contrast requirement is the text's. A hue that fails the same way joins
+   that rule. The lighter and dark fields pass on every hue, so they reset it. */
+
+[data-color] {
+  --os-illustration-field: var(--color-light);
+  --os-illustration-ink: var(--color-shade);
+  --os-illustration-text: var(--os-illustration-ink);
+  --os-illustration-on-ink: var(--color-light);
+  --os-illustration-accent: var(--color-base);
+  --os-illustration-accent-soft: var(--color-tint);
+}
+
+[data-color="red"],
+[data-color="green"] {
+  --os-illustration-text: var(--off-black);
+}
+
+[data-color][data-field="lighter"] {
+  --os-illustration-text: var(--os-illustration-ink);
+  --os-illustration-field: var(--color-tint);
+  --os-illustration-on-ink: var(--color-tint);
+  --os-illustration-accent-soft: var(--color-light);
+}
+
+[data-color][data-field="dark"] {
+  --os-illustration-text: var(--os-illustration-ink);
+  --os-illustration-field: var(--color-shade);
+  --os-illustration-ink: var(--color-tint);
+  --os-illustration-on-ink: var(--color-shade);
+  --os-illustration-accent-soft: var(--color-light);
 }
 
 /* ------ 3. SYSTEM TOKENS - SPACING & TYPOGRAPHY ------ */
@@ -994,6 +1101,26 @@
   --accordion-padding-x: var(--space-l);
   --accordion-padding-y: var(--space-l);
 
+  /* -- State opacity tokens --
+     Disabled: a control that cannot be used, faded whole (button, field
+     action, slider, stepper, chip). Loading: a control still enabled and
+     busy, so its label keeps the 4.5:1 text floor; at 0.6 the primary
+     button's white-on-accent fell to 4.27:1. */
+  --opacity-disabled: 0.4;
+  --opacity-loading: 0.75;
+
+  /* -- Focus ring tokens --
+     The ring every focusable control draws on :focus-visible: its width,
+     and how far it stands off the control. An inset ring (a row flush with
+     its neighbours) offsets by minus the width. */
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  /* How far the widest ring reaches outside a control's edge: the width, the
+     offset, and the one pixel the tool tiles stand off further to clear a
+     selected tile's border. A clipping container that holds controls at its
+     edge keeps at least this much room, or the ring is cut there. */
+  --focus-reach: calc(var(--focus-width) + var(--focus-offset) + var(--border-s));
+
   /* -- Border width tokens -- */
   --border-s: 0.0625rem;   /* 1px */
   --border-m: 0.09375rem;  /* 1.5px */
@@ -1074,8 +1201,9 @@
  * Naming convention for new semantic tokens:
  *   --motion-{scope}-{event}-{property}
  *   scope    = page | surface | element | feedback
- *   event    = open | close | swap | enter | exit | fade | hover | press
- *   property = duration | easing
+ *   event    = open | close | swap | enter | exit | fade | intro | stagger | hover | press
+ *              | toggle | content | text | scale | blur | reduced
+ *   property = duration | easing | offset | distance | from
  *
  * See cms/motion.md for the full reference and demos.
  */
@@ -1084,8 +1212,12 @@
   /* -- Easing primitives -- */
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   /* fast start, slow end. for exits. */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  /* slow start, slow end with long tail. for entrances. */
+  --ease-out: cubic-bezier(0.3, 0, 0, 1);
+  /* a short, soft lead-in, then a long glide to rest. for entrances and
+     everything that responds to the reader. eBay's standard curve, chosen
+     2026-10-15 over the old expo-like cubic-bezier(0.16, 1, 0.3, 1), which
+     did 75% of its travel in the first fifth and read as a snap. This one
+     is 38% in at a fifth. */
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   /* symmetric. for swaps and continuous motion. */
   --ease-emphasized: cubic-bezier(0.86, 0, 0.07, 1);
@@ -1098,7 +1230,7 @@
   --duration-xs: 200ms;
   --duration-s: 400ms;
   --duration-m: 600ms;
-  --duration-l: 800ms;
+  --duration-l: 1000ms;
   --duration-xl: 1200ms;
   --duration-2xl: 1500ms;
   --duration-3xl: 1800ms;
@@ -1129,6 +1261,96 @@
   --motion-page-fade-duration: var(--duration-m);
   /* 600ms */
   --motion-page-fade-easing: var(--ease-in-out);
+
+  /* Under prefers-reduced-motion every page transition becomes this short
+     crossfade, the arriving page fading in over the one that holds still:
+     the reader still sees the page change, with no travel. Replacement, not
+     removal. */
+  --motion-page-reduced-duration: var(--duration-xs);
+  /* 200ms */
+  --motion-page-reduced-easing: var(--ease-in-out);
+
+  /* How far into a page transition the arriving page's content starts, as
+     a share of that transition's duration: halfway, so the page has
+     visibly moved before its header and on-screen reveals rise into it and
+     the two land as one gesture. Unitless; the page router multiplies it by
+     the transition's duration. */
+  --motion-page-content-offset: 0.5;
+
+  /* The first-load curtain's drop (assets/js/bd-intro.js): how long the
+     wordmark takes to fall and settle, and the curve of the fall. The
+     settle after the fall is a spring the script samples. The fade after
+     it is the page fade above. */
+  --motion-page-intro-duration: var(--duration-2xl);
+  /* 1500ms */
+  --motion-page-intro-easing: var(--ease-in);
+
+  /* -- Element-level semantic motion -- the first consumer is
+     assets/js/bd-animate.js, which reads these and nothing below them.
+     Entrances and scroll reveals move on `enter`; exits on `exit`; a stagger
+     that only changes opacity (split text, list items) takes `fade`'s
+     symmetric curve: with nothing travelling, a run of units reads as one
+     sweep on a curve that is still at both ends, and each unit would land
+     abruptly on one that only decelerates. `stagger` is the step every
+     sequenced group counts in. */
+  --motion-element-enter-duration: var(--duration-l);
+  /* 1000ms: the gentler curve needs the room, and still reads calm */
+  --motion-element-enter-easing: var(--ease-out);
+
+  /* Where a scroll reveal starts: when the element's top crosses this line,
+     measured down the viewport. 95%: it starts as soon as it shows at the
+     bottom edge, so a reveal never reads as late, on a phone or a desktop. */
+  --motion-element-reveal-start: 95%;
+
+  /* How far an entrance travels, how far split text rises, and where a
+     scale or blur entrance starts. */
+  --motion-element-enter-distance: var(--space-3xl);
+  /* 40px */
+  --motion-element-text-distance: var(--space-l);
+  /* 16px */
+  --motion-element-scale-from: 0.9;
+  --motion-element-blur-from: 10px;
+
+  --motion-element-exit-duration: var(--duration-s);
+  /* 400ms */
+  --motion-element-exit-easing: var(--ease-in);
+
+  --motion-element-fade-easing: var(--ease-in-out);
+
+  --motion-element-stagger-duration: var(--duration-stagger);
+  /* 30ms */
+
+  /* -- Feedback -- an element answering the reader: hover, focus, a chevron
+     turning, a fill changing. Short, on the same curve as every entrance,
+     so a hover and a reveal feel like one system. Press is the shorter
+     confirmation of a tap or click. -- */
+  --motion-feedback-hover-duration: var(--duration-xs);
+  /* 200ms */
+  --motion-feedback-hover-easing: var(--ease-out);
+  --motion-feedback-press-duration: var(--duration-2xs);
+  /* 100ms */
+  --motion-feedback-press-easing: var(--ease-out);
+
+  /* -- Surface -- a panel or rail that changes the layout around it (a
+     navigation rail collapsing). Decisive, on the emphasised curve. -- */
+  --motion-surface-toggle-duration: var(--duration-s);
+  /* 400ms */
+  --motion-surface-toggle-easing: var(--ease-emphasized);
+
+  /* -- Surface open and close -- anything that opens over the page: a
+     dialog, a drawer, a sheet. One timing for all of them, so a dialog and
+     a drawer feel like the same system. Opens on the house curve, the glide
+     doing the work so it answers at once; closes accelerating away, on the
+     exit step (cms/motion.md). Under reduced motion, a 200ms fade, the same
+     as a page. -- */
+  --motion-surface-open-duration: var(--duration-m);
+  /* 600ms */
+  --motion-surface-open-easing: var(--ease-out);
+  --motion-surface-close-duration: var(--duration-s);
+  /* 400ms */
+  --motion-surface-close-easing: var(--ease-in);
+  --motion-surface-reduced-duration: var(--duration-xs);
+  /* 200ms */
 }
 
 /* ------ 5. LAYOUT PRIMITIVES ------ */
@@ -1395,30 +1617,33 @@ section {
 /* ------ 7. GRID ------ */
 
 /* -- Grid -- */
+/* Tracks are minmax(0, 1fr), not 1fr: a bare 1fr has a min-content floor,
+   so a long word, a wide input or a number field pushed its column wider
+   than its share and the grid overflowed its parent. */
 .grid {
   display: grid;
   gap: var(--space-m);
-  grid-template-columns: 1fr 1fr;
-  grid-auto-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-columns: minmax(0, 1fr);
 }
 
 /* -- Grid column modifiers -- */
 .cols-2 {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .cols-3 {
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .cols-4 {
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 /* -- Responsive collapse -- */
 @media (max-width: 768px) {
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1663,6 +1888,9 @@ font-family: var(--font-secondary);
 .text-center { text-align: center; }
 .text-right  { text-align: right; }
 
+/* Figures of one width, so a column of numbers lines up digit for digit. */
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
 /* -- Eyebrow text -- */
 .eyebrow {
   font-size: var(--font-xs);
@@ -1784,8 +2012,13 @@ button.button {
   transition: background-color var(--duration-m) var(--ease-out), color var(--duration-2xs) var(--ease-out), border-color var(--duration-2xs) var(--ease-out), opacity var(--duration-2xs) var(--ease-out), transform var(--duration-2xs) var(--ease-out);
 }
 
-/* -- Hover -- */
-.button:hover {
+/* -- Hover --
+   .is-hover forces the hover look without a pointer, for a picture of the
+   state beside its neighbours (Showcase, cms/components.md, State classes).
+   Every :hover rule on .button carries it, the context overrides included
+   (page header, bar, breadcrumb), as every :focus-visible carries .is-focus. */
+.button:hover,
+.button.is-hover {
   --button-color: color-mix(in srgb, var(--text-primary), var(--background-primary) 10%)
 }
 
@@ -1833,7 +2066,8 @@ button.button {
      the trim's worth of it either. */
   padding-block: var(--button-padding-y);
 }
-.button[data-variant="text"]:hover {
+.button[data-variant="text"]:hover,
+.button[data-variant="text"].is-hover {
   text-decoration: underline;
   text-underline-offset: 2.5px;
 }
@@ -1845,7 +2079,11 @@ button.button {
 .button[data-variant="outline"]:hover,
 .button[data-variant="faded"]:hover,
 .button[data-variant="outline-faded"]:hover,
-.button[data-variant="transparent"]:hover {
+.button[data-variant="transparent"]:hover,
+.button[data-variant="outline"].is-hover,
+.button[data-variant="faded"].is-hover,
+.button[data-variant="outline-faded"].is-hover,
+.button[data-variant="transparent"].is-hover {
   background-color: color-mix(in srgb, var(--button-color), var(--alpha-5));
 }
 
@@ -1901,7 +2139,9 @@ button.button {
    1.39:1, in line with the base button's own 1.31:1, and self-corrects in dark
    mode because --background-primary flips with the theme. */
 .button[data-color="danger"]:hover,
-.button[data-color="red"]:hover {
+.button[data-color="red"]:hover,
+.button[data-color="danger"].is-hover,
+.button[data-color="red"].is-hover {
   --button-color: color-mix(in srgb, var(--status-danger), var(--background-primary) 15%);
 }
 
@@ -1911,7 +2151,9 @@ button.button {
 }
 
 .button[data-color="success"]:hover,
-.button[data-color="green"]:hover {
+.button[data-color="green"]:hover,
+.button[data-color="success"].is-hover,
+.button[data-color="green"].is-hover {
   --button-color: color-mix(in srgb, var(--status-success), var(--background-primary) 15%);
 }
 
@@ -1935,7 +2177,8 @@ button.button {
   --button-color: var(--text-accent);
 }
 
-.button[data-color="accent"]:hover {
+.button[data-color="accent"]:hover,
+.button[data-color="accent"].is-hover {
   --button-color: color-mix(in srgb, var(--text-accent), var(--text-primary) 15%);
 }
 /* -- Role classes -- */
@@ -1953,7 +2196,8 @@ button.button {
   flex-shrink: 0;
 }
 
-.button.close-btn:hover {
+.button.close-btn:hover,
+.button.close-btn.is-hover {
   --button-color: var(--text-primary);
   background-color: color-mix(in srgb, var(--button-color), var(--alpha-5));
 }
@@ -1966,23 +2210,59 @@ button.button {
 }
 
 .button.close-btn[data-color="danger"]:hover,
-.button.close-btn[data-color="red"]:hover {
+.button.close-btn[data-color="red"]:hover,
+.button.close-btn[data-color="danger"].is-hover,
+.button.close-btn[data-color="red"].is-hover {
   --button-color: var(--status-danger);
   background-color: color-mix(in srgb, var(--status-danger), var(--alpha-10));
 }
 
+/* -- The close on a dialog or drawer --
+   The way out of a modal surface is the one control everyone needs, so in a
+   dialog or drawer header it is a faded button rather than a bare glyph:
+   at least the 44px target, the glyph at --icon-size-l (the bare one drew a
+   10px cross in a 42px box, under the target), and pulled toward the corner so it sits
+   --space-m from the top and end edges rather than at the full section
+   padding. It overrides any data-size on the markup: a smaller close
+   here is the problem this fixes. Elsewhere (a search field's clear, a
+   dismissible row) .close-btn keeps its quiet transparent form. */
+:is(.dialog-header, .drawer-header) .button.close-btn {
+  --button-color: var(--text-primary);
+  --button-bg: var(--button-faded);
+  --button-padding-y: var(--space-s);
+  --button-padding-x: var(--space-s);
+  --icon-size: var(--icon-size-l);
+}
+
+/* The header's end control (the close, or the actions group that ends in
+   it) moves toward the corner; the title stays on the section padding.
+   :not(:first-child) leaves a header holding only a title alone. */
+.dialog-header > :last-child:not(:first-child) {
+  margin-block-start: calc(var(--space-m) - var(--dialog-padding));
+  margin-inline-end: calc(var(--space-m) - var(--dialog-padding));
+}
+
+.drawer-header > :last-child:not(:first-child) {
+  margin-block-start: calc(var(--space-m) - var(--drawer-padding));
+  margin-inline-end: calc(var(--space-m) - var(--drawer-padding));
+}
+
 /* -- States -- */
 
+/* aria-disabled="true" is the form for a control that must stay
+   focusable, or an <a> with no href, which has no disabled attribute: the
+   script stops the activation, this paints it. */
 .button:disabled,
-.button.is-disabled {
-  opacity: 0.4;
+.button.is-disabled,
+.button[aria-disabled="true"] {
+  opacity: var(--opacity-disabled);
   pointer-events: none;
   cursor: not-allowed;
 }
 
 .button.is-loading {
   pointer-events: none;
-  opacity: 0.6;
+  opacity: var(--opacity-loading);
 }
 
 /* -- Reduced motion -- */
@@ -2002,7 +2282,7 @@ button.button {
   display: flex;
   aspect-ratio: 1 / 1;
   transition: color var(--duration-m) var(--ease-out);
-  margin: -0.175em
+  margin: var(--icon-trim);
 }
 
 .svg-icn svg,
@@ -2011,8 +2291,7 @@ button.button {
 }
 
 .svg-icn.is-preview {
-  width: 2.5rem;
-  height: 2.5rem;
+  --icon-size: var(--icon-size-xl);
 }
 
 .svg-logo {
@@ -2389,16 +2668,15 @@ dd {
 
    The widest ring in this section paints 4px outside the border box
    (2px outline + 2px offset on zero-padding buttons). .dialog-body and
-   .drawer-body size their clip-box padding to exactly that — widen an
-   outline or offset here and those two rules must grow with it, or
-   focus rings crop again at the body edges. */
+   .drawer-body hold their full inset inside the scroll box, so no ring in
+   this section reaches their clipping edge. */
 a:focus,
 button:focus,
 [role=button]:focus,
 input[type=radio]:focus,
 input[type=checkbox]:focus {
-  outline: 2px solid var(--status-info);
-  outline-offset: -2px;
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
   box-shadow: none;
 }
 
@@ -2414,32 +2692,43 @@ a:focus-visible,
 button:focus-visible,
 [role=button]:focus-visible,
 input[type=radio]:focus-visible,
-input[type=checkbox]:focus-visible {
-  outline: 2px solid var(--status-info);
-  outline-offset: -2px;
+input[type=checkbox]:focus-visible,
+a.is-focus,
+button.is-focus,
+[role=button].is-focus,
+input[type=radio].is-focus,
+input[type=checkbox].is-focus {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
   box-shadow: none;
 }
 
 /* The inset offset above assumes the control has padding to draw into.
    Zero-padding buttons need the ring outside, or it strikes through the label. */
 .button[data-variant="text"]:focus-visible,
+.button[data-variant="text"].is-focus,
 .dialog-close:focus-visible,
 .toast-close:focus-visible,
 .footer-link:focus-visible {
-  outline-offset: 2px;
+  outline-offset: var(--focus-offset);
 }
 
 /* A filled button surrounds the inset ring with its own fill, where the
-   status hue can vanish — --status-info measured 1.03:1 inside a filled
-   danger button. The text colour is the one value guaranteed to clear its
+   page ink can vanish — --input-focus is --text-primary, the same value as
+   the primary fill. The text colour is the one value guaranteed to clear its
    own fill, so the ring borrows it. Unfilled variants re-point
    --button-text-color at --button-color, which sits on the page ground. */
 .button:focus,
-.button:focus-visible {
+.button:focus-visible,
+.button.is-focus {
   outline-color: var(--button-text-color);
 }
 
-a:not([href]) {
+/* A placeholder link reads as text. A .button keeps its own colours with
+   no href — a Download that waits for a file to be picked — or this rule,
+   at (0,1,1), would out-rank .button's (0,1,0) and paint the label in the
+   page's ink, on a fill of the same colour. */
+a:not([href], .button) {
   color: inherit;
   text-decoration: none;
 }
@@ -2451,10 +2740,11 @@ a:not([href]) {
 /* ------ 11. CALLOUTS & ALERTS ------ */
 
 /* -- Base callout -- */
+/* No outer margin: whatever holds the callout spaces it, a block's gap or
+   the prose flow of a docs page (docs-site.css). A flex column does not
+   collapse margins, so a margin here added to every gap it sat in. */
 .callout {
   padding: var(--space-l);
-  margin-top: var(--space-l);
-  margin-bottom: var(--space-l);
   background-color: var(--background-faded);
   border: var(--border-s) solid var(--border-faded);
 }
@@ -2500,6 +2790,16 @@ a:not([href]) {
 .callout-description {
   margin-top: var(--space-xs);
   font-size: var(--font-s);
+}
+
+/* -- Callout actions --
+   The way forward under the description: one or two small buttons in a
+   row, wrapping. */
+.callout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-s);
+  margin-top: var(--space-s);
 }
 
 /* -- Callout type variants -- */
@@ -2550,6 +2850,23 @@ label {
   margin-bottom: var(--space-xs);
 }
 
+/* Caption: a quieter label for a dense panel of controls, regular weight
+   in the primary ink. On a <label> or a <legend>, so a single field and a
+   group of options read the same; on a <p> only for a group that names
+   itself with aria-labelledby because its caption row carries a button (a
+   legend's text is the group's name, and the button's would join it). No
+   margin of its own: the group's gap spaces it (a .block.gap-s, or a bare
+   fieldset). */
+label[data-variant="caption"],
+legend[data-variant="caption"],
+p[data-variant="caption"] {
+  margin: 0;
+  padding: 0;
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-regular);
+  color: var(--text-primary);
+}
+
 /* -- Text inputs & textarea -- */
 input[type="text"],
 input[type="email"],
@@ -2576,7 +2893,7 @@ select {
   min-height: var(--field-height);
   width: 100%;
   display: block;
-  transition: border-color 0.2s ease;
+  transition: border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 input[type="text"]:focus,
@@ -2593,8 +2910,8 @@ input[type="month"]:focus,
 input[type="week"]:focus,
 textarea:focus,
 select:focus {
-  outline: 1px solid var(--input-focus);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
   box-shadow: none;
 }
 
@@ -2618,6 +2935,16 @@ select:disabled {
   background-color: var(--input-disabled-bg);
   color: var(--input-disabled-text);
   cursor: not-allowed;
+}
+
+/* -- Read-only inputs --
+   A value the reader can select and copy but not type: a derived total, a
+   filename, a link. On the faded ground, so it does not ask to be typed
+   in; full-strength text, unlike disabled, because it is there to be read.
+   It stays in the tab order. A .field and a .number-input take it on the
+   box. Disabled wins over read-only when an input carries both. */
+input[readonly]:not(:disabled, [type="checkbox"], [type="radio"], [type="range"], [type="color"]) {
+  background-color: var(--background-faded);
 }
 
 input[type="number"]::-webkit-outer-spin-button,
@@ -2730,7 +3057,7 @@ input[type="color"] {
   aspect-ratio: 1 / 1;
   align-self: stretch;
   cursor: pointer;
-  transition: border-color 0.2s ease;
+  transition: border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 input[type="color"]::-webkit-color-swatch-wrapper {
@@ -2746,9 +3073,9 @@ input[type="color"]::-moz-color-swatch {
 }
 
 input[type="color"]:focus {
-  outline: none;
-  border-color: var(--input-focus);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
+  box-shadow: none;
 }
 
 /* The disabled background cannot show through the swatch, so dim it */
@@ -2760,11 +3087,20 @@ input[type="color"]:disabled {
 /* -- Select -- */
 select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23666' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E");
+  background-image: var(--select-caret);
   background-repeat: no-repeat;
   background-position: right var(--space-m) center;
   padding-right: var(--space-2xl);
   cursor: pointer;
+}
+
+/* A list box (multiple, or a size) is not a dropdown: no caret, and the
+   inset it reserved for one goes back to the options. */
+select[multiple],
+select[size]:not([size="1"]) {
+  background-image: none;
+  padding-right: var(--space-m);
+  cursor: default;
 }
 
 /* -- Select: customizable picker -- */
@@ -2882,8 +3218,8 @@ select {
   select:not([multiple]):not([size]) option:focus-visible {
     background-color: var(--dropdown-item-hover);
     color: var(--text-plain);
-    outline: 1px solid var(--input-focus);
-    outline-offset: -2px;
+    outline: var(--focus-width) solid var(--input-focus);
+    outline-offset: calc(var(--focus-width) * -1);
   }
 
   select:not([multiple]):not([size]) option:disabled {
@@ -2912,7 +3248,7 @@ select {
      only: the ::checkmark is a pseudo-element and cannot satisfy either half
      of this, but a bare text label cannot satisfy them either — which is why
      the docs require the label in its own <span>.
-     The end margin is zeroed because .svg-icn carries a -0.175em optical trim
+     The end margin is zeroed because .svg-icn carries the --icon-trim optical trim
      on all four sides; left alone it would hang the icon into the row's right
      padding and miss the edge the label column is measured to. */
   select:not([multiple]):not([size]) option .svg-icn:not(:only-child):last-child {
@@ -3033,6 +3369,26 @@ fieldset {
   margin: 0 0 var(--space-l) 0;
 }
 
+/* Bare: a fieldset that draws nothing, for naming a group of radios,
+   chips or switches with a native legend instead of role="group" and
+   aria-labelledby. A column at the --space-s step. A rendered legend is
+   not a flex item, so the gap never reaches it: its own margin spaces it
+   from the first control. */
+fieldset[data-variant="bare"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+fieldset[data-variant="bare"] > legend {
+  margin-bottom: var(--space-s);
+  padding: 0;
+}
+
 legend {
   font-size: var(--font-s);
   font-weight: var(--font-weight-semi-bold);
@@ -3051,7 +3407,7 @@ input[type="radio"] {
   cursor: pointer;
   background-color: var(--checkbox-background);
   border: var(--border-s) solid var(--checkbox-border);
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   flex-shrink: 0;
   position: relative;
 }
@@ -3082,12 +3438,11 @@ input[type="radio"]:checked::after {
   background-color: var(--checkbox-checkmark);
 }
 
-/* Transparent, not none: invisible here, and the ring forced colours draw
-   when they strip the box-shadow */
 input[type="checkbox"]:focus-visible,
 input[type="radio"]:focus-visible {
-  outline: 2px solid transparent;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
+  box-shadow: none;
 }
 
 input[type="checkbox"]:disabled,
@@ -3157,7 +3512,7 @@ input[type="radio"]:disabled:checked {
  * of a control would spend a colour the system reserves for meaning. Instead
  * it is the system's selected grammar — the inverted neutral the toggle's
  * checked track uses — via the shared pair --segmented-selected-background /
- * --segmented-selected-text (declared with the thumb variant tokens below).
+ * --segmented-selected-text (declared with the faded variant tokens below).
  *
  * Hover previews engagement with the faded wash; selection inverts. They
  * used to share the same 5%-black fill, argued as hover-previews-selection —
@@ -3171,7 +3526,14 @@ input[type="radio"]:disabled:checked {
   gap: var(--space-2xs);
 }
 
+/* An inline-flex row, so an icon written before the label sits beside it
+   rather than stacking above it. The gap is --space-s because .svg-icn
+   pulls itself in by a negative margin; --space-xs would all but close. */
 .segmented-control-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-s);
   padding: var(--space-s) var(--space-m);
   font-size: var(--font-s);
   font-weight: var(--font-weight-regular);
@@ -3198,8 +3560,8 @@ input[type="radio"]:disabled:checked {
 }
 
 .segmented-control-btn:focus-visible {
-  outline: 2px solid var(--text-primary);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
 }
 
 .segmented-control-btn.is-icon {
@@ -3225,8 +3587,60 @@ input[type="radio"]:disabled:checked {
   }
 }
 
-/* -- Segmented control, thumb variant (radio-backed) --
- * data-variant="thumb" draws what the flat form deliberately omits: a track,
+/* -- Segmented control, underline variant --
+ * data-variant="underline" marks the selected segment with a rule under it
+ * instead of a fill, on the same button markup as the flat form — switching
+ * between the two is the attribute alone. The mark is the tabs' mark (2px of
+ * the selected colour on a faded 1px baseline), so it reads as one family.
+ * That likeness is also the limit: tabs switch panels, this switches a view
+ * or a setting on the same content. Reach for .tabs when there are panels.
+ *
+ * The mark is a border, not a box-shadow, so it survives forced colours.
+ * The baseline is an inset shadow on the group, painted under the segments'
+ * borders; it is decorative, so losing it under forced colours costs
+ * nothing. The 2px mark clears 3:1 against the page in both themes. */
+.segmented-control[data-variant="underline"] {
+  gap: 0;
+  box-shadow: inset 0 calc(-1 * var(--border-s)) 0 var(--segmented-underline-baseline);
+}
+
+/* A matching transparent top border keeps the label optically centred,
+   which matters where the group's height is fixed (inside a .bar). */
+.segmented-control[data-variant="underline"] .segmented-control-btn {
+  border-radius: 0;
+  border-block: var(--segmented-underline-width) solid transparent;
+}
+
+.segmented-control[data-variant="underline"] .segmented-control-btn:hover {
+  background-color: transparent;
+}
+
+.segmented-control[data-variant="underline"] .segmented-control-btn.is-active {
+  background-color: transparent;
+  color: var(--text-primary);
+  border-bottom-color: var(--segmented-underline-color);
+}
+
+/* The flat form's forced-colours rule fills the selected segment with
+   Highlight; here the mark carries selection, so the fill goes back to the
+   canvas and the border takes Highlight. Forced colours also repaint
+   transparent borders, which would underline every segment and leave
+   selection to colour alone — so the unmarked borders take Canvas, a
+   system colour the mode leaves alone, and disappear. */
+@media (forced-colors: active) {
+  .segmented-control[data-variant="underline"] .segmented-control-btn {
+    border-color: Canvas;
+  }
+
+  .segmented-control[data-variant="underline"] .segmented-control-btn.is-active {
+    background-color: Canvas;
+    color: CanvasText;
+    border-bottom-color: Highlight;
+  }
+}
+
+/* -- Segmented control, faded variant (radio-backed) --
+ * data-variant="faded" draws what the flat form deliberately omits: a track,
  * and a thumb that slides to the selected segment. The flat form's argument
  * — hover previews the selected state — assumes a pointer that can hover.
  * On a touch surface there is no hover, and on a dense app screen an
@@ -3251,7 +3665,12 @@ input[type="radio"]:disabled:checked {
  * shared with the flat form's .is-active above, so both forms re-theme
  * from one place. The border stays as an aesthetic knob, transparent by
  * default; the 1.4.11 pass lives in the surface, where re-pointing an
- * optional border can never undo it. */
+ * optional border can never undo it.
+ *
+ * Named "faded" for its track, the same word Button uses for a faded
+ * surface. It shipped in 6.0 as data-variant="thumb"; every rule below
+ * matches both names, so thumb keeps working as an alias. The --segmented-
+ * thumb-* tokens keep their names — the thumb is the part, not the variant. */
 :root {
   --segmented-track-background: var(--background-faded);
   --segmented-track-padding: 3px; /* visual inset, same register as --toggle-knob-offset */
@@ -3269,9 +3688,13 @@ input[type="radio"]:disabled:checked {
      itself, but the token is a length other rules may read. */
   --segmented-thumb-radius: max(0px, calc(var(--segmented-track-radius) - var(--segmented-track-padding)));
   --segmented-thumb-duration: var(--duration-xs);
+  /* Underline variant: the same 2px mark and faded baseline the tabs draw. */
+  --segmented-underline-width: 2px;
+  --segmented-underline-color: var(--selected-background);
+  --segmented-underline-baseline: var(--border-faded);
 }
 
-.segmented-control[data-variant="thumb"] {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]) {
   --segmented-count: 2;
   --segmented-index: 0;
   --segmented-direction: 1;
@@ -3291,12 +3714,13 @@ input[type="radio"]:disabled:checked {
    control would render styled segments with no track and no thumb, carrying
    selection by text colour alone — the 1.4.1 failure the variant exists to
    avoid. */
-.segmented-control[data-variant="thumb"] .segmented-control-option {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]) .segmented-control-option {
   position: relative;
   z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-s);
   padding: var(--space-s) var(--space-m);
   margin-bottom: 0; /* this is a segment, not a field label — undo the form label margin */
   font-size: var(--font-s);
@@ -3311,17 +3735,17 @@ input[type="radio"]:disabled:checked {
 /* Hover previews engagement on unselected segments only — a hover rule that
    also matched the checked option would out-rank it on specificity and
    flip the inverted label back to dark-on-dark. */
-.segmented-control[data-variant="thumb"] .segmented-control-option:hover:not(:has(input:checked)):not(:has(input:disabled)) {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]) .segmented-control-option:hover:not(:has(input:checked)):not(:has(input:disabled)) {
   color: var(--text-primary);
 }
 
-.segmented-control[data-variant="thumb"] .segmented-control-option:has(input:checked) {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]) .segmented-control-option:has(input:checked) {
   color: var(--segmented-selected-text);
 }
 
 /* The radio is the hit area, stretched invisibly over its whole label —
    not display:none, which would forfeit focus and the arrow keys. */
-.segmented-control[data-variant="thumb"] .segmented-control-option input[type="radio"] {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]) .segmented-control-option input[type="radio"] {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -3333,15 +3757,15 @@ input[type="radio"]:disabled:checked {
   cursor: pointer;
 }
 
-.segmented-control[data-variant="thumb"] .segmented-control-option:has(input[type="radio"]:focus-visible) {
-  outline: 2px solid var(--text-primary);
-  outline-offset: 2px;
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]) .segmented-control-option:has(input[type="radio"]:focus-visible) {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
 }
 
 /* The radio's own disabled styling is invisible at opacity 0, so the label
    carries it — the same colour-plus-half-opacity pair the bare radio uses,
    because --input-disabled-text alone matches the resting label exactly. */
-.segmented-control[data-variant="thumb"] .segmented-control-option:has(input:disabled) {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]) .segmented-control-option:has(input:disabled) {
   color: var(--input-disabled-text);
   opacity: 0.5;
   cursor: not-allowed;
@@ -3351,22 +3775,22 @@ input[type="radio"]:disabled:checked {
    disabled rule above would win the label back to faded-on-dark — illegible
    on the thumb. Keep the inverted pairing and dim thumb and label together
    instead; :has(input:checked:disabled) out-ranks both single-state rules. */
-.segmented-control[data-variant="thumb"] .segmented-control-option:has(input:checked:disabled) {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]) .segmented-control-option:has(input:checked:disabled) {
   color: var(--segmented-selected-text);
 }
 
-.segmented-control[data-variant="thumb"]:has(input:checked:disabled)::before {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]):has(input:checked:disabled)::before {
   opacity: 0.5;
 }
 
-.segmented-control[data-variant="thumb"] .segmented-control-option:has(input:disabled) input[type="radio"] {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]) .segmented-control-option:has(input:disabled) input[type="radio"] {
   cursor: not-allowed;
 }
 
 /* The thumb: one element for the whole group, sized by segment count and
    moved by checked index. Equal columns mean translate needs no measuring,
    and translate composites without layout. */
-.segmented-control[data-variant="thumb"]::before {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"])::before {
   content: "";
   position: absolute;
   z-index: 0;
@@ -3382,39 +3806,39 @@ input[type="radio"]:disabled:checked {
 
 /* Nothing checked yet: no thumb. The flat form's "nothing is drawn until
    something is selected" survives here, scoped to the selection. */
-.segmented-control[data-variant="thumb"]:not(:has(input:checked))::before {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]):not(:has(input:checked))::before {
   display: none;
 }
 
 /* Segment count — equal columns mean the thumb only needs to know how many. */
-.segmented-control[data-variant="thumb"]:has(> :nth-child(3):last-child) { --segmented-count: 3; }
-.segmented-control[data-variant="thumb"]:has(> :nth-child(4):last-child) { --segmented-count: 4; }
-.segmented-control[data-variant="thumb"]:has(> :nth-child(5):last-child) { --segmented-count: 5; }
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]):has(> :nth-child(3):last-child) { --segmented-count: 3; }
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]):has(> :nth-child(4):last-child) { --segmented-count: 4; }
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]):has(> :nth-child(5):last-child) { --segmented-count: 5; }
 
 /* Past the documented five the enumeration above runs out, which would pin a
    half-width thumb to the first segment while selection sits elsewhere.
    Failing safe means failing flat: drop the thumb, and hand the checked
    label back its resting-surface colour — the selected text would be
    invisible on the bare track. A sixth option was a dropdown's job anyway. */
-.segmented-control[data-variant="thumb"]:has(> :nth-child(6))::before {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]):has(> :nth-child(6))::before {
   display: none;
 }
 
-.segmented-control[data-variant="thumb"]:has(> :nth-child(6)) .segmented-control-option:has(input:checked) {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]):has(> :nth-child(6)) .segmented-control-option:has(input:checked) {
   color: var(--text-primary);
 }
 
 /* Checked position. */
-.segmented-control[data-variant="thumb"]:has(> :nth-child(2) input:checked) { --segmented-index: 1; }
-.segmented-control[data-variant="thumb"]:has(> :nth-child(3) input:checked) { --segmented-index: 2; }
-.segmented-control[data-variant="thumb"]:has(> :nth-child(4) input:checked) { --segmented-index: 3; }
-.segmented-control[data-variant="thumb"]:has(> :nth-child(5) input:checked) { --segmented-index: 4; }
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]):has(> :nth-child(2) input:checked) { --segmented-index: 1; }
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]):has(> :nth-child(3) input:checked) { --segmented-index: 2; }
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]):has(> :nth-child(4) input:checked) { --segmented-index: 3; }
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]):has(> :nth-child(5) input:checked) { --segmented-index: 4; }
 
 /* RTL: the first segment sits at the inline start, so travel flips sign.
    A browser without :dir() keeps LTR travel — the thumb lands on the wrong
    segment visually, but selection is never wrong, because the checked label
    carries its own state. */
-.segmented-control[data-variant="thumb"]:dir(rtl) {
+.segmented-control:is([data-variant="faded"], [data-variant="thumb"]):dir(rtl) {
   --segmented-direction: -1;
 }
 
@@ -3422,7 +3846,7 @@ input[type="radio"]:disabled:checked {
    .form-toggle, .dialog, .drawer and .book-cover. The thumb still lands on
    the selected segment — it just arrives immediately. */
 @media (prefers-reduced-motion: reduce) {
-  .segmented-control[data-variant="thumb"] {
+  .segmented-control:is([data-variant="faded"], [data-variant="thumb"]) {
     --segmented-thumb-duration: var(--duration-2xs);
   }
 }
@@ -3433,21 +3857,21 @@ input[type="radio"]:disabled:checked {
    stops the mode forcing the focus outline, so its colour is declared
    explicitly. */
 @media (forced-colors: active) {
-  .segmented-control[data-variant="thumb"] {
+  .segmented-control:is([data-variant="faded"], [data-variant="thumb"]) {
     border: 1px solid CanvasText;
   }
 
-  .segmented-control[data-variant="thumb"]::before {
+  .segmented-control:is([data-variant="faded"], [data-variant="thumb"])::before {
     display: none;
   }
 
-  .segmented-control[data-variant="thumb"] .segmented-control-option:has(input:checked) {
+  .segmented-control:is([data-variant="faded"], [data-variant="thumb"]) .segmented-control-option:has(input:checked) {
     forced-color-adjust: none;
     background-color: Highlight;
     color: HighlightText;
   }
 
-  .segmented-control[data-variant="thumb"] .segmented-control-option:has(input[type="radio"]:focus-visible) {
+  .segmented-control:is([data-variant="faded"], [data-variant="thumb"]) .segmented-control-option:has(input[type="radio"]:focus-visible) {
     outline-color: CanvasText;
   }
 }
@@ -3540,9 +3964,10 @@ fieldset[data-size="small"],
   background-color: var(--off-white);
 }
 
-.form-toggle input[type="checkbox"]:focus-visible {
-  outline: 2px solid transparent;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+.form-toggle input[type="checkbox"]:focus-visible,
+.form-toggle input[type="checkbox"].is-focus {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
 }
 
 .form-toggle input[type="checkbox"]:disabled {
@@ -3770,6 +4195,13 @@ fieldset[data-size="small"],
   display: none;
 }
 
+/* A button toggled with the hidden attribute from script (the People
+   page's Resend, Remove and Delete group) - .button's display: inline-flex
+   is an author rule and would otherwise beat the UA's [hidden]. */
+.button[hidden] {
+  display: none;
+}
+
 /* -- Access support form states -- */
 .access-support-success {
   text-align: center;
@@ -3802,11 +4234,19 @@ fieldset[data-size="small"],
   /* The colour swatch's corner: the field's less its inset, floored at 0 so
      the token stays a usable length when the field is square. */
   --field-swatch-radius: max(0px, calc(var(--field-radius) - var(--border-m) - var(--space-xs)));
+  /* The ring the box draws while its input has focus. A field that sits
+     edge to edge in a band hands the ring to the band: set it to none
+     there, and draw the ring on the band instead. */
+  --field-focus-outline: var(--focus-width) solid var(--input-focus);
 
   display: flex;
   align-items: stretch;
   min-height: var(--field-height);
-  border: var(--border-m) solid var(--input-border);
+  /* --field-border is unset by default and falls back to the input's own
+     border, so a field and a bare input match. Re-point it to change the
+     box alone from a scope wider than the field, a bar or a form section,
+     where other inputs also read --input-border. */
+  border: var(--border-m) solid var(--field-border, var(--input-border));
   border-radius: var(--field-radius);
   background-color: var(--input-background);
   overflow: hidden;
@@ -3818,8 +4258,8 @@ fieldset[data-size="small"],
    draws a border */
 .field:focus-within,
 .password-field:focus-within {
-  outline: 1px solid var(--input-focus);
-  outline-offset: 2px;
+  outline: var(--field-focus-outline);
+  outline-offset: var(--focus-offset);
 }
 
 .field:has(> input.is-error),
@@ -3837,6 +4277,12 @@ fieldset[data-size="small"],
   background-color: var(--input-disabled-bg);
 }
 
+/* Read-only: the faded ground on the box; the input inside stays clear. */
+.field:has(> input[readonly]:not(:disabled)),
+.password-field:has(> input[readonly]:not(:disabled)) {
+  background-color: var(--background-faded);
+}
+
 /* The input gives its box to the wrapper. Same specificity as the base
    list, later in source, so it wins without a class on the input. */
 .field > input,
@@ -3847,6 +4293,13 @@ fieldset[data-size="small"],
   min-height: 0;
   border: none;
   border-radius: 0;
+  background-color: transparent;
+}
+
+/* The box carries the read-only fade; the input must not paint it twice.
+   Same specificity as the base read-only rule, later in source. */
+.field > input[readonly],
+.password-field > input[readonly] {
   background-color: transparent;
 }
 
@@ -3886,6 +4339,72 @@ fieldset[data-size="small"],
 
 .field > input:has(+ .field-icon) {
   padding-inline-end: var(--space-m);
+}
+
+/* An affix: a few characters of text inside the field — a letter naming
+   the value before it (X, W), a unit after it (%, °). Placed like the icon:
+   the edge padding is its, and the input takes a smaller gap. Quiet and
+   monospaced, so a column of fields lines their letters up. Decorative, as
+   the icon is: the input keeps a real label, and the affix is aria-hidden. */
+.field-affix {
+  flex: none;
+  display: flex;
+  align-items: center;
+  margin-inline-start: var(--field-padding-x);
+  font-family: var(--font-quaternary);
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.field > input ~ .field-affix {
+  margin-inline-start: 0;
+  margin-inline-end: var(--field-padding-x);
+}
+
+.field-affix + input {
+  padding-inline-start: var(--space-s);
+}
+
+.field > input:has(+ .field-affix, + select) {
+  padding-inline-end: var(--space-xs);
+}
+
+/* Prefix: text the field puts in front of the value, part of what it means
+   (linkedin.com/in/, https://). Body type, a divider, and NOT aria-hidden:
+   the input names it in aria-describedby so a screen reader hears what the
+   typed text is joined to. The divider is --border-primary, not the box's
+   --input-border: it has to read against the field's own fill, and the
+   input border's colour sits at 1.15:1 there in dark mode. */
+.field-affix[data-variant="prefix"] {
+  align-self: stretch;
+  margin-inline-start: 0;
+  padding-inline: var(--space-s);
+  font-family: var(--font-primary);
+  font-size: var(--font-s);
+  white-space: nowrap;
+  border-inline-end: var(--border-s) solid var(--border-primary);
+}
+
+/* A unit menu inside the field, after the input: the select gives up its
+   box as the input does, keeps its chevron, and reads as quiet as an
+   affix. Its own name (aria-label) says what it sets. */
+.field > select {
+  flex: none;
+  width: auto;
+  min-height: 0;
+  padding-block: 0;
+  padding-inline-start: var(--space-xs);
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.field > select:focus {
+  outline: none;
+  box-shadow: none;
 }
 
 /* A colour swatch leading a hex field: the native picker, set in from the
@@ -3943,14 +4462,18 @@ fieldset[data-size="small"],
   background: none;
   color: var(--text-faded);
   cursor: pointer;
-  transition: color var(--duration-xs) var(--ease-out);
+  transition: color var(--duration-xs) var(--ease-out), background-color var(--duration-xs) var(--ease-out);
 }
 
+/* Hover: the ink darkens and the square takes the faded wash, the same
+   answer a transparent button gives, so a copy or clear inside the box
+   reads as pressable. */
 .field-clear:hover,
 .field-toggle:hover,
 .field-action:hover,
 .password-toggle:hover {
   color: var(--text-primary);
+  background-color: var(--background-faded);
 }
 
 /* The clear exists only while there is something to clear. field.js sets
@@ -3961,12 +4484,32 @@ fieldset[data-size="small"],
 }
 
 /* A copy button in the box keeps its icon swap but not the copied fill:
-   .copy-btn.is-copied outranks .field-action and would paint a square wash
-   against the input. Same restatement as .swatch-copy. */
-.field-action.is-copied,
-.field-action.is-copied:hover {
+   .copy-btn.is-copied (§33) is the same weight and later, so it would paint
+   a success square against the input. Scoped under .field to outrank it.
+   Hovered — the pointer that just copied — it keeps the faded wash every
+   in-box control takes. */
+.field > .field-action.is-copied {
   background: none;
   border: 0;
+}
+
+.field > .field-action.is-copied:not(:disabled):hover {
+  background-color: var(--background-faded);
+}
+
+/* No wash on a control whose input is disabled: nothing there answers. */
+.field:has(> input:disabled) > :is(.field-toggle, .password-toggle, .field-action):hover {
+  background: none;
+}
+
+/* An action on a value that is not there — a colour field set to None —
+   is disabled with its input, and stops answering the pointer */
+.field-action:disabled,
+.field-action:disabled:hover {
+  color: var(--text-faded);
+  background: none;
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
 }
 
 .field.is-filled:not(:has(> input:disabled, > input[readonly])) > .field-clear {
@@ -4019,7 +4562,7 @@ summary::before {
   border-right: 2px solid currentColor;
   border-bottom: 2px solid currentColor;
   transform: rotate(-45deg);
-  transition: transform 0.2s ease;
+  transition: transform var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   flex-shrink: 0;
 }
 
@@ -4032,8 +4575,8 @@ summary:hover {
 }
 
 summary:focus-visible {
-  outline: 2px solid var(--input-focus);
-  outline-offset: -2px;
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
 }
 
 /* -- Disclosure content -- */
@@ -4071,6 +4614,11 @@ details .disclosure-content {
   --badge-case: uppercase;
   --badge-tracking: var(--letter-spacing-l);
   --badge-radius: var(--radius-detail);
+  /* Ground and ink: data-color re-points these. A surface that sets a
+     badge on its own ground re-points them on the badge (.surface .badge),
+     since the badge declares them itself. */
+  --badge-bg: var(--background-darker);
+  --badge-color: var(--text-primary);
 
   display: inline-flex;
   align-items: center;
@@ -4081,8 +4629,8 @@ details .disclosure-content {
   letter-spacing: var(--badge-tracking);
   padding: var(--space-2xs) var(--space-s);
   border-radius: var(--badge-radius);
-  background-color: var(--background-darker);
-  color: var(--text-primary);
+  background-color: var(--badge-bg);
+  color: var(--badge-color);
   white-space: nowrap;
   line-height: var(--line-height-m);
 }
@@ -4096,26 +4644,26 @@ details .disclosure-content {
 
 .badge[data-color="success"],
 .badge[data-color="green"] {
-  background-color: var(--status-success-bg);
-  color: var(--status-success);
+  --badge-bg: var(--status-success-bg);
+  --badge-color: var(--status-success);
 }
 
 .badge[data-color="warning"],
 .badge[data-color="yellow"] {
-  background-color: var(--status-warning-bg);
-  color: var(--status-warning);
+  --badge-bg: var(--status-warning-bg);
+  --badge-color: var(--status-warning);
 }
 
 .badge[data-color="danger"],
 .badge[data-color="red"] {
-  background-color: var(--status-danger-bg);
-  color: var(--status-danger);
+  --badge-bg: var(--status-danger-bg);
+  --badge-color: var(--status-danger);
 }
 
 .badge[data-color="info"],
 .badge[data-color="blue"] {
-  background-color: var(--status-info-bg);
-  color: var(--status-info);
+  --badge-bg: var(--status-info-bg);
+  --badge-color: var(--status-info);
 }
 
 
@@ -4126,7 +4674,7 @@ details .disclosure-content {
   background-color: var(--background-primary);
   border: var(--border-s) solid var(--border-faded);
   padding: var(--space-xl);
-  transition: border 0.3s, background-color 0.3s, box-shadow 0.15s;
+  transition: border var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), box-shadow var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .card--flush {
@@ -4138,7 +4686,7 @@ details .disclosure-content {
   cursor: pointer;
   text-decoration: none;
   color: inherit;
-  transition: border 0.3s, background-color 0.3s, box-shadow 0.15s;
+  transition: border var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), box-shadow var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .card--interactive:hover {
@@ -4148,8 +4696,8 @@ details .disclosure-content {
 }
 
 .card--interactive:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
 }
 /* -- Card inner elements -- */
 /* One rung below h3: a card grid usually sits under an h2 or h3, and its
@@ -4187,22 +4735,64 @@ details .disclosure-content {
 
 /* ------ 18. BREADCRUMB ------ */
 
+/* An ordered list inside a labelled nav: a screen reader announces "list,
+   3 items", which is the hierarchy. The separator is a real element inside
+   each item, hidden from assistive tech, so it is never read as content.
+ *
+ * The trail stays on one line. The first crumb always holds its width. When
+ * space runs out the current page gives first (its shrink factor dwarfs the
+ * others'), clipped with an ellipsis; the page heading carries it in full.
+ * Only on a trail too long even for that do the middle crumbs clip too. */
 .breadcrumb {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
+  min-width: 0;
   font-size: var(--font-xs);
   color: var(--text-faded);
 }
 
-.breadcrumb a {
-  color: var(--text-faded);
-  text-decoration: none;
-  transition: color 0.15s ease-in-out;
+.breadcrumb-list {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.breadcrumb a:hover {
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--space-xs);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.breadcrumb-item:not(:first-child, .breadcrumb-overflow) {
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.breadcrumb-item:last-child {
+  flex-shrink: 100;
+}
+
+/* Labels clip; the overflow item's dropdown must not, or its menu is cut
+   off with it. */
+.breadcrumb-item:not(.breadcrumb-overflow) > :not(.breadcrumb-separator) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Scoped to the crumbs' own links, so the overflow menu's items keep the
+   dropdown's look. */
+.breadcrumb-item > a {
+  color: var(--text-faded);
+  text-decoration: none;
+  transition: color var(--duration-xs) var(--ease-out);
+}
+
+.breadcrumb-item > a:hover {
   color: var(--text-primary);
   text-decoration: underline;
 }
@@ -4213,9 +4803,55 @@ details .disclosure-content {
 }
 
 .breadcrumb-separator {
+  flex-shrink: 0;
   color: var(--text-faded);
   user-select: none;
 }
+
+/* A collapsed crumb, or the overflow item while nothing has collapsed.
+   [hidden] alone loses to the item's display: flex. */
+.breadcrumb-item[hidden] {
+  display: none;
+}
+
+/* -- Overflow --
+   The ⋯ at position two that holds collapsed middle crumbs (breadcrumb.js).
+   A .dropdown sized to sit in a line of text: a 24px target round the
+   dropdown's 20px icon, in the trail's faded colour. */
+.breadcrumb-overflow .dropdown-trigger {
+  --dropdown-trigger-padding-y: var(--space-2xs);
+  --dropdown-trigger-padding-x: var(--space-2xs);
+  justify-content: center;
+  align-self: center;
+  min-width: var(--breadcrumb-overflow-target);
+  min-height: var(--breadcrumb-overflow-target);
+  color: var(--text-faded);
+  font-size: inherit;
+}
+
+.breadcrumb-overflow .dropdown-trigger:hover,
+.breadcrumb-overflow .dropdown-trigger.is-hover,
+.breadcrumb-overflow .dropdown-trigger[aria-expanded="true"] {
+  color: var(--text-primary);
+}
+
+/* The menu wraps a long level rather than running off a narrow screen; the
+   item inherits the trail's nowrap otherwise. Same cap as the panel menu. */
+.breadcrumb-overflow .dropdown-menu {
+  max-width: calc(100vw - 2 * var(--space-l));
+  white-space: normal;
+}
+
+/* A level with nowhere to land is text in the menu, as it is in the trail:
+   no pointer, no hover tint promising a link. */
+.breadcrumb-overflow span.dropdown-item,
+.breadcrumb-overflow span.dropdown-item:hover,
+.breadcrumb-overflow span.dropdown-item.is-hover {
+  cursor: default;
+  background-color: transparent;
+  color: var(--text-faded);
+}
+
 
 
 /* ------ 14. ACCORDION ------ */
@@ -4280,15 +4916,23 @@ details .disclosure-content {
   outline: solid 1px transparent;
 }
 
-.accordion-header:focus-visible {
-  outline: 2px solid var(--status-info);
-  outline-offset: -2px;
+.accordion-header:focus-visible,
+.accordion-header.is-focus {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
   box-shadow: none;
 }
 
 .accordion-inner {
   overflow: hidden;
   min-height: 0;
+  /* The clip that lets the panel animate also cut the top of a focus ring
+     when the panel opens on a control (a toggle, a field). Room for the ring
+     above the content, pulled back by the margin so nothing moves; closed,
+     that room holds no content, so nothing shows. Sides and bottom already
+     have the body's padding. */
+  padding-block-start: var(--focus-reach);
+  margin-block-start: calc(var(--focus-reach) * -1);
 }
 
 .accordion-body {
@@ -4314,38 +4958,50 @@ details .disclosure-content {
 }
 
 .tab {
+  /* -- Component tokens (re-point these to re-skin; never override the rules) -- */
+  --tab-inactive-color: var(--text-faded);
+  --tab-hover-color: var(--text-secondary);
+  --tab-active-color: var(--text-primary);
+  --tab-indicator-color: var(--text-primary);
+  --tab-indicator-size: 2px;
+
   position: relative;
   background: none;
   border: none;
   padding: var(--space-m) var(--space-l);
-  color: var(--text-faded);
+  color: var(--tab-inactive-color);
   font-weight: var(--font-weight-medium);
   font-size: var(--font-s);
   cursor: pointer;
-  transition: color 0.15s ease-in-out;
+  transition: color var(--duration-2xs) var(--ease-in-out);
 }
 
-.tab:hover {
-  color: var(--text-secondary);
+.tab:hover,
+.tab.is-hover {
+  color: var(--tab-hover-color);
 }
 
 .tab.is-active {
-  color: var(--text-primary);
+  color: var(--tab-active-color);
 }
 
+/* Sits over the tab list's bottom border, so it is pulled down by that
+   border's width. */
 .tab.is-active::after {
   content: "";
   position: absolute;
-  bottom: -1px;
+  bottom: calc(var(--border-s) * -1);
   left: 0;
   right: 0;
-  height: 2px;
-  background-color: var(--text-primary);
+  height: var(--tab-indicator-size);
+  background-color: var(--tab-indicator-color);
 }
 
-.tab:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+.tab:focus-visible,
+.tab.is-focus {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
+  box-shadow: none;
 }
 
 .tab-panel {
@@ -4356,7 +5012,8 @@ a.tab {
     text-decoration: none;
 }
 
-a.tab:hover {
+a.tab:hover,
+a.tab.is-hover {
   background-color: var(--background-faded);
 }
 
@@ -4512,7 +5169,7 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
   pointer-events: none;
   opacity: 0;
   transform: translateX(-50%);
-  transition: opacity 0.15s ease-in-out;
+  transition: opacity var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   z-index: 800;
 }
 
@@ -4528,8 +5185,13 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
   cursor: help;
 }
 
+/* The second content line gives the bubble empty alt text, so a control
+   named from its contents is not read with its tooltip appended ("Copy
+   Copy"). A browser without alt-text syntax drops that line and keeps the
+   first. */
 [data-tooltip]::before {
   content: attr(data-tooltip);
+  content: attr(data-tooltip) / "";
   position: absolute;
   bottom: calc(100% + var(--space-xs));
   left: 50%;
@@ -4541,7 +5203,7 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.15s ease-in-out;
+  transition: opacity var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   z-index: 800;
 }
 
@@ -4573,6 +5235,13 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
    so a browser without :has() drops this line alone. */
 [data-tooltip]:has(:focus-visible)::before {
   opacity: 1;
+}
+
+/* A trigger whose menu or panel is open has said what it is: the bubble
+   would only cover the thing it opened. After the show rules, which it
+   matches in specificity, so source order decides. */
+[data-tooltip][aria-expanded="true"]::before {
+  opacity: 0;
 }
 
 /* -- Tooltip positions -- */
@@ -4677,7 +5346,8 @@ a[data-tooltip],
   --button-text-color: currentColor;
 }
 
-.toast .button.close-btn:hover {
+.toast .button.close-btn:hover,
+.toast .button.close-btn.is-hover {
   background-color: color-mix(in srgb, currentColor, var(--alpha-5));
 }
 
@@ -4688,6 +5358,10 @@ a[data-tooltip],
   line-height: 1;
   opacity: 0.7;
   transition: opacity var(--duration-2xs) var(--ease-out);
+}
+
+.toast-close:focus-visible {
+  outline-color: currentColor;
 }
 
 .toast-close:hover {
@@ -4972,6 +5646,11 @@ figure[data-float="right"] { margin-block: 0 var(--space-s); }
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  /* overflow-x makes this a clip box on both axes, so a copy button in the
+     last row lost the bottom of its focus ring. Room for the ring at the top
+     and bottom, given back by the margin so the table does not move. */
+  padding-block: var(--focus-reach);
+  margin-block: calc(var(--focus-reach) * -1);
 }
 
 /* -- Scroll hint: fade on right edge when overflowing -- */
@@ -5171,7 +5850,8 @@ hr.xl {
               background-color var(--duration-2xs) var(--ease-out);
 }
 
-.dropdown-trigger:hover {
+.dropdown-trigger:hover,
+.dropdown-trigger.is-hover {
   background-color: var(--dropdown-item-hover);
   color: var(--text-plain);
 }
@@ -5315,7 +5995,8 @@ hr.xl {
   display: none;
 }
 
-.dropdown-item:hover {
+.dropdown-item:hover,
+.dropdown-item.is-hover {
   background-color: var(--dropdown-item-hover);
   color: var(--text-plain);
 }
@@ -5323,9 +6004,11 @@ hr.xl {
 /* Only the row tint belongs here. The ring itself comes from the global
    button/link rule — this used to override it with `outline: none` plus an
    inset box-shadow, which forced-colors modes strip entirely (leaving no
-   focus indicator at all) and which drew in --input-focus, an amber in dark
-   mode that fell below the 3:1 non-text contrast floor against this tint. */
-.dropdown-item:focus-visible {
+   focus indicator at all) and which drew in --input-focus back when that
+   was the accent, an amber in dark mode that fell below the 3:1 non-text
+   contrast floor against this tint. */
+.dropdown-item:focus-visible,
+.dropdown-item.is-focus {
   background-color: var(--dropdown-item-hover);
 }
 
@@ -5363,7 +6046,8 @@ hr.xl {
    read --alpha-90, which is `transparent 10%` — a 90% opaque red fill that
    put the label at 1.49:1 in dark mode. Every other status tint in this file
    uses --alpha-10; this was the only --alpha-90 in the stylesheet. */
-.dropdown-item--danger:hover {
+.dropdown-item--danger:hover,
+.dropdown-item--danger.is-hover {
   background-color: color-mix(in srgb, var(--status-danger), var(--alpha-10));
 }
 
@@ -5462,22 +6146,73 @@ hr.xl {
 .tag {
   --tag-case: uppercase;
   --tag-tracking: var(--letter-spacing-m);
-  --tag-radius: var(--radius-control);
+  /* A capsule, like an avatar is a circle: --radius-full never follows
+     --radius-scale, so a tag is a pill on a square brand too (owner,
+     2026-10-13, from the Asset Library's filters). */
+  --tag-radius: var(--radius-full);
+  --tag-bg: var(--bg-faded-5);
+  --tag-color: var(--text-primary);
+  /* A filter tag's states (below). Pressed is the system's shared selected
+     pair, the inverted neutral, because a deeper grey on a grey tag misses
+     the 3:1 a state indicator needs (the segmented control's finding). */
+  --tag-bg-hover: var(--bg-faded-10);
+  --tag-color-hover: var(--text-primary);
+  --tag-pressed-bg: var(--selected-background);
+  --tag-pressed-color: var(--selected-text);
+  /* A leading icon, decorative: a registry .svg-icn sizes itself from
+     --icon-size. The remove button's glyph keeps its own size,
+     --tag-remove-icon-size. */
+  --tag-icon-size: 1rem;
+  --icon-size: var(--tag-icon-size);
+  /* The box. The end side falls back to the sides' value when unset, so
+     a dismissible tag can tighten the edge its remove button sits on. */
+  --tag-padding-y: var(--space-s);
+  --tag-padding-x: var(--space-m);
+  --tag-font-size: var(--font-2xs);
+  --tag-remove-icon-size: 0.625rem;
+  /* The remove glyph at rest. 0.75 keeps it above the 3:1 non-text floor
+     with room to spare; 0.6 passed by 0.03 and failed once a brand
+     re-pointed its text colour. A tag the whole of which removes it (an
+     applied filter) sets 1. */
+  --tag-remove-opacity: 0.75;
+  /* One height for every tag, with an icon, a remove button or neither: an
+     icon's box and the padding, 32px at the defaults. */
+  --tag-min-height: calc(var(--tag-icon-size) + 2 * var(--tag-padding-y));
 
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
   font-family: var(--font-primary);
-  font-size: var(--font-2xs);
+  font-size: var(--tag-font-size);
   font-weight: var(--font-weight-regular);
   letter-spacing: var(--tag-tracking);
   text-transform: var(--tag-case);
-  padding: var(--space-s) var(--space-s);
-  background-color: var(--bg-faded-5);
-  color: var(--text-secondary);
+  min-height: var(--tag-min-height);
+  padding-block: var(--tag-padding-y);
+  padding-inline: var(--tag-padding-x) var(--tag-padding-end, var(--tag-padding-x));
+  background-color: var(--tag-bg);
+  color: var(--tag-color);
   white-space: nowrap;
   line-height: var(--line-height-xs);
   border-radius: var(--tag-radius);
+}
+
+/* A tag you press (a filter, a link, an applied filter you can remove) is
+   a control, so it takes the chip's control size: the 44px target, the
+   chip's text size and padding (owner, 2026-10-16: one look for chips and
+   tags). A tag that only labels stays compact. */
+:is(button, a).tag,
+.tag:has(.tag-remove) {
+  --tag-min-height: var(--target-min);
+  --tag-padding-x: var(--space-l);
+  --tag-font-size: var(--font-s);
+}
+
+/* A tag toggled with the hidden attribute from script (an active filter that
+   is off) - .tag's display: inline-flex is an author rule and would
+   otherwise beat the UA's [hidden]. */
+.tag[hidden] {
+  display: none;
 }
 
 /* Sentence-case variant — customize case via the tokens above or this
@@ -5495,33 +6230,42 @@ hr.xl {
    paints when a consumer composes the tag with the border classes. */
 .tag[data-color="success"],
 .tag[data-color="green"] {
-  background-color: var(--status-success-bg);
+  --tag-bg: var(--status-success-bg);
+  --tag-color: var(--status-success);
+  --tag-bg-hover: color-mix(in srgb, var(--status-success-bg), var(--status-success) 12%);
+  --tag-color-hover: var(--status-success);
   border-color: color-mix(in srgb, var(--status-success), transparent 60%);
-  color: var(--status-success);
 }
 
 .tag[data-color="warning"],
 .tag[data-color="yellow"] {
-  background-color: var(--status-warning-bg);
+  --tag-bg: var(--status-warning-bg);
+  --tag-color: var(--status-warning);
+  --tag-bg-hover: color-mix(in srgb, var(--status-warning-bg), var(--status-warning) 12%);
+  --tag-color-hover: var(--status-warning);
   border-color: color-mix(in srgb, var(--status-warning), transparent 60%);
-  color: var(--status-warning);
 }
 
 .tag[data-color="danger"],
 .tag[data-color="red"] {
-  background-color: var(--status-danger-bg);
+  --tag-bg: var(--status-danger-bg);
+  --tag-color: var(--status-danger);
+  --tag-bg-hover: color-mix(in srgb, var(--status-danger-bg), var(--status-danger) 12%);
+  --tag-color-hover: var(--status-danger);
   border-color: color-mix(in srgb, var(--status-danger), transparent 60%);
-  color: var(--status-danger);
 }
 
 .tag[data-color="info"],
 .tag[data-color="blue"] {
-  background-color: var(--status-info-bg);
+  --tag-bg: var(--status-info-bg);
+  --tag-color: var(--status-info);
+  --tag-bg-hover: color-mix(in srgb, var(--status-info-bg), var(--status-info) 12%);
+  --tag-color-hover: var(--status-info);
   border-color: color-mix(in srgb, var(--status-info), transparent 60%);
-  color: var(--status-info);
 }
 
 .tag-remove {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5529,26 +6273,140 @@ hr.xl {
   border: none;
   cursor: pointer;
   color: inherit;
-  opacity: 0.6;
+  opacity: var(--tag-remove-opacity, 0.75);
   padding: var(--space-2xs);
-  transition: opacity 0.15s ease, background-color 0.15s ease;
+  transition: opacity var(--duration-2xs) var(--ease-out), background-color var(--duration-2xs) var(--ease-out);
   flex-shrink: 0;
   border-radius: var(--radius-full);
 }
 
+/* The hit area reaches 5px past the button on every side, without moving
+   anything: 24px around the default 10px glyph (--tag-remove-icon-size),
+   the WCAG 2.5.8 minimum, and more around a larger one. */
+.tag-remove::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+}
+
 .tag-remove .svg-icn {
-  width: 0.625rem;
-  height: 0.625rem;
+  width: var(--tag-remove-icon-size, 0.625rem);
+  height: var(--tag-remove-icon-size, 0.625rem);
+}
+
+/* An icon before the label never shrinks to fit a long one. */
+.tag > .svg-icn {
+  flex-shrink: 0;
 }
 
 .tag-remove:hover {
   opacity: 1;
-  background-color: var(--black-alpha-10);
+  background-color: var(--bg-faded-10);
 }
 
 .tag-remove:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: 0;
+}
+
+/* -- Filter tag --
+   A tag that applies the filter it names is a <button class="tag">. The tag
+   rules already replace the button reset's padding and ground; this adds
+   what an action needs: a deeper ground under the pointer, the selected
+   pair while its filter is on (aria-pressed, styled on the attribute so the
+   two cannot drift). Focus is the global button outline, inset into the
+   tag's padding, which forced colours keep. The states read tokens, so a
+   data-color tag keeps its hue on hover. Hover leaves a pressed tag alone,
+   or a tag turned off under the pointer would still look on. */
+button.tag {
+  transition: background-color var(--duration-2xs) var(--ease-out), color var(--duration-2xs) var(--ease-out);
+}
+
+button.tag:hover:not([aria-pressed="true"]) {
+  background-color: var(--tag-bg-hover);
+  color: var(--tag-color-hover);
+}
+
+button.tag[aria-pressed="true"] {
+  background-color: var(--tag-pressed-bg);
+  color: var(--tag-pressed-color);
+}
+
+/* A count after the label: how many items the filter would show. The
+   quieter ink at rest; the secondary ink under the pointer, because the
+   deeper hover ground drops the faded one to 4.3:1 in dark mode; the
+   tag's own ink when pressed, because the faded one fails on the inverted
+   ground. Figures of one width, so a changing count does not shift the
+   row. */
+.tag-count {
+  color: var(--text-faded);
+  font-variant-numeric: tabular-nums;
+}
+
+button.tag:hover:not([aria-pressed="true"]) .tag-count {
+  color: var(--text-secondary);
+}
+
+button.tag[aria-pressed="true"] .tag-count,
+.tag[data-color] .tag-count {
+  color: inherit;
+}
+
+/* The global ring is inset and --input-focus, the page ink, which is the
+   pressed fill's own colour. Same move as .button:focus-visible: the ring
+   takes the tag's own text colour. */
+button.tag[aria-pressed="true"]:focus-visible {
+  outline-color: var(--tag-pressed-color);
+}
+
+/* -- Link tag --
+   A tag that goes to the page it names, such as a topic's index, is an
+   <a class="tag" href>. It drops the link underline, since the tag's ground
+   already says it is one thing to press, and takes the filter tag's hover:
+   the same token re-point and the same motion, replacing the global link
+   transition. The ring sits outside the capsule, as on an interactive
+   card, because the global inset ring would crowd the label. */
+a.tag {
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--duration-2xs) var(--ease-out), color var(--duration-2xs) var(--ease-out);
+}
+
+/* color is re-declared from the token because the global
+   a:not(.button):hover, of equal weight, would paint the link colour. */
+a.tag:hover {
+  --tag-bg: var(--tag-bg-hover);
+  --tag-color: var(--tag-color-hover);
+  color: var(--tag-color);
+}
+
+a.tag:focus-visible {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
+}
+
+/* Fills flatten under forced colours: the tag keeps a drawn edge and the
+   pressed one takes the system Highlight pair, re-declaring the outline that
+   forced-color-adjust: none would otherwise take down with it (Chip's rule). */
+@media (forced-colors: active) {
+  /* A dismissible tag (an applied filter) and a link tag keep an edge too,
+     or the fill goes and the tag reads as the text beside it. */
+  button.tag,
+  a.tag,
+  .tag:has(.tag-remove) {
+    border: 1px solid CanvasText;
+  }
+
+  button.tag[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background-color: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+
+  button.tag[aria-pressed="true"]:focus-visible {
+    outline-color: CanvasText;
+  }
 }
 
 .tag-group {
@@ -5558,6 +6416,54 @@ hr.xl {
   align-items: center;
 }
 
+/* -- Scroller --
+   One line of chips or tags that scrolls sideways instead of wrapping, for a
+   filter row that would otherwise stack three deep on a phone (the glossary's
+   topics, the Icon Library's categories, the Asset Library's options). The
+   scrollbar is hidden; an edge fades while there is more past it, and a
+   vertical mouse wheel moves it along (scroller.js, which sets
+   .is-overflow-start / -end). The row keeps --focus-reach of room on every
+   side inside its clip edge, pulled back by the margin, so a chip's focus
+   ring is never cut and the chips sit on the same line as before. Lives with
+   Tag because it holds tags and chips and nothing else. */
+.scroller {
+  --scroller-fade: var(--space-2xl);
+  --scroller-fade-start: 0px;
+  --scroller-fade-end: 0px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  padding: var(--focus-reach);
+  margin: calc(var(--focus-reach) * -1);
+  /* A chip focused at an edge scrolls clear of the fade, not under it. */
+  scroll-padding-inline: var(--scroller-fade);
+  -webkit-mask-image: linear-gradient(to right, transparent, black var(--scroller-fade-start), black calc(100% - var(--scroller-fade-end)), transparent);
+  mask-image: linear-gradient(to right, transparent, black var(--scroller-fade-start), black calc(100% - var(--scroller-fade-end)), transparent);
+}
+
+.scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.scroller.is-overflow-start {
+  --scroller-fade-start: var(--scroller-fade);
+}
+
+.scroller.is-overflow-end {
+  --scroller-fade-end: var(--scroller-fade);
+}
+
+.scroller > :is(.chip-group, .tag-group) {
+  flex-wrap: nowrap;
+  width: max-content;
+}
+
+.scroller :is(.chip, .tag) {
+  flex: none;
+  white-space: nowrap;
+}
+
+
 /* ------ 29. DIALOG ------ */
 
 .dialog {
@@ -5565,23 +6471,30 @@ hr.xl {
   --dialog-background: var(--background-primary);
   --dialog-shadow: 0 8px 32px var(--black-alpha-20);
   --dialog-radius: var(--radius-surface);
+  /* The inset every section keeps from the dialog's edges, and the space
+     between sections. The surface itself has no padding: the header and
+     footer carry the inset, and the body carries it INSIDE its scroll box,
+     so the scrollbar sits at the dialog's edge, content scrolls right up to
+     the header, and a focus ring near an edge lands in that padding rather
+     than being cut off by the scroll box. */
   --dialog-padding: var(--space-xl);
+  --dialog-gap: var(--space-l);
   --dialog-backdrop: var(--background-modal);
 
   /* -- Motion -- */
   /* Enters from below and settles upward; exits back down. Entrance is the
      slower half, which is why the two directions have their own tokens. */
   --dialog-offset: var(--space-l);
-  --dialog-enter-duration: var(--duration-m);
-  --dialog-enter-easing: var(--ease-out);
-  --dialog-exit-duration: var(--duration-s);
-  --dialog-exit-easing: var(--ease-in);
+  --dialog-enter-duration: var(--motion-surface-open-duration);
+  --dialog-enter-easing: var(--motion-surface-open-easing);
+  --dialog-exit-duration: var(--motion-surface-close-duration);
+  --dialog-exit-easing: var(--motion-surface-close-easing);
 
   background-color: var(--dialog-background);
   border: none;
   border-radius: var(--dialog-radius);
   box-shadow: var(--dialog-shadow);
-  padding: var(--dialog-padding);
+  padding: 0;
   max-width: var(--dialog-max-width);
   width: min(var(--dialog-max-width), calc(100vw - var(--space-2xl) * 2));
   max-height: 85vh;
@@ -5592,7 +6505,8 @@ hr.xl {
      on exit, so any layout property left on [open] would snap back the instant
      the attribute is removed — reflowing the dialog mid-animation. */
   flex-direction: column;
-  gap: var(--space-l);
+  /* The sections space themselves (see --dialog-padding / --drawer-padding). */
+  gap: 0;
 
   /* Closed / exit state. See the entrance-exit note below. */
   opacity: 0;
@@ -5658,6 +6572,34 @@ hr.xl {
   }
 }
 
+/* -- Scripted exit --
+   The exit above relies on `overlay` to keep a closing dialog in the top
+   layer while it animates. Safari and Firefox do not support it, so there
+   the dialog left the top layer at close() and vanished. dialog.js now plays
+   the exit first, on this class, while the dialog is still open, and calls
+   close() when it ends; close() then has nothing left to show. Same values
+   as the exit above, so every browser sees one animation. */
+.dialog[open].is-closing {
+  opacity: 0;
+  translate: 0 var(--dialog-offset);
+  transition:
+    opacity var(--dialog-exit-duration) var(--dialog-exit-easing),
+    translate var(--dialog-exit-duration) var(--dialog-exit-easing);
+}
+
+.dialog[open].is-closing::backdrop {
+  opacity: 0;
+  transition: opacity var(--dialog-exit-duration) var(--dialog-exit-easing);
+}
+
+/* Closed at the end of the scripted exit, already transparent: leave the top
+   layer at once. Without this the stylesheet's exit would run a second time,
+   an invisible dialog holding the top layer for its whole duration. */
+.dialog.is-closing,
+.dialog.is-closing::backdrop {
+  transition: none;
+}
+
 /* -- Reduced motion -- */
 /* Drops the travel and shortens to a plain fade. Re-points tokens rather than
    disabling the transition, so the discrete display/overlay steps still run
@@ -5665,8 +6607,8 @@ hr.xl {
 @media (prefers-reduced-motion: reduce) {
   .dialog {
     --dialog-offset: 0px;
-    --dialog-enter-duration: var(--duration-2xs);
-    --dialog-exit-duration: var(--duration-2xs);
+    --dialog-enter-duration: var(--motion-surface-reduced-duration);
+    --dialog-exit-duration: var(--motion-surface-reduced-duration);
   }
 }
 
@@ -5675,6 +6617,7 @@ hr.xl {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-l);
+  padding: var(--dialog-padding) var(--dialog-padding) 0;
 }
 
 .dialog-title {
@@ -5708,13 +6651,20 @@ hr.xl {
      shrinking and pushes the footer actions out of the dialog. */
   min-height: 0;
   overscroll-behavior: contain;
-  /* overflow-y turns the body into a clip box on both axes, and focus
-     outlines paint outside the border box — up to 4px (2px outline +
-     2px offset). Full-width fields touch the body's edges, so their
-     outlines were cropped. The padding keeps them inside the clip box;
-     the matching negative margin cancels it so nothing visibly moves. */
-  padding: 4px;
-  margin: -4px;
+  /* The padding lives inside the scroll box, edge to edge: overflow-y makes
+     the body a clip box on both axes, and an outline painted outside a
+     field's border box would be cut at the box's edge. Inside the padding it
+     never reaches that edge. The gap above and below scrolls with the text. */
+  padding: var(--dialog-gap) var(--dialog-padding);
+}
+
+/* First or last section: the full inset, not the gap between sections. */
+.dialog-body:not(.dialog-header + .dialog-body) {
+  padding-block-start: var(--dialog-padding);
+}
+
+.dialog-body:last-child {
+  padding-block-end: var(--dialog-padding);
 }
 
 .dialog-body > *:first-child {
@@ -5731,6 +6681,12 @@ hr.xl {
   justify-content: flex-end;
   gap: var(--space-m);
   flex-wrap: wrap;
+  padding: 0 var(--dialog-padding) var(--dialog-padding);
+}
+
+/* A footer with no body above it keeps the gap from the header. */
+.dialog-header + .dialog-footer {
+  padding-block-start: var(--dialog-gap);
 }
 
 /* -- Dialog dark mode -- */
@@ -5766,7 +6722,11 @@ hr.xl {
   --drawer-background: var(--background-primary);
   --drawer-shadow: 0 8px 32px var(--black-alpha-20);
   --drawer-radius: var(--radius-surface);
+  /* The inset every section keeps from the drawer's edges, and the space
+     between sections. Same arrangement as the dialog: the body carries the
+     inset inside its scroll box, so the scrollbar meets the edge. */
   --drawer-padding: var(--space-xl);
+  --drawer-gap: var(--space-l);
   --drawer-backdrop: var(--background-modal);
   /* Width when docked to an inline edge, height when docked to a block edge.
      One token covers both because only one axis is ever free. */
@@ -5793,12 +6753,14 @@ hr.xl {
   --drawer-handle-target: var(--target-min);
 
   /* -- Motion -- */
-  /* Faster than a dialog in both directions: a drawer travels the full width of
-     its own box, so the same duration would read as sluggish. */
-  --drawer-enter-duration: var(--duration-s);
-  --drawer-enter-easing: var(--ease-out);
-  --drawer-exit-duration: var(--duration-xs);
-  --drawer-exit-easing: var(--ease-in);
+  /* The surface timing every overlay shares. A drawer once ran faster than a
+     dialog (400ms in, 200ms out), on the reasoning that it travels further;
+     on the house curve the glide carries the distance, and a 200ms close
+     over a tall sheet read as a snap rather than a slide (2026-10-16). */
+  --drawer-enter-duration: var(--motion-surface-open-duration);
+  --drawer-enter-easing: var(--motion-surface-open-easing);
+  --drawer-exit-duration: var(--motion-surface-close-duration);
+  --drawer-exit-easing: var(--motion-surface-close-easing);
   /* How far the drawer travels when closed. Percentages resolve against its
      own border box, so 100% parks it exactly off-screen whatever
      --drawer-size is.
@@ -5816,14 +6778,17 @@ hr.xl {
   border: none;
   border-radius: var(--drawer-radius);
   box-shadow: var(--drawer-shadow);
-  padding: var(--drawer-padding);
+  /* The sections carry the inset (see .drawer-header, .drawer-body); only a
+     handle's strip is reserved on the surface itself. */
+  padding: 0;
   /* The UA stylesheet centres a dialog with margin:auto — that would undo the
      docking insets below. */
   margin: 0;
 
   /* Layout lives here, not on [open] — see the note in section 29. */
   flex-direction: column;
-  gap: var(--space-l);
+  /* The sections space themselves (see --dialog-padding / --drawer-padding). */
+  gap: 0;
 
   /* Closed / exit state. */
   opacity: 0;
@@ -5948,19 +6913,47 @@ hr.xl {
   }
 }
 
+/* -- Scripted exit --
+   Same reason as the dialog's (section 29): without `overlay` support a
+   drawer left the top layer at close() and vanished. dialog.js plays the
+   exit on this class while the drawer is still open, then closes it. A drag
+   release clears its inline translate in the same frame the class goes on,
+   so the drawer carries on from where the finger left it. */
+.drawer[open].is-closing {
+  opacity: 0;
+  translate: var(--drawer-offset);
+  transition:
+    opacity var(--drawer-exit-duration) var(--drawer-exit-easing),
+    translate var(--drawer-exit-duration) var(--drawer-exit-easing);
+}
+
+.drawer[open].is-closing::backdrop {
+  opacity: 0;
+  transition: opacity var(--drawer-exit-duration) var(--drawer-exit-easing);
+}
+
+/* Closed at the end of the scripted exit: leave at once (as the dialog). */
+.drawer.is-closing,
+.drawer.is-closing::backdrop {
+  transition: none;
+}
+
 /* showModal() makes the rest of the page inert but does not stop it scrolling.
    Behind a full-height drawer that reads as the drawer itself scrolling, so
    pin the page while one is open. Scoped to .drawer deliberately — .dialog has
    never locked scroll and changing that belongs with a dialog change.
 
-   Both elements are targeted because which one scrolls depends on the document.
-   This only reaches a page whose scroller IS the root: an app that scrolls a
-   container div, or drives scrolling through a library, has to lock its own
-   scroller (noted in cms/drawer.md). Pages without a stable scrollbar gutter
-   will shift by the scrollbar width on open — set `scrollbar-gutter: stable`
-   on :root in the consuming product if that matters there. */
-html:has(.drawer[open]),
-body:has(.drawer[open]) {
+   Only the root is locked, and that is deliberate. Locking body as well made
+   it a scroll container (with the root already hidden, body's overflow no
+   longer passes to the viewport), so every sticky element on the page (site
+   header, docked bars, a docked page header) stuck to a box that never
+   scrolls: they dropped out of place behind the open drawer and snapped back
+   as it closed. A page whose scroller is body, or a container div, or that
+   drives scrolling through a library, has to lock its own scroller (noted in
+   cms/drawer.md). Pages without a stable scrollbar gutter will shift by the
+   scrollbar width on open — set `scrollbar-gutter: stable` on :root in the
+   consuming product if that matters there. */
+html:has(.drawer[open]) {
   overflow: hidden;
 }
 
@@ -6028,11 +7021,11 @@ body:has(.drawer[open]) {
 .drawer[data-placement="bottom"] .drawer-handle { inset-block-start: 0; }
 
 .drawer[data-placement="top"]:has(.drawer-handle) {
-  padding-block-end: calc(var(--drawer-padding) + var(--drawer-handle-target, var(--target-min)));
+  padding-block-end: var(--drawer-handle-target, var(--target-min));
 }
 
 .drawer[data-placement="bottom"]:has(.drawer-handle) {
-  padding-block-start: calc(var(--drawer-padding) + var(--drawer-handle-target, var(--target-min)));
+  padding-block-start: var(--drawer-handle-target, var(--target-min));
 }
 
 /* Inline placements: the strip spans the block axis, the pill stands upright.
@@ -6042,8 +7035,8 @@ body:has(.drawer[open]) {
 
    On an inline drawer the strip runs the full height beside the header, where
    the close button also sits. They are adjacent rather than overlapping only
-   because the padding reservation below insets the header by the strip's own
-   width — re-point --drawer-padding toward zero and that clearance narrows. */
+   because the padding reservation below insets the whole drawer by the strip's
+   own width; the header's own --drawer-padding sits inside that. */
 .drawer:not([data-placement="top"]):not([data-placement="bottom"]) .drawer-handle {
   inset-block: 0;
   inline-size: var(--drawer-handle-target, var(--target-min));
@@ -6058,7 +7051,7 @@ body:has(.drawer[open]) {
 .drawer[data-placement="start"] .drawer-handle { inset-inline-end: 0; }
 
 .drawer[data-placement="start"]:has(.drawer-handle) {
-  padding-inline-end: calc(var(--drawer-padding) + var(--drawer-handle-target, var(--target-min)));
+  padding-inline-end: var(--drawer-handle-target, var(--target-min));
 }
 
 .drawer:not([data-placement="start"]):not([data-placement="top"]):not([data-placement="bottom"]) .drawer-handle {
@@ -6066,7 +7059,7 @@ body:has(.drawer[open]) {
 }
 
 .drawer:not([data-placement="start"]):not([data-placement="top"]):not([data-placement="bottom"]):has(.drawer-handle) {
-  padding-inline-start: calc(var(--drawer-padding) + var(--drawer-handle-target, var(--target-min)));
+  padding-inline-start: var(--drawer-handle-target, var(--target-min));
 }
 
 /* While the finger is down the drawer must track it exactly, so the entrance
@@ -6127,8 +7120,8 @@ body:has(.drawer[open]) {
     /* Zeroing the magnitude is what actually drops the travel — the placement
        rules only carry direction, so they cannot override this. */
     --drawer-travel: 0%;
-    --drawer-enter-duration: var(--duration-2xs);
-    --drawer-exit-duration: var(--duration-2xs);
+    --drawer-enter-duration: var(--motion-surface-reduced-duration);
+    --drawer-exit-duration: var(--motion-surface-reduced-duration);
 
     /* A drag leaves an inline translate of at least half the drawer's extent.
        With travel zeroed, keeping translate in the exit would tween the
@@ -6149,6 +7142,11 @@ body:has(.drawer[open]) {
       opacity var(--drawer-exit-duration) var(--drawer-exit-easing),
       display var(--drawer-exit-duration) allow-discrete,
       overlay var(--drawer-exit-duration) allow-discrete;
+  }
+
+  /* The scripted exit takes position out for the same reason: fade only. */
+  .drawer[open].is-closing {
+    transition: opacity var(--drawer-exit-duration) var(--drawer-exit-easing);
   }
 
   .dialog.is-pulsing,
@@ -6175,6 +7173,7 @@ body:has(.drawer[open]) {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-l);
+  padding: var(--drawer-padding) var(--drawer-padding) 0;
 }
 
 .drawer-title {
@@ -6200,10 +7199,17 @@ body:has(.drawer[open]) {
      shrinking and pushes the footer out of the drawer. */
   min-height: 0;
   overscroll-behavior: contain;
-  /* Same clip-box fix as .dialog-body: focus outlines paint up to 4px
-     outside the border box and were cropped at the body's edges. */
-  padding: 4px;
-  margin: -4px;
+  /* The inset inside the scroll box, as .dialog-body: the scrollbar meets the
+     drawer's edge and nothing near an edge is cut off. */
+  padding: var(--drawer-gap) var(--drawer-padding);
+}
+
+.drawer-body:not(.drawer-header + .drawer-body) {
+  padding-block-start: var(--drawer-padding);
+}
+
+.drawer-body:last-child {
+  padding-block-end: var(--drawer-padding);
 }
 
 .drawer-body > *:first-child {
@@ -6220,6 +7226,11 @@ body:has(.drawer[open]) {
   justify-content: flex-end;
   gap: var(--space-m);
   flex-wrap: wrap;
+  padding: 0 var(--drawer-padding) var(--drawer-padding);
+}
+
+.drawer-header + .drawer-footer {
+  padding-block-start: var(--drawer-gap);
 }
 
 /* -- Drawer dark mode -- */
@@ -6264,7 +7275,7 @@ input[type="range"]::-webkit-slider-thumb {
   border: 2px solid var(--background-primary);
   cursor: pointer;
   box-shadow: 0 1px 4px var(--black-alpha-20);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition: transform var(--motion-feedback-press-duration) var(--motion-feedback-press-easing), box-shadow var(--motion-feedback-press-duration) var(--motion-feedback-press-easing);
 }
 
 input[type="range"]::-moz-range-thumb {
@@ -6283,12 +7294,13 @@ input[type="range"]:hover::-webkit-slider-thumb {
 }
 
 input[type="range"]:focus-visible {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
   border-radius: var(--radius-full);
 }
 
 input[type="range"]:disabled {
-  opacity: 0.4;
+  opacity: var(--opacity-disabled);
   cursor: not-allowed;
 }
 
@@ -6330,7 +7342,7 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   height: var(--rating-size);
   cursor: pointer;
   color: var(--background-faded);
-  transition: color 0.1s ease, transform 0.1s ease;
+  transition: color var(--motion-feedback-press-duration) var(--motion-feedback-press-easing), transform var(--motion-feedback-press-duration) var(--motion-feedback-press-easing);
   flex-shrink: 0;
 }
 
@@ -6356,9 +7368,9 @@ input[type="range"]:disabled::-webkit-slider-thumb {
 }
 
 .rating-star:focus-visible {
-  outline: none;
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
   border-radius: var(--radius-detail);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
 }
 
 .rating.is-readonly .rating-star {
@@ -6451,8 +7463,13 @@ input[type="range"]:disabled::-webkit-slider-thumb {
 }
 
 .number-input:focus-within {
-  border-color: var(--input-focus);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
+}
+
+/* Read-only: the box takes the fade, as a .field does. */
+.number-input:has(input[readonly]:not(:disabled)) {
+  background-color: var(--background-faded);
 }
 
 /* tabular-nums so the field does not reflow as the value steps through digits
@@ -6505,12 +7522,13 @@ input[type="range"]:disabled::-webkit-slider-thumb {
 }
 
 .number-input-btn:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
+  box-shadow: none;
 }
 
 .number-input-btn:disabled {
-  opacity: 0.4;
+  opacity: var(--opacity-disabled);
   cursor: not-allowed;
 }
 
@@ -6604,7 +7622,7 @@ input[type="range"]:disabled::-webkit-slider-thumb {
    Tokens declared in :root have to be restated. For the page header that is
    four lines. */
 
-/* :not(:has(.page-header-media)) because design-system.css:7315-7320 re-points
+/* :not(:has(.page-header-media)) because the photo rule .page-header:has(.page-header-media) re-points
    the same three tokens for a header carrying a picture, at the same (0,2,0),
    and this rule would win on source order — painting the title in --color-text
    over a 45% black scrim. A photo header already has a colour treatment; this
@@ -6615,6 +7633,9 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   --background-secondary: var(--color-background);
   --background-faded: var(--color-raised);
   --text-primary: var(--color-text);
+  /* --input-focus resolves at :root, so it would not follow --text-primary
+     without being re-pointed too. Same in the two book blocks below. */
+  --input-focus: var(--color-text);
   --text-secondary: var(--color-text-muted);
   --text-inverted: var(--color-background);
   --border-faded: var(--color-border-faded);
@@ -6656,7 +7677,8 @@ input[type="range"]:disabled::-webkit-slider-thumb {
    --color-hover-mix is therefore a tuning number, the kind this pass otherwise
    deleted. It earns its place by being the single value both the real rule and
    the measurement probe read, which is what stops the two drifting apart. */
-.page-header[data-color] .button:not([data-color]):not([data-variant]):hover {
+.page-header[data-color] .button:not([data-color]):not([data-variant]):hover,
+.page-header[data-color] .button:not([data-color]):not([data-variant]).is-hover {
   --button-color: color-mix(in srgb, var(--color-text) var(--color-hover-mix), var(--color-background));
 }
 
@@ -6688,6 +7710,7 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   --background-secondary: var(--color-background);
   --background-faded: var(--color-raised);
   --text-primary: var(--color-text);
+  --input-focus: var(--color-text);
   --text-secondary: var(--color-text-muted);
   --text-inverted: var(--color-background);
   --border-faded: var(--color-border-faded);
@@ -6703,7 +7726,7 @@ input[type="range"]:disabled::-webkit-slider-thumb {
    --yellow in dark. Measured on a purple contents row before the fix: rest
    #35005D, hover #1A54D6 — the row turned blue under the cursor, and yellow in
    dark. The book cover escaped it only by accident, because
-   a.book-cover:hover sets color: var(--text-primary) and ties the generic rule
+   :is(a, button).book-cover:hover sets color: var(--text-primary) and ties the generic rule
    on specificity, winning on source order. Fixing the token rather than the
    hover rule covers all four consumers of --text-link, including the underline
    colour and any link nested inside the component.
@@ -6731,6 +7754,7 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   --background-secondary: var(--color-background);
   --background-faded: var(--color-raised);
   --text-primary: var(--color-text);
+  --input-focus: var(--color-text);
   --text-secondary: var(--color-text-muted);
   --text-inverted: var(--color-background);
   --border-faded: var(--color-border-faded);
@@ -6754,14 +7778,6 @@ input[type="range"]:disabled::-webkit-slider-thumb {
    normally. */
 .book-contents-item[data-color]:hover {
   background: var(--book-contents-item-background-hover);
-}
-
-/* Focus rings are fixed --status-info, which is not redefined here on purpose —
-   it is a status token. On a blue shade header in light that is --blue-dark on
-   --blue-dark: a 1.00:1 ring. Buttons already re-point their own outline to
-   --button-text-color, so they are excluded rather than overridden. */
-.page-header[data-color] :focus-visible:not(.button) {
-  outline-color: var(--color-text);
 }
 
 /* ------ 37. BOOK ------
@@ -6797,6 +7813,7 @@ input[type="range"]:disabled::-webkit-slider-thumb {
  *
  *   <div class="book-shelf">
  *     <a href="/brand/" class="book-cover">
+ *       <div class="book-cover-media"><img alt=""></div>  ← data-variant="media" only
  *       <header class="book-cover-header">
  *         <div class="book-cover-leading">…</div>    ← optional, varies
  *         <div class="book-cover-trailing">…</div>   ← open-full
@@ -6869,17 +7886,22 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   --book-cover-title-size: var(--font-5xl);
   --book-cover-background: var(--background-primary);
   --book-cover-background-hover: var(--background-faded);
+  --book-cover-locked-color: var(--text-faded);
   --book-cover-border: var(--border-s) solid var(--border-faded);
   --book-cover-bar-padding: var(--space-m) var(--space-l);
   --book-cover-body-padding: var(--space-2xl);
   --book-cover-lift: -2px;
   --book-cover-shadow-hover: 0 7px 1px -3px var(--black-alpha-10);
+  --book-cover-media-ratio: 16 / 10;
 
   display: flex;
   flex-direction: column;
   min-height: var(--book-cover-min-height);
   background: var(--book-cover-background);
   border: var(--book-cover-border);
+  /* Stretch, said outright: an <a> stretches its flex items by default,
+     but a <button> cover centres them, which shrank the body to its text. */
+  align-items: stretch;
   color: inherit;
   text-align: center;
   text-decoration: none;
@@ -6906,10 +7928,24 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   --book-cover-body-padding: var(--space-3xl);
 }
 
+/* Media cover: an image runs edge to edge across the top and the text below
+   reads as its caption, start-aligned and smaller. The image sets the
+   cover's height, so the variant drops the min-height and carries its own
+   title and inset in place of data-size. It sits after the sizes so all
+   three win on source order if the two are combined. */
+.book-cover[data-variant="media"] {
+  --book-cover-min-height: 0;
+  --book-cover-title-size: var(--font-2xl);
+  --book-cover-body-padding: var(--space-l);
+
+  position: relative;
+  text-align: start;
+}
+
 /* The heading scale steps by restating font-size on the element, not by
    re-pointing a token — so a class that sets its own size has to carry the
    step itself, or it stays at desktop size on every phone. Every size
-   variant drops two rungs.
+   variant drops two rungs; the media variant, already small, drops one.
 
    This block must stay BELOW the size variants: the bare .book-cover rule
    here is (0,1,0) against their (0,2,0), so the variants' own steps only win
@@ -6926,6 +7962,10 @@ input[type="range"]:disabled::-webkit-slider-thumb {
 
   .book-cover[data-size="large"] {
     --book-cover-title-size: var(--font-4xl);
+  }
+
+  .book-cover[data-variant="media"] {
+    --book-cover-title-size: var(--font-xl);
   }
 }
 
@@ -6966,8 +8006,10 @@ input[type="range"]:disabled::-webkit-slider-thumb {
 
 /* Focus reveals the affordance too — a keyboard user tabbing a shelf should
    see what a mouse user sees. */
-a.book-cover:hover .book-cover-trailing .svg-icn,
-a.book-cover:focus-visible .book-cover-trailing .svg-icn {
+/* A cover is an <a> that navigates or a <button> that selects (a library
+   tile); both get the same hover, focus and reveal. */
+:is(a, button).book-cover:hover .book-cover-trailing .svg-icn,
+:is(a, button).book-cover:focus-visible .book-cover-trailing .svg-icn {
   opacity: 1;
 }
 
@@ -6991,13 +8033,14 @@ a.book-cover:focus-visible .book-cover-trailing .svg-icn {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-xs);
+  /* The title and the description: the body's gap, not a margin on the
+     title (no margins inside a block). */
+  gap: var(--space-m);
   padding: var(--book-cover-body-padding);
 }
 
 .book-cover-title {
-  margin-top: 0;
-  margin-bottom: var(--space-s);
+  margin: 0;
   font-size: var(--book-cover-title-size);
   line-height: var(--title-leading);
   font-weight: var(--font-weight-regular);
@@ -7009,16 +8052,130 @@ a.book-cover:focus-visible .book-cover-trailing .svg-icn {
   margin-bottom: 0;
 }
 
-a.book-cover:hover {
+/* -- Book cover media --
+ * The image slot of a media cover, and the cover's first child. Scoped to
+ * the variant: the slot means nothing on a plain cover. The ratio is a token
+ * so a change of artwork shape is one line; object-fit keeps any image
+ * filling it without distortion. */
+.book-cover[data-variant="media"] .book-cover-media {
+  flex-shrink: 0;
+  border-bottom: var(--book-cover-border);
+}
+
+.book-cover[data-variant="media"] .book-cover-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--book-cover-media-ratio);
+  object-fit: cover;
+}
+
+/* On a media cover the header floats over the image instead of taking a
+   strip of its own, and the body starts at the top, under the image. */
+.book-cover[data-variant="media"] .book-cover-header {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+}
+
+.book-cover[data-variant="media"] .book-cover-body {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+/* Both header slots sit on the image, whose colours the cover does not
+   control. A chip of the cover's own surface keeps them legible in both
+   themes. */
+.book-cover[data-variant="media"] .book-cover-leading,
+.book-cover[data-variant="media"] .book-cover-trailing {
+  padding: var(--space-2xs);
+  border-radius: var(--radius-control);
+  background: var(--book-cover-background);
+}
+
+/* The trailing chip fades in place of its icon, or an empty square would sit
+   on the image until hover. The icon inside stays opaque so the two fades
+   don't multiply. */
+.book-cover[data-variant="media"] .book-cover-trailing {
+  opacity: 0;
+  transition: opacity var(--duration-xs) var(--ease-out);
+}
+
+.book-cover[data-variant="media"] .book-cover-trailing .svg-icn {
+  opacity: 1;
+}
+
+:is(a, button).book-cover[data-variant="media"]:hover .book-cover-trailing,
+:is(a, button).book-cover[data-variant="media"]:focus-visible .book-cover-trailing {
+  opacity: 1;
+}
+
+/* -- Book cover media: os-illustration --
+ * The slot paints the field and holds the ratio, so it keeps its height when
+ * forced colours hides the art. Every os-illustration is a 500 × 500 square
+ * drawn centred and scaled to fit (preserveAspectRatio's default, meet), so
+ * at 16:10, or any ratio the token moves to, the field fills the sides and
+ * nothing is cropped. The hue sits on the slot, not the cover: a
+ * .book-cover[data-color] would theme the whole cover, and the cover stays
+ * the neutral book. */
+.book-cover[data-variant="media"] .book-cover-media[data-color] {
+  background: var(--os-illustration-field);
+}
+
+/* min-height: 0, or the square art's own 1:1 shape grows the slot past its
+   ratio — an aspect-ratio box stretches to fit its content otherwise. */
+.book-cover[data-variant="media"] .book-cover-media:has(> .os-illustration) {
+  aspect-ratio: var(--book-cover-media-ratio);
+  min-height: 0;
+}
+
+.book-cover[data-variant="media"] .book-cover-media > .os-illustration {
+  width: 100%;
+  height: 100%;
+}
+
+/* On a photo the corner slots need a chip because the photo's colours are
+   unknown. On an os-illustration they are known, so the chip goes and the
+   icon draws in the art's ink. Keyed on data-color on the header, which is
+   written alongside the media slot's. The padding stays, so the icon does
+   not move. */
+.book-cover[data-variant="media"] .book-cover-header[data-color] :is(.book-cover-leading, .book-cover-trailing) {
+  background: none;
+  color: var(--os-illustration-ink);
+}
+
+/* Forced colours flattens the field, so the art goes and the slot keeps its
+   ratio. */
+@media (forced-colors: active) {
+  .book-cover-media > .os-illustration {
+    display: none;
+  }
+}
+
+:is(a, button).book-cover:hover {
   color: var(--text-primary);
   background: var(--book-cover-background-hover);
   transform: translateY(var(--book-cover-lift));
   box-shadow: var(--book-cover-shadow-hover);
 }
 
-a.book-cover:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+:is(a, button).book-cover:focus-visible {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
+}
+
+/* Selected: the cover a reader has picked (a library tile), marked with
+   aria-current="true". A ring in the ink: the border inked and doubled
+   outward, since an inset ring would sit under a media cover's picture.
+   Kept under the pointer with the lift shadow beside it (owner, 2026-10-13:
+   a ring, not the inverted pair, so a picture stays fully visible). */
+.book-cover[aria-current="true"] {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 var(--border-s) var(--text-primary);
+}
+
+.book-cover[aria-current="true"]:hover {
+  box-shadow: 0 0 0 var(--border-s) var(--text-primary), var(--book-cover-shadow-hover);
 }
 
 /* -- Book cover dark mode -- */
@@ -7073,6 +8230,7 @@ a.book-cover:focus-visible {
   --book-contents-item-gap: var(--space-xl);
   --book-contents-item-title-size: var(--font-4xl);
   --book-contents-item-background-hover: var(--background-faded);
+  --book-contents-item-locked-color: var(--text-faded);
 
   display: flex;
   align-items: center;
@@ -7090,14 +8248,28 @@ a.book-cover:focus-visible {
   background: var(--book-contents-item-background-hover);
 }
 
-/* The transparent outline is not dead code: forced-colors mode (Windows High
-   Contrast) suppresses box-shadow, and an outline drawn transparent here is
-   repainted in the user's forced palette there — without it the ring
-   vanishes entirely for exactly the users who most need it. */
+/* An outline, never a box-shadow: forced-colors mode (Windows High Contrast)
+   suppresses box-shadow, and the outline is repainted in the user's forced
+   palette. Inset, because rows sit flush to one another. */
 .book-contents-item:focus-visible {
-  outline: 2px solid transparent;
-  outline-offset: -1px;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
+}
+
+/* Selected (aria-current="true"), as a cover is: a ring in the ink, inset
+   all round so it never touches the rows above and below. */
+.book-contents-item[aria-current="true"] {
+  box-shadow: inset 0 0 0 var(--border-m) var(--text-primary);
+}
+
+/* Forced colours drop box-shadow, so the selected ring would vanish: an
+   outline in the system's Highlight, inset, marks it instead. */
+@media (forced-colors: active) {
+  :is(a, button).book-cover[aria-current="true"],
+  .book-contents-item[aria-current="true"] {
+    outline: var(--focus-width) solid Highlight;
+    outline-offset: calc(var(--focus-width) * -1);
+  }
 }
 
 /* Content grows so identity stays left and meta/action stay right, whatever
@@ -7121,6 +8293,57 @@ a.book-cover:focus-visible {
   align-items: center;
   gap: var(--space-s);
   flex-shrink: 0;
+}
+
+/* Locked (.is-locked): a cover or a row the reader cannot open. The lock
+   takes the trailing icon's place, the text mutes, and nothing lights up or
+   lifts on hover - a card that responds reads as one that goes somewhere.
+   Re-pointed tokens, never overridden rules: the hover fill becomes the rest
+   fill, the lift and shadow go to nothing, so the focus ring (box-shadow on
+   a row, outline on a cover) is untouched. The class styles only: pair it
+   with aria-disabled="true" and stop the click in script, since the href
+   stays. */
+.book-cover-lock,
+.book-contents-item-lock {
+  display: none;
+}
+
+.book-cover.is-locked .book-cover-trailing > .svg-icn:not(.book-cover-lock),
+.book-contents-item.is-locked .book-contents-item-trailing > .svg-icn:not(.book-contents-item-lock) {
+  display: none;
+}
+
+.book-cover.is-locked .book-cover-lock,
+.book-contents-item.is-locked .book-contents-item-lock {
+  display: flex;
+  opacity: 1;
+}
+
+/* A media cover fades its whole trailing chip in at hover; locked, the chip
+   stays, so the lock is read at rest. */
+.book-cover[data-variant="media"].is-locked .book-cover-trailing {
+  opacity: 1;
+}
+
+.book-cover.is-locked {
+  --book-cover-background-hover: var(--book-cover-background);
+  --book-cover-lift: 0;
+  /* A transparent shadow, not none: the selected ring lists this token after
+     its own shadow, and none inside a list is invalid. */
+  --book-cover-shadow-hover: 0 0 transparent;
+  color: var(--book-cover-locked-color);
+  cursor: not-allowed;
+}
+
+.book-contents-item.is-locked {
+  --book-contents-item-background-hover: transparent;
+  color: var(--book-contents-item-locked-color);
+  cursor: not-allowed;
+}
+
+/* A row that paints its own ground keeps it on hover while locked. */
+.book-contents-item[data-color].is-locked {
+  --book-contents-item-background-hover: var(--color-background);
 }
 
 /* Meta sits INSIDE the content column, under the description, rather than as
@@ -7175,8 +8398,8 @@ a.book-cover:focus-visible {
   transition: opacity var(--duration-xs) var(--ease-out);
 }
 
-a.book-contents-item:hover .book-contents-item-trailing .svg-icn,
-a.book-contents-item:focus-visible .book-contents-item-trailing .svg-icn {
+:is(a, button).book-contents-item:hover .book-contents-item-trailing .svg-icn,
+:is(a, button).book-contents-item:focus-visible .book-contents-item-trailing .svg-icn {
   opacity: 1;
 }
 
@@ -7248,12 +8471,10 @@ details.book-contents-item > summary:hover {
 
 /* The summary is the focusable element — a :focus-visible on the details
    itself never matches — and it takes the family ring, not section 13's
-   inset outline, so the accordion matches its link siblings. The transparent
-   outline is the forced-colors fallback — see the family focus rule above. */
+   inset outline, so the accordion matches its link siblings. */
 details.book-contents-item > summary:focus-visible {
-  outline: 2px solid transparent;
-  outline-offset: -1px;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--input-focus), var(--alpha-75));
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
 }
 
 details.book-contents-item .book-contents-item-trailing .svg-icn {
@@ -7576,6 +8797,7 @@ details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn
   --z-bar: 40;
   --z-app-nav: 90; /* app chrome: above bars, below the site header */
   --z-site-header: 100;
+  --z-intro: 2000; /* the first-load curtain: over everything, for a few seconds, once */
 }
 
 /* main[id] matters as much as the headings: the skip link targets it, and
@@ -7627,6 +8849,7 @@ section[id] {
 }
 
 .site-header {
+  --input-focus: var(--site-header-text);
   position: sticky;
   top: 0;
   z-index: var(--site-header-z);
@@ -7728,17 +8951,31 @@ section[id] {
   justify-content: center;
 }
 
-/* The three buttons ring in the header's text colour through .button; the
-   trigger is not a .button and would ring in the status blue beside them. */
-.site-header .dropdown-trigger.header-account-trigger:focus-visible {
-  outline-color: var(--site-header-text);
-}
-
 /* The account slot ships hidden and is revealed once a session is confirmed.
    `.dropdown` sets display, and the UA's [hidden] rule loses to any authored
    display — so without this the empty slot still holds its 44px signed out. */
 .site-header .header-account[hidden] {
   display: none;
+}
+
+/* The last action sits on the header's edge, so a tooltip centred under it
+   runs off a phone screen. Its bubble aligns to the button's end instead. */
+.site-header-end > :last-child[data-tooltip]::before,
+.site-header-end > :last-child [data-tooltip]::before {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+/* Signed out, the last child is the hidden account slot, so the action on
+   the edge is the one before it. Its own rule, so a browser without :has()
+   drops this alone. Without it the centred bubble, invisible but still laid
+   out, widened every page to 341px at a 320px viewport. */
+.site-header-end > :has(+ :last-child[hidden])[data-tooltip]::before,
+.site-header-end > :has(+ :last-child[hidden]) [data-tooltip]::before {
+  left: auto;
+  right: 0;
+  transform: none;
 }
 
 /* -- Header action: a Button role class --
@@ -7768,7 +9005,8 @@ section[id] {
   min-block-size: var(--target-min);
 }
 
-.button.header-action:hover {
+.button.header-action:hover,
+.button.header-action.is-hover {
   --button-color: var(--text-plain);
   background-color: var(--background-faded);
 }
@@ -7881,7 +9119,7 @@ section[id] {
  *
  * A single item too wide for the bar is not a collapse case — there is nothing
  * to move — so it handles its own width: the breadcrumb truncates with an
- * ellipsis (docs-site.css), fixed-width inputs stay fixed. .bar-content does
+ * ellipsis (Breadcrumb, §18), fixed-width inputs stay fixed. .bar-content does
  * not clip — it was a hidden-scrollbar scroll container once, and the clip
  * silently swallowed every dropdown panel opened from inside it.
  *
@@ -8008,13 +9246,23 @@ section[id] {
  * must be able to cross this edge. A set of items that no longer fits is the
  * overflow menu's job (bar.js reads scrollWidth, which reports the overhang
  * with or without a scroll container); a single too-wide item truncates
- * itself, the way the breadcrumb does in docs-site.css. */
+ * itself, the way the breadcrumb does (§18). */
 .bar-content {
   display: flex;
   align-items: center;
   align-self: stretch;
   gap: var(--bar-gap);
   min-width: 0;
+}
+
+/* A "menu" item is authored in the row but never belongs there. bar.js banks
+   it in the overflow panel, and on a Barba arrival that happens only in
+   afterEnter, once the enter animation has finished. Until then it painted in
+   the row as a dropdown item, 51px against the bar's 36px controls, so every
+   tool's bar entered 15px tall and snapped shut, pulling the page up. Once
+   moved it is no longer a child of .bar-content, so this stops applying. */
+.bar-content > [data-priority="menu"] {
+  display: none;
 }
 
 /* -- Group: a label and its control, or a set of related controls --
@@ -8123,34 +9371,41 @@ section[id] {
    restates the layout the row was providing: groups stack, each on its own
    line with the label and control pushed apart. */
 
-/* The panel is a surface of relocated form controls, not a menu of flush
-   rows — flush-edge hover is a .dropdown-item affordance and nothing in here
-   is one. A gutter gives the rows breathing space instead. Child combinator,
-   so a nested dropdown's own static menu is not double-padded. */
-.bar-overflow > .dropdown-menu {
-  padding: var(--space-s);
-}
-
+/* The panel is the dropdown's own flush menu, the same as the docs bar's:
+   rows run edge to edge and the only hairline is bar.js's separator, where
+   the kind of row changes (what always lives in the menu above, what spilled
+   from the row below).
+   It once carried a --space-s gutter plus a --space-xs inset per resident,
+   which kept .dropdown-item hover off the edges and made a tool's menu look
+   padded beside a doc page's. Each section is a mount point that could take
+   a .dropdown-label at its head later; none needs one today. */
 .bar-overflow .dropdown-menu [data-bar-demoted],
 .bar-overflow .dropdown-menu [data-bar-spill] {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2xs);
 }
 
-/* Every resident gets the same inline inset, whatever it is. A resident is
-   any direct child of .bar-content that bar.js moved here — usually a
-   .bar-group, but a tool that folds a multi-row settings panel into the
-   overflow (CPM Calculator) sends plain stacked blocks, and their labels sat
-   4px left of the groups' until the inset moved from the group to the slot. */
+/* A resident is any direct child of .bar-content that bar.js moved here —
+   usually a .bar-group, sometimes a plain block. A resident is one of two
+   things: a control row, padded to the item's inline step so its caption
+   starts on the line an item's icon does, or a wrapper round a single
+   .dropdown-item, which carries the menu's row padding itself and so adds
+   none. Padding first and the :has() exemption second, so a browser without
+   :has() falls back to padded rows rather than captions on the border. A
+   dropdown that travels in keeps its options inside its own row's inset:
+   they belong to that control, not to the panel. */
 .bar-overflow .dropdown-menu [data-bar-demoted] > *,
 .bar-overflow .dropdown-menu [data-bar-spill] > * {
-  padding-inline: var(--space-xs);
+  padding: var(--space-s) var(--space-m);
+}
+
+.bar-overflow .dropdown-menu [data-bar-demoted] > :has(> .dropdown-item),
+.bar-overflow .dropdown-menu [data-bar-spill] > :has(> .dropdown-item) {
+  padding: 0;
 }
 
 .bar-overflow .dropdown-menu .bar-group {
   justify-content: space-between;
-  padding-block: var(--space-2xs);
 }
 
 /* The narrow-viewport rule above hides labels to save bar width; in the panel
@@ -8201,6 +9456,7 @@ section[id] {
 
 .bar-overflow .dropdown-menu .dropdown .dropdown-menu {
   position: static;
+  width: auto;
   min-width: 0;
   border: none;
 }
@@ -8269,11 +9525,11 @@ section[id] {
 .bar .button,
 .bar .dropdown-trigger,
 .bar .copy-btn,
-/* The thumb variant is excluded like range and checkbox: its labels plus
-   track padding need more than the bar's 36px, so clamping the container
-   would break the labels out of the track. The flat form is the bar's
-   segmented control (cms/form.md). */
-.bar .segmented-control:not([data-variant="thumb"]),
+/* The faded variant (and its old name, thumb) is excluded like range and
+   checkbox: its labels plus track padding need more than the bar's 36px, so
+   clamping the container would break the labels out of the track. The flat
+   and underline forms are the bar's segmented controls (cms/form.md). */
+.bar .segmented-control:not([data-variant="faded"]):not([data-variant="thumb"]),
 .bar .number-input,
 /* A .field is sized as a whole; the input inside it is excluded, or this
    rule would force it to 36px inside a 36px bordered box and no field rule
@@ -8320,7 +9576,8 @@ section[id] {
   border-radius: var(--radius-control);
 }
 
-.bar .dropdown-trigger:hover {
+.bar .dropdown-trigger:hover,
+.bar .dropdown-trigger.is-hover {
   background-color: var(--background-faded);
 }
 
@@ -8377,8 +9634,8 @@ section[id] {
  * NOTE: there is no .bar-breadcrumbs. Breadcrumb is a core component (§18) and
  * `.bar .breadcrumb` adapts it here. The docs generator used to emit a parallel
  * implementation under `.sticky-bar-breadcrumbs`; it was retired on 2026-08-11
- * and the bar composes the component like any other consumer. All docs-site.css
- * keeps is the truncation a bar needs and a page does not. */
+ * and the bar composes the component like any other consumer, truncation
+ * included: the component holds itself to one line wherever it sits. */
 .bar .tabs {
   align-self: stretch;
   flex-shrink: 0;
@@ -8431,9 +9688,12 @@ section[id] {
      it, so the menu's own floor (--dropdown-menu-min-width, section 27) is
      dropped and a ceiling applied instead. The ceiling subtracts the bar's real
      gutter rather than a repeated literal, so moving the padding moves the
-     clamp with it. */
+     clamp with it. Without a floor an absolute menu shrinks to its anchor —
+     a 48px cell — and wrapped "Copy link" onto two lines, so it sizes to its
+     content instead, up to the ceiling. */
   .bar .dropdown-menu {
     --dropdown-menu-min-width: 0;
+    width: max-content;
     max-width: min(var(--bar-menu-max-width), calc(100vw - 2 * var(--bar-padding-x)));
   }
 }
@@ -8503,7 +9763,7 @@ section[id] {
   object-fit: cover;
 }
 
-/* The icon fallback. .svg-icn carries a -0.175em optical margin for inline use
+/* The icon fallback. .svg-icn carries the --icon-trim optical margin for use
    next to text; inside a centred box it just pulls the icon off-centre.
    inline-size and block-size are restated rather than left to .svg-icn's own
    width/height, because context rules like .dropdown-item .svg-icn set a literal
@@ -8512,7 +9772,7 @@ section[id] {
   --icon-size: calc(var(--avatar-size) * var(--avatar-icon-scale));
   inline-size: var(--icon-size);
   block-size: var(--icon-size);
-  margin: 0;
+  --icon-trim: 0;
 }
 
 .avatar[data-size="small"] {
@@ -8675,6 +9935,10 @@ section[id] {
      and an <h2> in a demo without changing size — see the note on
      .page-header-title. */
   --page-header-title-size: var(--font-7xl);
+  /* An os-illustration beside the title: the gap between text and art, and
+     a cap on the art so the header never takes over a short laptop screen. */
+  --page-header-illustration-gap: var(--space-2xl);
+  --page-header-illustration-max: 60svh;
 }
 
 .page-header {
@@ -8688,6 +9952,17 @@ section[id] {
   border-bottom: var(--page-header-border);
   color: var(--page-header-color);
   text-wrap: balance;
+}
+
+/* -- Covered --
+   Something has scrolled over the header and hides it completely (a shell
+   that docks it, then lets the content cover it). Transparent, not hidden:
+   the title stays in the accessibility tree and its outline. Whatever set
+   the state also tells an animated drawing inside to stop (bd:cover-change).
+   Focus inside shows it again; a shell that covers the header also lifts
+   it above the cover while it holds focus (docs-site.css does). */
+.page-header.is-covered:not(:focus-within) {
+  opacity: 0;
 }
 
 /* -- Height --
@@ -8737,6 +10012,7 @@ section[id] {
   --page-header-color: var(--page-header-color-on-media);
   --page-header-color-muted: var(--page-header-color-on-media);
   --page-header-background: var(--page-header-background-on-media);
+  --input-focus: var(--page-header-color-on-media);
   border-bottom-color: transparent;
 }
 
@@ -8827,6 +10103,101 @@ section[id] {
   justify-content: center;
 }
 
+/* -- Illustration --
+   An os-illustration in .page-header-illustration, beside a
+   .page-header-content wrapper around the text. The wrapper is part of the
+   slot's contract: emit it whenever the slot is emitted.
+
+   The header is as tall as the art, flush top and bottom, because the
+   square's own margin around its safe zone is the breathing room. When a
+   long title needs more, it is as tall as the text plus its padding. So
+   data-size stands down and the padding moves onto the text. color-scheme
+   pins native controls and focus rings to the field, which the re-pointed
+   tokens below cannot reach. Every rule here is keyed on the slot or one of
+   its two wrappers, which are only emitted together, so a header without an
+   illustration is untouched. */
+.page-header:has(.page-header-illustration) {
+  min-height: 0;
+  padding-block: 0;
+  color-scheme: light;
+}
+
+.page-header[data-field="dark"]:has(.page-header-illustration) {
+  color-scheme: dark;
+}
+
+/* Re-pointing the scope's two roles is the whole colour treatment.
+   .page-header[data-color]:not(:has(.page-header-media)) maps them onto every
+   semantic token in the header, and the derived raised / muted / border roles
+   recompute from them on the same element. At (0,3,0) this beats every
+   section 2d theme arm (the tint arms are (0,1,0), the shade arms (0,2,0)),
+   which is what holds the header light in both themes. The text reads the
+   text role, not the ink, so a hue can give its header text a different
+   colour from its art. */
+.page-header[data-color]:has(.page-header-illustration) {
+  --color-background: var(--os-illustration-field);
+  --color-text: var(--os-illustration-text);
+}
+
+/* Two equal columns inside the measure, text first. Equal halves keep the
+   same proportions at every width and give the text a measure that matches
+   the art. Centre alignment stands down beside art: the text starts at the
+   column edge. */
+.page-header:has(.page-header-illustration) .page-header-container,
+.page-header[data-align="center"]:has(.page-header-illustration) .page-header-container {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--page-header-illustration-gap);
+  text-align: start;
+}
+
+.page-header-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  gap: var(--page-header-gap);
+  min-width: 0;
+  padding-block: var(--page-header-padding-y);
+}
+
+.page-header[data-align="center"]:has(.page-header-illustration) .page-header-subtitle {
+  margin-inline: 0;
+}
+
+.page-header[data-align="center"]:has(.page-header-illustration) .page-header-actions {
+  justify-content: flex-start;
+}
+
+/* The art's half. When the height cap is narrower than the half, the square
+   sits centred in it. Positioned for the pause button below. */
+.page-header-illustration {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.page-header-illustration > .os-illustration {
+  width: min(100%, var(--page-header-illustration-max));
+  aspect-ratio: 1;
+}
+
+/* The pause button beside an animated drawing, in the slot's bottom end
+   corner. It is the WCAG 2.2.2 control that lets a header loop past five
+   seconds; os-illustration.js sets aria-pressed, and the icon swaps on it
+   the way the password toggle's does. A still drawing has no button. */
+.page-header-illustration > .button {
+  position: absolute;
+  inset-block-end: var(--space-s);
+  inset-inline-end: var(--space-s);
+}
+
+.page-header-illustration > .button:not([aria-pressed="true"]) .svg-icn[data-icon="play"],
+.page-header-illustration > .button[aria-pressed="true"] .svg-icn[data-icon="pause"] {
+  display: none;
+}
+
 /* -- Narrow viewports --
    The title steps with the heading scale at 959px, the same breakpoint h1
    uses; padding steps later, at 767px. The heights are already clamped, so
@@ -8841,14 +10212,55 @@ section[id] {
   .page-header {
     --page-header-padding-y: var(--section-m);
     --page-header-padding-x: var(--space-l);
+    --page-header-illustration-gap: var(--space-l);
+  }
+
+  /* The art stacks above the title at full width. It is aria-hidden, so the
+     visual order costs nothing in reading order. Its own bottom margin is
+     the gap above the text, so the text drops its top padding. */
+  .page-header:has(.page-header-illustration) .page-header-container,
+  .page-header[data-align="center"]:has(.page-header-illustration) .page-header-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-header-content {
+    flex: none;
+    padding-block-start: 0;
+  }
+
+  .page-header-illustration {
+    order: -1;
+    flex: none;
+  }
+
+  .page-header-illustration > .os-illustration {
+    width: 100%;
+  }
+
+  /* Stacked, the art no longer sits beside the text, so a centred header
+     centres its text again: the start alignment above is only for side by
+     side. A header without data-align="center" keeps its start edge. */
+  .page-header[data-align="center"]:has(.page-header-illustration) .page-header-container {
+    text-align: center;
+  }
+
+  .page-header[data-align="center"]:has(.page-header-illustration) .page-header-subtitle {
+    margin-inline: auto;
+  }
+
+  .page-header[data-align="center"]:has(.page-header-illustration) .page-header-actions {
+    justify-content: center;
   }
 }
 
 /* Forced colours drops the scrim and flattens every background, which would
    leave light-on-light text over the image. Hide the picture and hand the
-   header back to the system palette. */
+   header back to the system palette. An os-illustration goes for the same
+   reason: its field is flattened, and the text takes the full width. */
 @media (forced-colors: active) {
-  .page-header-media {
+  .page-header-media,
+  .page-header-illustration {
     display: none;
   }
 
@@ -9505,8 +10917,8 @@ section[id] {
    real outline around the row instead */
 @media (forced-colors: active) {
   .cell-input:focus-within .cell-input-cells {
-    outline: 2px solid Highlight;
-    outline-offset: 2px;
+    outline: var(--focus-width) solid Highlight;
+    outline-offset: var(--focus-offset);
   }
 }
 
@@ -9859,7 +11271,7 @@ section[id] {
 /* ------ 50. CHIP ------
  *
  * A one-of-N control whose options wrap. Native radios inside labels, exactly
- * as the segmented control's thumb variant does it — the browser supplies
+ * as the segmented control's faded variant does it — the browser supplies
  * radiogroup semantics, roving arrow keys and the label association, so there
  * is nothing to keep in step and no script required to select.
  *
@@ -9872,17 +11284,23 @@ section[id] {
  * cannot do; that is chip.js, and only groups marked [data-clearable] load it.
  */
 :root {
-  --chip-background: transparent;
-  --chip-border: var(--border-control);
-  --chip-text: var(--text-secondary);
-  --chip-hover-background: var(--background-faded);
+  /* One look for everything a reader filters or chooses with, chip or tag
+     (owner, 2026-10-16): a pill, a light grey wash with no outline, primary
+     text, 44px tall; selected is the inverted pair. The wash and its hover
+     step are the tag's (--bg-faded-5 / -10), so a chip row and a tag row
+     read as the same thing. The radius is --radius-full, the capsule that
+     never follows --radius-scale, as the tag's has been since 2026-10-13. */
+  --chip-background: var(--bg-faded-5);
+  --chip-border: transparent;
+  --chip-text: var(--text-primary);
+  --chip-hover-background: var(--bg-faded-10);
   --chip-hover-text: var(--text-primary);
   /* Selection is the system's inverted surface, never a wash — see the
      --selected-* note in System Tokens for why. */
   --chip-selected-background: var(--selected-background);
   --chip-selected-text: var(--selected-text);
-  --chip-radius: var(--radius-control);
-  --chip-padding-x: var(--space-xl);
+  --chip-radius: var(--radius-full);
+  --chip-padding-x: var(--space-l);
   --chip-gap: var(--space-xs);
   /* Narrowest a scale stop may be before the row wraps. Sized so five stops
      fit two rows on a 375px viewport at --font-s. */
@@ -9924,7 +11342,7 @@ section[id] {
   --chip-colour-empty: var(--background-primary);
   /* A disabled swatch has no text to grey out, so the paint itself has to
      carry the state — the one case where tinting it is the lesser evil. */
-  --chip-disabled-opacity: 0.4;
+  --chip-disabled-opacity: var(--opacity-disabled);
 }
 
 .chip-group {
@@ -10004,8 +11422,8 @@ section[id] {
    and the fill are both --text-primary, so the page-coloured 2px gap is the
    only thing that makes the ring visible. Do not tidy it to 0. */
 .chip:has(input[type="radio"]:focus-visible) {
-  outline: 2px solid var(--text-primary);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
 }
 
 /* No opacity here: it would compound onto an already-faded colour, and on a
@@ -10279,7 +11697,7 @@ section[id] {
    a check straddling two fills never read clearly on either — so the ring
    alone says which pair is chosen. That makes data-contrast inert here: a
    split chip cannot show pass or fail, so its consumer shows the verdict
-   elsewhere (Colour Pairing stamps it on the band) and the hidden label
+   elsewhere (Colour Pairing in its Contrast section) and the hidden label
    carries it as it already must. Like data-contrast, the paint works on a
    bare swatch too. */
 .chip-swatch[data-split],
@@ -10557,8 +11975,8 @@ section[id] {
   color: var(--selected-text);
 }
 
-/* The global ring is inset and --status-info, which reads at 1.6:1 on the
-   inverted fill. Same move as .button:focus-visible: the ring takes the
+/* The global ring is inset and --input-focus, the page ink, which is the
+   inverted fill's own colour. Same move as .button:focus-visible: the ring takes the
    surface's own text colour. */
 .date-picker-day.is-selected:focus-visible {
   outline-color: var(--selected-text);
@@ -10741,14 +12159,14 @@ section[id] {
 
 /* The label is a span inside .copy-btn-default: a flex item does not take
    its parent's text decoration, so the span carries it. */
-.swatch-copy:hover .copy-btn-default > span {
+.swatch-copy:hover .copy-btn-default > span:not(.svg-icn) {
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
 
 .swatch-copy:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
+  outline: var(--focus-width) solid currentColor;
+  outline-offset: var(--focus-offset);
 }
 
 /* -- Ink --
@@ -10918,6 +12336,296 @@ section[id] {
   }
 }
 
+/* ------ 54. LAYER STACK ------ */
+/*
+ * Paint for what assets/js/layer-stack.js draws: a Layout Spec's zones,
+ * shapes, guides, grids, measures, notes and images, the canvas shape and
+ * background, over a specimen. Foundation since 2026-10-04: the engine ships
+ * in dist/js and any product that draws a Layout Spec reads these rules.
+ * The format is documented in cms/layout-spec.md.
+ *
+ * Each layer is a <g class="layer-stack-layer" data-type> carrying its
+ * paints on its style: the outline's colour and opacity, the fill's, and the
+ * line weight (a measure, a specimen and an image: one colour and opacity).
+ * Every part the engine draws is .layer-stack-fill (an area),
+ * .layer-stack-edge (a line) or both, already cut to the layer's draw
+ * (outline, fill or both): the fill paint fills an area, the outline paint
+ * strokes a line, so two rules paint every type. Every stroke is
+ * non-scaling (set on the shape by the engine), so a line weight is screen
+ * pixels at any size. A brand restyles every rule from its theme.css through
+ * the --overlay-* tokens below, never by overriding these classes.
+ */
+
+:root {
+  /* The artwork rules the layers read (--artwork-icon-padding,
+     --artwork-icon-grid, --artwork-logo-clear-space) are brand tokens, in
+     design-system.css §1, so a brand sets them in its theme.css. What is
+     here is how the layers are painted. */
+
+  /* -- Overlay paint --
+     One colour per category, and its opacity; a zone's outline has its
+     own, stronger than its area, so a faint area keeps a readable edge.
+     Fixed primitives on purpose: the layers sit on the specimen's ground,
+     not the page's, so they must not flip with the site theme. A layer's
+     outline and fill each start from these and change apart. */
+  --overlay-zone: var(--purple);
+  --overlay-zone-opacity: 0.2;
+  --overlay-zone-outline-opacity: 0.5;
+  --overlay-guide: var(--red);
+  --overlay-guide-opacity: 1;
+  --overlay-grid: var(--blue);
+  --overlay-grid-opacity: 0.35;
+  /* Every line's weight and a dashed line's dash and gap, in screen px
+     (the strokes do not scale). A layer's own weight overrides the first. */
+  --overlay-line-weight: 1px;
+  --overlay-line-dash: 4 3;
+  /* The finer dash: the canvas edge and an approximate rule. */
+  --overlay-dash-fine: 2 2;
+}
+
+/* On a dark ground the zone hue lifts a step and its fill thickens, or a
+   20% purple on black is gone. Keyed on the ground's ink, never on the site
+   theme: a host sets data-layer-stack-ink="light" on the element that holds
+   a dark ground; a host maps its own ground switch onto it. */
+[data-layer-stack-ink="light"] {
+  --overlay-zone: var(--purple-light);
+  --overlay-zone-opacity: 0.3;
+  --overlay-zone-outline-opacity: 0.75;
+  --overlay-grid: var(--blue-light);
+}
+
+.layer-stack-layer {
+  --layer-stack-colour: var(--layer-stack-colour-set, currentColor);
+  --layer-stack-opacity: var(--layer-stack-opacity-set, 1);
+  /* The two paints. A layer with one paint (a measure) leaves the -set
+     values unset, so both follow its colour and opacity. */
+  --layer-stack-outline-colour: var(--layer-stack-outline-colour-set, var(--layer-stack-colour));
+  --layer-stack-outline-opacity: var(--layer-stack-outline-opacity-set, var(--layer-stack-opacity));
+  --layer-stack-fill-colour: var(--layer-stack-fill-colour-set, var(--layer-stack-colour));
+  --layer-stack-fill-opacity: var(--layer-stack-fill-opacity-set, var(--layer-stack-opacity));
+  --layer-stack-line-weight: var(--layer-stack-line-weight-set, var(--overlay-line-weight));
+}
+
+.layer-stack-layer.is-hidden {
+  display: none;
+}
+
+/* An area in the fill paint; a line in the outline paint, at the line
+   weight. A part that is both is filled and stroked, each in its own. */
+.layer-stack-layer .layer-stack-fill {
+  fill: var(--layer-stack-fill-colour);
+  fill-opacity: var(--layer-stack-fill-opacity);
+  stroke: none;
+}
+
+.layer-stack-layer .layer-stack-edge {
+  fill: none;
+  stroke: var(--layer-stack-outline-colour);
+  stroke-opacity: var(--layer-stack-outline-opacity);
+  stroke-width: var(--layer-stack-line-weight);
+}
+
+.layer-stack-layer .layer-stack-fill.layer-stack-edge {
+  fill: var(--layer-stack-fill-colour);
+  fill-opacity: var(--layer-stack-fill-opacity);
+}
+
+.layer-stack-layer:is([data-type="specimen"], [data-type="image"]) {
+  opacity: var(--layer-stack-opacity);
+}
+
+.layer-stack-layer[data-line="dashed"] .layer-stack-edge {
+  stroke-dasharray: var(--overlay-line-dash);
+}
+
+/* An approximate rule (a measured estimate) never looks as crisp as a
+   published one: a finer dash and a fainter area. */
+.layer-stack-layer[data-approximate] .layer-stack-edge {
+  stroke-dasharray: var(--overlay-dash-fine);
+}
+
+.layer-stack-layer[data-approximate] .layer-stack-fill {
+  fill-opacity: calc(var(--layer-stack-fill-opacity) * 0.5);
+}
+
+/* The canvas background: one colour under everything, inside the canvas
+   shape. A colour that no longer resolves leaves it clear, not an ink
+   block under the specimen. */
+.layer-stack-background {
+  --layer-stack-colour: var(--layer-stack-colour-set, transparent);
+}
+
+.layer-stack-background .layer-stack-fill {
+  fill: var(--layer-stack-colour);
+  stroke: none;
+}
+
+/* The canvas shape: the cut-away corners or the shape that stays, shaded
+   in the guide hue at the zone's strength, and its outline. */
+.layer-stack-canvas-shape .layer-stack-shade {
+  fill: var(--overlay-guide);
+  fill-opacity: var(--overlay-zone-opacity);
+  stroke: none;
+}
+
+.layer-stack-canvas-shape .layer-stack-edge {
+  fill: none;
+  stroke: var(--overlay-guide);
+  stroke-width: var(--overlay-line-weight);
+}
+
+/* Over a host's own artwork (overlayOnly), the host's ink: currentColor,
+   as every other layer of a host's overlay is drawn. */
+.layer-stack-canvas-shape[data-ink="host"] .layer-stack-shade {
+  fill: currentColor;
+}
+
+.layer-stack-canvas-shape[data-ink="host"] .layer-stack-edge {
+  stroke: currentColor;
+}
+
+/* An image layer with no image yet: its box, so it can be placed. */
+.layer-stack-layer .layer-stack-placeholder {
+  fill: currentColor;
+  fill-opacity: 0.06;
+  stroke: currentColor;
+  stroke-opacity: 0.4;
+  stroke-width: var(--overlay-line-weight);
+  stroke-dasharray: var(--overlay-line-dash);
+}
+
+/* The canvas edge, when layers reach past it (a clear space). */
+.layer-stack-canvas-edge {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.25;
+  stroke-width: var(--overlay-line-weight);
+  stroke-dasharray: var(--overlay-dash-fine);
+  pointer-events: none;
+}
+
+/* Annotation text, as HTML over the drawing so it keeps its size. The host
+   sets --layer-stack-label-ink and --layer-stack-label-paper; they default to the page's. */
+.layer-stack-label {
+  position: absolute;
+  padding: 0 var(--space-2xs);
+  border-radius: var(--radius-detail);
+  background: var(--layer-stack-label-paper, var(--background-primary));
+  color: var(--layer-stack-label-ink, var(--text-primary));
+  font-family: var(--font-quaternary);
+  font-size: var(--font-2xs);
+  line-height: var(--line-height-m);
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.layer-stack-label[data-anchor="above"] { transform: translate(-50%, calc(-100% - var(--space-2xs))); }
+.layer-stack-label[data-anchor="below"] { transform: translate(-50%, var(--space-2xs)); }
+.layer-stack-label[data-anchor="right"] { transform: translate(var(--space-xs), -50%); }
+
+/* -- Markers --
+   A zone's marker: a glyph, text, SVG or image drawn in the band, as wide
+   as the band is deep. In the zone's outline colour (its fill colour when
+   it is drawn as a fill alone, set by the engine) unless the layer sets its
+   own (--layer-stack-marker-colour-set), at its own opacity. */
+.layer-stack-marker {
+  --layer-stack-marker-colour: var(--layer-stack-marker-colour-set, var(--layer-stack-outline-colour));
+  color: var(--layer-stack-marker-colour);
+  opacity: var(--layer-stack-marker-opacity-set, 0.6);
+}
+
+/* A glyph or SVG marker carries currentColor in its own markup (the
+   upload is converted on the way in), so only its colour is set here and
+   a stroke-drawn SVG keeps its strokes. Text is the one marker filled. */
+.layer-stack-marker-text {
+  fill: currentColor;
+  stroke: none;
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Forced colours: every layer in the system's text colour. The painted
+   colours arrive as -set properties (the outline's, the fill's, a
+   measure's), so these definitions decide. */
+@media (forced-colors: active) {
+  .layer-stack-layer {
+    --layer-stack-colour: CanvasText;
+    --layer-stack-outline-colour: CanvasText;
+    --layer-stack-fill-colour: CanvasText;
+  }
+
+  .layer-stack-canvas-shape .layer-stack-shade,
+  .layer-stack-canvas-shape .layer-stack-edge {
+    fill: none;
+    stroke: CanvasText;
+  }
+
+  /* A background in CanvasText would bury the specimen; the system's own
+     background is the ground instead. */
+  .layer-stack-background {
+    display: none;
+  }
+
+  .layer-stack-marker {
+    --layer-stack-marker-colour: CanvasText;
+  }
+}
+
+/* ------ 55. OS ILLUSTRATION ------
+ * A drawing that belongs to the platform: an SVG inlined at build time and
+ * coloured by the role tokens in section 2d (layer 5), so one file takes any
+ * hue (data-color) and any field (data-field) from its container, stays light
+ * in dark mode, fits any container shape, and can move. Its containers are
+ * the book cover's media slot (section 37) and the page header's
+ * illustration slot (section 43). Spec: os-illustration-plan.md, until
+ * cms/os-illustration.md is written.
+ *
+ *   <svg class="os-illustration" data-os-illustration="glossary"
+ *        viewBox="0 0 500 500" fill="none" aria-hidden="true" focusable="false">
+ *     <path data-stroke="ink" …/>
+ *   </svg>
+ *
+ * The import (npm run os-illustration:import) writes data-fill / data-stroke
+ * roles because SVG presentation attributes cannot take var(). These rules
+ * are what colour them. The fallbacks draw the art in the surrounding text
+ * colour when no hue is in scope: the root carries fill="none", so without
+ * them the art would vanish rather than fail visibly. data-stop-color="field"
+ * is the one gradient the style allows, a fade into the field (D24).
+ */
+.os-illustration {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.os-illustration [data-fill="ink"] { fill: var(--os-illustration-ink, currentColor); }
+.os-illustration [data-fill="on-ink"] { fill: var(--os-illustration-on-ink, var(--background-primary)); }
+.os-illustration [data-fill="accent"] { fill: var(--os-illustration-accent, currentColor); }
+.os-illustration [data-fill="accent-soft"] { fill: var(--os-illustration-accent-soft, var(--background-primary)); }
+.os-illustration [data-stroke="ink"] { stroke: var(--os-illustration-ink, currentColor); }
+.os-illustration [data-stroke="on-ink"] { stroke: var(--os-illustration-on-ink, var(--background-primary)); }
+.os-illustration [data-stroke="accent"] { stroke: var(--os-illustration-accent, currentColor); }
+.os-illustration [data-stroke="accent-soft"] { stroke: var(--os-illustration-accent-soft, var(--background-primary)); }
+.os-illustration [data-stop-color="field"] { stop-color: var(--os-illustration-field, var(--background-primary)); }
+
+/* -- Motion --
+   A drawing that moves is still until playback marks it .is-playing: a
+   cover on hover and keyboard focus, a header while it is on screen. With no
+   script, or with reduced motion, it rests on its first frame. !important
+   because the in-SVG rules Figma writes set the animation shorthand on #id
+   selectors, which resets play-state at (1,0,0). This holds CSS keyframes
+   only. SMIL <animate> ignores CSS and is paused by the script, which is why
+   playback cannot be CSS alone. The motion is artwork, so it is exempt from
+   the motion tokens. */
+.os-illustration[data-motion] * {
+  animation-play-state: paused !important;
+}
+
+.os-illustration[data-motion].is-playing * {
+  animation-play-state: running !important;
+}
+
 /* ------ 15. COMPONENTS IN PROGRESS ------ */
 /*
  * The following components are actively being built.
@@ -10965,5 +12673,6 @@ section[id] {
  * - [x] Cell Input (.cell-input)
  * - [x] App Navigation (.app-nav)
  * - [x] Swatch (.swatch, .swatch-grid)
+ * - [x] OS Illustration (.os-illustration)
  */
 

@@ -1,10 +1,10 @@
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 /**
  * Toast component
  * Call window.showToast(message, type, duration) to display a notification.
  * Types: 'default', 'success', 'warning', 'danger', 'info'
  *
- * @version 1.1.0
+ * @version 1.1.1
  */
 (function () {
   'use strict';
@@ -69,7 +69,7 @@
     if (type === 'danger') toast.setAttribute('role', 'alert');
     toast.innerHTML =
       '<span class="toast-message">' + escapeHTML(message) + '</span>' +
-      '<button class="button close-btn" type="button" data-icon-only data-size="small" aria-label="Dismiss"><div class="svg-icn" data-icon="close"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.4 19L5 17.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L5 6.4L6.4 5L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L17.6 5L19 6.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L19 17.6L17.6 19L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L6.4 19Z" fill="currentColor"/></svg></div></button>';
+      '<button class="button close-btn" type="button" data-icon-only data-size="small" aria-label="Dismiss"><span class="svg-icn" data-icon="close"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7.4 18L6 16.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L6 7.4L7.4 6L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L16.6 6L18 7.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L18 16.6L16.6 18L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L7.4 18Z" fill="currentColor"/></svg></span></button>';
 
     container.appendChild(toast);
 

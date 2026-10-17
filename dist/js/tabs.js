@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 /**
  * Tabs component
  * Initialises all .tabs[role="tablist"] on the page.
@@ -63,8 +63,8 @@
   }
 
   // Panel ids are only unique within a page, and during a transition the
-  // outgoing container is still in the document — website/tabs.html and
-  // website/accordion.html both use demo-panel-1..3. Resolve within the tablist's
+  // outgoing container is still in the document — web/tabs.html and
+  // web/accordion.html both use demo-panel-1..3. Resolve within the tablist's
   // own container so a click mid-swap cannot toggle the leaving page's panel.
   function panelFor(tab, tablist) {
     var scope = tablist.closest('[data-barba="container"]') || document;

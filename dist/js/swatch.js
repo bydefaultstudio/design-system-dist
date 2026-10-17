@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 /**
  * Swatch component
  * Reads each swatch's live fill and writes what depends on it: the hex in
@@ -18,12 +18,12 @@
  *
  * Copying itself is copy-button.js: every action is a .copy-btn.
  *
- * @version 1.2.0
+ * @version 1.2.1
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.2.0';
+  var VERSION = '1.2.1';
   var SELECTOR = '.swatch';
 
   // WCAG 2.1 1.4.3 for the name, value and actions, which are all small text.
@@ -236,7 +236,7 @@
 
   function nameAction(btn, colour) {
     if (!btn || !colour || btn.querySelector('.visually-hidden')) return;
-    var label = btn.querySelector('.copy-btn-default > span') || btn.querySelector('.copy-btn-default') || btn;
+    var label = btn.querySelector('.copy-btn-default > span:not(.svg-icn)') || btn.querySelector('.copy-btn-default') || btn;
     label.insertBefore(hiddenText('Copy '), label.firstChild);
     label.appendChild(hiddenText(' of ' + colour));
   }

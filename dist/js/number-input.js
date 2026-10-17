@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 // Number input — stepper buttons for .number-input elements
 (function () {
   document.addEventListener('click', function (e) {

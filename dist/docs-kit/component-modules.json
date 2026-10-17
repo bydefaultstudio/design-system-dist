@@ -1,11 +1,14 @@
 {
-  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^5.1.1",
+  "install": "npm install github:bydefaultstudio/design-system-dist#semver:^7.0.0",
   "modules": [
     "accordion.js",
     "bar.js",
+    "bd-animate.js",
     "bd-audio.js",
     "bd-cursor.js",
+    "bd-intro.js",
     "bd-video.js",
+    "breadcrumb.js",
     "cell-input.js",
     "chip.js",
     "copy-button.js",
@@ -13,19 +16,35 @@
     "dialog.js",
     "dropdown.js",
     "field.js",
+    "layer-stack.js",
     "number-input.js",
     "password-toggle.js",
     "rating.js",
+    "scroller.js",
     "swatch.js",
     "tabs.js",
     "toast.js"
   ],
   "componentCss": [
+    "bd-animate.css",
     "bd-cursor.css",
+    "bd-intro.css",
     "bd-video.css"
   ],
+  "externalScripts": {
+    "bd-animate": {
+      "label": "GSAP 3 with the ScrollTrigger, SplitText and CustomEase plugins, which the package does not ship: `npm i gsap` and copy the four files from `node_modules/gsap/dist/`",
+      "scripts": [
+        "vendor/gsap/gsap.min.js",
+        "vendor/gsap/ScrollTrigger.min.js",
+        "vendor/gsap/SplitText.min.js",
+        "vendor/gsap/CustomEase.min.js"
+      ]
+    }
+  },
   "moduleDependencies": {
-    "swatch": ["copy-button.js"]
+    "swatch": ["copy-button.js"],
+    "breadcrumb": ["dropdown.js"]
   },
   "moduleAliases": {
     "drawer": "dialog.js",
@@ -37,6 +56,7 @@
     "tabs": "Tabs",
     "form": "SegmentedControl",
     "dropdown": "Dropdown",
+    "breadcrumb": "Breadcrumb",
     "toast": "showToast",
     "rating": "Rating",
     "cell-input": "CellInput",

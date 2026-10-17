@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 /* ============================================================
    BD Video player — component-scoped CSS
    ============================================================
@@ -65,7 +65,7 @@
   --bd-video-duration-transition: var(--duration-s, 400ms);
   --bd-video-duration-mobile-scrubber: var(--duration-m, 600ms);
   --bd-video-duration-fade: var(--duration-2xl, 1200ms);
-  --bd-video-ease: var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+  --bd-video-ease: var(--ease-out, cubic-bezier(0.3, 0, 0, 1));
 
   /* SPACING — design system scale */
   --bd-video-space-xs: var(--space-xs, 0.5rem);

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 // Copy button — unified handler for all .copy-btn variants
 // Supports data-copy (static value), data-clipboard-target (element text
 // content) and data-download (fetch-free file download via a temporary link).
@@ -108,6 +108,21 @@
     announceCopy(value && value.length <= ANNOUNCE_MAX ? 'Copied ' + value : 'Copied');
   }
 
+  // A failed copy: a danger toast where the page loads toast.js, and BD
+  // Audio's error sound where it loads that. The toast container is a live
+  // region, so the copy announcer stays quiet beside it and the failure is
+  // read once; without a toast the announcer carries it.
+  function reportCopyFailure() {
+    if (typeof window.showToast === 'function') {
+      window.showToast('Couldn’t copy. Select the text and copy it yourself.', 'danger');
+    } else {
+      announceCopy('Copy failed');
+    }
+    if (window.bdAudio && typeof window.bdAudio.playSound === 'function') {
+      window.bdAudio.playSound('error');
+    }
+  }
+
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('.copy-btn');
     if (!btn) return;
@@ -153,10 +168,10 @@
         }
       }, FEEDBACK_DURATION);
     }).catch(function (err) {
-      // No false success state; the button stays as it was. Announced all the
+      // No false success state; the button stays as it was. Reported all the
       // same — a silent failure is worse than a reported one, and a screen
       // reader user has no other signal that nothing reached the clipboard.
-      announceCopy('Copy failed');
+      reportCopyFailure();
       console.warn('[copy-button] copy failed:', err);
     });
   });
@@ -190,7 +205,7 @@
       if (btn.querySelector('.copy-btn-default')) return;
       var content = btn.innerHTML;
       btn.innerHTML = '<span class="copy-btn-default">' + content + '</span>'
-        + '<span class="copy-btn-copied"><div class="svg-icn">' + iconCheck() + '</div> Copied</span>';
+        + '<span class="copy-btn-copied"><span class="svg-icn">' + iconCheck() + '</span> Copied</span>';
     });
   }
 

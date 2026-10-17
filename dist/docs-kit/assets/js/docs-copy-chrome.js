@@ -92,10 +92,18 @@
   }
 
   function warnCopyFailed(err) {
-    // No false success state; the control stays as it was. Announced all
-    // the same — a silent failure is worse than a reported one, and a screen
-    // reader user has no other signal that nothing reached the clipboard.
-    announceCopy('Copy failed');
+    // No false success state; the control stays as it was. Reported all the
+    // same, as copy-button.js reports it: a danger toast where the page has
+    // toast.js (its container is the live region, so the announcer stays
+    // quiet beside it), and BD Audio's error sound where it is loaded.
+    if (typeof window.showToast === 'function') {
+      window.showToast('Couldn’t copy. Select the text and copy it yourself.', 'danger');
+    } else {
+      announceCopy('Copy failed');
+    }
+    if (window.bdAudio && typeof window.bdAudio.playSound === 'function') {
+      window.bdAudio.playSound('error');
+    }
     console.warn('[docs-copy-chrome] copy failed:', err);
   }
 
@@ -123,7 +131,7 @@
     if (!btn) return;
 
     var iconEl = btn.querySelector('.svg-icn');
-    var label = btn.querySelector('span');
+    var label = btn.querySelector('span:not(.svg-icn)');
 
     // Capture the originals only from the resting state — a second click
     // inside the feedback window would otherwise capture the check icon and
@@ -191,8 +199,8 @@
         copyBtn.className = 'copy-btn is-ghost';
         copyBtn.setAttribute('data-copy', iconHTML);
         copyBtn.setAttribute('aria-label', 'Copy ' + iconName + ' icon code');
-        copyBtn.innerHTML = '<span class="copy-btn-default"><div class="svg-icn">' + ICON_COPY + '</div> Copy</span>'
-          + '<span class="copy-btn-copied"><div class="svg-icn">' + ICON_CHECK + '</div> Copied</span>';
+        copyBtn.innerHTML = '<span class="copy-btn-default"><span class="svg-icn">' + ICON_COPY + '</span> Copy</span>'
+          + '<span class="copy-btn-copied"><span class="svg-icn">' + ICON_CHECK + '</span> Copied</span>';
         copyTd.appendChild(copyBtn);
         row.appendChild(copyTd);
 
@@ -201,7 +209,7 @@
         var dlBtn = document.createElement('button');
         dlBtn.className = 'copy-btn is-ghost';
         dlBtn.setAttribute('aria-label', 'Download ' + iconName + ' SVG');
-        dlBtn.innerHTML = '<div class="svg-icn">' + ICON_DOWNLOAD + '</div> Download';
+        dlBtn.innerHTML = '<span class="svg-icn">' + ICON_DOWNLOAD + '</span> Download';
         dlBtn.addEventListener('click', function () {
           var a = document.createElement('a');
           a.href = '../assets/images/svg-icons/' + encodeURIComponent(fileName);
@@ -304,8 +312,8 @@
     btn.setAttribute('data-size', 'small');
     btn.setAttribute('data-copy', value);
     btn.setAttribute('aria-label', 'Copy as ' + label.toLowerCase() + ': ' + value.slice(0, 60));
-    btn.innerHTML = '<span class="copy-btn-default"><div class="svg-icn">' + ICON_COPY + '</div> ' + label + '</span>'
-      + '<span class="copy-btn-copied"><div class="svg-icn">' + ICON_CHECK + '</div> Copied</span>';
+    btn.innerHTML = '<span class="copy-btn-default"><span class="svg-icn">' + ICON_COPY + '</span> ' + label + '</span>'
+      + '<span class="copy-btn-copied"><span class="svg-icn">' + ICON_CHECK + '</span> Copied</span>';
     return btn;
   }
 

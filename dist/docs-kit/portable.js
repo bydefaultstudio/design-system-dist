@@ -11,7 +11,9 @@
  */
 
 // Filename prefixes for brand/channel content pages. If a restructure renames
-// these files, this array is the only place to update.
+// these files, update this array and worker/moved.mjs (it redirects to the
+// brand-<name> paths); docgen fails if a core page in a brand section or in
+// Foundations › Identity loses its prefix.
 const BRAND_CONTENT_PREFIXES = ['brand-', 'social-', 'channels-'];
 
 // Brand/channel content: core-layer pages about one brand, not the engine

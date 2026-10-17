@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 /**
  * bd-cursor — custom cursor system (native / label / badge / graphic / halo)
  * Version: 6.0.0
@@ -38,7 +38,7 @@
     --bd-cursor-graphic-color: var(--text-primary, #1f1f1f);
     --bd-cursor-duration-fade: var(--duration-2xs, 100ms);
     --bd-cursor-duration-halo: var(--duration-xs, 200ms);
-    --bd-cursor-ease: var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+    --bd-cursor-ease: var(--ease-out, cubic-bezier(0.3, 0, 0, 1));
     /* Halo tints — mixed from the accent so one override re-themes the set. */
     --bd-cursor-tint-5: color-mix(in srgb, var(--bd-cursor-color), var(--alpha-5, transparent 95%));
     --bd-cursor-tint-10: color-mix(in srgb, var(--bd-cursor-color), var(--alpha-10, transparent 90%));

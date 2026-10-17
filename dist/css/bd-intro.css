@@ -1,0 +1,111 @@
+/* @bydefaultstudio/design-system v7.0.0 */
+/* ==========================================================================
+   BD Intro — companion stylesheet for assets/js/bd-intro.js
+   ==========================================================================
+
+   The first-load curtain: an inverted surface over the page while the
+   wordmark drops into place, held until the page is ready, then faded.
+
+   Shown from first paint under html.js (the class the head guard script
+   adds) for a reader who has not asked for less motion, so the page never
+   shows before the curtain covers it; with scripts off the class never
+   lands and nothing here applies, and under prefers-reduced-motion: reduce
+   the show rule never applies either, so that reader never sees it. The
+   stage stays hidden until the script has placed the pieces (.is-active),
+   so an unplaced glyph is never seen. html.bd-intro-off, added by the head
+   script at 5s if the curtain never said it was leaving, hides one whose
+   script never ran. Every design-system token is read through a
+   --bd-intro-* token with a literal fallback, the bd-cursor.css pattern; a
+   brand retunes them on :root, never here.
+*/
+
+.bd-intro {
+  --bd-intro-background: var(--background-inverted, #1f1f1f);
+  --bd-intro-color: var(--text-inverted, #fffdfa);
+  --bd-intro-vignette: color-mix(in srgb, currentColor 4%, transparent);
+  --bd-intro-z: var(--z-intro, 2000);
+  --bd-intro-fade-duration: var(--motion-page-fade-duration, 600ms);
+  --bd-intro-fade-easing: var(--motion-page-fade-easing, ease-in-out);
+
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: var(--bd-intro-z);
+  overflow: hidden;
+  background: var(--bd-intro-background);
+  color: var(--bd-intro-color);
+  opacity: 1;
+  transition: opacity var(--bd-intro-fade-duration) var(--bd-intro-fade-easing);
+}
+
+/* The show rule lives inside the positive query on purpose: a reduce rule
+   of the same shape would lose to .js .bd-intro on specificity, and a
+   media query adds none. */
+@media (prefers-reduced-motion: no-preference) {
+  .js .bd-intro {
+    display: block;
+  }
+}
+
+.js.bd-intro-off .bd-intro {
+  display: none;
+}
+
+.bd-intro.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* A faint vignette so the surface is not dead flat: the mark's own colour,
+   nearly transparent, so it reads on either theme's inverted surface. */
+.bd-intro::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(ellipse at center, transparent 35%, var(--bd-intro-vignette) 100%);
+  pointer-events: none;
+}
+
+.bd-intro-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+.bd-intro.is-active .bd-intro-stage {
+  visibility: visible;
+}
+
+/* Each piece is positioned by the script from its own viewBox. */
+.bd-intro-piece {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  overflow: visible;
+  will-change: transform;
+  pointer-events: none;
+  user-select: none;
+  transform-origin: 50% 50%;
+  fill: currentColor;
+}
+
+/* Scroll lock while the curtain is up. iOS Safari rubber-bands through
+   overflow: hidden, so the body is fixed and the script sets top: -scrollY
+   inline, restoring the position on dismiss. */
+body.is-intro-loading {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+/* A fixed body has no scroll height, so a classic scrollbar would leave
+   for the hold and come back on unlock, narrowing the page under anything
+   measured or split against it. The gutter stays. */
+html:has(> body.is-intro-loading) {
+  scrollbar-gutter: stable;
+}

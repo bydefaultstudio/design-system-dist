@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 /**
  * Dialog + Drawer component
  * Opens and closes native <dialog> elements declaratively.
@@ -74,6 +74,9 @@
  *     against an accidental backdrop press, and a deliberate drag past half
  *     the panel is not accidental.
  *
+ *     Every guarded close plays the exit first (.is-closing) and closes when
+ *     it ends; see "Scripted exit" below.
+ *
  *     Programmatic .close() is NOT guarded — the native method cannot be
  *     intercepted without patching HTMLDialogElement. Call requestClose via
  *     window.bdRequestClose(el, "programmatic") if you want the guard to run.
@@ -97,7 +100,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "2.2.0";
+  var VERSION = "2.3.0";
   var SURFACE_SELECTOR = "dialog.dialog, dialog.drawer";
   var OPEN_SELECTOR = "[data-dialog-open], [data-drawer-open]";
   var CLOSE_SELECTOR = "[data-dialog-close], [data-drawer-close], .dialog-close";
@@ -107,6 +110,11 @@
      .dialog there is no pulse animation to end, and under reduced motion the
      drawer's own animation is replaced by a backdrop one. */
   var PULSE_MS = 400;
+
+  /* Margin past the exit's own duration before the close is forced, for a
+     transitionend that never comes (a hidden tab, a property that did not
+     change). */
+  var EXIT_GRACE_MS = 80;
 
   /**
    * Latched on pointerdown, read on click. Without it, a drag that starts on
@@ -172,6 +180,9 @@
    */
   function requestClose(surface, source) {
     if (!isSurface(surface)) return false;
+    // Already on its way out: a second press of the close button or a
+    // backdrop press during the exit is the same request, not a new one.
+    if (surface.__bdExit) return true;
 
     // A close can arrive mid-drag from another path entirely — Escape, a
     // second finger on the close button. Release the gesture first, or the
@@ -193,8 +204,77 @@
       return false;
     }
 
-    surface.close();
+    closeWithExit(surface);
     return true;
+  }
+
+  /* ── Scripted exit ───────────────────────────────────────────────────────
+   * The stylesheet's exit keeps a closing surface in the top layer through
+   * `overlay`, which Safari and Firefox do not support: there close() took it
+   * out at once and it vanished. So the exit plays first, on .is-closing,
+   * while the surface is still open and modal, and close() runs when it ends.
+   * By then the surface is transparent and off its edge, so whatever the
+   * browser does at close() shows nothing. One path for every browser.
+   */
+
+  /** The longest transition the surface now runs, in ms (duration + delay). */
+  function exitDurationMs(surface) {
+    var style = window.getComputedStyle(surface);
+    var durations = style.transitionDuration.split(",");
+    var delays = style.transitionDelay.split(",");
+    var longest = 0;
+
+    for (var i = 0; i < durations.length; i += 1) {
+      var total = parseFloat(durations[i]) + parseFloat(delays[i % delays.length] || "0");
+      if (total > longest) longest = total;
+    }
+
+    return longest * 1000;
+  }
+
+  /** Drop the exit's state. Leaves the surface open; the caller decides. */
+  function clearExit(surface) {
+    var exit = surface.__bdExit;
+    if (!exit) return;
+    surface.__bdExit = null;
+    window.clearTimeout(exit.timer);
+    surface.removeEventListener("transitionend", exit.onEnd);
+  }
+
+  function closeWithExit(surface) {
+    if (!surface.open || surface.__bdExit) return;
+
+    surface.classList.add("is-closing");
+
+    var duration = exitDurationMs(surface);
+
+    function finish() {
+      if (surface.__bdExit !== exit) return;
+      clearExit(surface);
+      // The class stays on through close(): closed, .is-closing switches the
+      // stylesheet's own exit off, so the surface (already transparent) leaves
+      // the top layer at once rather than lingering invisible over the page.
+      // handleClose takes the class off once the close has landed.
+      if (surface.open) surface.close();
+      else surface.classList.remove("is-closing");
+    }
+
+    // The surface's own opacity: the backdrop's transition ends on the same
+    // element, flagged by pseudoElement, and must not end the exit for it.
+    function onEnd(event) {
+      if (event.target === surface && event.propertyName === "opacity" && !event.pseudoElement) finish();
+    }
+
+    var exit = { onEnd: onEnd, finish: finish, timer: 0 };
+    surface.__bdExit = exit;
+
+    if (duration <= 0) {
+      finish();
+      return;
+    }
+
+    surface.addEventListener("transitionend", onEnd);
+    exit.timer = window.setTimeout(finish, duration + EXIT_GRACE_MS);
   }
 
   /* ── Drag to dismiss ─────────────────────────────────────────────────────
@@ -271,7 +351,8 @@
     if (!handle) return false;
 
     var surface = handle.closest("dialog.drawer");
-    if (!surface || !surface.open) return false;
+    // Not while it leaves: the exit is already taking it off its edge.
+    if (!surface || !surface.open || surface.__bdExit) return false;
 
     // WCAG 2.5.7: the gesture needs a single-pointer, non-dragging
     // alternative, and that alternative is a close control or a live
@@ -430,21 +511,35 @@
    */
   function handleClose(event) {
     if (!isSurface(event.target)) return;
+    // Closed by something else mid-exit (application code calling .close(),
+    // a form with method="dialog"): the exit has nothing left to do.
+    clearExit(event.target);
+    event.target.classList.remove("is-closing");
     if (drag && drag.surface === event.target) finishDrag(false);
     event.target.style.removeProperty("translate");
   }
 
-  function openSurface(id) {
-    var surface = document.getElementById(id);
+  /** Open by id or element. Exposed as window.bdOpenSurface. */
+  function openSurface(target) {
+    var surface = typeof target === "string" ? document.getElementById(target) : target;
     if (!surface || surface.tagName !== "DIALOG") return;
     // showModal() throws InvalidStateError on an already-open dialog. A
     // dialog rendered inline with the `open` attribute is open but
     // NON-modal — no backdrop, no focus containment — so restart that one
     // as a real modal instead of leaving an untrapped pseudo-dialog.
     if (surface.open) {
+      // Reopened while its exit plays: call the exit off and let the entrance
+      // transition carry it back from wherever it had got to.
+      if (surface.__bdExit) {
+        clearExit(surface);
+        surface.classList.remove("is-closing");
+        return;
+      }
       if (surface.matches(":modal")) return;
       surface.close();
     }
+    // Reopened in the gap between an exit's close() and its close event.
+    surface.classList.remove("is-closing");
     surface.showModal();
   }
 
@@ -462,6 +557,11 @@
     // finishDrag no-ops when nothing is in flight.
     finishDrag(false);
     document.querySelectorAll(SURFACE_SELECTOR).forEach(function (surface) {
+      // A surface mid-exit closes now too: the page is going.
+      if (surface.__bdExit) {
+        surface.__bdExit.finish();
+        return;
+      }
       if (surface.open) surface.close();
     });
   }
@@ -559,6 +659,9 @@
   // Lets application code close a surface through the guard, which plain
   // .close() cannot do.
   window.bdRequestClose = requestClose;
+  // Lets application code open a surface the way a trigger does, which also
+  // calls off an exit still playing instead of letting it finish closing.
+  window.bdOpenSurface = openSurface;
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initDialog);

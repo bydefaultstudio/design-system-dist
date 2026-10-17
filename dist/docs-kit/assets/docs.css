@@ -115,27 +115,7 @@
 
 /* The bar composes the core Breadcrumb component (design-system.css §18), which
    already knows it is in a bar — `.bar .breadcrumb` there centres it and steps
-   the size up.
- *
- * What is left is truncation, which the component deliberately does not do: it
- * wraps to a second line, which is right in a page but wrong in a bar of fixed
- * height whose content region already scrolls horizontally. A documentation
- * title is long and arbitrary, so the current page is clipped with an ellipsis
- * and the section link before it is held on one line. */
-.bar .breadcrumb {
-  flex-wrap: nowrap;
-  min-width: 0;
-}
-
-.bar .breadcrumb a {
-  white-space: nowrap;
-}
-
-.bar .breadcrumb > [aria-current="page"] {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+   the size up — and holds itself to one line, clipping the current page. */
 
 
 /* ------ 2. COPY CHROME ------
@@ -164,7 +144,7 @@
 /* It has little or no padding, so the design system's inset focus ring
    would be drawn through its own text. Push it outside. */
 .token-copy:focus-visible {
-  outline-offset: 2px;
+  outline-offset: var(--focus-offset);
 }
 
 .token-copy {
@@ -181,7 +161,7 @@
 }
 
 .token-copy code {
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), background var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .token-copy:hover code {
@@ -219,7 +199,7 @@
   mask-repeat: no-repeat;
   -webkit-mask-repeat: no-repeat;
   opacity: 0.4;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   pointer-events: none;
 }
 
@@ -307,8 +287,8 @@
 }
 
 .az-index-letter:focus-visible {
-  outline: 2px solid var(--input-focus);
-  outline-offset: 2px;
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
 }
 
 .az-index-letter.is-active {
@@ -325,9 +305,10 @@
 }
 
 /* -- Glossary page tuning --
- * The interactive term list on /glossary.html: search field, letter rail,
- * letter-grouped book-contents lists of details rows (design-system.css §37).
- * Structure is authored in cms/glossary.md; behaviour is assets/js/glossary.js.
+ * The interactive term list on /glossary.html: search field, topic chips,
+ * letter rail, letter-grouped term cards, and the reading drawer each card
+ * opens. Structure is generated from cms/glossary/ (cms/generator/glossary.js)
+ * into cms/glossary.md; behaviour is assets/js/glossary.js.
  */
 
 /* Jumping to a letter has to clear the header, any docked bar, AND the sticky
@@ -341,15 +322,191 @@
    Same trap the glossary repo documents in its own stylesheet — do not
    simplify it back. */
 .az-group[id],
-.glossary-terms details[id] {
+.glossary-card[id],
+.glossary-terms [data-glossary-topic-filter] {
   scroll-margin-top: calc(var(--scroll-offset) + var(--az-index-height));
 }
 
-/* Density re-point for a 13-row page: the shipped --font-4xl title is
-   index-page scale. Token re-point on the declaring element, scoped to this
-   page's wrapper so the variant keeps its shipped size everywhere else. */
-.glossary-terms .book-contents-item {
-  --book-contents-item-title-size: var(--font-2xl);
+/* Three columns, two below the docs layout breakpoint, one on a phone, at
+   the system's own breakpoints. Its own grid rather than .grid.cols-3, which
+   goes from three straight to one; the column count is a token re-pointed in
+   the media queries, the same shape as .book-shelf. */
+.glossary-grid {
+  --glossary-grid-columns: 3;
+
+  display: grid;
+  grid-template-columns: repeat(var(--glossary-grid-columns), minmax(0, 1fr));
+  gap: var(--space-m);
+}
+
+@media (max-width: 959px) {
+  .glossary-grid {
+    --glossary-grid-columns: 2;
+  }
+}
+
+@media (max-width: 767px) {
+  .glossary-grid {
+    --glossary-grid-columns: 1;
+  }
+}
+
+/* The card borrows the contents row's title and description classes, so a
+   term reads the same here as in every other contents list. The title's size
+   token is only declared on .book-contents-item, which a card is not, so it
+   is declared here at card scale. */
+.glossary-card {
+  --book-contents-item-title-size: var(--font-xl);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+/* -- Reading drawer --
+   A tall bottom sheet that reads like a page: rounded top corners and a
+   handle, the header and text held to a centred reading column. --radius-l
+   directly, not --radius-surface: the brand is square (--radius-scale 0),
+   and a sheet's rounded top is its shape, not a brand corner, the same
+   reasoning as the tag's capsule. */
+.glossary-drawer {
+  --drawer-size: 85dvh;
+  /* The handle stays for the pull-down gesture; its pill is not drawn. */
+  --drawer-handle-color: transparent;
+  /* The top bar: tall enough for the full-size close button. */
+  --glossary-drawer-bar-height: var(--space-7xl);
+  --drawer-radius: var(--radius-l) var(--radius-l) 0 0;
+}
+
+.glossary-drawer-heading,
+.glossary-drawer-content {
+  inline-size: 100%;
+  max-inline-size: var(--container-s);
+  margin-inline: auto;
+}
+
+/* A sheet, not a full-bleed panel, on a wide screen: capped at the
+   container and centred. Full width below it. The top padding goes, because
+   the bar below fills the strip the handle used to reserve. */
+.drawer.glossary-drawer[data-placement="bottom"]:has(.drawer-handle) {
+  inline-size: min(100%, var(--container-m));
+  margin-inline: auto;
+  padding-block-start: 0;
+}
+
+/* -- The bar --
+   Inspired by the page bar, not the .bar component (no breadcrumb, menu or
+   docking): the term's topics at the start, the close button at the end, a
+   divider edge to edge (the drawer has no padding of its own, so the header
+   spans it). It stays put while the text scrolls up to it. The handle is
+   laid under it at the same height, so the sheet pulls down from any empty
+   part of the bar; the tags and the close button sit above the handle and
+   take their own clicks (positioned, and later in the tree). */
+.drawer.glossary-drawer[data-placement="bottom"] .drawer-handle {
+  block-size: var(--glossary-drawer-bar-height);
+}
+
+.glossary-drawer .drawer-header {
+  align-items: center;
+  block-size: var(--glossary-drawer-bar-height);
+  padding-block: 0;
+  border-block-end: var(--border-s) solid var(--border-faded);
+}
+
+.glossary-drawer .drawer-header > * {
+  position: relative;
+}
+
+/* The close is the engine's (design-system.css, "The close on a dialog or
+   drawer"); the bar centres it, so it takes no pull upward, only toward the
+   end edge, which lands it the same distance from the top and the end. */
+.glossary-drawer .drawer-header > :last-child {
+  margin-block-start: 0;
+}
+
+/* Transparent here (owner, 2026-10-16): the bar's divider already frames
+   the close, so the faded fill read as a second box. Size and position stay
+   the engine's; hover still fills it. */
+.glossary-drawer .button.close-btn {
+  --button-bg: transparent;
+}
+
+/* The title and definition lead the scrolling text and leave with it. The
+   gap spaces them from the entry; the status line is visually hidden and
+   out of the flow. */
+.glossary-drawer .drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.glossary-drawer-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+.glossary-drawer-title {
+  font-size: var(--font-6xl);
+}
+
+/* Focus lands on the title when the sheet opens, so a screen reader starts
+   at the term rather than at the close button. It is a heading, not a
+   control, so it takes no ring at all: the site's ring only covers controls,
+   and leaving it to the browser drew Safari's default blue ring on every
+   open, tap included (2026-10-16). Tab moves on into the text and Shift+Tab
+   back to the close button, both carrying the site's ring. */
+.glossary-drawer-title:focus {
+  outline: none;
+}
+
+.glossary-drawer-lede {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-m);
+}
+
+.glossary-drawer-message {
+  color: var(--text-secondary);
+}
+
+.glossary-drawer-message.is-error {
+  color: var(--text-primary);
+}
+
+@media (max-width: 767px) {
+  .glossary-drawer-title {
+    font-size: var(--font-4xl);
+  }
+}
+
+/* -- Related terms --
+   On every entry page, and in the drawer, which lifts the same article. The
+   topics above them are a .tag-group of link tags (design-system.css §28). */
+.glossary-related {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+  margin: 0;
+}
+
+/* The element defaults (design-system.css, dl dt / dl dd) style a dl as
+   small italic labels over indented text; here the term is a link at body
+   size and the definition sits flush under it. */
+.glossary-related dt,
+.glossary-related dd {
+  margin: 0;
+  padding: 0;
+}
+
+.glossary-related dt {
+  font-size: var(--body-size);
+  font-style: normal;
+  font-weight: var(--font-weight-regular);
+}
+
+.glossary-related dd {
+  color: var(--text-secondary);
 }
 
 
@@ -449,6 +606,7 @@
  * Removes the slot padding; the image spans the full width at its own ratio.
  * No inline styles needed on the <img>. */
 .asset-card-preview--fill {
+  min-height: 0;
   padding: 0;
 }
 
@@ -683,7 +841,7 @@ pre {
   word-wrap: normal;
   line-height: var(--line-height-2xl);
   background-color: var(--background-darker);
-  transition: border-color 0.3s ease;
+  transition: border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   min-height: 67px;
 }
 
@@ -747,7 +905,9 @@ hr {
   z-index: 100;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.3s, visibility 0.3s;
+  transition:
+    opacity var(--duration-xs) var(--ease-in-out),
+    visibility var(--duration-xs) var(--ease-in-out);
 }
 
 .back-to-top-wrapper.is-visible {
@@ -778,11 +938,9 @@ hr {
   --toc-top-offset: var(--scroll-offset);
   --toc-border: color-mix(in srgb, var(--text-primary) 10%, transparent);
   --toc-border-active: color-mix(in srgb, var(--text-primary) 30%, transparent);
-  /* Still hardcoded: the scale has no 300ms step, so tokenising this means
-     picking 200ms (--duration-xs) or 400ms (--duration-s) — a motion decision,
-     not a find-and-replace. Same for the two transform transitions further
-     down. Grouped in ROADMAP rather than changed silently. */
-  --sidebar-transition: 0.3s ease;
+  /* The sidebar collapsing changes the layout around it: a surface toggle
+     (400ms, emphasised), decided with the motion tokens on 2026-10-15. */
+  --sidebar-transition: var(--motion-surface-toggle-duration) var(--motion-surface-toggle-easing);
 }
 
 /* Pages with a docked bar stack it under the header, so anchors have to clear
@@ -889,6 +1047,14 @@ body.no-sidebar .docs-layout {
   background-color: var(--background-primary);
   container-type: inline-size;
   container-name: main-content;
+}
+
+/* A callout in a page's prose sits a step clear of the paragraphs around
+   it. The component carries no outer margin (design-system.css, Callouts),
+   so the prose flow that needs one supplies it. Not on a tool's canvas,
+   which renders inside .docs-main too and places its callouts with gaps. */
+.docs-main .callout:not(.tool-canvas *) {
+  margin-block: var(--space-l);
 }
 
 .docs-content-grid {
@@ -1009,10 +1175,16 @@ body.no-sidebar .docs-layout {
      from the padding they describe. The surface is what the panel actually
      paints: the drawer's colour below 769px (--background-secondary in dark
      mode, not the page background), re-pointed to --background-sidebar by the desktop reset. */
+  /* One type treatment for every row — section toggle, subsection toggle and
+     link read alike; level is carried by indent and chevron, not by type. */
+  --sidebar-nav-font-family: var(--font-primary);
+  --sidebar-nav-font-size: var(--font-m);
+  --sidebar-nav-font-weight: var(--font-weight-medium);
+  --sidebar-nav-line-height: var(--line-height-l);
   --sidebar-nav-icon-size: 1.5rem;
   --sidebar-nav-lock-size: 1rem;
   --sidebar-nav-locked-color: var(--text-faded);
-  --sidebar-nav-row-height: calc(2 * var(--space-l) + var(--font-m) * var(--line-height-l));
+  --sidebar-nav-row-height: calc(2 * var(--space-l) + var(--sidebar-nav-font-size) * var(--sidebar-nav-line-height));
   --sidebar-nav-section-toggle-pad: var(--space-l);
   --sidebar-nav-section-toggle-height: calc(2 * var(--sidebar-nav-section-toggle-pad) + var(--sidebar-nav-icon-size));
   --sidebar-nav-list-pad: var(--space-m);
@@ -1123,8 +1295,12 @@ body.sidebar-collapsed .sidebar-icon-close { display: block; }
    was cut off at the bottom of the screen for anyone who had once collapsed
    the rail — and the sticky nav headers (§1D) had no scroller to pin to. */
 @media (min-width: 769px) {
+  /* Above the header too: the rail and the header only meet at the edge,
+     and a bubble from the collapse toggle, which sits level with the
+     header, opens across it. */
   body.sidebar-collapsed .site-sidebar {
     overflow: visible;
+    z-index: calc(var(--site-header-z) + 1);
   }
 
   body.sidebar-collapsed .site-sidebar-content {
@@ -1141,11 +1317,11 @@ body.sidebar-collapsed .sidebar-icon-close { display: block; }
 }
 
 /* Collapsed: hide text, lists, toggle chevrons, labels */
-body.sidebar-collapsed .sidebar-nav-section-toggle span:not(.sidebar-nav-toggle-icon),
+body.sidebar-collapsed .sidebar-nav-section-toggle span:not(.sidebar-nav-toggle-icon, .svg-icn),
 body.sidebar-collapsed .sidebar-nav-section-toggle .sidebar-nav-toggle-icon,
 body.sidebar-collapsed .sidebar-nav-list,
-body.sidebar-collapsed .sidebar-nav-link > span,
-body.sidebar-collapsed .sidebar-nav-home > span {
+body.sidebar-collapsed .sidebar-nav-link > span:not(.svg-icn),
+body.sidebar-collapsed .sidebar-nav-home > span:not(.svg-icn) {
   display: none;
 }
 
@@ -1183,6 +1359,21 @@ body.sidebar-collapsed .sidebar-nav-section[open] {
 body.sidebar-collapsed:not(.sidebar-tooltips-dismissed) .site-sidebar [data-tooltip]:hover::before,
 body.sidebar-collapsed:not(.sidebar-tooltips-dismissed) .site-sidebar [data-tooltip]:focus-visible::before {
   display: block;
+}
+
+/* The collapse toggle names itself in both states, like the header's
+   actions: it is a control, not a link the expanded label already names. */
+body:not(.sidebar-tooltips-dismissed) .site-sidebar .site-sidebar-toggle[data-tooltip]:hover::before,
+body:not(.sidebar-tooltips-dismissed) .site-sidebar .site-sidebar-toggle[data-tooltip]:focus-visible::before {
+  display: block;
+}
+
+/* Expanded, the sidebar clips past its edge (overflow-x hidden), so the
+   bubble opens left, into the sidebar; collapsed, it opens right, as the
+   collapsed links' do. */
+body:not(.sidebar-collapsed) .site-sidebar .site-sidebar-toggle[data-tooltip]::before {
+  left: auto;
+  right: calc(100% + var(--space-xs));
 }
 
 /* Keyboard focus on the icon link nested in a section row — the tooltip
@@ -1263,8 +1454,9 @@ body.sidebar-collapsed .site-sidebar .sidebar-nav-section-toggle[data-tooltip]::
   min-block-size: var(--sidebar-nav-section-toggle-height);
   margin-bottom: 0;
   color: var(--text-primary);
-  font-family: var(--font-primary);
-  font-size: var(--font-m);
+  font-family: var(--sidebar-nav-font-family);
+  font-size: var(--sidebar-nav-font-size);
+  font-weight: var(--sidebar-nav-font-weight);
   line-height: 1;
   cursor: pointer;
   list-style: none;
@@ -1307,7 +1499,7 @@ body.sidebar-collapsed .site-sidebar .sidebar-nav-section-toggle[data-tooltip]::
    its own links a little, and truncating would hide text from readers on
    large type (WCAG 1.4.4). Below 25em nothing pins, so labels wrap again. */
 @media not all and (max-height: 25em) {
-  .sidebar-nav-section-toggle > span:not(.sidebar-nav-toggle-icon) {
+  .sidebar-nav-section-toggle > span:not(.sidebar-nav-toggle-icon, .svg-icn) {
     min-inline-size: 0;
     overflow: hidden;
     white-space: nowrap;
@@ -1319,7 +1511,7 @@ body.sidebar-collapsed .site-sidebar .sidebar-nav-section-toggle[data-tooltip]::
 .sidebar-nav-toggle-icon {
   display: inline-flex;
   align-items: center;
-  transition: transform 0.3s ease;
+  transition: transform var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   margin-left: auto;
 }
 
@@ -1381,9 +1573,10 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   padding: var(--space-l);
   color: var(--text-primary);
   text-decoration: none;
-  font-family: var(--font-primary);
-  font-size: var(--font-m);
-    line-height: var(--line-height-l);
+  font-family: var(--sidebar-nav-font-family);
+  font-size: var(--sidebar-nav-font-size);
+  font-weight: var(--sidebar-nav-font-weight);
+  line-height: var(--sidebar-nav-line-height);
   transition: color var(--duration-xs) var(--ease-out), background var(--duration-xs) var(--ease-out);
 }
 
@@ -1393,8 +1586,8 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
 }
 
 .sidebar-nav-link:focus-visible {
-  outline: 2px solid var(--text-link);
-  outline-offset: -2px;
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
 }
 
 .sidebar-nav-link .svg-icn {
@@ -1413,37 +1606,41 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   padding: var(--space-l) var(--space-l) var(--space-l) var(--space-4xl);
 }
 
-/* --- Locked sidebar (signed out on a public page) ---
-   nav.js sets body.is-signed-out and aria-disabled on every link and toggle
-   (applySessionLock); the template paints the class before first paint. The
-   lock sits before a section's chevron and at the trailing edge of a root
-   link, and takes the chevron's auto margin so the pair stays right-aligned.
-   No hover: a row that lights up reads as one that opens. */
+/* --- Locked sidebar ---
+   nav.js (applyAccess) marks what the reader cannot open aria-disabled -
+   everything for a signed-out visitor on a public page (body.is-signed-out,
+   painted by the template before first paint), the team pages a guest's
+   groups do not reach (body.is-guest), and a section or subsection with
+   nothing open inside it. The lock sits at the trailing edge of every row
+   and before a section's chevron, and takes the chevron's auto margin so the
+   pair stays right-aligned. No hover: a row that lights up reads as one that
+   opens. Presentation only; the Worker is the control. */
 .sidebar-nav-lock {
   display: none;
 }
 
-body.is-signed-out .site-sidebar .sidebar-nav-lock {
+.site-sidebar [aria-disabled="true"] > .sidebar-nav-lock {
   display: flex;
   width: var(--sidebar-nav-lock-size);
   height: var(--sidebar-nav-lock-size);
   margin-left: auto;
 }
 
-body.is-signed-out .site-sidebar .sidebar-nav-lock + .sidebar-nav-toggle-icon {
+.site-sidebar [aria-disabled="true"] > .sidebar-nav-lock + .sidebar-nav-toggle-icon {
   margin-left: 0;
 }
 
-body.is-signed-out .site-sidebar [aria-disabled="true"],
-body.is-signed-out .site-sidebar [aria-disabled="true"]:hover {
+.site-sidebar [aria-disabled="true"],
+.site-sidebar [aria-disabled="true"]:hover {
   color: var(--sidebar-nav-locked-color);
   background: none;
   cursor: not-allowed;
 }
 
-/* The reason, once, above the rows. Hidden rather than removed when the
-   sidebar is open to all: locked items reference it by id (aria-describedby),
-   which still reads hidden text. */
+/* The reason, once, above the rows, in the words for that reader (nav.js
+   LOCK_NOTES). Hidden rather than removed when the sidebar is open to all:
+   locked items reference it by id (aria-describedby), which still reads
+   hidden text - a team member's locked pager link is described by it. */
 .sidebar-lock-note {
   display: none;
   margin: 0;
@@ -1456,17 +1653,36 @@ body.is-signed-out .site-sidebar [aria-disabled="true"]:hover {
   line-height: var(--line-height-l);
 }
 
-body.is-signed-out .sidebar-lock-note {
+body.is-signed-out .sidebar-lock-note,
+body.is-guest .sidebar-lock-note {
   display: block;
 }
 
 /* The rail shows icons only. Desktop only: the collapsed class persists in
    the mobile drawer, where labels, locks and the note all show. */
 @media (min-width: 769px) {
-  body.is-signed-out.sidebar-collapsed .site-sidebar .sidebar-nav-lock,
-  body.is-signed-out.sidebar-collapsed .sidebar-lock-note {
+  body.sidebar-collapsed .site-sidebar .sidebar-nav-lock,
+  body.sidebar-collapsed .sidebar-lock-note {
     display: none;
   }
+}
+
+/* --- Admin pages are hidden, not locked, from everyone but admins ---
+   (permissions-plan.md §3.2). Keyed on body[data-role], which the template's
+   pre-paint script sets from the last session answer and nav.js settles, so
+   nothing flickers away after paint. A signed-out reader has no role and
+   sees them locked with everything else. Search is closed to a guest for
+   the reason gate.mjs gives: the indexes hold every team page's text. */
+body[data-role="team"] .site-sidebar [data-access="admin"],
+body[data-role="guest"] .site-sidebar [data-access="admin"],
+body[data-role="team"] .site-sidebar li:has(> [data-access="admin"]),
+body[data-role="guest"] .site-sidebar li:has(> [data-access="admin"]),
+body[data-role="team"] .book-contents-item[data-access="admin"],
+body[data-role="guest"] .book-contents-item[data-access="admin"],
+body[data-role="team"] .book-cover[data-access="admin"],
+body[data-role="guest"] .book-cover[data-access="admin"],
+body[data-role="guest"] .header-search-btn {
+  display: none;
 }
 
 /* Subsection dropdowns — nested <details> inside a section's sidebar-nav-list.
@@ -1479,9 +1695,10 @@ body.is-signed-out .sidebar-lock-note {
   align-items: center;
   padding: var(--space-l) var(--space-l) var(--space-l) var(--space-xl);
   color: var(--text-primary);
-  font-family: var(--font-primary);
-  font-size: var(--font-m);
-  line-height: var(--line-height-l);
+  font-family: var(--sidebar-nav-font-family);
+  font-size: var(--sidebar-nav-font-size);
+  font-weight: var(--sidebar-nav-font-weight);
+  line-height: var(--sidebar-nav-line-height);
   cursor: pointer;
   list-style: none;
   user-select: none;
@@ -1494,8 +1711,8 @@ body.is-signed-out .sidebar-lock-note {
 }
 
 .sidebar-nav-subsection-toggle:focus-visible {
-  outline: 2px solid var(--text-link);
-  outline-offset: -2px;
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
 }
 
 /* Remove default WebKit arrow */
@@ -1772,8 +1989,10 @@ body.is-signed-out .sidebar-lock-note {
 /* ------ 3. DOCS MAIN CONTENT ------ */
 
 .docs-main {
-  width: 100%;
-  padding: var(--space-m) 0 var(--space-5xl) 0;
+  /* auto, not 100%: the negative margins below widen the column by the
+     ring room, which a fixed 100% would shift sideways instead. */
+  width: auto;
+  padding-block: var(--space-m) var(--space-5xl);
   /* clip, not hidden: both cut off horizontal blowout, but hidden makes this
      element the scroll container for every sticky descendant — and since
      .docs-main itself never scrolls, position: sticky inside it silently
@@ -1781,6 +2000,13 @@ body.is-signed-out .sidebar-lock-note {
      (The docs TOC never hit this because it is a grid sibling, not a
      descendant.) No JS reads this element's scroll state. */
   overflow: clip;
+  /* clip cuts at the padding edge, and controls sit flush with the column's
+     edges (a glossary card, a token copy button, a field), so their focus
+     rings lost their outer pixels. Room for a ring on each side, given back
+     by the margin: the content does not move, only the clip edge does. Not
+     overflow-clip-margin, which Safari does not support. */
+  padding-inline: var(--focus-reach);
+  margin-inline: calc(var(--focus-reach) * -1);
 }
 
 /* Floats (an .img or a figure carrying [data-float], design-system.css §24)
@@ -1869,16 +2095,47 @@ body.is-signed-out .sidebar-lock-note {
  *
  * Keyed on the grid rather than the page type: a `tool` body has no grid and
  * lays itself out, so it has nothing to cover the header with and keeps the
- * component's default flow. barba-init.js holdStickyElements pins the docked
- * header through a page transition along with every other sticky element. */
+ * component's default flow. docked-header.js puts the component's .is-covered
+ * state on once the cover hides the header completely, so it stops painting
+ * and its drawing stops playing. barba-init.js holdStickyElements pins the docked
+ * header through a page transition along with every other sticky element,
+ * but only while some of it is in view: once the cover has passed over it,
+ * pinning it would leave it live under the leaving page (isCoveredDockedHeader). */
 main > .page-header:has(~ .docs-content-grid) {
   position: sticky;
   top: var(--top-nav-height);
 }
 
-main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
+/* Focus inside a covered header (its pause button, an action) lifts it
+   above the cover while it holds focus, so the focused control is seen
+   rather than painted over by the content (WCAG 2.4.7, 2.4.11). */
+main > .page-header:has(~ .docs-content-grid):focus-within {
+  z-index: 2;
+}
+
+/* The line docked-header.js watches: the top of the content grid. Absolute,
+   so it takes no grid cell. When it passes above the header's docked top
+   plus the bar, the header is fully covered and gets .is-covered. */
+.docked-header-sentinel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+main > .page-header:has(~ .docs-content-grid) ~ :not(.bar, .page-nav) {
   position: relative;
   border-image: linear-gradient(var(--background-primary) 0 0) fill 0 / / 0 100vw;
+}
+
+/* The pager covers with a background instead: a border-image replaces the
+   element's own borders, which erased .page-nav's border-top. It spans <main>
+   as the header does, so it needs no full-bleed outset. */
+main > .page-header:has(~ .docs-content-grid) ~ .page-nav {
+  position: relative;
+  background-color: var(--background-primary);
 }
 
 /* Every page the generator writes emits the component's documented anatomy —
@@ -1980,7 +2237,7 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
   display: block;
   padding: var(--space-s) 0 var(--space-s) var(--space-l);
   border-left: var(--border-m) solid var(--toc-border);
-  transition: color 0.2s, border-color 0.2s;
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .toc-link:hover {
@@ -2396,10 +2653,16 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* Content capped at 720px and centred, with the column's focus-ring room
+     (base rule) still outside the content at every width: the margin is
+     whichever is larger, the ring room pulled back, or the centring space
+     less the ring room. Percentages here are of the grid area's width. */
   .docs-content-grid:has(.docs-toc) .docs-main {
-    width: 100%;
-    max-width: 720px;
-    margin-inline: auto;
+    width: auto;
+    margin-inline: max(
+      calc(var(--focus-reach) * -1),
+      calc((100% - 720px) / 2 - var(--focus-reach))
+    );
   }
 
   .docs-toc {
@@ -2421,6 +2684,14 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
     padding-left: var(--space-l);
     padding-right: var(--space-l);
     padding-top: 0;
+  }
+
+  /* No bar between the header and the content on a contents-level page
+     (section indexes, the Glossary): the bar was the space, so the content
+     keeps its own. The home shelf (level 0) never had a bar and keeps its
+     spacing as it was. */
+  [data-level="1"] .page-header + .docs-content-grid {
+    padding-top: var(--space-l);
   }
 }
 
@@ -2513,7 +2784,10 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
      shell has an opinion about is how wide it opens. */
   .site-sidebar {
     --drawer-size: 75vw;
-    --drawer-padding: 0 0 var(--space-l);
+    /* Its own sections, not the drawer's header and body, so the drawer's
+       inset does not reach them; only the space under the last link is kept
+       here. */
+    padding-block-end: var(--space-l);
     --sidebar-nav-section-toggle-pad: var(--space-xl);
     --sidebar-nav-list-pad: var(--space-s);
     z-index: 101;
@@ -2530,19 +2804,27 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
 
   .button.site-sidebar-close {
     display: inline-flex;
+    /* The engine's dialog and drawer close (design-system.css), for this
+       header, which is the menu's own rather than a .drawer-header. Its
+       padding already sets it --space-m from the corner. */
+    --button-color: var(--text-primary);
+    --button-bg: var(--button-faded);
+    --button-padding-y: var(--space-s);
+    --button-padding-x: var(--space-s);
+    --icon-size: var(--icon-size-l);
   }
 
   /* No collapsed state at this width — the sidebar is a modal drawer, and
      `sidebar-collapsed` persists in localStorage regardless of viewport. The
      rules that used to sit here were pre-dialog leftovers, and one of them
-     (`padding: 0`) silently cancelled the drawer's own --drawer-padding. */
+     (`padding: 0`) silently cancelled the drawer's own padding. */
 
 
-  body.sidebar-collapsed .sidebar-nav-section-toggle span:not(.sidebar-nav-toggle-icon),
+  body.sidebar-collapsed .sidebar-nav-section-toggle span:not(.sidebar-nav-toggle-icon, .svg-icn),
   body.sidebar-collapsed .sidebar-nav-section-toggle .sidebar-nav-toggle-icon,
   body.sidebar-collapsed .sidebar-nav-list,
-  body.sidebar-collapsed .sidebar-nav-link > span,
-  body.sidebar-collapsed .sidebar-nav-home > span {
+  body.sidebar-collapsed .sidebar-nav-link > span:not(.svg-icn),
+  body.sidebar-collapsed .sidebar-nav-home > span:not(.svg-icn) {
     display: revert;
   }
 
@@ -2650,7 +2932,7 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
    * The exclusion it needed was never expressible either. What the rule meant
    * was "a page opening, not a tool page", and every key tried for that was
    * wrong: the element name broke when index pages became `<header>`s, and
-   * `:not(:has(.bar))` excludes `website/bar.html`, a documentation
+   * `:not(:has(.bar))` excludes `web/bar.html`, a documentation
    * page carrying a dozen bar demos. If a taller mobile header is wanted,
    * it belongs on the component as a size, where the page asks for it. */
 
@@ -2771,21 +3053,50 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
   background: var(--background-primary);
 }
 
-/* --- Access Denied Page --- */
-
-.access-denied-wrapper {
+/* --- Locked page (cms/locked.md) ---
+   The panel a signed-in reader meets at a URL their account cannot open
+   (permissions-plan.md §4.6), served by the Worker at that URL with 403. The
+   stack, its gap and the centring are the utilities on the markup (.block,
+   .gap-l, .align-center, .button-group.justify-center); this styles only
+   what they cannot say: the measure it fills, the icon's size, and which of
+   the heading's two wordings shows - the Worker fills data-locked-level
+   with the level that refused the reader. */
+.locked-panel {
   min-height: 60vh;
   justify-content: center;
   text-align: center;
 }
 
-.access-denied-wrapper p {
+.locked-panel-icon {
+  --icon-size: var(--icon-size-xl);
   color: var(--text-secondary);
 }
 
-.access-denied-icon {
-  width: 2.5rem;
-  height: 2.5rem;
+.locked-panel-title {
+  margin: 0;
+}
+
+.locked-panel-title > span {
+  display: none;
+}
+
+.locked-panel[data-locked-level="admin"] .locked-panel-title > [data-for="admin"],
+.locked-panel:not([data-locked-level="admin"]) .locked-panel-title > [data-for="team"] {
+  display: inline;
+}
+
+/* The status line is rendered from first paint and only ever changes text:
+   a polite region revealed at announce time is not reliably announced. While
+   empty it keeps one line, so the first message does not shift the panel. */
+.locked-panel-description,
+.locked-panel-status {
+  margin: 0;
+  max-width: var(--max-width-s);
+  color: var(--text-secondary);
+}
+
+.locked-panel-status {
+  min-height: calc(var(--line-height-l) * 1em);
 }
 
 
@@ -2866,8 +3177,8 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
   --wireframe-main-track: 1160fr;
   --wireframe-article-track: 780fr;
   --wireframe-aside-track: 220fr;
-  /* Tool canvas map: the Sidebar layout's columns, the --tool-panel-width
-     sidebar (28rem, 448px) against the rest of a 1440px CONTENT area — the
+  /* Tool canvas map: an end dock's columns, the --tool-panel-width
+     column (28rem, 448px) against the rest of a 1440px CONTENT area — the
      canvas's own width, not the viewport the shell tokens above read. 448
      restates --tool-panel-width (tools.css): docs-site cannot read that
      token and fr cannot take rem, so a change there is mirrored here. The
@@ -2875,7 +3186,7 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
   --wireframe-tool-work-track: 992fr;
   --wireframe-tool-panel-track: 448fr;
   --wireframe-phone-width: 22rem;
-  /* A region drawn as a control on another — the panels toggle on the
+  /* A region drawn as a control on another — the dock toggle on the
      preview — is a chip, not a card. */
   --wireframe-chip-padding: var(--space-2xs) var(--space-s);
 
@@ -3174,49 +3485,41 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
 }
 
 /* -- The tool canvas map --
- * The shell a full-space tool is built on (tools.css, Tool canvas), drawn in
- * the state wireframe.js writes onto the map: data-layout, data-width,
- * data-panels and data-actions. Named grid areas, with one template per
- * state listing only the areas drawn in it — a hidden region in a named row
- * leaves an empty track and pays the gap twice, which is why the shell map
- * above is flex. The base template is Band, and every stacked state.
+ * The shell a full-space tool is built on, as docks (tools.css, Docks),
+ * drawn in the state wireframe.js writes onto the map: data-width, data-end
+ * (shown or none) and data-bottom (open or none), from the layout chosen.
  *
- * data-layout and data-width here describe the TOOL being drawn, not the
- * map. "band" is the map's name for a canvas with no data-layout at all.
- * Wide stays two columns on a phone on purpose: the chip says which layout
- * to draw, and the map's own narrow breakpoint (below) only collapses the
- * docs-shell map, whose two columns are the reader's sidebar. */
+ * Stacked, and wide without an end dock, the map is one column placed in
+ * source order — bar, preview, end dock, bottom dock — which is the
+ * real canvas's own order, and a hidden region takes no track. The footer
+ * is not drawn: it is optional, and none of the layouts needs it
+ * (cms/tool-canvas.md, Footer). Named areas
+ * only where the end dock makes a second column, with one template per
+ * state listing only the areas drawn in it: a hidden region in a named row
+ * leaves an empty track and pays the gap twice.
+ *
+ * data-width here describes the TOOL being drawn, not the map. Wide stays
+ * two columns on a phone on purpose: the chip says what to draw, and the
+ * map's own narrow breakpoint (below) only collapses the docs-shell map,
+ * whose two columns are the reader's sidebar. */
 .wireframe-map[data-map="tool-canvas"] {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "bar" "preview" "panels" "footer";
+  grid-template-areas: none;
 }
 
-.wireframe-map[data-map="tool-canvas"] > [data-area="bar"] { grid-area: bar; }
-.wireframe-map[data-map="tool-canvas"] > [data-area="preview"] { grid-area: preview; }
-.wireframe-map[data-map="tool-canvas"] > [data-area="panels"] { grid-area: panels; }
-.wireframe-map[data-map="tool-canvas"] > [data-area="actions"] { grid-area: actions; }
-.wireframe-map[data-map="tool-canvas"] > [data-area="footer"] { grid-area: footer; }
-
-/* Sidebar, wide: the preview beside the sidebar, the actions pinned under
-   the panels in the sidebar's column. */
-.wireframe-map[data-map="tool-canvas"][data-layout="sidebar"][data-width="wide"][data-panels="shown"] {
+.wireframe-map[data-map="tool-canvas"][data-width="wide"][data-end="shown"] {
   grid-template-columns: minmax(0, var(--wireframe-tool-work-track)) minmax(0, var(--wireframe-tool-panel-track));
-  grid-template-areas: "bar bar" "preview panels" "footer footer";
+  grid-template-areas: "bar bar" "preview end" "bottom end";
 }
 
-.wireframe-map[data-map="tool-canvas"][data-layout="sidebar"][data-width="wide"][data-panels="shown"][data-actions="pinned"] {
-  grid-template-areas: "bar bar" "preview panels" "preview actions" "footer footer";
+.wireframe-map[data-map="tool-canvas"][data-width="wide"][data-end="shown"][data-bottom="none"] {
+  grid-template-areas: "bar bar" "preview end";
 }
 
-/* Sidebar, narrow: the actions pinned under the scrolling panels. */
-.wireframe-map[data-map="tool-canvas"][data-layout="sidebar"][data-width="narrow"][data-panels="shown"][data-actions="pinned"] {
-  grid-template-areas: "bar" "preview" "panels" "actions" "footer";
-}
-
-/* Sidebar hidden, either width: the preview takes the canvas. */
-.wireframe-map[data-map="tool-canvas"][data-panels="hidden"] {
-  grid-template-areas: "bar" "preview" "footer";
-}
+.wireframe-map[data-map="tool-canvas"][data-width="wide"][data-end="shown"] > [data-area="bar"] { grid-area: bar; }
+.wireframe-map[data-map="tool-canvas"][data-width="wide"][data-end="shown"] > [data-area="preview"] { grid-area: preview; }
+.wireframe-map[data-map="tool-canvas"][data-width="wide"][data-end="shown"] > [data-area="end"] { grid-area: end; }
+.wireframe-map[data-map="tool-canvas"][data-width="wide"][data-end="shown"] > [data-area="bottom"] { grid-area: bottom; }
 
 /* Narrow is drawn at a phone's proportion, centred under the controls. */
 .wireframe-map[data-map="tool-canvas"][data-width="narrow"] {
@@ -3226,16 +3529,22 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
 }
 
 .wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="bar"],
-.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="actions"],
-.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="footer"] {
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="actions"] {
   min-height: var(--wireframe-row-s);
 }
 
 /* The preview holds the toggle in its bottom-right corner, where the real
-   one sits; out of flow, so the label stays centred on the band. */
+   one sits; out of flow, so the label stays centred on the band. Its
+   height says what the real one does: its own height over an open bottom
+   dock, the rest of the canvas with nothing open under it. */
 .wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="preview"] {
   position: relative;
-  min-height: var(--wireframe-row-xl);
+  min-height: calc(var(--wireframe-row-xl) + var(--wireframe-row-l));
+}
+
+.wireframe-map[data-map="tool-canvas"][data-width="wide"][data-bottom="open"] .wireframe-region[data-area="preview"],
+.wireframe-map[data-map="tool-canvas"][data-width="narrow"] .wireframe-region[data-area="preview"] {
+  min-height: var(--wireframe-row-l);
 }
 
 .wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="toggle"] {
@@ -3246,49 +3555,67 @@ main > .page-header:has(~ .docs-content-grid) ~ :not(.bar) {
   padding: var(--wireframe-chip-padding);
 }
 
-/* Panels holds panels, as Content holds the article: its label a caption
-   at the start, its children laid out on its surface. Stacked by default —
-   the sidebar, and Band on a phone. */
-.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="panels"] {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
-  /* stretch, not the centre a leaf region sets: two panels side by side are
-     one height, as the real ones are. */
+/* A dock holds its panels, as Content holds the article: its label a
+   caption at the start, its children laid out on its surface. */
+.wireframe-map[data-map="tool-canvas"] .wireframe-region:is([data-area="end"], [data-area="bottom"]) {
+  display: flex;
+  flex-direction: column;
   align-items: stretch;
+  justify-content: flex-start;
   gap: var(--wireframe-gap);
   padding: var(--wireframe-padding);
   text-align: start;
 }
 
-.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="panels"] > .wireframe-label {
-  justify-self: start;
+.wireframe-map[data-map="tool-canvas"] .wireframe-region:is([data-area="end"], [data-area="bottom"]) > .wireframe-label {
+  align-self: flex-start;
 }
 
-/* Band, wide: two up. */
-.wireframe-map[data-map="tool-canvas"][data-layout="band"][data-width="wide"] .wireframe-region[data-area="panels"] {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.wireframe-map[data-map="tool-canvas"][data-layout="band"][data-width="wide"] .wireframe-region[data-area="panels"] > .wireframe-label {
-  grid-column: 1 / -1;
-}
-
-/* A panel is a row of settings; a closed one in the sidebar is only its
-   header. One holding the verbs stacks its label over them. */
-.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="panel"] {
-  flex-direction: column;
-  gap: var(--wireframe-gap);
+/* The end dock: the open section takes the spare height, as the real last
+   open section does, and the actions sit at the foot. */
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="section"] {
   min-height: var(--wireframe-row-l);
 }
 
-.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="panel"][data-open="false"] {
+.wireframe-map[data-map="tool-canvas"][data-width="wide"] .wireframe-region[data-area="section"][data-open="true"] {
+  flex-grow: 1;
+}
+
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="section"][data-open="false"] {
+  flex-grow: 0;
   min-height: var(--wireframe-row-s);
 }
 
-/* Last in the block, at the specificity of the display rules above, so a
-   region the state does not draw is hidden whatever it would otherwise be. */
-.wireframe-map[data-map="tool-canvas"] .wireframe-region[hidden] {
+/* The bottom dock: its panels share one row, as the real ones do from
+   769px; stacked on a phone. The label takes a line of its own. */
+.wireframe-map[data-map="tool-canvas"][data-width="wide"] .wireframe-region[data-area="bottom"] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-content: stretch;
+}
+
+.wireframe-map[data-map="tool-canvas"][data-width="wide"] .wireframe-region[data-area="bottom"] > .wireframe-label {
+  flex-basis: 100%;
+}
+
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[data-area="panel"] {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--wireframe-row-xl);
+}
+
+/* Stacked on a phone, a panel is drawn shorter so the dock reads as a list
+   rather than filling the screen. */
+.wireframe-map[data-map="tool-canvas"][data-width="narrow"] .wireframe-region[data-area="panel"] {
+  flex-basis: auto;
+  min-height: var(--wireframe-row-l);
+}
+
+/* Last in the block, and as specific as the dock rule above (whose :is()
+   counts its attribute), so a region the state does not draw is hidden
+   whatever it would otherwise be. */
+.wireframe-map[data-map="tool-canvas"] .wireframe-region[hidden],
+.wireframe-map[data-map="tool-canvas"] .wireframe-region:is([data-area="end"], [data-area="bottom"])[hidden] {
   display: none;
 }
 
@@ -3669,10 +3996,8 @@ a.search-result:hover,
   width: 60%;
 }
 
-/* The results area already carries the inset, so the callout adds none. */
-.search-results .search-empty {
-  margin: 0;
-}
+/* The results area already carries the inset, so the callout adds none
+   (and the Callout itself carries no outer margin). */
 
 /* -- See all --
  * The last row of the list, and on a phone the only route to the results page:

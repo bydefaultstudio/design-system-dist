@@ -1,0 +1,61 @@
+/* @bydefaultstudio/design-system v7.0.0 */
+/* ==========================================================================
+   BD Animate — companion stylesheet for assets/js/bd-animate.js
+   ==========================================================================
+
+   One job: hold every element the engine will animate at opacity 0 until the
+   engine sets its first frame, so nothing flashes visible, hides, then
+   animates. Opacity only, never visibility: a held heading or nav link stays
+   in the accessibility tree and in find-in-page the whole time.
+
+   The guard applies only when motion is wanted. A reader who asked for less
+   motion is never held, not even for the time the engine takes to load; the
+   engine agrees and runs no tween for them.
+
+   Three releases, so a page can never stay blank:
+
+   - `html.js` is added by an inline script first in <head>. With scripts off
+     the class never lands and nothing here applies.
+   - `html.bd-animate-off` is added by the same script after a timeout if the
+     engine has not stamped `data-bd-ready` — a 404, a syntax error or an
+     exception before init costs a late reveal, not an empty page.
+   - `data-bd-revealed` is stamped by the engine on every element once it has
+     played, so a later context revert (width resize, page swap) cannot
+     re-hide it.
+
+   Opt-in module CSS, kept out of the core bundle the way bd-cursor.css and
+   bd-video.css are; listed in componentCss and extraStylesheets so it is in
+   the head before first paint.
+*/
+
+@media (prefers-reduced-motion: no-preference) {
+  .js:not(.bd-animate-off) [data-bd-animate]:not([data-bd-revealed]),
+  .js:not(.bd-animate-off) [data-bd-text]:not([data-bd-revealed]),
+  .js:not(.bd-animate-off) [data-bd-enter]:not([data-bd-revealed]) {
+    opacity: 0;
+  }
+}
+
+/* The engine owns transform, opacity and filter until an element has played,
+   so a component's own CSS transition stands down until then. Left on, it
+   eases toward every frame GSAP writes instead of landing on it: a cover with
+   a 200ms transform transition (its hover lift) trailed its reveal by up to
+   10px and ran 200ms long, which reads as a soft, laggy slide. The
+   component's transitions return with data-bd-revealed. Outside the motion
+   query on purpose: no tween runs under reduced motion, so this costs
+   nothing there. */
+.js:not(.bd-animate-off) [data-bd-animate]:not([data-bd-revealed]),
+.js:not(.bd-animate-off) [data-bd-enter]:not([data-bd-revealed]) {
+  transition: none;
+}
+
+/* Print sees the finished page. */
+@media print {
+  .js [data-bd-animate],
+  .js [data-bd-text],
+  .js [data-bd-enter] {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}

@@ -1,7 +1,181 @@
 {
   "$comment": "Deprecated icon names kept as byte-identical source files so consumer icons.manifest.json entries keep resolving. Aliases ship in the sprite and package but are hidden from the registry, the Brand Book table, and llms.txt. Remove the alias file and its entry here at the next major version.",
   "aliases": {
-    "switch": { "renamedTo": "loop", "since": "2.2.0" },
-    "return": { "renamedTo": "loop-reverse", "since": "2.2.0" }
+    "switch": {
+      "renamedTo": "loop",
+      "since": "2.2.0"
+    },
+    "return": {
+      "renamedTo": "loop-reverse",
+      "since": "2.2.0"
+    },
+    "frame": {
+      "renamedTo": "arrow-down-long",
+      "since": "7.0.0"
+    },
+    "flame-spark": {
+      "renamedTo": "bullseye",
+      "since": "7.0.0"
+    },
+    "file-img": {
+      "renamedTo": "file-image",
+      "since": "7.0.0"
+    },
+    "docs": {
+      "renamedTo": "page",
+      "since": "7.0.0"
+    },
+    "trending": {
+      "renamedTo": "trending-up",
+      "since": "7.0.0"
+    },
+    "play-2": {
+      "renamedTo": "play-circled",
+      "since": "7.0.0"
+    },
+    "cursor-pointer-1": {
+      "renamedTo": "cursor-ripple",
+      "since": "7.0.0"
+    },
+    "click-2": {
+      "renamedTo": "cursor-click",
+      "since": "7.0.0"
+    },
+    "cursor-pointer-4": {
+      "renamedTo": "tap-ripple",
+      "since": "7.0.0"
+    },
+    "more-horizontal": {
+      "renamedTo": "ellipsis-large",
+      "since": "7.0.0"
+    },
+    "more-vertical": {
+      "renamedTo": "ellipsis-vertical",
+      "since": "7.0.0"
+    },
+    "ai": {
+      "renamedTo": "sparkle",
+      "since": "7.0.0"
+    },
+    "ai-chat": {
+      "renamedTo": "chat-sparkle",
+      "since": "7.0.0"
+    },
+    "settings": {
+      "renamedTo": "sliders",
+      "since": "7.0.0"
+    },
+    "shop": {
+      "renamedTo": "cart",
+      "since": "7.0.0"
+    },
+    "widgets": {
+      "renamedTo": "shapes",
+      "since": "7.0.0"
+    },
+    "weapon": {
+      "renamedTo": "swords",
+      "since": "7.0.0"
+    },
+    "smiling": {
+      "renamedTo": "smile",
+      "since": "7.0.0"
+    },
+    "percentage": {
+      "renamedTo": "percent",
+      "since": "7.0.0"
+    },
+    "sidebar-close-2": {
+      "renamedTo": "arrow-right-to-line",
+      "since": "7.0.0"
+    },
+    "arrow-top": {
+      "renamedTo": "arrow-up-to-line",
+      "since": "7.0.0"
+    },
+    "arrow-top-right": {
+      "renamedTo": "arrow-up-right",
+      "since": "7.0.0"
+    },
+    "target": {
+      "renamedTo": "crosshair",
+      "since": "7.0.0"
+    },
+    "circled": {
+      "renamedTo": "circle",
+      "since": "7.0.0"
+    },
+    "squared": {
+      "renamedTo": "square",
+      "since": "7.0.0"
+    },
+    "ai-large": {
+      "renamedTo": "sparkle-large",
+      "since": "7.0.0"
+    },
+    "scroll-down": {
+      "renamedTo": "arrow-down-from-line",
+      "since": "7.0.0"
+    },
+    "cursor-pointer-2": {
+      "renamedTo": "cursor-pointer",
+      "since": "7.0.0"
+    },
+    "tap-3": {
+      "renamedTo": "tap",
+      "since": "7.0.0"
+    },
+    "share-1": {
+      "renamedTo": "share",
+      "since": "7.0.0"
+    },
+    "catalog": {
+      "renamedTo": "book-open",
+      "since": "7.0.0"
+    },
+    "design-system": {
+      "renamedTo": "shapes",
+      "since": "7.0.0"
+    },
+    "status-10": {
+      "renamedTo": "pie-10-circled",
+      "since": "7.0.0"
+    },
+    "status-20": {
+      "renamedTo": "pie-25-circled",
+      "since": "7.0.0"
+    },
+    "status-50": {
+      "renamedTo": "pie-50-circled",
+      "since": "7.0.0"
+    },
+    "status-75": {
+      "renamedTo": "pie-75-circled",
+      "since": "7.0.0"
+    },
+    "status-100": {
+      "renamedTo": "pie-100-circled",
+      "since": "7.0.0"
+    },
+    "status-check": {
+      "renamedTo": "check-filled-circled",
+      "since": "7.0.0"
+    },
+    "status-0": {
+      "renamedTo": "circle",
+      "since": "7.0.0"
+    },
+    "question": {
+      "renamedTo": "question-circled",
+      "since": "7.0.0"
+    },
+    "info": {
+      "renamedTo": "info-circled",
+      "since": "7.0.0"
+    },
+    "exclamation": {
+      "renamedTo": "exclamation-circled",
+      "since": "7.0.0"
+    }
   }
 }

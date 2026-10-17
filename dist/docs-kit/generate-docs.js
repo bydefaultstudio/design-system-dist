@@ -3,6 +3,9 @@
 const fs = require('fs');
 const path = require('path');
 const { readIconAliases } = require('./icon-aliases');
+const assetLibrary = require('./asset-library');
+const siteMap = require('./site-map');
+const showcase = require('./showcase');
 const { marked } = require('marked');
 
 //------- Project discovery -------//
@@ -49,6 +52,10 @@ const CONFIG = {
   // Core
   outputDir: userConfig.outputDir || path.join(path.basename(DOCS_DIR), 'site'),
   basePath: userConfig.basePath || '',
+  // The deployed origin, no trailing slash. Only pages shared outside the site
+  // read it (the public Showcase pages' canonical and Open Graph URLs, which
+  // must be absolute); unset, those pages emit relative tags and no canonical.
+  siteUrl: (userConfig.siteUrl || '').replace(/\/+$/, ''),
   designSystemPath: userConfig.designSystemPath || 'assets/css/design-system.css',
   brandCssPath: userConfig.brandCssPath || null,
   googleFontsUrl: userConfig.googleFontsUrl !== undefined ? userConfig.googleFontsUrl : null,
@@ -73,9 +80,19 @@ const CONFIG = {
   search: userConfig.search === true,
   validateLayers: userConfig.validateLayers === true,
   pageTransitions: userConfig.pageTransitions === true,
+  // By Default OS features. Each writes files a docs-kit project does not own
+  // (worker/*.mjs, experiments/, a public /showcase/), and a project with its
+  // own Worker has a worker/ folder for other reasons, so each is opt-in.
+  showcase: userConfig.showcase === true,
+  siteMap: userConfig.siteMap === true,
+  accessGate: userConfig.accessGate === true,
+  assetLibrary: userConfig.assetLibrary === true,
   uiScripts: userConfig.uiScripts || null, // null = kit-bundled copy-button + dropdown
   // Extension surface (all off by default)
   extraHeadHtml: userConfig.extraHeadHtml || '',
+  // Markup first in <body>, before the layout (a curtain, a banner: anything
+  // that has to be in the document before the page is).
+  extraBodyStartHtml: userConfig.extraBodyStartHtml || '',
   extraStylesheets: userConfig.extraStylesheets || [],
   extraScripts: userConfig.extraScripts || [],
   extraContentHtml: userConfig.extraContentHtml || '',
@@ -117,12 +134,33 @@ const BRANDS_DIR = CONFIG.brandsDir ? path.resolve(ROOT, CONFIG.brandsDir) : nul
 // Site-relative brands path for markdown-source links in brand doc pages
 const BRANDS_REL = BRANDS_DIR ? path.relative(ROOT, BRANDS_DIR).split(path.sep).join('/') : '';
 
-// Pages that opted out of the access gate (access-plan.md §12.4). Each emitter
-// adds its output URL as it writes a page whose frontmatter says exactly
-// access: "public"; writePublicPages() serialises the set at the end of a full
-// build. Only the literal string counts — a missing field, a typo or any other
-// value leaves the page gated (fail closed, §4.2).
-const publicPages = new Set();
+// Every page's level, for the access gate (access-plan.md §12.4;
+// permissions-plan.md §4.1). Each emitter records its output URL as it writes
+// a page, public, team or admin from the page's OWN `access:` frontmatter,
+// never from _defaults.md, and writePageAccess() serialises the map at the end
+// of a full build. Only the three literal strings count: a missing field, a
+// typo or any other value is a team page (fail closed, §4.2). The home shelf
+// and the section indexes are recorded too, as the index types, which the gate
+// opens to every signed-in reader.
+const pageAccess = new Map();
+
+/**
+ * The three levels a page can declare; a missing field is team. A PRESENT
+ * value outside the three fails the build (isValidAccess, checked where the
+ * layer is) rather than falling to team - a mistyped "admin" would otherwise
+ * open a page to the team with no error. The twin of normaliseLevel in
+ * worker/auth-schema.mjs: the generator ships to consumers without a
+ * worker/, so it cannot import it; scripts/verify-auth-gate.mjs reads the
+ * frontmatter independently and counts the map against it.
+ */
+const ACCESS_LEVELS = ['public', 'team', 'admin'];
+function normaliseLevel(value) {
+  const level = String(value || '').trim().toLowerCase();
+  return ACCESS_LEVELS.includes(level) ? level : 'team';
+}
+function isValidAccess(value) {
+  return value === undefined || value === null || value === '' || ACCESS_LEVELS.includes(String(value).trim().toLowerCase());
+}
 
 // Root-site manifest (config: brandManifest): the site's admin values — name,
 // description, footer, favicons, fonts — come from a brand.json when one is
@@ -330,7 +368,7 @@ function buildIconMap() {
  * Return icon wrapped in the standard .svg-icn container.
  *
  * The wrapper carries data-icon as well as the <svg> inside it: the wrapper
- * is the documented hook (cms/iconography.md, `<div class="svg-icn"
+ * is the documented hook (cms/iconography.md, `<span class="svg-icn"
  * data-icon="name">`) and component CSS keys on it — the password toggle's
  * eye swap reads `.svg-icn[data-icon="eye"]`, and without the attribute here
  * every generated page showed both eyes. The <svg> keeps its own copy for
@@ -344,7 +382,7 @@ function getIcon(name) {
     console.warn(`⚠️  Unknown icon: "${name}"`);
     return `<!-- unknown icon: ${name} -->`;
   }
-  return `<div class="svg-icn" data-icon="${name}">${entry.svg}</div>`;
+  return `<span class="svg-icn" data-icon="${name}">${entry.svg}</span>`;
 }
 
 /**
@@ -360,6 +398,138 @@ function getRawIcon(name) {
     return `<!-- unknown icon: ${name} -->`;
   }
   return entry.svg;
+}
+
+/**
+ * The lock a row shows when nav.js locks it for this reader. Only the access
+ * gate locks anything, so without it there is no lock to draw and the
+ * project's icon set need not hold one.
+ */
+function lockIcon(className) {
+  if (!CONFIG.accessGate) return '';
+  return `<span class="svg-icn ${className}" data-icon="lock" aria-hidden="true">${getRawIcon('lock')}</span>`;
+}
+
+//------- OS illustrations -------//
+
+// A drawing the generator inlines on a book cover's media slot or a page
+// header's illustration slot, coloured by the colour scope (design-system.css
+// §2d layer 5, §37, §43, §55). The import (npm run os-illustration:import)
+// writes the file; this only reads it. Spec: os-illustration-plan.md, until
+// cms/os-illustration.md is written.
+//
+// Unlike an icon, a missing drawing fails the build: a cover or header that
+// declared art and shipped without it is a broken page, not a blank slot.
+const OS_ILLUSTRATIONS_DIR = path.join(ROOT, 'assets', 'images', 'os-illustrations');
+// The nine hues §2d puts in scope. A hue outside this list would render the
+// field in no colour at all, silently.
+const OS_ILLUSTRATION_HUES = ['blue', 'purple', 'green', 'yellow', 'red', 'aqua', 'pink', 'peach', 'brown'];
+// `light` is the default and is never written (§2d: omit data-field for it).
+const OS_ILLUSTRATION_FIELDS = ['lighter', 'dark'];
+const osIllustrationCache = new Map();
+
+/**
+ * Read one drawing once per build.
+ * @param {string} slug - the file's basename in assets/images/os-illustrations/
+ * @param {string} page - what declared it, for the error
+ * @returns {{ svg: string, hue: string, motion: boolean }} the markup, the
+ *   authored hue (data-os-illustration-hue, written by the import on an exact
+ *   ramp match) and whether the drawing animates (data-motion)
+ */
+function getOsIllustration(slug, page) {
+  if (!osIllustrationCache.has(slug)) {
+    const file = path.join(OS_ILLUSTRATIONS_DIR, `${slug}.svg`);
+    if (!/^[a-z0-9-]+$/.test(slug) || !fs.existsSync(file)) {
+      throw new Error(`${page}: os-illustration "${slug}" has no file at assets/images/os-illustrations/${slug}.svg`);
+    }
+    const svg = fs.readFileSync(file, 'utf8').trim();
+    const hue = svg.match(/\sdata-os-illustration-hue="([a-z]+)"/);
+    const motion = /<svg[^>]*\sdata-motion[\s>]/.test(svg);
+    osIllustrationCache.set(slug, { svg, hue: hue ? hue[1] : '', motion });
+  }
+  return osIllustrationCache.get(slug);
+}
+
+function hasOsIllustration(slug) {
+  return /^[a-z0-9-]+$/.test(slug) && fs.existsSync(path.join(OS_ILLUSTRATIONS_DIR, `${slug}.svg`));
+}
+
+/**
+ * Resolve what a card or page declares into what the emitters write.
+ * The hue is the declared one, else the drawing's authored one, else the
+ * fallback (a page's section hue); a drawing with none of them has nothing
+ * to colour it, so that fails.
+ * @param {object} declared
+ * @param {string} [declared.osIllustration] - drawing slug
+ * @param {string} [declared.hue] - overrides the authored hue
+ * @param {string} [declared.field] - `lighter` or `dark`; omit for light
+ * @param {string} [declared.fallbackHue] - used when neither of the above is set
+ * @param {string} page - what declared it, for the error
+ * @returns {{ svg: string, color: string, field: string, motion: boolean } | null}
+ */
+function resolveOsIllustration({ osIllustration, hue, field, fallbackHue } = {}, page) {
+  if (!osIllustration) return null;
+  const art = getOsIllustration(osIllustration, page);
+  const color = hue || art.hue || fallbackHue;
+  if (!color) {
+    throw new Error(`${page}: os-illustration "${osIllustration}" carries no authored hue, so it needs a hue`);
+  }
+  if (!OS_ILLUSTRATION_HUES.includes(color)) {
+    throw new Error(`${page}: hue "${color}" is not in the colour scope (${OS_ILLUSTRATION_HUES.join(', ')})`);
+  }
+  if (field && !OS_ILLUSTRATION_FIELDS.includes(field)) {
+    throw new Error(`${page}: field "${field}" is not ${OS_ILLUSTRATION_FIELDS.join(' or ')} (omit it for light)`);
+  }
+  return { svg: art.svg, color, field: field || '', motion: art.motion };
+}
+
+/**
+ * The pause button beside an animated header drawing: the WCAG 2.2.2
+ * mechanism that lets a header loop past five seconds. aria-pressed is the
+ * paused state (os-illustration.js keeps it for the session); the two icons
+ * swap on it, the password-toggle pattern. Only an animated drawing gets one.
+ */
+function renderOsIllustrationPause(illustration) {
+  if (!illustration.motion) return '';
+  return `<button class="button" type="button" data-variant="transparent" data-icon-only data-size="small" aria-pressed="false" aria-label="Pause the illustration" data-os-illustration-pause>${getIcon('pause')}${getIcon('play')}</button>`;
+}
+
+// data-color and data-field go on the same element: §2d reads the field only
+// where the hue is set.
+function osIllustrationAttrs(illustration) {
+  return ` data-color="${illustration.color}"` + (illustration.field ? ` data-field="${illustration.field}"` : '');
+}
+
+// The home card whose href is a section's index, so the section's contents
+// page can take the card's art for its header.
+function homeCardForSection(sectionFolder) {
+  return (CONFIG.indexCards || []).find(card => card.href === `/${sectionFolder}/`) || null;
+}
+
+// What a doc page's header draws. Figma's Covers page names every frame
+// after the page it covers, so a page takes the drawing with its own slug
+// when one exists, and a tool's docs page (`<tool>-docs`) shares the tool's.
+// Frontmatter overrides it: `os-illustration: <slug>` for another drawing,
+// `os-illustration: none` for no art, `hue:` and `field:` as on a home card.
+// With no hue declared or authored, the page's section hue colours it, so a
+// Figma colour that is not a code ramp step still renders in the section's
+// hue rather than failing the build.
+function pageOsIllustration(frontmatter, file) {
+  const declared = frontmatter['os-illustration'];
+  if (declared === 'none') return {};
+  // Keyed on the source name, which is what the Figma frames are named after:
+  // channels-email-signature.md is channels/email-signature.html, and only
+  // the source name tells it apart from the Email Signature tool.
+  const implied = file.filename.replace(/\.md$/, '').replace(/-docs$/, '');
+  const slug = declared || (hasOsIllustration(implied) ? implied : '');
+  if (!slug) return {};
+  const card = homeCardForSection(SECTION_FOLDERS[frontmatter.section] || '');
+  return {
+    osIllustration: slug,
+    hue: frontmatter.hue,
+    field: frontmatter.field,
+    fallbackHue: card ? card.hue : '',
+  };
 }
 
 /**
@@ -466,7 +636,7 @@ function namespaceIds(svg, prefix) {
 }
 
 /**
- * "arrow-top-right" → "Arrow Top Right", for icons the brand book has not
+ * "arrow-up-right" → "Arrow Up Right", for icons the brand book has not
  * named yet.
  * @param {string} key
  * @returns {string}
@@ -531,6 +701,55 @@ function renderIconManifest() {
 }
 
 /**
+ * The Asset Library's catalog and lock, read once per build and validated
+ * together. Both emitters below need the same pair, and the validation prints
+ * its warnings once. Errors fail the build the way an invalid `layer:` does:
+ * the tool page and the Worker's index are generated from this data, and a
+ * catalog naming a file the bucket does not hold would ship a Download that
+ * 404s. No catalog at all is not an error — the engine ships without one and
+ * the tool renders its empty state.
+ */
+let libraryData = null;
+function loadValidatedLibrary() {
+  if (libraryData) return libraryData;
+  const { catalog, lock } = assetLibrary.loadLibrary(ROOT);
+  if (catalog) {
+    const result = assetLibrary.validateCatalog(catalog, lock, { rootDir: ROOT });
+    for (const warning of result.warnings) console.warn(`asset library: ${warning}`);
+    if (result.errors.length) {
+      console.error('\n❌ Asset Library catalog and lock disagree — fix cms/asset-library/catalog.json, or run `npm run asset-library:build` on the machine that holds library/:');
+      for (const error of result.errors) console.error(`  ${error}`);
+      process.exit(1);
+    }
+  }
+  libraryData = { catalog, lock };
+  return libraryData;
+}
+
+/**
+ * The Asset Library's data, inlined on its tool page from {{asset-manifest}}
+ * — the same shape and the same reasoning as renderIconManifest above. The
+ * budget is asset-library-plan.md §3: past 700 KB the manifest should be a
+ * fetched file, not a block in the page.
+ * @returns {string} HTML string
+ */
+function renderAssetManifest() {
+  const { catalog, lock } = loadValidatedLibrary();
+  if (!catalog) console.warn('{{asset-manifest}}: no cms/asset-library/catalog.json — the Asset Library renders empty');
+  const manifest = assetLibrary.buildManifest(catalog, lock);
+  const json = assetLibrary.manifestJson(manifest);
+  if (json.length > assetLibrary.MANIFEST_FAIL_BYTES) {
+    console.error(`\n❌ Asset manifest is ${Math.round(json.length / 1024)} KB, over the ${assetLibrary.MANIFEST_FAIL_BYTES / 1024} KB inline budget (asset-library-plan.md §3) — move it to a fetched file.`);
+    process.exit(1);
+  }
+  if (json.length > assetLibrary.MANIFEST_WARN_BYTES) {
+    console.warn(`Asset manifest is ${Math.round(json.length / 1024)} KB — nearing the inline budget (asset-library-plan.md §3)`);
+  }
+  console.log(`Asset manifest: ${manifest.assets.length} assets, ${Math.round(json.length / 1024)} KB`);
+  return `<script type="application/json" id="asset-manifest">${json}</script>`;
+}
+
+/**
  * Render a .book-cover anchor with the standard header/content/footer layout.
  *
  *   header  → full-screen icon (top right)
@@ -544,6 +763,9 @@ function renderIconManifest() {
  * @param {string} [opts.author]  - footer author label (defaults to "Studio")
  * @param {string} [opts.access]  - data-access value (omitted if falsy)
  * @param {number} [opts.headingLevel] - heading level for the title (default 3)
+ * @param {string} [opts.osIllustration] - drawing slug; makes it a media cover
+ * @param {string} [opts.hue] - the art's hue (overrides the authored one)
+ * @param {string} [opts.field] - `lighter` or `dark`; omit for light
  * @returns {string} HTML string
  */
 function renderBookCover(opts) {
@@ -557,8 +779,19 @@ function renderBookCover(opts) {
     : '';
   const flipId = flipIdFromHref(opts.href);
   const flipAttr = flipId ? ` data-flip-id="${escapeAttr(flipId)}"` : '';
-  return `<a href="${siteHref(opts.href)}" class="book-cover"${accessAttr}>
-        <header class="book-cover-header"><div class="book-cover-trailing">${getIcon('open-full')}</div></header>
+  // An os-illustration makes it a media cover (§37): the art in a media slot
+  // before the header, the hue on the slot and on the header (whose corner
+  // icon then draws in the art's ink), never on the cover itself (D10).
+  const illustration = resolveOsIllustration(opts, `book cover "${opts.title}" (${opts.href})`);
+  const variantAttr = illustration ? ' data-variant="media"' : '';
+  const hueAttrs = illustration ? osIllustrationAttrs(illustration) : '';
+  const media = illustration
+    ? `\n        <div class="book-cover-media"${hueAttrs}>${illustration.svg}</div>`
+    : '';
+  // The lock is always in the markup and shown only on .is-locked, which
+  // nav.js sets for a reader who cannot open the page (applyAccess).
+  return `<a href="${siteHref(opts.href)}" class="book-cover"${variantAttr}${accessAttr}${MOTION.cover}>${media}
+        <header class="book-cover-header"${hueAttrs}><div class="book-cover-trailing">${getIcon('open-full')}${lockIcon('book-cover-lock')}</div></header>
         <div class="book-cover-body">
           <h${level} class="book-cover-title"${flipAttr}>${opts.title}</h${level}>
           ${description}
@@ -596,36 +829,30 @@ function renderBookContentsItem(opts) {
   const meta = opts.meta
     ? `\n          <span class="book-contents-item-meta">${opts.meta}</span>`
     : '';
-  return `<a href="${siteHref(opts.href)}" class="book-contents-item"${accessAttr}>
+  return `<a href="${siteHref(opts.href)}" class="book-contents-item"${accessAttr}${MOTION.contentsItem}>
         ${identity}<div class="book-contents-item-body">
           <h${level} class="book-contents-item-title"${flipAttr}>${opts.title}</h${level}>
           ${description}${meta}
         </div>
-        <div class="book-contents-item-trailing">${getIcon('open-full')}</div>
+        <div class="book-contents-item-trailing">${getIcon('open-full')}${lockIcon('book-contents-item-lock')}</div>
       </a>`;
 }
 
 /**
  * Audience tag for a contents row, or '' for the default audience.
  *
- * This is a *classification*, not a lock. Auth was removed in July 2026
- * (CLAUDE.md §20): `auth.js` is gone, the page template no longer loads it,
- * and nothing server-side reads `data-access`. So the label names who a page
- * is written for, and must never imply it is protected — "Admin", not
- * "Admin only". Restoring enforcement is a separate job from labelling it.
+ * The label tells the truth now (permissions-plan.md Phase 1, 2026-10-07):
+ * the gate reads the same level this tag is drawn from, so "Public" is a page
+ * a signed-out visitor can open and "Admin" is one only an admin can. Only
+ * non-default levels are tagged. `team` covers nearly every page; tagging
+ * those would be chrome, not signal.
  *
- * Only non-default audiences are tagged. `team` is the frontmatter default and
- * covers 87 of ~100 pages; tagging those would be chrome, not signal.
- *
- * @param {string} access - value from deriveDataAccess()
+ * @param {string} access - a level from deriveDataAccess()
  * @returns {string} HTML for the meta slot, or ''
  */
 function audienceTag(access) {
-  if (!access || access === 'team') return '';
   if (access === 'public') return '<span class="tag">Public</span>';
-  if (access.startsWith('admin')) return '<span class="tag" data-color="warning">Admin</span>';
-  if (access.startsWith('brand')) return '<span class="tag">Brand</span>';
-  if (access.startsWith('user:')) return '<span class="tag" data-color="warning">Named</span>';
+  if (access === 'admin') return '<span class="tag" data-color="warning">Admin</span>';
   return '';
 }
 
@@ -657,6 +884,61 @@ const DEFAULT_SECTION_ORDER = Object.keys(SECTION_FOLDERS);
 function slugifySection(section) {
   if (!section) return 'page';
   return String(section).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'page';
+}
+
+/**
+ * A subsection label without its ordinal — "04 Visual Identity" → "Visual
+ * Identity". The ordinal orders the sidebar; in a breadcrumb it is noise.
+ */
+function subsectionLabel(subsection) {
+  return String(subsection).replace(/^\d+\s+/, '');
+}
+
+/**
+ * The id a subsection's heading carries on its section index, which is also
+ * the fragment a doc page's subsection crumb links to. One function for both
+ * so the two cannot drift. Built from the label without its ordinal, so
+ * renumbering a subsection never breaks a link: "04 Visual Identity" →
+ * "visual-identity".
+ */
+// Ids the site's scripts add to every page after load, so a subsection
+// heading must never take one. Keep in step with nav.js and search.js.
+const RUNTIME_IDS = new Set([
+  'main', 'nav-drawer', 'nav-drawer-title', 'sidebar-lock-note',
+  'site-search', 'site-search-input', 'site-search-results',
+]);
+
+function subsectionAnchorId(subsection) {
+  return slugifySection(subsectionLabel(subsection));
+}
+
+/**
+ * The pages a section index lists. Layer Discipline (CLAUDE.md §17 Rule 5):
+ * docs-site chrome components (asset-card, dont-card) still get standalone
+ * pages but are hidden from every section index, so the browsable surface
+ * stays portable. Keyed on layer, not section label — the old section gate
+ * silently stopped filtering when pages moved or a section was renamed.
+ *
+ * Shared by the index and the breadcrumb: a subsection whose pages are all
+ * filtered here gets no heading, so its crumb has nowhere to link to.
+ */
+function sectionIndexFiles(files) {
+  return files.filter(f => f.frontmatter.layer !== 'docs-site');
+}
+
+/**
+ * Section → the set of subsections that get a heading on its index. A doc
+ * page links its subsection crumb only when its subsection is in here; one
+ * that is not (a group whose pages are all docs-site) shows as plain text.
+ */
+function buildSubsectionHeadings(filesBySection) {
+  const headings = {};
+  for (const [section, files] of Object.entries(filesBySection)) {
+    headings[section] = new Set(
+      sectionIndexFiles(files).map(f => f.frontmatter.subsection).filter(Boolean)
+    );
+  }
+  return headings;
 }
 
 /**
@@ -723,33 +1005,19 @@ function loadDefaults(dirPath) {
 }
 
 /**
- * Derive the data-access attribute value from access + brand frontmatter fields.
+ * The data-access value for a page or a link: its level, public, team or
+ * admin, from the `access:` field, the same reading the gate compiles into
+ * worker/page-access.mjs, so what the markup says and what the Worker does
+ * cannot differ. Anything else, the Netlify-era `brand…` values included, is
+ * team.
  *
- * Rules:
- *   access "public" / "team" / "admin"  → passthrough
- *   access "brand"        + brand "all"        → "brand"
- *   access "brand"        + brand "<name>"      → "brand:<name>"
- *   access "admin+brand"  + brand "all"        → "admin+brand"
- *   access "admin+brand"  + brand "<name>"      → "admin+brand:<name>"
- *   fallback                                      → "team"
+ * The attribute is the client-side hint the locks read (nav.js applyAccess):
+ * a sidebar link, a card or a pager link whose level the reader cannot open
+ * is locked or hidden before the Worker is ever asked. It decides nothing -
+ * the Worker is the control (access-plan.md §4.9, revised 2026-10-07).
  */
 function deriveDataAccess(frontmatter) {
-  const access = frontmatter.access || 'team';
-  const brand = frontmatter.brand || 'internal';
-
-  if (access === 'brand' || access === 'admin+brand') {
-    let brandPart;
-    if (brand === 'all') {
-      brandPart = 'brand';
-    } else if (brand && brand !== 'internal') {
-      brandPart = 'brand:' + brand;
-    } else {
-      return 'team'; // access: "brand" with no valid brand → fallback
-    }
-    return access === 'admin+brand' ? 'admin+' + brandPart : brandPart;
-  }
-
-  return access;
+  return normaliseLevel(frontmatter.access);
 }
 
 /**
@@ -1153,8 +1421,10 @@ function markdownToHtml(markdown) {
   // {{icon-manifest}} is a tool-body placeholder (cms/apps/<slug>.html). In
   // markdown it would publish as literal text, so say so at build time. Same
   // line-only match as the registry, so a doc can still mention it inline.
-  if (/^\{\{icon-manifest\}\}[^\S\n]*$/m.test(markdown)) {
-    console.warn('{{icon-manifest}} only resolves in a tool body (cms/apps/<slug>.html) — here it renders as text');
+  for (const name of ['icon-manifest', 'asset-manifest']) {
+    if (new RegExp(`^\\{\\{${name}\\}\\}[^\\S\\n]*$`, 'm').test(markdown)) {
+      console.warn(`{{${name}}} only resolves in a tool body (cms/apps/<slug>.html) — here it renders as text`);
+    }
   }
 
   let html = marked(markdown);
@@ -1164,6 +1434,7 @@ function markdownToHtml(markdown) {
 
   html = html.replace(/<h([1-6])>([^<]+)<\/h[1-6]>/g, (match, level, text) => {
     const id = text.toLowerCase()
+      .replace(/&[#\w]+;/g, '') // Drop escaped entities: "don&#39;t" → "dont", not "don39t"
       .replace(/[^\w\s-]/g, '') // Remove special characters
       .replace(/\s+/g, '-') // Replace spaces with hyphens
       .replace(/-+/g, '-') // Replace multiple hyphens with single
@@ -1240,6 +1511,10 @@ function markdownToHtml(markdown) {
       return getIcon(name);
     });
 
+
+  // The body's reveals, last, over the rendered markup (MOTION).
+  html = stampBodyMotion(html);
+  assertStamped(html, new RegExp('<div\\b' + ATTRS + '\\sclass="(?:[^"]*\\s)?demo-preview(?:\\s[^"]*)?"' + ATTRS + '>', 'g'), 'demo frames', 'markdownToHtml');
   return html;
 }
 
@@ -1272,11 +1547,11 @@ function generateTableOfContents(html) {
   // Labelled "Table of contents", not "On this page": the dropdown's
   // <summary> already says "On this page", and a nav label repeating its
   // disclosure's name gets announced twice.
-  let toc = '<nav class="toc" aria-label="Table of contents"><ul class="toc-list">';
+  let toc = '<nav class="toc" aria-label="Table of contents"><ul class="toc-list"' + MOTION.tocList + '>';
 
   headings.forEach((heading) => {
     const { level, id, text } = heading;
-    toc += `<li class="toc-item toc-level-${level}"><a href="#${id}" class="toc-link">${text}</a></li>`;
+    toc += `<li class="toc-item toc-level-${level}"${MOTION.tocItem}><a href="#${id}" class="toc-link">${text}</a></li>`;
   });
 
   toc += '</ul></nav>';
@@ -1298,10 +1573,15 @@ const STYLEGUIDE_SOURCE = 'styleguide.md';
  * Basenames are unique across the pages this gate sees today, but nothing in
  * the code guarantees it: deriveOutputPath honours CONFIG.filenameOverrides,
  * which can send any page anywhere (styleguide.md and glossary.md are already
- * pulled to the output root that way). Two Website pages overridden into
+ * pulled to the output root that way). Two Foundations or Web pages overridden into
  * different folders with the same basename would collide here. Hence
  * assertUniqueSlugs below — the invariant is asserted rather than assumed.
  */
+// Output folders whose foundation and core pages must appear on the styleguide.
+const STYLEGUIDE_FOLDERS = new Set(['foundations', 'web']);
+// Output folders whose core pages are this brand's content, never the engine's.
+const BRAND_CONTENT_FOLDERS = new Set(['brand', 'social', 'channels']);
+
 function styleguideSlug(htmlPath) {
   return path.basename(htmlPath, '.html');
 }
@@ -1403,7 +1683,7 @@ function validateStyleguideCoverage(expected, known) {
 // keys on them, not because anyone authors them.
 const PAGE_TYPES = {
   shelf:    { level: 0, header: true,  stickyBar: false,  toc: false, pager: false, chrome: true,  frame: 'grid', article: false, body: 'markdown' },
-  contents: { level: 1, header: true,  stickyBar: 'full', toc: false, pager: false, chrome: true,  frame: 'grid', article: false, body: 'markdown' },
+  contents: { level: 1, header: true,  stickyBar: false,  toc: false, pager: false, chrome: true,  frame: 'grid', article: false, body: 'markdown' },
   doc:      { level: 2, header: true,  stickyBar: 'full', toc: true,  pager: true,  chrome: true,  frame: 'grid', article: true,  body: 'markdown' },
   page:     { level: 2, header: true,  stickyBar: 'full', toc: false, pager: true,  chrome: true,  frame: 'wide', article: true,  body: 'html' },
   // The loosest type on purpose. A tool can look like anything; its only
@@ -1412,6 +1692,185 @@ const PAGE_TYPES = {
   tool:     { level: 2, header: false, stickyBar: false,  toc: false, pager: false, chrome: false, frame: 'free', article: false, body: 'html' },
   bare:     { level: null, header: false, stickyBar: false, toc: false, pager: false, chrome: false, frame: 'free', article: false, body: 'html' },
 };
+
+/**
+ * Element motion (assets/js/bd-animate.js): the attributes every generated
+ * surface carries, chosen by the owner on 2026-10-14 from
+ * experiments/motion.html and recorded in handovers/HANDOVER-motion.md.
+ * One table, so a change is one edit and every emitter reads it; the
+ * engine's doc page (cms/bd-animate.md) is the vocabulary. Nothing in a doc
+ * body animates but demo frames, figures and scrolling tables: headings,
+ * paragraphs, lists and code stay still, by the owner's word.
+ *
+ * Each value is an attribute string ready to drop into an opening tag.
+ * `enter` plays once as the page arrives (held behind the curtain on a hard
+ * load, during the slide on a swap); `animate` reveals on scroll; a
+ * `stagger` parent sequences its direct animated children; a `replay`
+ * parent plays its entrances when its state class turns on. A sticky bar
+ * only ever fades: a transform on a sticky element re-anchors it. A sticky
+ * element never takes `animate` (a scroll reveal): bdAnimateFreeze finishes
+ * entrances before the router holds sticky elements, not reveals, and a
+ * reveal ending mid-transition clears the hold's inline translate.
+ */
+const MOTION = {
+  headerGroup: ' data-bd-stagger',
+  headerPart: ' data-bd-enter="slide-up"',
+  bar: ' data-bd-enter="fade"',
+  shelf: ' data-bd-stagger="4"',
+  cover: ' data-bd-animate="slide-up"',
+  contents: ' data-bd-stagger="4"',
+  contentsItem: ' data-bd-animate="slide-up"',
+  tocList: ' data-bd-stagger',
+  tocItem: ' data-bd-enter="fade"',
+  pager: ' data-bd-animate="slide-up"',
+  block: ' data-bd-animate="slide-up"',
+  // The article re-measures its reveals when its height changes (a demo
+  // collapsed above an unrevealed table would otherwise leave it waiting
+  // for a start line that moved).
+  article: ' data-bd-refresh',
+  sidebarGroup: ' data-bd-stagger',
+  sidebarItem: ' data-bd-enter="slide-up"',
+  // The tool canvas (cms/tool-canvas.md), stamped at build time by
+  // stampToolMotion so a tool author writes none of it.
+  toolCanvas: ' data-bd-stagger',
+  toolPreview: ' data-bd-enter="scale"',
+  toolDockEnd: ' data-bd-enter="slide-left"',
+  toolDockBottom: ' data-bd-enter="slide-up"',
+  toolActions: ' data-bd-enter="slide-up"',
+  toolPanel: ' data-bd-replay="open"',
+  toolPanelBody: ' data-bd-stagger',
+  toolPanelChild: ' data-bd-enter="slide-up"',
+};
+
+// Tags that never close, so the walker below does not wait for them.
+const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+// An attribute list: quoted values may hold `>`, so `[^>]*` is not enough.
+const ATTRS = '(?:"[^"]*"|\'[^\']*\'|[^\'">])*';
+// The two end tags HTML lets an author omit that occur in prose and lists:
+// an open <p> is closed by the next block, an open <li> by the next <li>.
+const CLOSES_P = new Set(['address', 'article', 'aside', 'blockquote', 'details', 'div', 'dl', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hr', 'main', 'nav', 'ol', 'p', 'pre', 'section', 'table', 'ul']);
+
+function classTokens(attrs) {
+  const m = attrs.match(/\sclass\s*=\s*"([^"]*)"/);
+  return m ? m[1].trim().split(/\s+/).filter(Boolean) : [];
+}
+
+/**
+ * Walk the opening tags of an HTML string with a stack of open ancestors,
+ * and let `decide({ name, attrs, cls, parent, ancestors })` return the
+ * attributes to add to a tag ('' leaves it). Comments and the bodies of
+ * <script> and <style> are skipped whole; a void or self-closing tag is a
+ * child without depth; a closing tag pops to the nearest open element of
+ * its name, so an omitted end tag is closed by its ancestor's rather than
+ * stranding the walk. Classes are read as tokens, never by attribute
+ * order: the search pass rewrites `<div class="demo-preview">` to
+ * `<div data-pagefind-ignore class="demo-preview">`, which is exactly the
+ * kind of thing an order-sensitive match misses in silence. Regex, not a
+ * DOM: the tool bodies are hand-authored and a parser round-trip would
+ * rewrite their formatting.
+ */
+function stampTags(html, decide) {
+  const TAG = new RegExp('<!--[\\s\\S]*?-->|<(script|style)\\b' + ATTRS + '>[\\s\\S]*?<\\/\\1\\s*>|<(\\/?)([a-zA-Z][\\w-]*)(' + ATTRS + ')>', 'g');
+  const stack = [];
+  const inserts = [];
+  let tag;
+  while ((tag = TAG.exec(html)) !== null) {
+    if (tag[0].startsWith('<!--') || tag[1]) continue;
+    const closing = tag[2] === '/';
+    const name = tag[3].toLowerCase();
+    const attrs = tag[4];
+    if (closing) {
+      const at = stack.map((entry) => entry.name).lastIndexOf(name);
+      if (at >= 0) stack.length = at;
+      continue;
+    }
+    const top = stack[stack.length - 1];
+    if (top && ((top.name === 'p' && CLOSES_P.has(name)) || (top.name === 'li' && name === 'li'))) stack.pop();
+    const selfClosed = /\/\s*$/.test(attrs) || VOID_TAGS.has(name);
+    const entry = { name, attrs, cls: classTokens(attrs) };
+    const add = decide({ ...entry, parent: stack[stack.length - 1] || null, ancestors: stack });
+    if (add) {
+      // Before the closing `>`, or before a self-closing `/>`.
+      const slash = attrs.search(/\/\s*$/);
+      inserts.push({ at: slash >= 0 ? tag.index + 1 + tag[3].length + slash : tag.index + tag[0].length - 1, add });
+    }
+    if (!selfClosed) stack.push(entry);
+  }
+  let out = '';
+  let last = 0;
+  inserts.forEach(({ at, add }) => {
+    out += html.slice(last, at) + add;
+    last = at;
+  });
+  return out + html.slice(last);
+}
+
+// An element that already says how it moves, or that it does not
+// (`data-bd-enter="none"`), is the author's: the stamping leaves it alone.
+function authored(attrs) {
+  return /\sdata-bd-(enter|animate|text)(?=[\s=\/]|$)/.test(attrs);
+}
+
+/**
+ * The tool canvas's motion, stamped on a tool body at build time (the table
+ * above): the canvas sequences its bar, preview, docks and actions; each
+ * accordion panel replays its body's direct children when it opens. A panel
+ * that is not an accordion item has no state to replay on, so its children
+ * join the page cascade instead. A child that renders nothing (a script, a
+ * template, `hidden`, the system's own hidden states) or that must not be
+ * touched (a live region) takes no entrance.
+ */
+function stampToolMotion(html) {
+  return stampTags(html, ({ name, attrs, cls, parent }) => {
+    if (authored(attrs)) return '';
+    if (cls.includes('tool-canvas')) return MOTION.toolCanvas;
+    if (cls.includes('tool-actions')) return MOTION.toolActions;
+    if (cls.includes('tool-panel') && cls.includes('accordion-item')) return MOTION.toolPanel;
+    if (cls.includes('tool-panel-body')) return MOTION.toolPanelBody;
+    if (parent && parent.cls.includes('tool-canvas')) {
+      if (cls.includes('bar')) return MOTION.bar;
+      if (cls.includes('tool-preview')) return MOTION.toolPreview;
+      if (cls.includes('tool-dock')) return /\sdata-edge="bottom"/.test(attrs) ? MOTION.toolDockBottom : MOTION.toolDockEnd;
+      return '';
+    }
+    if (parent && parent.cls.includes('tool-panel-body')) {
+      if (name === 'template' || name === 'br' || name === 'wbr') return '';
+      if (/\shidden(?=[\s=\/]|$)/.test(attrs) || cls.includes('is-hidden') || cls.includes('visually-hidden')) return '';
+      if (/\srole="(status|alert|log)"|\saria-live=/.test(attrs)) return '';
+      return MOTION.toolPanelChild;
+    }
+    return '';
+  });
+}
+
+/**
+ * The body's reveals (the table above): demo frames, figures and scrolling
+ * tables, and nothing else. A figure or table inside a demo frame is left
+ * to the frame, so nothing reveals twice.
+ */
+function stampBodyMotion(html) {
+  return stampTags(html, ({ name, attrs, cls, ancestors }) => {
+    if (authored(attrs)) return '';
+    if (cls.includes('demo-preview')) return MOTION.block;
+    if (name === 'figure' || cls.includes('table-scroll')) {
+      return ancestors.some((a) => a.cls.includes('demo-preview')) ? '' : MOTION.block;
+    }
+    return '';
+  });
+}
+
+/**
+ * A silent miss is the failure mode here (the search pass once hid every
+ * frame from an order-sensitive match), so a body that holds a surface the
+ * table names must come out carrying it.
+ */
+function assertStamped(html, re, what, where) {
+  const tags = html.match(re) || [];
+  const missed = tags.filter((tag) => !/\sdata-bd-/.test(tag));
+  if (missed.length) {
+    throw new Error(`${where}: ${missed.length} of ${tags.length} ${what} came out with no data-bd-* attribute: ${missed[0].slice(0, 80)}`);
+  }
+}
 
 const DEFAULT_PAGE_TYPE = 'doc';
 /**
@@ -1651,7 +2110,7 @@ function buildPageBody({ frame, content, toc = '', article = true }) {
   // screen reader while inviting prose rules scoped to it to leak in. The
   // table decides (PAGE_TYPES.article); this only obeys.
   const body = article
-    ? `<article>
+    ? `<article${MOTION.article}>
                     ${content}
                 </article>`
     : content;
@@ -1748,11 +2207,36 @@ function generateIndexPage(template, filesBySection) {
   if (CONFIG.indexCards) {
     // Curated index (config: indexCards): one card per entry in a 2-column grid
     cards = `<div class="docs-section">
-      <div class="book-shelf">`;
+      <div class="book-shelf"${MOTION.shelf}>`;
 
-    for (const card of CONFIG.indexCards) {
+    // The shelf shows art only when every card has it: a half-illustrated
+    // shelf reads as broken, so art is added one card at a time without
+    // showing until the last one lands. And no two neighbours share a hue,
+    // or the shelf reads as one band (D18).
+    const shelf = CONFIG.indexCards;
+    const missingArt = shelf.filter(card => !card.osIllustration).map(card => card.title);
+    const illustrated = missingArt.length === 0;
+    if (!illustrated && missingArt.length < shelf.length) {
+      console.warn(`Home shelf renders plain covers: no osIllustration on ${missingArt.join(', ')}`);
+    }
+    // Every declared drawing is resolved whether or not the shelf shows it,
+    // so a bad slug or hue fails at the commit that wrote it, not on the day
+    // the last card lands.
+    const hues = shelf.map(card => {
+      const art = resolveOsIllustration(card, `book cover "${card.title}"`);
+      return art ? art.color : '';
+    });
+    if (illustrated) {
+      hues.forEach((hue, i) => {
+        if (i && hue === hues[i - 1]) {
+          console.warn(`Home shelf: "${shelf[i - 1].title}" and "${shelf[i].title}" are neighbours in the same hue (${hue})`);
+        }
+      });
+    }
+
+    for (const card of shelf) {
       cards += `
-        ${renderBookCover({ ...card, headingLevel: 2 })}`;
+        ${renderBookCover({ ...card, osIllustration: illustrated ? card.osIllustration : '', headingLevel: 2 })}`;
     }
 
     cards += `
@@ -1781,7 +2265,7 @@ function generateIndexPage(template, filesBySection) {
 
       cards += `<div class="docs-section">
       <h2 class="book-shelf-title">${section}</h2>
-      <div class="book-shelf">`;
+      <div class="book-shelf"${MOTION.shelf}>`;
       for (const file of files) {
         cards += `
         ${renderBookCover({ href: file.htmlPath, title: file.title, subtitle: file.frontmatter.subtitle })}`;
@@ -1795,6 +2279,11 @@ function generateIndexPage(template, filesBySection) {
   const indexContent = cards;
 
   const access = deriveDataAccess(loadDefaults(DOCS_DIR));
+  // The shelf is an index: the gate opens it to every signed-in reader, and
+  // the cards on it lock by what the reader may open (permissions-plan.md
+  // §3.2). Its level is fixed at team - a generated page has no frontmatter,
+  // and _defaults.md cannot open a page (the map's banner says so).
+  pageAccess.set('/index.html', { level: 'team', section: '', type: 'shelf', title: 'Home' });
 
   // Home lives at the repo root, so its NAV_BASE is the current directory.
   // It must be './' not '' — an empty base turns the GoTrue dynamic
@@ -1827,14 +2316,10 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
   const sectionFolder = SECTION_FOLDERS[section];
   if (!sectionFolder) return null;
 
-  // Layer Discipline (CLAUDE.md §17 Rule 5): docs-site chrome components
-  // (asset-card, book-cover, dont-card) still get standalone
-  // pages but are hidden from every section index, so the browsable surface
-  // stays portable. Keyed on layer, not section label — the old section gate
-  // silently stopped filtering when pages moved or a section was renamed.
-  // An app-layer page misfiled into a portable section is a content error
-  // for review to catch, not for the index to hide.
-  files = files.filter(f => f.frontmatter.layer !== 'docs-site');
+  // docs-site pages are hidden here (sectionIndexFiles). An app-layer page
+  // misfiled into a portable section is a content error for review to catch,
+  // not for the index to hide.
+  files = sectionIndexFiles(files);
 
   // Sort files by order
   const sorted = [...files].sort((a, b) => {
@@ -1861,7 +2346,7 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
 
   // Ungrouped files first
   if (ungrouped.length > 0) {
-    cards += `<div class="docs-section"><div class="book-contents">`;
+    cards += `<div class="docs-section"><div class="book-contents"${MOTION.contents}>`;
     for (const file of ungrouped) {
       // Absolute href so the link resolves correctly from any depth and survives
       // Barba transitions that don't update the chrome's data-base.
@@ -1904,7 +2389,10 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
   });
 
   for (const sub of subs) {
-    cards += `<div class="docs-section"><h2 class="book-contents-title">${sub}</h2><div class="book-contents">`;
+    // The id is what a doc page's subsection crumb lands on. It goes on the
+    // h2, not the .docs-section div: §39B's scroll-margin-top covers
+    // headings, main and section, so a div would land under the sticky bar.
+    cards += `<div class="docs-section"><h2 class="book-contents-title" id="${subsectionAnchorId(sub)}">${sub}</h2><div class="book-contents"${MOTION.contents}>`;
     for (const file of grouped[sub]) {
       cards += renderBookContentsItem({
         href: '/' + file.htmlPath,
@@ -1927,25 +2415,45 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
   const globalSectionOrder = parseList(sectionDefaults['section-order'], DEFAULT_SECTION_ORDER);
   const sectionIndex = globalSectionOrder.indexOf(section);
   const sectionOrderValue = sectionIndex === -1 ? 999 : sectionIndex;
+  const homeCard = homeCardForSection(sectionFolder) || {};
+
+  // A contents page is an index: open to every signed-in reader, cards
+  // locked by what they may open (permissions-plan.md §3.2).
+  pageAccess.set(`/${sectionFolder}/index.html`, {
+    level: 'team', // fixed: generated pages have no frontmatter, and _defaults.md cannot open a page
+    section: sectionFolder,
+    type: 'contents',
+    title: section,
+  });
 
   return renderPage(template, {
     space: ROOT_SPACE,
     navBase,
     title: `${section} - Overview`,
     description: `Overview of all ${section} pages.`,
-    header: buildPageHeaderHtml({ title: section }),
-    // A contents page closes to the shelf, the way a doc page closes to its
-    // contents. Without it the only routes home are the sidebar and the header
-    // logo, so the one level in the book model that could not be backed out of
-    // was the middle one.
+    // The section's home card carries its description, art and hue. The
+    // header shows the art whatever the shelf decided (the shelf rule is about
+    // a half-illustrated row, which a single header is not), so a section's
+    // contents page has its art from the commit that declared it.
+    header: buildPageHeaderHtml({
+      title: section,
+      subtitle: homeCard.subtitle,
+      illustration: resolveOsIllustration(homeCard, `${section} index`),
+    }),
+    // Off since 2026-10-15 (owner): a contents page is an overview the reader
+    // arrives at from the sidebar or the shelf, and the bar above it carried
+    // only a close to home and a Copy link. The sidebar and the header logo
+    // are the way back. Flip the preset to bring it back.
     //
     // No .md source behind a generated index, so the dropdown carries Copy link
-    // alone — buildBar omits the markdown items when mdHref is null.
+    // alone — buildBar omits the markdown items when mdHref is null. No trail
+    // either: the trail starts at the section, so here it would be the
+    // current page alone, linking nowhere.
     stickyBar: PAGE_TYPES.contents.stickyBar
       ? buildBar({
-          sectionHref: siteHref('/index.html'),
-          sectionLabel: 'Home',
-          title: section,
+          crumbs: [],
+          closeHref: siteHref('/index.html'),
+          closeLabel: 'Home',
         })
       : '',
     content: cards,
@@ -2124,12 +2632,12 @@ function generatePageNav(file, pageOrder) {
    * @param {string} label     - visible eyebrow ("Previous" / "Next")
    * @param {string} arrow     - rendered arrow icon
    *
-   * On a public page, a link to a page the gate keeps closed gets
-   * data-gated and a lock icon, hidden until nav.js marks the link
-   * .is-locked for a signed-out reader. Only public pages: nobody signed out
-   * ever sees any other. The test is each page's own access field, the same
-   * one that writes worker/public-pages.mjs, so a link never looks open and
-   * then bounces to the login screen.
+   * Every link carries the target's level as data-access and a lock icon,
+   * hidden until nav.js marks the link .is-locked for a reader who cannot
+   * open it - signed out on a public page, a guest whose groups do not reach
+   * it, a team member next to an admin page. The level is each page's own
+   * access field, the same one that writes worker/page-access.mjs, so a link
+   * never looks open and then meets the locked page.
    */
   function renderLink(direction, target, label, arrow) {
     // Truthiness matters as well as inequality: a page with no `section` in
@@ -2138,9 +2646,8 @@ function generatePageNav(file, pageOrder) {
     const sectionLabel = target.section && target.section !== file.section
       ? `<span class="page-nav-section">${target.section}</span>`
       : '';
-    const gated = file.ownAccess === 'public' && target.ownAccess !== 'public';
-    return `<a href="${relativeHref(target)}" class="page-nav-link" data-direction="${direction}" rel="${direction}"${gated ? ' data-gated' : ''}>
-      ${arrow}${gated ? lock : ''}
+    return `<a href="${relativeHref(target)}" class="page-nav-link" data-direction="${direction}" rel="${direction}" data-access="${normaliseLevel(target.ownAccess)}">
+      ${arrow}${lock}
       <span class="page-nav-text">
         <span class="page-nav-label">${label}</span>
         ${sectionLabel}
@@ -2149,13 +2656,13 @@ function generatePageNav(file, pageOrder) {
     </a>`;
   }
 
-  const arrowLeft = `<div class="svg-icn page-nav-arrow">${getRawIcon('chevron-left-large')}</div>`;
-  const arrowRight = `<div class="svg-icn page-nav-arrow">${getRawIcon('chevron-right-large')}</div>`;
-  const lock = `<div class="svg-icn page-nav-lock" data-icon="lock" aria-hidden="true">${getRawIcon('lock')}</div>`;
+  const arrowLeft = `<span class="svg-icn page-nav-arrow">${getRawIcon('chevron-left-large')}</span>`;
+  const arrowRight = `<span class="svg-icn page-nav-arrow">${getRawIcon('chevron-right-large')}</span>`;
+  const lock = lockIcon('page-nav-lock');
 
   // No placeholder for a missing neighbour: grid-column pins each link to its
   // own half, so the surviving link keeps its side on its own.
-  let html = '<nav class="page-nav" aria-label="Page navigation"><div class="page-nav-inner">';
+  let html = '<nav class="page-nav" aria-label="Page navigation"><div class="page-nav-inner"' + MOTION.pager + '>';
   if (prev) html += renderLink('prev', prev, 'Previous', arrowLeft);
   if (next) html += renderLink('next', next, 'Next', arrowRight);
   html += '</div></nav>';
@@ -2190,19 +2697,66 @@ function buildFooterHtml(override) {
  * .page-header-subtitle itself and wins the specificity tie on source order,
  * so the attribute would be inert and imply behaviour that does not happen.
  */
-function buildPageHeaderHtml({ title, subtitle = '', eyebrow = '', actions = '', flipId = '' } = {}) {
+function buildPageHeaderHtml({ title, subtitle = '', eyebrow = '', actions = '', flipId = '', illustration = null } = {}) {
   if (!title) return '';
   const flipAttr = flipId ? ` data-flip-id="${escapeAttr(flipId)}"` : '';
   const parts = [];
-  if (eyebrow) parts.push(`<p class="eyebrow">${eyebrow}</p>`);
-  parts.push(`<h1 class="page-header-title"${flipAttr}>${title}</h1>`);
-  if (subtitle) parts.push(`<p class="page-header-subtitle">${subtitle}</p>`);
-  if (actions) parts.push(`<div class="page-header-actions">${actions}</div>`);
-  return `<header class="page-header" data-align="center">
+  if (eyebrow) parts.push(`<p class="eyebrow"${MOTION.headerPart}>${eyebrow}</p>`);
+  parts.push(`<h1 class="page-header-title"${flipAttr}${MOTION.headerPart}>${title}</h1>`);
+  if (subtitle) parts.push(`<p class="page-header-subtitle"${MOTION.headerPart}>${subtitle}</p>`);
+  if (actions) parts.push(`<div class="page-header-actions"${MOTION.headerPart}>${actions}</div>`);
+  // The cascade's group is whichever element holds the parts directly.
+  // An os-illustration beside the text (§43). The .page-header-content
+  // wrapper is part of the slot's contract: the CSS lays the two out as
+  // columns, so it is emitted with the slot and only with the slot. The hue
+  // on the header becomes its field and text colour.
+  if (illustration) {
+    return `<header class="page-header" data-align="center"${osIllustrationAttrs(illustration)}>
       <div class="page-header-container">
+        <div class="page-header-content"${MOTION.headerGroup}>
+          ${parts.join('\n          ')}
+        </div>
+        <div class="page-header-illustration">${illustration.svg}${renderOsIllustrationPause(illustration)}</div>
+      </div>
+    </header>`;
+  }
+  return `<header class="page-header" data-align="center">
+      <div class="page-header-container"${MOTION.headerGroup}>
         ${parts.join('\n        ')}
       </div>
     </header>`;
+}
+
+/**
+ * The core Breadcrumb component (design-system.css §18) for a bar. Empty when
+ * the trail is the current page alone — a crumb that only names the page you
+ * are on links nowhere and repeats the heading.
+ *
+ * @param {Array<{label: string, href?: string}>} crumbs section first, current last
+ */
+function buildBreadcrumb(crumbs) {
+  if (!crumbs || crumbs.length < 2) return '';
+  const separator = '<span class="breadcrumb-separator" aria-hidden="true">/</span>';
+  const items = crumbs.map((crumb, i) => {
+    if (i === crumbs.length - 1) {
+      return `<li class="breadcrumb-item"><span aria-current="page">${crumb.label}</span></li>`;
+    }
+    const label = crumb.href ? `<a href="${crumb.href}">${crumb.label}</a>` : `<span>${crumb.label}</span>`;
+    return `<li class="breadcrumb-item">${label}${separator}</li>`;
+  });
+  // A trail with a middle crumb carries the overflow item at position two,
+  // hidden until breadcrumb.js finds the labels no longer fit. A disclosure
+  // of links (cms/dropdown.md), so no menu roles and no aria-haspopup.
+  if (crumbs.length > 2) {
+    items.splice(1, 0, `<li class="breadcrumb-item breadcrumb-overflow" hidden><div class="dropdown"><button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More levels">${getIcon('ellipsis')}</button><div class="dropdown-menu"></div></div>${separator}</li>`);
+  }
+  return `
+          <nav class="breadcrumb" aria-label="Breadcrumb">
+            <ol class="breadcrumb-list">
+              ${items.join('\n              ')}
+            </ol>
+          </nav>
+        `;
 }
 
 /**
@@ -2213,26 +2767,30 @@ function buildPageHeaderHtml({ title, subtitle = '', eyebrow = '', actions = '',
  * full copy of this markup and had already drifted apart in whitespace; a
  * change to the dropdown had to be made twice or the two spaces disagreed.
  *
- * @param {string}      sectionHref  where the breadcrumb and close point (absolute)
- * @param {string}      sectionLabel breadcrumb's first crumb
- * @param {string}      title        current page, the crumb that is not a link
+ * @param {Array<{label: string, href?: string}>} crumbs
+ *                                   the trail, section first, current page
+ *                                   last. A crumb with no href is plain text;
+ *                                   the last is always the current page
+ * @param {string}      closeHref    where the close points (absolute)
+ * @param {string}      closeLabel   what the close goes back to, for its label
  * @param {string|null} mdHref       markdown source; null omits the .md items,
  *                                   which is what a project without a served
  *                                   markdownSourceBase needs
  */
-function buildBar({ sectionHref, sectionLabel, title, mdHref = null, width = 'docs' }) {
+function buildBar({ crumbs, closeHref, closeLabel, mdHref = null, width = 'docs' }) {
   // role="presentation" on the wrapper: role="menu" may only own menu items,
   // groups and separators, and this div exists purely to carry the auth gate.
-  // Presentation hands its children straight to the menu.
+  // Presentation hands its children straight to the menu. One divider, where
+  // the kind of item changes (the page's link, then its markdown source) —
+  // not one between every item; the tools' overflow menu follows the same rule.
   const mdSourceItems = mdHref ? `<div data-auth-role="team" role="presentation">
                 <div class="dropdown-divider" role="separator"></div>
                 <a href="${mdHref}" class="dropdown-item js-md-download" role="menuitem" download>
                   ${getIcon('download')}
                   <span>Download .md file</span>
                 </a>
-                <div class="dropdown-divider" role="separator"></div>
                 <a href="${mdHref}" class="dropdown-item js-md-open" role="menuitem" target="_blank" rel="noopener noreferrer">
-                  ${getIcon('share')}
+                  ${getIcon('external-link')}
                   <span>Open .md in new tab</span>
                 </a>
               </div>` : '';
@@ -2242,19 +2800,13 @@ function buildBar({ sectionHref, sectionLabel, title, mdHref = null, width = 'do
   // (design-system.css §41). No role="toolbar" here: this bar carries a
   // breadcrumb, and the class names the box while the role names the contents.
   const widthAttr = width ? ` data-width="${width}"` : '';
-  return `<div class="bar" data-density="regular"${widthAttr} data-sticky="true" data-pagefind-ignore>
+  return `<div class="bar" data-density="regular"${widthAttr} data-sticky="true" data-pagefind-ignore${MOTION.bar}>
       <div class="bar-container">
-        <div class="bar-content">
-          <nav class="breadcrumb" aria-label="Breadcrumb">
-            <a href="${sectionHref}">${sectionLabel}</a>
-            <span class="breadcrumb-separator" aria-hidden="true">/</span>
-            <span aria-current="page">${title}</span>
-          </nav>
-        </div>
+        <div class="bar-content">${buildBreadcrumb(crumbs)}</div>
         <div class="bar-actions">
           <div class="dropdown">
             <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Markdown source options">
-              ${getIcon('more-horizontal')}
+              ${getIcon('ellipsis-large')}
             </button>
             <div class="dropdown-menu is-right" role="menu">
               <button type="button" class="dropdown-item js-copy-url" role="menuitem">
@@ -2264,7 +2816,7 @@ function buildBar({ sectionHref, sectionLabel, title, mdHref = null, width = 'do
               ${mdSourceItems}
             </div>
           </div>
-          <a href="${sectionHref}" class="bar-close" data-page-close aria-label="Back to ${sectionLabel}">
+          <a href="${closeHref}" class="bar-close" data-page-close aria-label="Back to ${closeLabel}">
             ${getIcon('close-large')}
           </a>
         </div>
@@ -2316,7 +2868,13 @@ function buildPageScripts(section, frontmatter, navBase = '../') {
 // scripts/build-package.js via component-modules.json — a component whose
 // JS ships in dist/js/ automatically gets its script include documented.
 const COMPONENT_MODULES = require('./component-modules.json');
-const { isPortableComponentPage } = require('./portable');
+const { isPortableComponentPage, isBrandContent } = require('./portable');
+const { loadGlossary, renderGlossaryList, renderTopicChips, entryAppendix, glossaryFeed, escapeHtml: escapeGlossaryText } = require('./glossary');
+
+// The glossary (cms/glossary/), loaded once per run in generateDocs and read by
+// generatePage for {{glossary-terms}}. Null when the directory does not exist.
+let GLOSSARY = null;
+const GLOSSARY_FOLDER = 'glossary';
 
 // An alias pointing at a module that isn't shipped would silently fall back to
 // "No JavaScript, nothing else to include" — the exact wrong claim the alias
@@ -2336,6 +2894,20 @@ for (const [slug, deps] of Object.entries(COMPONENT_MODULES.moduleDependencies |
     if (!COMPONENT_MODULES.modules.includes(dep)) {
       throw new Error(`component-modules.json: moduleDependencies "${slug}" → "${dep}" is not in modules[]`);
     }
+  }
+}
+
+// An external library entry names files the product must source itself, so a
+// malformed one would print a broken include block on the page that tells a
+// product what to copy. Check the shape, and that the module it belongs to
+// is one the package ships.
+for (const [slug, entry] of Object.entries(COMPONENT_MODULES.externalScripts || {})) {
+  const moduleName = (COMPONENT_MODULES.moduleAliases || {})[slug] || slug + '.js';
+  if (!COMPONENT_MODULES.modules.includes(moduleName)) {
+    throw new Error(`component-modules.json: externalScripts "${slug}" names a module that is not in modules[]`);
+  }
+  if (!entry || typeof entry.label !== 'string' || !Array.isArray(entry.scripts) || !entry.scripts.length) {
+    throw new Error(`component-modules.json: externalScripts "${slug}" needs a label and a non-empty scripts[]`);
   }
 }
 
@@ -2389,11 +2961,17 @@ function buildComponentUsage(file) {
   const deps = (COMPONENT_MODULES.moduleDependencies || {})[slug] || [];
   const scripts = deps.concat(moduleName);
   const shipsAs = scripts.map((name) => `\`dist/js/${name}\``).join(' and ');
+  // A module that leans on a library the package does not ship (bd-animate
+  // on GSAP) says so and lists the library's files first, so the include
+  // block a product copies is complete rather than quietly short.
+  const external = (COMPONENT_MODULES.externalScripts || {})[slug] || null;
+  const externalPart = external ? ` It also needs ${external.label}, loaded before it.` : '';
+  const includes = (external ? external.scripts : []).concat(scripts);
   const jsPart = hasJs
-    ? `${stylesPart} Its behaviour ships as ${shipsAs} — copy ${scripts.length > 1 ? 'them' : 'it'} into the product's served assets and include ${scripts.length > 1 ? 'each' : 'it'} once per page:
+    ? `${stylesPart} Its behaviour ships as ${shipsAs} — copy ${scripts.length > 1 ? 'them' : 'it'} into the product's served assets and include ${scripts.length > 1 ? 'each' : 'it'} once per page.${externalPart}
 
 \`\`\`html
-${scripts.map((name) => `<script src="assets/js/${name}" defer></script>`).join('\n')}
+${includes.map((name) => `<script src="assets/js/${name}" defer></script>`).join('\n')}
 \`\`\``
     : `${stylesPart} No JavaScript, nothing else to include.`;
 
@@ -2428,7 +3006,111 @@ ${jsPart}${reactPart}
 `;
 }
 
-function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
+/**
+ * Fill the Glossary page's placeholders from cms/glossary/. Line-anchored like
+ * {{icon-registry}}, so a mention inside prose stays text. A placeholder on a
+ * page while the glossary directory is missing fails the build rather than
+ * shipping the literal.
+ */
+function expandGlossaryPlaceholders(content, file) {
+  // Comments are left alone: the page's own authoring note names the
+  // placeholders, and must neither count as one nor be rewritten.
+  const live = content.replace(/<!--[\s\S]*?-->/g, '');
+  if (!/\{\{glossary-(terms|topics|count)\}\}/.test(live)) return content;
+  if (!GLOSSARY) throw new Error(`cms/${file.filename} uses a {{glossary-}} placeholder, but cms/glossary/ does not exist`);
+  const entryHref = slug => siteHref(`/${GLOSSARY_FOLDER}/${slug}.html`);
+  for (const name of ['terms', 'topics']) {
+    const line = new RegExp(`^[^\\S\\n]*\\{\\{glossary-${name}\\}\\}[^\\S\\n]*$`, 'm');
+    if (live.includes(`{{glossary-${name}}}`) && !line.test(live)) {
+      throw new Error(`cms/${file.filename}: {{glossary-${name}}} must sit on a line of its own`);
+    }
+  }
+  return content.replace(
+    /(<!--[\s\S]*?-->)|^[^\S\n]*\{\{glossary-(terms|topics)\}\}[^\S\n]*$|\{\{glossary-count\}\}/gm,
+    (match, comment, block) => {
+      if (comment) return match;
+      if (block === 'terms') return renderGlossaryList(GLOSSARY, entryHref);
+      if (block === 'topics') return renderTopicChips(GLOSSARY);
+      return String(GLOSSARY.published.length);
+    }
+  );
+}
+
+/**
+ * One page per published glossary entry, at /glossary/<slug>.html, plus the
+ * feed at /glossary/index.json. A `doc` page in everything but source: the
+ * short definition is the lede, the markdown body the article, related terms
+ * and the source appended so they reach the TOC. The bar closes to the
+ * Glossary index, which is where every entry is reached from.
+ */
+function generateGlossaryPages(template, glossary, level) {
+  const type = PAGE_TYPES.doc;
+  const dir = path.join(OUTPUT_DIR, GLOSSARY_FOLDER);
+  const indexHref = siteHref('/glossary.html');
+  // Root-relative, not `${slug}.html`: the reading drawer on /glossary.html
+  // shows this article one folder up from where it was built.
+  const entryHref = slug => siteHref(`/${GLOSSARY_FOLDER}/${slug}.html`);
+  const topicHref = slug => siteHref(`/glossary.html?topic=${slug}`);
+  fs.mkdirSync(dir, { recursive: true });
+
+  // Entries that were published and no longer are must not linger as pages.
+  // Only this emitter writes the folder, so anything else in it is stale.
+  const keep = new Set(glossary.published.map(e => `${e.slug}.html`).concat('index.json'));
+  for (const name of fs.readdirSync(dir)) {
+    if (!keep.has(name)) fs.rmSync(path.join(dir, name), { recursive: true, force: true });
+  }
+
+  glossary.published.forEach((entry, position) => {
+    const content = markdownToHtml(entry.body + entryAppendix(entry, glossary, entryHref, topicHref));
+    // Escaped here, as the Showcase emitter does: renderPage and the header
+    // and bar builders take their text as markup.
+    const title = escapeGlossaryText(entry.title);
+    const short = escapeGlossaryText(`${entry.short}.`);
+    const html = renderPage(template, {
+      space: ROOT_SPACE,
+      navBase: '../',
+      title,
+      description: short,
+      header: buildPageHeaderHtml({ title, subtitle: short }),
+      stickyBar: buildBar({
+        crumbs: [{ label: 'Glossary', href: indexHref }, { label: title }],
+        closeHref: indexHref,
+        closeLabel: 'Glossary',
+      }),
+      content,
+      toc: generateTableOfContents(content),
+      frame: type.frame,
+      article: type.article,
+      access: level,
+      sectionSlug: GLOSSARY_FOLDER,
+      pageSection: GLOSSARY_FOLDER,
+      // Alphabetical position, so a hop between entries slides the way
+      // the index reads (barba-init.js compares data-order).
+      order: position + 1,
+      level: type.level,
+      chrome: type.chrome,
+    });
+    fs.writeFileSync(path.join(dir, `${entry.slug}.html`), html);
+    // No section, like a Showcase post: the glossary is one page with its
+    // entries under it, not a docs section a guest is granted.
+    pageAccess.set(`/${GLOSSARY_FOLDER}/${entry.slug}.html`, {
+      level,
+      section: '',
+      type: 'doc',
+      title: entry.title,
+    });
+  });
+
+  const feed = glossaryFeed(glossary, slug => `/${GLOSSARY_FOLDER}/${slug}.html`);
+  fs.writeFileSync(path.join(dir, 'index.json'), JSON.stringify(feed, null, 2) + '\n');
+  // Not on the page map: that file holds .html pages only, so the feed falls
+  // to the gate's default and stays team-only whatever the glossary's level.
+  // Opening it is a deliberate line in PUBLIC_EXACT (worker/gate.mjs), made
+  // when the glossary goes public (handovers/HANDOVER-glossary.md).
+  console.log(`📄 Generated: ${GLOSSARY_FOLDER}/ (${glossary.published.length} entry pages + index.json)`);
+}
+
+function generatePage(file, template, pageOrder, sidebarOrderMap = {}, subsectionHeadings = {}) {
   const { frontmatter, content } = file;
 
   // The page type decides which chrome this page gets; the per-page flags in
@@ -2447,8 +3129,12 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
   // <pre>, and HTML comments — an expansion inside a comment injects the
   // fallback's own comment markers and breaks the comment open at the first
   // `-->`, spilling the remainder into the rendered page.
+  // {{glossary-terms}} and {{glossary-count}} fill the Glossary page from
+  // cms/glossary/. Done before the icon pass: the rows carry {{icon:}}
+  // shorthand for their chevrons.
+  const body = type.body === 'html' ? expandGlossaryPlaceholders(content, file) : content;
   let htmlContent = type.body === 'html'
-    ? content.replace(
+    ? body.replace(
         /(<code[^>]*>[\s\S]*?<\/code>)|(<pre[^>]*>[\s\S]*?<\/pre>)|(<!--[\s\S]*?-->)|\{\{icon:([a-z0-9-]+)\}\}/g,
         (match, code, pre, comment, name) => (code || pre || comment) ? match : getIcon(name)
       )
@@ -2473,10 +3159,16 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
     subtitle: frontmatter.subtitle,
     actions: actionLinkHtml,
     flipId: flipIdFromHref(file.htmlName),
+    // The drawing named after the page, or what frontmatter declares.
+    illustration: resolveOsIllustration(pageOsIllustration(frontmatter, file), `cms/${file.filename}`),
   }) : '';
 
-  // Page depth drives every relative href; folderless pages sit at output root
-  const navBase = file.htmlFolder ? '../' : './';
+  // Page depth drives every relative href; folderless pages sit at output
+  // root. A filenameOverrides entry with `base: '/'` makes every href
+  // site-absolute instead, for the one page the Worker serves at other
+  // pages' URLs (cms/locked.md), where a depth-relative asset path would
+  // resolve under the wrong folder.
+  const navBase = file.base || (file.htmlFolder ? '../' : './');
 
   // Generate sticky sub-header bar (breadcrumb + markdown dropdown)
   //
@@ -2486,6 +3178,11 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
   // rootLinks — so there is no section index to go back to. Before this they
   // got no bar at all, which left the Glossary as the one page on the
   // site with no way out and no pager: reachable, and then a dead end.
+  //
+  // The trail is section / subsection / page. A root page has no section, so
+  // its trail would be the page alone and buildBreadcrumb omits it; the close
+  // still takes it home. The subsection crumb lands on its heading on the
+  // section index, or is plain text when that index gives it no heading.
   let pageSubbar = '';
   if (type.stickyBar && frontmatter.title) {
     const sectionHref = file.htmlFolder
@@ -2494,10 +3191,27 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
     const sectionLabel = file.htmlFolder
       ? (file.section || file.htmlFolder.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' '))
       : 'Home';
+    const crumbs = [];
+    if (file.htmlFolder) {
+      crumbs.push({ label: sectionLabel, href: sectionHref });
+      const sub = frontmatter.subsection;
+      if (sub) {
+        // Linked only when the heading exists and sits on the index this
+        // page's folder closes to — a page filed into another section's
+        // folder would otherwise link to an index without that heading.
+        const headed = file.htmlFolder === SECTION_FOLDERS[file.section]
+          && subsectionHeadings[file.section] && subsectionHeadings[file.section].has(sub);
+        crumbs.push({
+          label: subsectionLabel(sub),
+          href: headed ? `${sectionHref}#${subsectionAnchorId(sub)}` : null,
+        });
+      }
+    }
+    crumbs.push({ label: frontmatter.title });
     pageSubbar = buildBar({
-      sectionHref,
-      sectionLabel,
-      title: frontmatter.title,
+      crumbs,
+      closeHref: sectionHref,
+      closeLabel: sectionLabel,
       // Markdown-source items only when the .md files are reachable from the
       // served site (config: markdownSourceBase)
       mdHref: CONFIG.markdownSourceBase ? `${navBase}${CONFIG.markdownSourceBase}/${file.markdownPath}` : null,
@@ -2506,6 +3220,12 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
 
   // Build page scripts based on section and frontmatter
   const pageScripts = buildPageScripts(file.section, frontmatter, navBase);
+
+  // The Glossary page is the index of its entry pages (generateGlossaryPages),
+  // so it carries their section at level 1, the way the Showcase feed does:
+  // barba-init.js then reads entry to index as "close", not a cross-book
+  // "open".
+  const isGlossaryIndex = GLOSSARY && file.htmlPath === 'glossary.html';
 
   return renderPage(template, {
     space: ROOT_SPACE,
@@ -2521,12 +3241,12 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}) {
     pageNav: type.pager ? generatePageNav(file, pageOrder) : '',
     access,
     scripts: pageScripts,
-    sectionSlug: slugifySection(file.section),
-    pageSection: slugifySection(file.section),
+    sectionSlug: isGlossaryIndex ? GLOSSARY_FOLDER : slugifySection(file.section),
+    pageSection: isGlossaryIndex ? GLOSSARY_FOLDER : slugifySection(file.section),
     // Per-section sidebar position (matches the data-order on the matching
     // sidebar sidebar-nav-link). Falls back to 999 for files not in any sidebar.
     order: sidebarOrderMap[file.htmlPath] || 999,
-    level: type.level,
+    level: isGlossaryIndex ? PAGE_TYPES.contents.level : type.level,
     chrome: type.chrome,
     searchable: frontmatter.search !== 'false',
     // The tool pair renderer has always passed this; a cms/*.md page could not,
@@ -2568,8 +3288,8 @@ function generateNavJs(filesBySection) {
   // Icon-only at every width, like every action in the end slot since the
   // 2026-09-30 header; the accessible name is the aria-label.
   const contactNavJs = CONFIG.contactHref ? `
-    + '<a href="${siteHref(CONFIG.contactHref)}" class="button header-action header-contact-link" data-icon-only aria-label="${CONFIG.contactLabel}">'
-    + '<div class="svg-icn">' + ICON_MAIL + '</div>'
+    + '<a href="${siteHref(CONFIG.contactHref)}" class="button header-action header-contact-link" data-icon-only aria-label="${CONFIG.contactLabel}" data-tooltip="${CONFIG.contactLabel}" data-tooltip-position="bottom">'
+    + '<span class="svg-icn">' + ICON_MAIL + '</span>'
     + '</a>'` : '';
 
   const script = `/**
@@ -2600,7 +3320,7 @@ function generateNavJs(filesBySection) {
   var ICON_CLOCK = '${esc(getRawIcon('clock'))}';
   var ICON_RETURN = '${esc(getRawIcon('return-arrow'))}';
   var ICON_LOGOUT = '${esc(getRawIcon('logout'))}';
-  var ICON_LOCK = '${esc(getRawIcon('lock'))}';
+  var NAV_LOCK = '${esc(lockIcon('sidebar-nav-lock'))}';
 
   // ── Build site header HTML ──
   var headerStart = '<div class="site-header-start">';
@@ -2612,12 +3332,14 @@ function generateNavJs(filesBySection) {
     headerStart += '<button type="button" class="button header-action header-menu-btn" data-icon-only'
       + ' data-drawer-open="site-nav-drawer" aria-controls="site-nav-drawer"'
       + ' aria-expanded="false" aria-label="Open navigation">'
-      + '<div class="svg-icn hamburger-icon-open">' + ICON_HAMBURGER + '</div>'
-      + '<div class="svg-icn hamburger-icon-close">' + ICON_CLOSE + '</div>'
+      + '<span class="svg-icn hamburger-icon-open">' + ICON_HAMBURGER + '</span>'
+      + '<span class="svg-icn hamburger-icon-close">' + ICON_CLOSE + '</span>'
       + '</button>';
   }
 
-  headerStart += '<a href="${siteHref('/index.html')}" class="site-header-logo">'
+  // The logo is an aria-hidden SVG, so the link names itself the way the
+  // sidebar's home link does; without this it has no accessible name.
+  headerStart += '<a href="${siteHref('/index.html')}" class="site-header-logo" aria-label="Home">'
     + '${esc(logoHtml)}'
     + '</a></div>';
 
@@ -2658,8 +3380,8 @@ function generateNavJs(filesBySection) {
   var searchTriggerJs = ${!CONFIG.search ? "''" : `(isBrandInstance || !hasSearch) ? '' : ('<button type="button" class="button header-action header-search-btn" data-icon-only'
     + ' data-dialog-open="site-search" aria-controls="site-search"'
     + ' aria-haspopup="dialog" aria-keyshortcuts="Meta+K Control+K"'
-    + ' aria-label="Search the system">'
-    + '<div class="svg-icn">' + ICON_SEARCH + '</div>'
+    + ' aria-label="Search the system" data-tooltip="Search" data-tooltip-position="bottom">'
+    + '<span class="svg-icn">' + ICON_SEARCH + '</span>'
     + '</button>')`};
 
   // The account menu: the Dropdown's avatar-item pattern (cms/dropdown.md),
@@ -2672,7 +3394,7 @@ function generateNavJs(filesBySection) {
   // (login, support, access denied) keeps it hidden. Brand instances get it
   // too: they sit behind the same gate.
   var accountMenuJs = '<div class="dropdown header-account" data-placement="bottom-end" hidden>'
-    + '<button type="button" class="dropdown-trigger header-account-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Account">'
+    + '<button type="button" class="dropdown-trigger header-account-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Account" data-tooltip="Account" data-tooltip-position="bottom">'
     + '<span class="avatar" aria-hidden="true"></span>'
     + '</button>'
     + '<div class="dropdown-menu">'
@@ -2684,7 +3406,7 @@ function generateNavJs(filesBySection) {
     + '<div class="dropdown-divider" role="separator"></div>'
     + '<div class="dropdown-group" role="menu">'
     + '<button type="button" class="dropdown-item dropdown-item--danger" role="menuitem" data-account-sign-out>'
-    + '<div class="svg-icn">' + ICON_LOGOUT + '</div><span>Sign out</span>'
+    + '<span class="svg-icn">' + ICON_LOGOUT + '</span><span>Sign out</span>'
     + '</button>'
     + '</div>'
     + '</div>'
@@ -2692,9 +3414,9 @@ function generateNavJs(filesBySection) {
 
   // Contact, search, theme, account — every one an icon-only square.
   var headerEnd = '<div class="site-header-end">'${contactNavJs} + searchTriggerJs
-    + '<button type="button" class="button header-action dark-mode-toggle" data-icon-only aria-label="Dark mode">'
-    + '<div class="svg-icn dark-mode-icon-light">' + ICON_SUN + '</div>'
-    + '<div class="svg-icn dark-mode-icon-dark">' + ICON_MOON + '</div>'
+    + '<button type="button" class="button header-action dark-mode-toggle" data-icon-only aria-label="Dark mode" data-tooltip="Dark mode" data-tooltip-position="bottom">'
+    + '<span class="svg-icn dark-mode-icon-light">' + ICON_SUN + '</span>'
+    + '<span class="svg-icn dark-mode-icon-dark">' + ICON_MOON + '</span>'
     + '</button>'
     + accountMenuJs
     + '</div>';
@@ -2725,7 +3447,7 @@ function generateNavJs(filesBySection) {
     + ' data-search-page="${siteHref('/search.html')}">'
     // <search> carries an implicit role="search"; stating it again is noise.
     + '<search class="search-field">'
-    + '<div class="svg-icn search-field-icon">' + ICON_SEARCH + '</div>'
+    + '<span class="svg-icn search-field-icon">' + ICON_SEARCH + '</span>'
     // type="text", not "search". role="combobox" already overrides the implicit
     // role, the base input rules name both types in one selector list so the
     // styling is identical, and the webkit clear affordance was being hidden in
@@ -2741,7 +3463,7 @@ function generateNavJs(filesBySection) {
     + ' enterkeyhint="search"'
     + ' placeholder="Search the system" aria-label="Search the system">'
     + '<button type="button" class="button close-btn search-close" data-icon-only data-size="small" data-dialog-close aria-label="Close search">'
-    + '<div class="svg-icn">' + ICON_CLOSE + '</div>'
+    + '<span class="svg-icn">' + ICON_CLOSE + '</span>'
     + '</button>'
     + '</search>'
     // The Segmented control's flat form (cms/form.md). search.js fills it with
@@ -2790,27 +3512,27 @@ function generateNavJs(filesBySection) {
     // just moving them off-screen.
     sidebarHtml = '<dialog id="site-nav-drawer" class="site-sidebar drawer" data-placement="start" aria-label="Site navigation">'
       + '<div class="site-sidebar-header">'
-      + '<button class="site-sidebar-toggle" aria-label="Collapse sidebar" type="button">'
-      + '<div class="svg-icn sidebar-icon-open">' + ICON_COLLAPSE + '</div>'
-      + '<div class="svg-icn sidebar-icon-close">' + ICON_EXPAND + '</div>'
+      + '<button class="site-sidebar-toggle" aria-label="Collapse sidebar" data-tooltip="Collapse sidebar" data-tooltip-position="right" type="button">'
+      + '<span class="svg-icn sidebar-icon-open">' + ICON_COLLAPSE + '</span>'
+      + '<span class="svg-icn sidebar-icon-close">' + ICON_EXPAND + '</span>'
       + '</button>'
       // Mobile only: closing by backdrop tap works but is not discoverable,
       // and there is no Escape key on a touch device. data-drawer-close is
       // dialog.js's own attribute, so this needs no extra wiring.
       + '<button type="button" class="button close-btn site-sidebar-close" data-icon-only data-size="small" data-drawer-close aria-label="Close navigation">'
-      + '<div class="svg-icn">' + ICON_CLOSE + '</div>'
+      + '<span class="svg-icn">' + ICON_CLOSE + '</span>'
       + '</button>'
       + '</div>'
-      + '<div class="site-sidebar-content">'
+      + '<div class="site-sidebar-content"${MOTION.sidebarGroup}>'
       // Shown only while the sidebar is locked (body.is-signed-out), and only
       // where labels show — the expanded sidebar and the mobile drawer. Every
       // locked item points at it with aria-describedby, which reads hidden
       // text too, so the reason reaches a screen reader on the rail as well.
       + '<p class="sidebar-lock-note" id="sidebar-lock-note">Log in to access the rest of the system.</p>'
-      + '<a href="${siteHref('/index.html')}" class="sidebar-nav-link sidebar-nav-home" data-access="team" aria-label="Home" data-tooltip="Home" data-tooltip-position="right">'
-      + '<div class="svg-icn">' + ICON_HOME + '</div>'
+      + '<a href="${siteHref('/index.html')}" class="sidebar-nav-link sidebar-nav-home" data-access="team" aria-label="Home" data-tooltip="Home" data-tooltip-position="right"${MOTION.sidebarItem}>'
+      + '<span class="svg-icn">' + ICON_HOME + '</span>'
       + '<span>Home</span>'
-      + '<div class="svg-icn sidebar-nav-lock" data-icon="lock" aria-hidden="true">' + ICON_LOCK + '</div>'
+      + NAV_LOCK
       + '</a>'
       + \`${esc(navSectionsHtml)}\`
       + '</div>'
@@ -2822,6 +3544,14 @@ function generateNavJs(filesBySection) {
   // the template. Use insertAdjacentHTML to prepend the header + sidebar
   // BEFORE the existing <main>, preserving it in place as a grid sibling.
   mount.insertAdjacentHTML('afterbegin', headerHtml + sidebarHtml + searchDialogHtml);
+
+  // The sidebar's entrances are played by bd-animate's chrome pass, which
+  // runs after this script on every page today (defer order). Should the
+  // engine ever run first, its pass would miss a sidebar not yet in the
+  // document and leave it held, so it is asked again here.
+  if (document.documentElement.hasAttribute('data-bd-ready') && typeof window.bdAnimateChromeIn === 'function') {
+    window.bdAnimateChromeIn(mount);
+  }
 
   // A brand instance ships no search surface, so it must not ship a route to
   // one either. The sidebar is built once for the whole site, so the entries
@@ -2865,7 +3595,16 @@ function generateNavJs(filesBySection) {
         var resolvedPath = new URL(link.href, window.location.href).pathname;
         var resolvedNorm = normPath(resolvedPath);
 
-        if (currentNorm === resolvedNorm) {
+        // A root link that stands for a folder (Showcase) is current on
+        // every page in it, not only on its index. A root page whose
+        // children sit in a folder of its own name (/glossary.html and
+        // /glossary/<term>.html) is current on those children too.
+        var isRoot = link.classList.contains('sidebar-nav-root-link');
+        var rootFolder = resolvedNorm.replace(/\\.html$/, '');
+        var isCurrent = currentNorm === resolvedNorm
+          || (isRoot && currentNorm.indexOf(resolvedNorm + '/') === 0)
+          || (isRoot && rootFolder !== resolvedNorm && currentNorm.indexOf(rootFolder + '/') === 0);
+        if (isCurrent) {
           link.classList.add('sidebar-nav-link-active');
           link.setAttribute('aria-current', 'page');
           // A locked sidebar keeps every section shut; applySessionLock
@@ -2902,7 +3641,9 @@ function generateNavJs(filesBySection) {
     function syncToggleLabel() {
       if (!sidebarToggle) return;
       var isCollapsed = document.body.classList.contains('sidebar-collapsed');
-      sidebarToggle.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+      var label = isCollapsed ? 'Expand sidebar' : 'Collapse sidebar';
+      sidebarToggle.setAttribute('aria-label', label);
+      sidebarToggle.setAttribute('data-tooltip', label);
     }
 
     // The reader's own state: their saved choice, else the page's default.
@@ -2934,12 +3675,13 @@ function generateNavJs(filesBySection) {
       });
     }
 
-    // Esc dismisses the collapsed-sidebar tooltips (WCAG 1.4.13); moving the
-    // pointer to another row or shifting focus re-arms them.
+    // Esc dismisses the sidebar's tooltips (WCAG 1.4.13): the collapsed
+    // rail's, and the collapse toggle's in either state. Moving the pointer
+    // to another row or shifting focus re-arms them.
     var sidebarEl = mount.querySelector('.site-sidebar');
 
     function dismissSidebarTooltips(e) {
-      if (e.key === 'Escape' && document.body.classList.contains('sidebar-collapsed')) {
+      if (e.key === 'Escape' && (document.body.classList.contains('sidebar-collapsed') || (sidebarToggle && sidebarToggle.matches(':hover, :focus-visible')))) {
         document.body.classList.add('sidebar-tooltips-dismissed');
       }
     }
@@ -2954,21 +3696,101 @@ function generateNavJs(filesBySection) {
       sidebarEl.addEventListener('focusin', rearmSidebarTooltips);
     }
 
-    // ── Session lock ──
-    // A signed-out reader (only ever on a public page — the gate turns them
-    // away from the rest) gets the sidebar locked: every section shut, every
-    // link and toggle aria-disabled and described by the lock note, the
-    // rail's tooltips keeping the item's name and adding LOCK_TOOLTIP.
-    // Presentation only. The gate is the control, the links keep
-    // their hrefs, and data-access is never read (access-plan.md §4.9).
+    // ── Access locks ──
+    // What a reader cannot open is locked, never hidden, except admin pages,
+    // which are hidden from everyone but admins (permissions-plan.md §3.2,
+    // the CSS keyed on body[data-role]). Three readers get locks: signed out
+    // on a public page (everything, the gate turns them away from the rest),
+    // a guest (team pages their groups do not reach), and a team member
+    // beside an admin page in the pager. Every locked element is aria-disabled
+    // and described by the note, whose words say why for that reader; the
+    // rail's tooltips keep the item's name and add the reason.
+    //
+    // Presentation only. The gate is the control, the links keep their
+    // hrefs, and the rule here mirrors authorise() in worker/gate.mjs - it
+    // paints the verdict the Worker will give, it never replaces it.
     // header-account.js owns the page's one session check and publishes it
     // as window.bdSession and the bd:session event; the template's pre-paint
-    // script has already set body.is-signed-out from the last answer, so the
-    // rail is in place before this runs. Declared in this block because it
-    // needs restoreCollapsed and syncToggleLabel, which are block-scoped.
-    var LOCK_TOOLTIP = 'Log in to access';
+    // script has already set body.is-signed-out and body[data-role] from the
+    // last answer, so the rail is in place before this runs. Declared in
+    // this block because it needs restoreCollapsed and syncToggleLabel,
+    // which are block-scoped.
     var LOCK_NOTE_ID = 'sidebar-lock-note';
     var LOCKABLE = 'a[href], summary';
+    var CARD = '.book-contents-item[data-access], .book-cover[data-access]';
+    var PAGER = '.page-nav-link[data-access]';
+    // The signed-out words are the owner's (2026-10-01: no sign-in link, the
+    // site is invite-only). A guest's note carries a real link, because every
+    // locked row refuses the click - the note is where asking happens.
+    var LOCK_NOTES = {
+      out: 'Log in to access the rest of the system.',
+      guest: 'Locked pages are for the team. ',
+      team: 'Locked pages are for admins.',
+      admin: ''
+    };
+    var LOCK_TOOLTIPS = { out: 'Log in to access', guest: 'For the team', team: 'For admins', admin: '' };
+    var SUPPORT_PATH = '${siteHref('/support.html')}';
+    var lockNote = sidebarEl ? sidebarEl.querySelector('#' + LOCK_NOTE_ID) : null;
+
+    function askHref() {
+      return SUPPORT_PATH + '?from=' + encodeURIComponent(window.location.pathname);
+    }
+
+    function writeLockNote(role) {
+      if (!lockNote) return;
+      lockNote.replaceChildren(document.createTextNode(LOCK_NOTES[role] || ''));
+      if (role !== 'guest') return;
+      var ask = document.createElement('a');
+      ask.href = askHref();
+      ask.textContent = 'Ask for access';
+      lockNote.appendChild(ask);
+    }
+
+    // The reader, from the one session answer: 'out', 'guest', 'team' or
+    // 'admin' with the scopes a guest's groups grant. null until it lands.
+    function readerState() {
+      var s = window.bdSession;
+      if (!s) return null;
+      if (!s.signedIn) return { role: 'out', scopes: [] };
+      var role = s.role === 'admin' || s.role === 'team' || s.role === 'guest' ? s.role : 'guest';
+      return { role: role, scopes: Array.isArray(s.scopes) ? s.scopes : [] };
+    }
+
+    function pathOf(el) {
+      try { return new URL(el.href, window.location.href).pathname; } catch (e) { return ''; }
+    }
+
+    // The same rule as worker/gate.mjs isIndexPath: the home, or one
+    // folder's index, never deeper.
+    function isIndexPath(p) {
+      return p === '/' || p === '/index.html' || /^\\/[a-z0-9-]+\\/index\\.html$/.test(p);
+    }
+
+    function folderOf(p) {
+      var m = /^\\/([a-z0-9-]+)\\/[^/]+$/.exec(p);
+      return m ? m[1] : '';
+    }
+
+    // The second question, as the Worker asks it (worker/gate.mjs authorise):
+    // public opens for everyone; an admin opens everything; an admin page
+    // opens for no one else; a team member opens the rest; a guest opens the
+    // indexes and what their groups grant. Signed out opens nothing - the
+    // sidebar locks even links to other public pages, by the 2026-10-01
+    // decision, so a signed-out reader is told to log in once, not page by page.
+    function canOpen(reader, level, p) {
+      if (reader.role === 'out') return false;
+      if (level === 'public') return true;
+      if (reader.role === 'admin') return true;
+      if (level === 'admin') return false;
+      if (reader.role === 'team') return true;
+      if (isIndexPath(p)) return true;
+      var folder = folderOf(p);
+      for (var i = 0; i < reader.scopes.length; i++) {
+        if (reader.scopes[i] === 'page:' + p) return true;
+        if (folder && reader.scopes[i] === 'section:' + folder) return true;
+      }
+      return false;
+    }
 
     // The reason, for assistive tech: the name stays exactly the visible
     // label, aria-disabled says unavailable, and this says why.
@@ -2977,7 +3799,7 @@ function generateNavJs(filesBySection) {
       else if (el.getAttribute('aria-describedby') === LOCK_NOTE_ID) el.removeAttribute('aria-describedby');
     }
 
-    function lockItem(item, locked) {
+    function lockItem(item, locked, reason) {
       if (locked) item.setAttribute('aria-disabled', 'true');
       else item.removeAttribute('aria-disabled');
       // The section icon is a link inside its own section's <summary>: two
@@ -2990,58 +3812,78 @@ function generateNavJs(filesBySection) {
       // The originals are parked on the element so an unlock can restore
       // them exactly, and a second lock does not park the locked text.
       if (item.hasAttribute('data-tooltip')) {
-        if (locked && !item.hasAttribute('data-tooltip-default')) {
-          item.setAttribute('data-tooltip-default', item.getAttribute('data-tooltip'));
-          item.setAttribute('data-tooltip', item.getAttribute('data-tooltip') + ' \u00b7 ' + LOCK_TOOLTIP);
-        } else if (!locked && item.hasAttribute('data-tooltip-default')) {
-          item.setAttribute('data-tooltip', item.getAttribute('data-tooltip-default'));
-          item.removeAttribute('data-tooltip-default');
-        }
+        if (!item.hasAttribute('data-tooltip-default')) item.setAttribute('data-tooltip-default', item.getAttribute('data-tooltip'));
+        var base = item.getAttribute('data-tooltip-default');
+        item.setAttribute('data-tooltip', locked && reason ? base + ' · ' + reason : base);
       }
       describeLock(item, locked);
     }
 
-    // The pager sits inside the Barba container, so it is re-marked on every
-    // swap (bd:after-nav) as well as here. data-gated is the generator's
-    // record that the target is not public; .is-locked is the component's
-    // own state (design-system.css §38).
-    function lockPager(locked) {
-      var links = document.querySelectorAll('.page-nav-link[data-gated]');
-      for (var pl = 0; pl < links.length; pl++) {
-        links[pl].classList.toggle('is-locked', locked);
-        if (locked) links[pl].setAttribute('aria-disabled', 'true');
-        else links[pl].removeAttribute('aria-disabled');
-        describeLock(links[pl], locked);
+    // The pager and the cards sit inside the Barba container, so they are
+    // re-marked on every swap - from beforeEnter, before the new container
+    // animates in (barba-init.js), and again on bd:after-nav, as well as
+    // here. data-access is the generator's record of the target's level;
+    // .is-locked is each component's own state (design-system.css §38, the
+    // Book). scope is the arriving container when there is one, so the
+    // leaving container is never swept.
+    function lockLinks(selector, reader, scope) {
+      var links = (scope || document).querySelectorAll(selector);
+      for (var i = 0; i < links.length; i++) {
+        var locked = !!reader && !canOpen(reader, links[i].getAttribute('data-access') || 'team', pathOf(links[i]));
+        links[i].classList.toggle('is-locked', locked);
+        if (locked) links[i].setAttribute('aria-disabled', 'true');
+        else links[i].removeAttribute('aria-disabled');
+        describeLock(links[i], locked);
       }
     }
 
-    function applySessionLock(locked) {
+    function applyAccess(reader) {
+      if (!reader) return; // nothing known yet: the paint stands
       var body = document.body;
-      var wasLocked = body.classList.contains('is-signed-out');
-      body.classList.toggle('is-signed-out', locked);
+      var wasOut = body.classList.contains('is-signed-out');
+      var out = reader.role === 'out';
+      var reason = LOCK_TOOLTIPS[reader.role] || '';
+      body.classList.toggle('is-signed-out', out);
+      body.classList.toggle('is-guest', reader.role === 'guest');
+      if (out) body.removeAttribute('data-role');
+      else body.setAttribute('data-role', reader.role);
+      writeLockNote(reader.role);
 
-      var items = sidebarEl.querySelectorAll(LOCKABLE);
-      for (var li = 0; li < items.length; li++) lockItem(items[li], locked);
-      lockPager(locked);
-
-      if (locked) {
-        var open = sidebarEl.querySelectorAll('details[open]');
-        for (var od = 0; od < open.length; od++) {
+      var links = sidebarEl.querySelectorAll('a[href]');
+      for (var li = 0; li < links.length; li++) {
+        // The note's own link is the way to ask; it is never a locked row.
+        if (lockNote && lockNote.contains(links[li])) continue;
+        lockItem(links[li], !canOpen(reader, links[li].getAttribute('data-access') || 'team', pathOf(links[li])), reason);
+      }
+      // A section or subsection is locked when nothing listed in it opens;
+      // the Overview is listed, so a guest's sections stay expandable and
+      // show what the system holds - the locked rail is a sales surface.
+      var groups = sidebarEl.querySelectorAll('details');
+      for (var gi = 0; gi < groups.length; gi++) {
+        var inner = groups[gi].querySelectorAll('.sidebar-nav-list a[href], .sidebar-nav-sublist a[href]');
+        var anyOpen = false;
+        for (var ii = 0; ii < inner.length; ii++) {
+          if (inner[ii].getAttribute('aria-disabled') !== 'true' && !inner[ii].matches('[data-access="admin"]')) anyOpen = true;
+        }
+        var locked = out || !anyOpen;
+        var toggle = groups[gi].querySelector(':scope > summary');
+        if (toggle) lockItem(toggle, locked, reason);
+        if (locked && groups[gi].open) {
           // A late lock can shut the section holding focus; hand focus to
           // its toggle rather than let it fall to <body>.
-          if (open[od].contains(document.activeElement)) {
-            var openToggle = open[od].querySelector(':scope > summary');
-            if (openToggle) openToggle.focus();
-          }
-          open[od].open = false;
+          if (toggle && groups[gi].contains(document.activeElement)) toggle.focus();
+          groups[gi].open = false;
         }
+      }
+      lockLinks(PAGER, reader);
+      lockLinks(CARD, reader);
+
+      if (out && !wasOut) {
         // A lock that lands after paint (the hint said signed in, the
         // session did not) starts collapsed like one that painted locked.
-        if (!wasLocked) {
-          body.classList.add('sidebar-collapsed');
-          syncToggleLabel();
-        }
-      } else if (wasLocked) {
+        body.classList.add('sidebar-collapsed');
+        syncToggleLabel();
+      } else if (!out && wasOut) {
         restoreCollapsed();
         if (window.refreshNavActive) window.refreshNavActive();
       }
@@ -3054,18 +3896,16 @@ function generateNavJs(filesBySection) {
     // middle-click; Enter on a link and Enter or Space on a summary arrive
     // as click.
     //
-    // Only once the session is confirmed signed out. A page painted locked
-    // from a missing hint whose check then fails (rate limit, outage,
-    // offline) keeps the look but not the block: a signed-in reader there
-    // still gets through, and a signed-out one meets the gate, which is the
-    // control anyway. [data-gated] rather than .is-locked for the pager,
-    // which is marked only after a Barba swap has made it clickable.
+    // Only once a session answer has landed. A page painted locked from a
+    // missing hint whose check then fails (rate limit, outage, offline)
+    // keeps the look but not the block: a signed-in reader there still gets
+    // through, and a signed-out one meets the gate, which is the control
+    // anyway.
     function guardLockedClick(e) {
-      if (!document.body.classList.contains('is-signed-out') || !e.target.closest) return;
-      if (!window.bdSession || window.bdSession.signedIn !== false) return;
-      var item = e.target.closest(LOCKABLE);
-      if (!item) return;
-      if (!sidebarEl.contains(item) && !item.matches('.page-nav-link[data-gated]')) return;
+      if (!window.bdSession || !e.target.closest) return;
+      var item = e.target.closest(LOCKABLE + ', ' + PAGER + ', ' + CARD);
+      if (!item || item.getAttribute('aria-disabled') !== 'true') return;
+      if (!sidebarEl.contains(item) && !item.matches(PAGER) && !item.matches(CARD)) return;
       e.preventDefault();
     }
 
@@ -3073,28 +3913,54 @@ function generateNavJs(filesBySection) {
     // toggle does not bubble, hence capture. Only <details>: the sidebar is
     // itself a <dialog>, which fires toggle as the mobile drawer opens.
     function keepLockedSectionsShut(e) {
-      // Confirmed signed out only, for the reason guardLockedClick gives.
-      if (!document.body.classList.contains('is-signed-out')) return;
-      if (!window.bdSession || window.bdSession.signedIn !== false) return;
-      if (e.target.tagName === 'DETAILS' && e.target.open) e.target.open = false;
+      if (!window.bdSession) return; // confirmed only, for the reason guardLockedClick gives
+      if (e.target.tagName !== 'DETAILS' || !e.target.open) return;
+      var toggle = e.target.querySelector(':scope > summary');
+      if (toggle && toggle.getAttribute('aria-disabled') === 'true') e.target.open = false;
     }
 
-    function onSessionChange(e) {
-      applySessionLock(!(e.detail && e.detail.signedIn));
+    function onSessionChange() {
+      applyAccess(readerState());
     }
 
-    function relockPager() {
-      lockPager(document.body.classList.contains('is-signed-out'));
+    // Before the answer lands, a page painted locked (signed out, from the
+    // hint) is treated as signed out so a swapped-in container is marked
+    // like the page it joins; with nothing known at all, the marks stand.
+    function knownReader() {
+      var reader = readerState();
+      if (reader) return reader;
+      return document.body.classList.contains('is-signed-out') ? { role: 'out', scopes: [] } : null;
     }
+
+    function relockSwapped(container) {
+      var reader = knownReader();
+      if (!reader) return;
+      var scope = container && container.querySelectorAll ? container : null;
+      lockLinks(PAGER, reader, scope);
+      lockLinks(CARD, reader, scope);
+      // The guest's way to ask follows the page they are on.
+      var ask = lockNote ? lockNote.querySelector('a') : null;
+      if (ask) ask.href = askHref();
+    }
+
+    function onAfterNav(e) {
+      relockSwapped(e && e.detail ? e.detail.container : null);
+    }
+
+    // For barba-init.js's beforeEnter hook: the arriving container, marked
+    // before it animates in rather than after.
+    window.bdRelockSwapped = relockSwapped;
 
     if (sidebarEl) {
       window.addEventListener('click', guardLockedClick, true);
       window.addEventListener('auxclick', guardLockedClick, true);
       sidebarEl.addEventListener('toggle', keepLockedSectionsShut, true);
       document.addEventListener('bd:session', onSessionChange);
-      document.addEventListener('bd:after-nav', relockPager);
-      var knownSession = window.bdSession;
-      applySessionLock(knownSession ? !knownSession.signedIn : document.body.classList.contains('is-signed-out'));
+      document.addEventListener('bd:after-nav', onAfterNav);
+      // Before the answer lands: a page painted locked (signed out, from the
+      // hint) is marked locked so the look and the semantics agree; any
+      // other page waits for the answer.
+      applyAccess(knownReader());
     }
   }
 
@@ -3278,6 +4144,18 @@ function generateNavJs(filesBySection) {
 }
 
 /**
+ * The level a tool app declares in its own frontmatter (cms/apps/<slug>.md),
+ * for the sidebar entry that opens it. Falls back to the guide's level when
+ * the pair has no .md - a guide with no app lists itself.
+ */
+function appAccess(slug, fallback) {
+  const source = path.join(DOCS_DIR, 'apps', `${slug}.md`);
+  if (!fs.existsSync(source)) return fallback;
+  const { frontmatter } = parseFrontmatter(fs.readFileSync(source, 'utf8'));
+  return deriveDataAccess(frontmatter);
+}
+
+/**
  * Build nav sections HTML string for embedding in nav.js
  *
  * Takes no order map: nav links number themselves as they are emitted, which is
@@ -3292,7 +4170,7 @@ function buildNavSectionsHtml(filesBySection) {
   // the trailing edge of a root link. Hidden from the accessibility tree —
   // aria-disabled carries the state and the lock note (aria-describedby)
   // the reason.
-  const navLock = `<div class="svg-icn sidebar-nav-lock" data-icon="lock" aria-hidden="true">${getRawIcon('lock')}</div>`;
+  const navLock = lockIcon('sidebar-nav-lock');
 
   // Shared chevron for section and subsection toggles
   const navChevron = `<span class="sidebar-nav-toggle-icon">
@@ -3332,8 +4210,8 @@ function buildNavSectionsHtml(filesBySection) {
     // to be a runtime one — the same reason the search trigger and dialog are
     // gated in the emitted script rather than here.
     const engineOnly = link.requires === 'search' ? ' data-engine-only' : '';
-    const rootIconHtml = link.icon ? `<div class="svg-icn">${getRawIcon(link.icon)}</div>` : '';
-    html += `<a href="${siteHref(link.href)}" class="sidebar-nav-link sidebar-nav-root-link" data-access="${escapeAttr(link.access || 'team')}"${engineOnly} aria-label="${escapeAttr(link.title)}" data-tooltip="${escapeAttr(link.title)}" data-tooltip-position="right">${rootIconHtml}<span>${escapeAttr(link.title)}</span>${navLock}</a>`;
+    const rootIconHtml = link.icon ? `<span class="svg-icn">${getRawIcon(link.icon)}</span>` : '';
+    html += `<a href="${siteHref(link.href)}" class="sidebar-nav-link sidebar-nav-root-link" data-access="${escapeAttr(link.access || 'team')}"${engineOnly}${MOTION.sidebarItem} aria-label="${escapeAttr(link.title)}" data-tooltip="${escapeAttr(link.title)}" data-tooltip-position="right">${rootIconHtml}<span>${escapeAttr(link.title)}</span>${navLock}</a>`;
   }
 
   // Read ordering from _defaults.md (configurable per directory)
@@ -3370,10 +4248,10 @@ function buildNavSectionsHtml(filesBySection) {
     // Slug used by Phase 3 directional transitions to detect same/different section
     const sectionSlug = slugifySection(section);
     const iconHtml = sectionIcon
-      ? `<a href="${sectionIndexHref}" class="sidebar-nav-section-icon" data-section="${sectionSlug}" aria-label="${escapeAttr(sectionLabel)}"><div class="svg-icn">${sectionIcon.icon}</div></a>`
+      ? `<a href="${sectionIndexHref}" class="sidebar-nav-section-icon" data-section="${sectionSlug}" aria-label="${escapeAttr(sectionLabel)}"><span class="svg-icn">${sectionIcon.icon}</span></a>`
       : '';
 
-    html += `<details class="sidebar-nav-section">
+    html += `<details class="sidebar-nav-section"${MOTION.sidebarItem}>
       <summary class="sidebar-nav-section-toggle" aria-label="${escapeAttr(sectionLabel)}" data-tooltip="${escapeAttr(sectionLabel)}" data-tooltip-position="right">
         ${iconHtml}<span>${sectionLabel}</span>
         ${navLock}${navChevron}
@@ -3384,7 +4262,7 @@ function buildNavSectionsHtml(filesBySection) {
     // folder and therefore an index page). data-order="0" so direction
     // detection always treats it as the lowest-order page in the section.
     if (sectionIndexHref) {
-      html += `<li><a href="${sectionIndexHref}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="0" data-access="team"><span>Overview</span></a></li>`;
+      html += `<li><a href="${sectionIndexHref}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="0" data-access="team"><span>Overview</span>${navLock}</a></li>`;
     }
 
     // Sequential counter mirrors buildSidebarOrderMap — same walk order, so the
@@ -3405,7 +4283,9 @@ function buildNavSectionsHtml(filesBySection) {
 
     // Render ungrouped files first
     for (const file of ungrouped) {
-      // For Tools section: link to actual tool app, use actionAccess for visibility.
+      // For Tools section: link to the tool app itself, carrying the APP's
+      // own level - the lock the reader sees must describe the page the
+      // link opens, and a guide and its tool can sit at different levels.
       // All hrefs are emitted as absolute paths (`/section/file.html`).
       let linkHref = siteHref('/' + file.htmlPath);
       let linkAccess = deriveDataAccess(file.frontmatter);
@@ -3416,9 +4296,9 @@ function buildNavSectionsHtml(filesBySection) {
         const fileName = navActionUrl.replace(/^(\.\.?\/)+/, '');
         const sectionFolder = SECTION_FOLDERS[section] || 'tools';
         linkHref = siteHref('/' + sectionFolder + '/' + fileName);
-        linkAccess = file.frontmatter.actionAccess || file.frontmatter.toolAccess || 'brand';
+        linkAccess = appAccess(fileName.replace(/\.html$/, ''), linkAccess);
       }
-      html += `<li><a href="${linkHref}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span></a></li>`;
+      html += `<li><a href="${linkHref}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span>${navLock}</a></li>`;
       navPos++;
     }
 
@@ -3457,7 +4337,7 @@ function buildNavSectionsHtml(filesBySection) {
         <ul class="sidebar-nav-sublist">`;
       for (const file of grouped[sub]) {
         const linkAccess = deriveDataAccess(file.frontmatter);
-        html += `<li><a href="${siteHref('/' + file.htmlPath)}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span></a></li>`;
+        html += `<li><a href="${siteHref('/' + file.htmlPath)}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span>${navLock}</a></li>`;
         navPos++;
       }
       html += `</ul></details></li>`;
@@ -3607,26 +4487,29 @@ function writeThemeConfig(themes) {
   if (ROOT_MANIFEST && ROOT_MANIFEST.emailSignature) {
     payload.emailSignature = ROOT_MANIFEST.emailSignature;
   }
-  // The Colour Pairing tool's recommended pairs are the brand's call, so the
-  // engine carries none; a malformed list fails here rather than reaching
-  // the page as a panel of broken chips. Token names are checked at runtime,
-  // against the palette the theme actually defines.
-  if (ROOT_MANIFEST && ROOT_MANIFEST.colorPairings !== undefined) {
-    const pairs = ROOT_MANIFEST.colorPairings;
+  // Pair lists are the brand's call, so the engine carries none: the Colour
+  // Pairing tool's recommended pairs (colorPairings), and the shorter list
+  // every other tool's Pairs row offers (toolPairings). A malformed list
+  // fails here rather than reaching the page as a panel of broken chips.
+  // Token names are checked at runtime, against the palette the theme
+  // actually defines.
+  for (const key of ['colorPairings', 'toolPairings']) {
+    if (!ROOT_MANIFEST || ROOT_MANIFEST[key] === undefined) continue;
+    const pairs = ROOT_MANIFEST[key];
     const valid = Array.isArray(pairs) && pairs.every(pair =>
       pair && typeof pair.fg === 'string' && pair.fg && typeof pair.bg === 'string' && pair.bg);
     if (!valid) {
-      throw new Error(`${ROOT_MANIFEST_PATH}: "colorPairings" must be an array of { "fg": "<token>", "bg": "<token>" }`);
+      throw new Error(`${ROOT_MANIFEST_PATH}: "${key}" must be an array of { "fg": "<token>", "bg": "<token>" }`);
     }
     const seen = new Set();
     for (const pair of pairs) {
-      const key = `${pair.fg}|${pair.bg}`;
-      if (seen.has(key)) {
-        throw new Error(`${ROOT_MANIFEST_PATH}: "colorPairings" lists ${pair.fg} on ${pair.bg} twice`);
+      const pairKey = `${pair.fg}|${pair.bg}`;
+      if (seen.has(pairKey)) {
+        throw new Error(`${ROOT_MANIFEST_PATH}: "${key}" lists ${pair.fg} on ${pair.bg} twice`);
       }
-      seen.add(key);
+      seen.add(pairKey);
     }
-    payload.colorPairings = pairs.map(pair => ({ fg: pair.fg, bg: pair.bg }));
+    payload[key] = pairs.map(pair => ({ fg: pair.fg, bg: pair.bg }));
   }
   // The engine's own version, from the package this generator ships in, so
   // the banner cannot freeze on the release it was first written in.
@@ -3653,36 +4536,89 @@ function writeThemeConfig(themes) {
 }
 
 /**
- * worker/public-pages.mjs — the pages half of the access gate's public list
- * (access-plan.md §5, §12.4). Serialised once, sorted, so two builds of the
- * same tree are byte-identical. The Worker imports it (worker/gate.mjs) at
- * build time, never runtime: the middleware serves static assets and must not
- * parse frontmatter. Infrastructure routes — /assets/, /image/, the login —
- * stay in gate.mjs's own static lists; this file holds pages and nothing else.
- * A project with no worker/ directory has no gate to feed, so nothing is
- * written there. Brand pages (cms/brands/**) never reach the set, whatever
- * their frontmatter says: the gate opens pages of this deployment's own site,
- * and a brand page that needs to be public is a decision for §11, not a flag.
+ * worker/page-access.mjs - the pages half of the access gate (access-plan.md
+ * §5, §12.4; permissions-plan.md §4.1): every generated page's level, section
+ * and type by output URL, plus the section folders a group can be granted.
+ * Serialised once, sorted, so two builds of the same tree are byte-identical.
+ * The Worker imports it (worker/gate.mjs) at build time, never runtime: the
+ * middleware serves static assets and must not parse frontmatter.
+ * Infrastructure routes - /assets/, /image/, the login - stay in gate.mjs's
+ * own static lists; this file holds pages and nothing else. A project with no
+ * worker/ directory has no gate to feed, so nothing is written there. Brand
+ * pages (cms/brands/**) never reach the map, whatever their frontmatter says:
+ * the gate judges pages of this deployment's own site, and a brand page is a
+ * decision for §11, not a flag.
  */
-function writePublicPages() {
+function writePageAccess() {
   const workerDir = path.join(ROOT, 'worker');
   if (!fs.existsSync(workerDir)) return;
-  const paths = [...publicPages].sort();
+  const entries = [...pageAccess.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  const counts = { public: 0, team: 0, admin: 0 };
+  for (const [, entry] of entries) counts[entry.level]++;
+  const sections = Object.fromEntries(
+    Object.entries(SECTION_FOLDERS).map(([label, folder]) => [folder, label]).sort((a, b) => (a[0] < b[0] ? -1 : 1)),
+  );
   const banner = `/**
- * public-pages.mjs — GENERATED by cms/generator/generate-docs.js, do not edit.
+ * page-access.mjs - GENERATED by cms/generator/generate-docs.js, do not edit.
  *
- * Every page whose own frontmatter declares access: "public", quoted or not
- * (access-plan.md §12.4), by output URL. _defaults.md cannot open a page. worker/gate.mjs imports it as the pages half of the
- * public list; the infrastructure half is gate.mjs's own static lists. To open
- * a page, set the field and re-run: cd cms/generator && npm run docgen.
- * Anything else — a missing field, a typo, another value — leaves it gated.
+ * Every generated page by output URL, with the level its OWN frontmatter
+ * declares, public, team or admin (access-plan.md §12.4; permissions-plan.md
+ * §3.1). _defaults.md cannot set a level; a missing field, a typo or another
+ * value is team. The home shelf and the section indexes carry the index types,
+ * which the gate opens to every signed-in reader. worker/gate.mjs imports it as
+ * the pages half of the gate; the infrastructure half is gate.mjs's own static
+ * lists. To change a page's level, set the field and re-run a FULL docgen:
+ * cd cms/generator && npm run docgen. A single-file run leaves this file alone.
+ *
+ * SECTIONS maps each output folder to its section label, the sections a
+ * group can be granted (worker/people.js).
  */
 `;
-  const body = paths.length
-    ? `export const PUBLIC_PAGES = new Set([\n${paths.map(p => `  ${JSON.stringify(p)},`).join('\n')}\n]);\n`
-    : 'export const PUBLIC_PAGES = new Set();\n';
-  fs.writeFileSync(path.join(workerDir, 'public-pages.mjs'), banner + body);
-  console.log(`📄 Generated: worker/public-pages.mjs (${paths.length} public page${paths.length === 1 ? '' : 's'})`);
+  const lines = entries.map(([p, e]) => `  [${JSON.stringify(p)}, { level: ${JSON.stringify(e.level)}, section: ${JSON.stringify(e.section)}, type: ${JSON.stringify(e.type)}, title: ${JSON.stringify(e.title)} }],`);
+  const body = `export const SECTIONS = Object.freeze(${JSON.stringify(sections)});\n\n`
+    + `export const PAGE_ACCESS = new Map([\n${lines.join('\n')}\n]);\n`;
+  fs.writeFileSync(path.join(workerDir, 'page-access.mjs'), banner + body);
+  console.log(`📄 Generated: worker/page-access.mjs (${entries.length} pages: ${counts.public} public, ${counts.team} team, ${counts.admin} admin)`);
+}
+
+/**
+ * experiments/site-map-data.js — every page as data for the site-map
+ * experiment (cms/generator/site-map.js has the walk and the contract).
+ * Written under experiments/, never /assets/: the file lists every gated URL.
+ */
+function writeSiteMapData(allFiles, cmsDefaults) {
+  const { js, nodes } = siteMap.renderSiteMapData({
+    root: ROOT,
+    docsDir: DOCS_DIR,
+    allFiles,
+    sectionOrder: parseList(cmsDefaults['section-order'], DEFAULT_SECTION_ORDER),
+    subsectionOrder: (section) => getSubsectionOrder(cmsDefaults, section),
+    sectionFolders: SECTION_FOLDERS,
+    pageTypes: Object.keys(PAGE_TYPES),
+    parseFrontmatter,
+  });
+  const out = path.join(ROOT, siteMap.DATA_FILE);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, js);
+  const planned = nodes.filter(n => n.status === 'planned').length;
+  console.log(`📄 Generated: ${siteMap.DATA_FILE} (${nodes.length} pages, ${planned} planned)`);
+}
+
+/**
+ * worker/library-index.mjs — the Asset Library's download map, "<asset id>/
+ * <filename>" → [R2 key, mime, size], imported by worker/library.js. Same
+ * contract as page-access.mjs above: generated, sorted, byte-identical for
+ * the same tree, and the Worker's only knowledge of what the catalog offers —
+ * a path not in it is a 404 whatever the bucket holds. Written even when
+ * there is no catalog, as an empty Map, so the import never dangles.
+ */
+function writeLibraryIndex() {
+  const workerDir = path.join(ROOT, 'worker');
+  if (!fs.existsSync(workerDir)) return;
+  const { catalog, lock } = loadValidatedLibrary();
+  const entries = assetLibrary.buildIndex(catalog, lock);
+  fs.writeFileSync(path.join(workerDir, 'library-index.mjs'), assetLibrary.renderLibraryIndex(entries));
+  console.log(`📄 Generated: worker/library-index.mjs (${entries.length} downloadable file${entries.length === 1 ? '' : 's'})`);
 }
 
 function copyBrandAssets(brandKey) {
@@ -3781,10 +4717,13 @@ function generateBrandDocs(template, themes) {
         const overviewHref = siteHref(sectionSlug
           ? `/${brandKey}/${sectionSlug}/index.html`
           : `/${brandKey}/index.html`);
+        // Section / page only. Brand instances are on their way out (D7 of
+        // access-plan.md removes multi-brand), so the subsection crumb is
+        // deliberately not threaded through here.
         pageSubbar = buildBar({
-          sectionHref: overviewHref,
-          sectionLabel,
-          title,
+          crumbs: [{ label: sectionLabel, href: overviewHref }, { label: title }],
+          closeHref: overviewHref,
+          closeLabel: sectionLabel,
           mdHref: `${navBase}${BRANDS_REL}/${brandKey}/${filename}`,
         });
       }
@@ -3987,6 +4926,10 @@ function generateSourceDirPages(template, {
       closeErrors.push(`  ${dirName}/${slug}.md — invalid type "${frontmatter.type}" (valid: ${Object.keys(PAGE_TYPES).join(', ')})`);
       continue;
     }
+    if (!isValidAccess(frontmatter.access)) {
+      closeErrors.push(`  ${dirName}/${slug}.md - invalid access "${frontmatter.access}" (must be one of: public, team, admin, or absent, which is team)`);
+      continue;
+    }
 
     // An HTML-bodied type needs its sibling; a markdown-bodied one must not
     // have one, or the .md's own content would be silently ignored.
@@ -4037,7 +4980,17 @@ function generateSourceDirPages(template, {
       // global: one page holds one manifest, and a second copy would
       // duplicate its id.
       content = content.replace(/^[^\S\n]*\{\{icon-manifest\}\}[^\S\n]*$/m, renderIconManifest);
+      content = content.replace(/^[^\S\n]*\{\{asset-manifest\}\}[^\S\n]*$/m, renderAssetManifest);
+      content = content.replace(/^[^\S\n]*\{\{showcase-manifest\}\}[^\S\n]*$/m, renderShowcaseManifest);
     }
+    // A tool's chrome animates in without its author writing a word of it;
+    // a page body's frames, figures and tables reveal as a doc's do. The
+    // same narrow pass markdown bodies get, not the markdown pipeline.
+    if (type.name === 'tool') {
+      content = stampToolMotion(content);
+      assertStamped(content, new RegExp('<div\\b' + ATTRS + '\\sclass="tool-canvas"' + ATTRS + '>', 'g'), 'tool canvases', `${dirName}/${slug}.html`);
+    }
+    if (type.name === 'page') content = stampBodyMotion(content);
 
     // Assert the close came out navigable. The check above proves the attribute
     // is there; this proves fillPageClose actually resolved it. Nothing in the
@@ -4068,9 +5021,9 @@ function generateSourceDirPages(template, {
       article: type.article,
       stickyBar: type.stickyBar
         ? buildBar({
-            sectionHref: upHref,
-            sectionLabel: upLabel,
-            title: frontmatter.title || slug,
+            crumbs: [{ label: upLabel, href: upHref }, { label: frontmatter.title || slug }],
+            closeHref: upHref,
+            closeLabel: upLabel,
             // A framed tool's bar lines up with the tool column; a full-bleed
             // one (bar-width: "full") spans, matching the canvas below it.
             width: frontmatter['bar-width'] === 'full' ? null : 'tool',
@@ -4102,9 +5055,15 @@ function generateSourceDirPages(template, {
     console.log(`📄 Generated: ${folder}/${slug}.html`);
     generated.push(`${folder}/${slug}.html`);
     // The examples are specimens of the page types, not pages anyone reads,
-    // so they cannot opt out of the gate whatever their frontmatter says.
-    if (frontmatter.access === 'public' && dirName !== 'examples') {
-      publicPages.add(`/${folder}/${slug}.html`);
+    // so they stay off the map and gated to the team whatever their
+    // frontmatter says.
+    if (dirName !== 'examples') {
+      pageAccess.set(`/${folder}/${slug}.html`, {
+        level: normaliseLevel(frontmatter.access),
+        section: folder,
+        type: type.name,
+        title: frontmatter.title || slug,
+      });
     }
   }
 
@@ -4119,6 +5078,311 @@ function generateSourceDirPages(template, {
   }
 
   return generated;
+}
+
+//------- Showcase -------//
+//
+// Components on social frames, as posts (handovers/HANDOVER-showcase.md).
+// The sources are cms/showcase/<slug>.json + <slug>.html, loaded and checked
+// by ./showcase.js. Three outputs:
+//
+//   /showcase/index.html     the feed, PUBLIC: every published post, newest first
+//   /showcase/<slug>.html    one post, PUBLIC, for a story's link sticker
+//   {{showcase-manifest}}    every asset, drafts included, inlined into the
+//                            edit view — a gated tool page, so drafts never
+//                            reach a public URL
+//
+// The public pages are `page`-type pages in the docs chrome (site header,
+// sidebar, footer), rendered through renderPage the way a section index is.
+// They are public: a visitor from Instagram gets the post under the locked
+// sidebar (nav.js canOpen, the 2026-10-01 decision), not a login wall. Each
+// post is one social card (showcaseCard): author, the live stage, an action
+// row, a caption. The card leaves mount points for the controls showcase.js
+// adds (play, layers).
+//
+// No public JSON file carries the assets: each public page inlines only what
+// it shows, which is how a draft stays off the open web.
+
+let SHOWCASE = null;
+
+function loadShowcaseOnce() {
+  if (SHOWCASE) return SHOWCASE;
+  const loaded = showcase.loadShowcase(
+    path.join(DOCS_DIR, 'showcase'),
+    path.resolve(ROOT, PROJECT_CONFIG.designSystemPath),
+    ROOT,
+  );
+  if (loaded.errors.length > 0) {
+    console.error('\n❌ cms/showcase — fix these before the build can ship a post:');
+    console.error(loaded.errors.join('\n'));
+    console.error('\nThe contract is assets/data/showcase-asset.schema.json; cms/showcase-docs.md walks through it.\n');
+    process.exit(1);
+  }
+  // {{icon:name}} expands in an asset's markup as it does in a tool body:
+  // brand icons only (CLAUDE.md §3), and no raw SVG pasted into the sources.
+  SHOWCASE = loaded.assets.map((asset) => ({
+    ...asset,
+    html: asset.html.replace(/\{\{icon:([a-z0-9-]+)\}\}/g, (match, name) => getIcon(name)),
+  }));
+  return SHOWCASE;
+}
+
+/** The frames and grounds as the runtime reads them (showcase-stage.js). */
+function showcaseConfigBlock() {
+  const json = JSON.stringify({ frames: showcase.FRAMES, backgrounds: showcase.BACKGROUNDS })
+    .replace(/</g, '\\u003c');
+  return `<script type="application/json" id="showcase-config">${json}</script>`;
+}
+
+// The drawn cursor's shapes, from the site's two-colour cursor set
+// (assets/images/svg-cursors/, cms/iconography.md "Cursor Sprite"): fixed
+// black-and-white artwork with its own white edge, as a real pointer has, so
+// it reads on any ground. Not brand icons, so not .svg-icn; the runtime
+// clones them by data-cursor. The set's files carry xmlns and a fixed size
+// for the sprite; inline they take the wrapper's size instead.
+const SHOWCASE_CURSORS = { arrow: 'cursor-arrow', pointer: 'cursor-hand-pointing-dark' };
+
+/** The brand icons and cursor drawings the runtime clones. */
+function showcaseIconsBlock() {
+  const names = ['play-outline', 'pause', 'stack'];
+  const cursors = Object.entries(SHOWCASE_CURSORS).map(([shape, name]) => {
+    const file = path.join(ROOT, 'assets/images/svg-cursors', `${name}.svg`);
+    if (!fs.existsSync(file)) {
+      console.error(`❌ Showcase: the cursor drawing assets/images/svg-cursors/${name}.svg is missing`);
+      process.exit(1);
+    }
+    const svg = fs.readFileSync(file, 'utf8').trim()
+      .replace(/\s(?:xmlns|width|height)="[^"]*"/g, '')
+      .replace(/^<svg\b/, '<svg width="100%" height="100%"');
+    return `<div class="showcase-cursor-art" data-cursor="${shape}">${svg}</div>`;
+  });
+  return `<template id="showcase-icons">${names.map((name) => getIcon(name)).join('')}${cursors.join('')}</template>`;
+}
+
+/**
+ * {{showcase-manifest}} in the edit view's body: every asset, drafts
+ * included, plus the config and icons. The edit view is a team page.
+ */
+function renderShowcaseManifest() {
+  const assets = loadShowcaseOnce();
+  const json = `[${assets.map(showcase.serialiseAsset).join(',')}]`;
+  return [
+    showcaseConfigBlock(),
+    showcaseIconsBlock(),
+    `<script type="application/json" id="showcase-manifest">${json}</script>`,
+  ].join('\n');
+}
+
+function showcaseDate(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${d} ${months[m - 1]} ${y}`;
+}
+
+/** One post's live stage, with its asset inlined for showcase.js. */
+function showcaseHost(asset) {
+  return `<div class="showcase-host" data-showcase-slug="${escapeAttr(asset.slug)}">
+                    <script type="application/json" class="showcase-asset">${showcase.serialiseAsset(asset)}</script>
+                    <noscript><p class="showcase-noscript">This post is a live component. Turn on JavaScript to see it.</p></noscript>
+                  </div>`;
+}
+
+/**
+ * One post as a social card. `kind` is where it sits: on the feed the head
+ * carries the one way into the post's page (the full-screen button; the
+ * title is a heading, not a second link to the same place); on the post
+ * page the title is the h1. The action row leaves mount points for the controls
+ * showcase.js adds (play when the asset has steps, layers when it has any a
+ * reader may switch); the heart is a picture until likes ship (ROADMAP,
+ * Showcase). The author comes from cms/showcase/authors.json; the brand's own
+ * entry may leave its name to the deployment.
+ */
+function showcaseCard(asset, { kind, navBase }) {
+  const { slug, data, author } = asset;
+  const titleId = `post-${escapeAttr(slug)}`;
+  const title = escapeAttr(data.title);
+  const name = escapeAttr((author && author.name) || SITE.name);
+  const initials = escapeAttr(author ? author.initials : '');
+  const avatar = author && author.avatar ? `<img src="${navBase}${escapeAttr(author.avatar)}" alt="">` : '';
+  const heading = kind === 'feed'
+    ? `<h2 class="text-size-l showcase-post-title" id="${titleId}">${title}</h2>`
+    : `<h1 class="text-size-l showcase-post-title" id="${titleId}">${title}</h1>`;
+  const open = kind === 'feed'
+    ? `
+                    <a class="button showcase-post-open" data-variant="text" data-icon-only href="${escapeAttr(slug)}.html" aria-label="Open ${title}">${getIcon('full-screen')}</a>`
+    : '';
+  return `<article class="showcase-post" aria-labelledby="${titleId}">
+                  <header class="showcase-post-head">
+                    <div class="showcase-post-author">
+                      <span class="avatar" aria-hidden="true">${initials}${avatar}</span>
+                      <span class="showcase-post-author-name">${name}</span>
+                    </div>${open}
+                  </header>
+                  ${showcaseHost(asset)}
+                  <div class="showcase-post-actions">
+                    <div class="showcase-post-primary">
+                      <span class="showcase-post-heart" aria-hidden="true">${getIcon('heart')}</span>
+                      <span class="showcase-post-play" data-showcase-play></span>
+                    </div>
+                    <span class="showcase-post-layers" data-showcase-layers></span>
+                  </div>
+                  <div class="showcase-post-caption">
+                    ${heading}
+                    <p class="text-secondary">${escapeAttr(data.description)}</p>
+                    <time class="text-size-xs text-faded" datetime="${data.date}">${showcaseDate(data.date)}</time>
+                  </div>
+                </article>`;
+}
+
+/**
+ * worker/showcase-assets.mjs: what the overrides API may accept, per asset.
+ * Written on every full build, like page-access.mjs, so the Worker checks a
+ * save against the assets that exist rather than a list that could go stale.
+ */
+function writeShowcaseCatalogue(assets) {
+  const workerDir = path.join(ROOT, 'worker');
+  if (!fs.existsSync(workerDir)) return;
+  const catalogue = {
+    backgrounds: showcase.BACKGROUNDS,
+    fixedGrounds: showcase.FIXED_GROUNDS,
+    themes: showcase.THEMES,
+    assets: Object.fromEntries(assets.map((asset) => {
+      const layers = [...new Set((asset.html.match(/\sdata-layer\s*=\s*["']([^"']*)["']/g) || [])
+        .map((m) => m.replace(/^.*=\s*["']/, '').replace(/["']$/, '')))];
+      if (asset.data.annotations.length > 0) layers.push(showcase.ANNOTATIONS_LAYER);
+      for (const spec of Object.values(asset.specData || {})) {
+        for (const toggle of showcase.specToggles(spec)) if (!layers.includes(toggle.id)) layers.push(toggle.id);
+      }
+      return [asset.slug, {
+        background: asset.data.background,
+        theme: asset.data.theme,
+        props: Object.keys(asset.data.props),
+        choices: asset.data.choices || {},
+        layers,
+      }];
+    })),
+  };
+  const banner = `/**
+ * showcase-assets.mjs - GENERATED by cms/generator/generate-docs.js, do not edit.
+ *
+ * What the Showcase overrides API (worker/showcase.js) accepts for each asset
+ * in cms/showcase/: its props, their choices, its layers, and the allowed
+ * grounds and themes. Rewritten on every full docgen.
+ */
+`;
+  fs.writeFileSync(path.join(workerDir, 'showcase-assets.mjs'), `${banner}export const SHOWCASE_CATALOGUE = Object.freeze(${JSON.stringify(catalogue, null, 2)});\n`);
+  console.log(`📄 Generated: worker/showcase-assets.mjs (${assets.length} assets)`);
+}
+
+/**
+ * A public Showcase page through the docs template: the chrome every docs
+ * page has, public access, one section slug for Barba. No <article> frame
+ * around the content: the card is the article.
+ */
+function renderShowcasePage(template, { title, description, header, stickyBar, content, level, order }) {
+  return renderPage(template, {
+    space: ROOT_SPACE,
+    navBase: '../',
+    title: escapeAttr(title),
+    description: escapeAttr(description),
+    header,
+    stickyBar,
+    content,
+    access: 'public',
+    sectionSlug: 'showcase',
+    pageSection: 'showcase',
+    order,
+    level,
+    frame: PAGE_TYPES.page.frame,
+    article: false,
+    chrome: PAGE_TYPES.page.chrome,
+  });
+}
+
+function generateShowcasePages(template) {
+  const assets = loadShowcaseOnce();
+  const published = assets.filter((asset) => asset.data.published);
+  const dir = path.join(OUTPUT_DIR, 'showcase');
+  fs.mkdirSync(dir, { recursive: true });
+
+  // A post that was published and is now a draft must not linger at its old
+  // URL, so every generated post page not in this build is removed.
+  const keep = new Set(['index.html', ...published.map((asset) => `${asset.slug}.html`)]);
+  for (const file of fs.readdirSync(dir)) {
+    if (file.endsWith('.html') && !keep.has(file)) {
+      fs.unlinkSync(path.join(dir, file));
+      console.log(`🗑️  Removed: showcase/${file} (no longer published)`);
+    }
+  }
+
+  writeShowcaseCatalogue(assets);
+
+  const navBase = '../';
+  // The config and icons sit inside the container, so a Barba swap brings
+  // them with the page (showcase-stage.js reads them by id).
+  const blocks = `${showcaseConfigBlock()}
+            ${showcaseIconsBlock()}`;
+  const intro = `Live components from the ${escapeAttr(SITE.name)} design system. Each post works: open it, tap it, try it.`;
+
+  const feedItems = published.map((asset) => `
+                <li>${showcaseCard(asset, { kind: 'feed', navBase })}</li>`).join('');
+  const feedContent = `<div data-showcase-page="feed">
+            <div class="container-xs">
+              ${published.length > 0
+                ? `<ol class="showcase-feed" role="list">${feedItems}
+              </ol>`
+                : '<p class="text-secondary">The first posts are on their way.</p>'}
+            </div>
+            ${blocks}
+          </div>`;
+
+  fs.writeFileSync(path.join(dir, 'index.html'), renderShowcasePage(template, {
+    title: 'Showcase',
+    description: 'Live components from the design system, every state on a social frame. Each post is the real component: open it, tap it, try it.',
+    header: buildPageHeaderHtml({ eyebrow: escapeAttr(SITE.name), title: 'Components you can tap, not screenshots', subtitle: intro }),
+    // The feed belongs to no section, so it closes to home.
+    stickyBar: buildBar({ crumbs: [], closeHref: siteHref('/index.html'), closeLabel: 'Home' }),
+    content: feedContent,
+    level: 1,
+    order: 0,
+  }));
+  console.log(`📄 Generated: showcase/index.html (${published.length} of ${assets.length} posts published)`);
+  pageAccess.set('/showcase/index.html', { level: 'public', section: '', type: 'page', title: 'Showcase' });
+
+  for (const asset of published) {
+    const { slug, data } = asset;
+    const frameSwitch = data.frames.length > 1
+      ? `
+                <div class="segmented-control showcase-frame-switch" data-variant="faded" role="radiogroup" aria-label="Frame">
+                  ${data.frames.map((frame, i) => `<label class="segmented-control-option"><input type="radio" name="showcase-frame" value="${frame}"${i === 0 ? ' checked' : ''}><span>${showcase.FRAMES[frame].label}</span></label>`).join('\n                  ')}
+                </div>`
+      : '';
+    const content = `<div data-showcase-page="post">
+            <div class="container-xs">
+              <div class="block gap-l">
+                <a class="button showcase-back" data-variant="text" href="index.html">${getIcon('arrow-left')}<span>All posts</span></a>${frameSwitch}
+                ${showcaseCard(asset, { kind: 'post', navBase })}
+              </div>
+            </div>
+            ${blocks}
+          </div>`;
+    fs.writeFileSync(path.join(dir, `${slug}.html`), renderShowcasePage(template, {
+      title: data.title,
+      description: data.description,
+      // The card carries the h1; a page header would say the title twice.
+      header: '',
+      stickyBar: buildBar({
+        crumbs: [{ label: 'Showcase', href: 'index.html' }, { label: escapeAttr(data.title) }],
+        closeHref: 'index.html',
+        closeLabel: 'Showcase',
+      }),
+      content,
+      level: 2,
+      order: 1,
+    }));
+    console.log(`📄 Generated: showcase/${slug}.html`);
+    pageAccess.set(`/showcase/${slug}.html`, { level: 'public', section: '', type: 'page', title: data.title });
+  }
 }
 
 /**
@@ -4140,7 +5404,9 @@ function buildToolRegistryFromFrontmatter() {
         title: frontmatter.title || slug,
         subtitle: frontmatter.subtitle || '',
         author: frontmatter.author || '',
-        toolAccess: frontmatter.actionAccess || frontmatter.toolAccess || 'brand',
+        // The app's own level: a brand space lists the public tools and
+        // none of the team's. (`actionAccess:` on the guides is gone.)
+        toolAccess: appAccess(slug, 'team'),
         actionUrl: toolActionUrl
       };
     }
@@ -4220,7 +5486,7 @@ function generateBrandSectionOverviews(template, themes) {
     // a brand instance taught a different structure from the site it lives in.
     const docsPages = (theme.pages || []).filter(p => p.section === 'Docs' && p.title !== 'Overview');
     if (docsPages.length > 0) {
-      let cards = '<div class="docs-section"><div class="book-contents">';
+      let cards = '<div class="docs-section"><div class="book-contents"' + MOTION.contents + '>';
       for (const page of docsPages) {
         // page.href is already absolute (`/<brand>/docs/<file>.html`).
         cards += renderBookContentsItem({
@@ -4240,7 +5506,7 @@ function generateBrandSectionOverviews(template, themes) {
     // Tools overview — cards for tools this brand has access to (from frontmatter)
     const brandToolKeys = Object.keys(toolRegistry).filter(slug => brandHasToolAccess(toolRegistry[slug].toolAccess, brandKey));
     if (brandToolKeys.length > 0) {
-      let cards = '<div class="docs-section"><div class="book-contents">';
+      let cards = '<div class="docs-section"><div class="book-contents"' + MOTION.contents + '>';
       for (const toolKey of brandToolKeys) {
         const tool = toolRegistry[toolKey];
         cards += renderBookContentsItem({
@@ -4662,7 +5928,7 @@ function generateBrandBook(template, themes) {
     // Demonstrates: book-cover, card-title, card-description, grid layout.
     contentHtml += `<section class="brand-book-section block gap-l">
       <h2>Three things worth your time</h2>
-      <div class="book-shelf" data-cols="3">
+      <div class="book-shelf" data-cols="3"${MOTION.shelf}>
         ${renderBookCover({ href: '#', title: 'Catchy article title example', subtitle: 'A short preview of the article content, crafted to grab attention and spark curiosity. Just enough to tempt the reader to click.' })}
         ${renderBookCover({ href: '#', title: 'Bold title for a blog post', subtitle: 'A few compelling lines that hint at the story within. Use this space to draw the reader in with tone, intrigue, or a bold statement.' })}
         ${renderBookCover({ href: '#', title: 'Short and scroll-stopping', subtitle: 'Bold insights, fresh thinking, and a reason to scroll. This placeholder shows how a post excerpt will look in your feed layout.' })}
@@ -4760,7 +6026,7 @@ function generateBrandIndexPages(template, themes) {
 
       contentHtml += `<div class="docs-section">
       <h2 class="book-shelf-title">${section}</h2>
-      <div class="book-shelf">`;
+      <div class="book-shelf"${MOTION.shelf}>`;
       for (const page of sectionGroups[section]) {
         // page.href is absolute (`/<brand>/<section>/<file>.html`) — use as-is.
         contentHtml += renderBookCover({
@@ -4778,7 +6044,7 @@ function generateBrandIndexPages(template, themes) {
     if (brandToolKeys.length > 0) {
       contentHtml += `<div class="docs-section">
       <h2 class="book-shelf-title">Tools</h2>
-      <div class="book-shelf">`;
+      <div class="book-shelf"${MOTION.shelf}>`;
       // Tools overview card first
       const toolsOverviewPage = (theme.pages || []).find(p => p.section === 'Tools' && p.title === 'Overview');
       if (toolsOverviewPage) {
@@ -4894,11 +6160,12 @@ function applyTemplateChrome(rawTemplate) {
   // kit-bundled pair copied into the output
   let uiScripts = CONFIG.uiScripts;
   if (uiScripts === null) {
-    uiScripts = ['assets/docs-kit/copy-button.js', 'assets/docs-kit/swatch.js', 'assets/docs-kit/docs-copy-chrome.js', 'assets/docs-kit/dropdown.js'];
+    uiScripts = ['assets/docs-kit/copy-button.js', 'assets/docs-kit/swatch.js', 'assets/docs-kit/docs-copy-chrome.js', 'assets/docs-kit/dropdown.js', 'assets/docs-kit/breadcrumb.js'];
     copyKitAsset('js/copy-button.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'copy-button.js'));
     copyKitAsset('js/swatch.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'swatch.js'));
     copyKitAsset('js/docs-copy-chrome.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'docs-copy-chrome.js'));
     copyKitAsset('js/dropdown.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'dropdown.js'));
+    copyKitAsset('js/breadcrumb.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'breadcrumb.js'));
   }
 
   // All configured paths are site-root-relative; the {{NAV_BASE}} prefix
@@ -4956,6 +6223,7 @@ function applyTemplateChrome(rawTemplate) {
     .replace('{{EXTRA_STYLESHEETS}}', () => styleLinks)
     .replace('{{EXTRA_HEAD}}', () => CONFIG.extraHeadHtml.trimEnd())
     .replace('{{BODY_ATTRS}}', () => CONFIG.bodyAttrs)
+    .replace('{{EXTRA_BODY_START}}', () => CONFIG.extraBodyStartHtml.trimEnd())
     .replace('{{WRAPPER_ATTRS}}', () => wrapperAttrs)
     // {{CONTAINER_EXTRA}} rides along after the configured container attrs so
     // a page can add its own without every consumer config having to declare
@@ -5024,6 +6292,11 @@ async function generateDocs() {
 
   console.log('✅ Template loaded');
 
+  // Loaded on every run, single-file included: glossary.md's body is built
+  // from it. A broken entry fails the build here, before anything is written.
+  GLOSSARY = loadGlossary(DOCS_DIR, parseFrontmatter);
+  if (GLOSSARY) console.log(`✅ Glossary loaded: ${GLOSSARY.published.length} of ${GLOSSARY.entries.length} entries published`);
+
   // Find all markdown files (exclude generator folder and README files)
   // We always parse ALL files to build navigation, even for single-file mode
   const markdownFiles = fs.readdirSync(DOCS_DIR)
@@ -5058,8 +6331,9 @@ async function generateDocs() {
   const VALID_SIDEBAR = new Set(['collapsed', 'expanded']);
   const layerErrors = [];
   const typeErrors = [];
-  // Every portable Website page owes the styleguide an entry (see the gate below).
+  // Every portable Foundations or Web page owes the styleguide an entry (see the gate below).
   const styleguideExpected = [];
+  const brandLeaks = [];
   // Every page the build actually produces, by output slug. The gate's stale
   // check reads this rather than the required set, so that showing something
   // extra stays legal and only a slug matching no page at all is an error.
@@ -5088,12 +6362,18 @@ async function generateDocs() {
       }
     }
 
+    // Validate the level. Absent is team; present and unknown fails the
+    // build, the way a bad layer does - the gate reads this field.
+    if (!isValidAccess(parsed.frontmatter.access)) {
+      typeErrors.push(`  ${filename} - invalid access "${parsed.frontmatter.access}" (must be one of: public, team, admin, or absent, which is team)`);
+    }
+
     // Validate page type. Unlike layer, `type:` is optional — an absent type
     // means `doc`, which is what nearly every page is. Only a value that is
     // present and unrecognised fails, because that is a typo silently getting
     // doc chrome rather than the chrome the author asked for.
     // The styleguide shows the system in one scroll, so every portable
-    // Website page has to appear on it. Collected here, checked after the
+    // Foundations or Web page has to appear on it. Collected here, checked after the
     // loop — `styleguide-exempt` opts out a page with nothing to specimen.
     // Keyed on the output folder, not the section label: renaming the section
     // in config would silently empty this set and disable the gate forever,
@@ -5102,7 +6382,11 @@ async function generateDocs() {
     const outPath = out.folder ? `${out.folder}/${out.htmlName}` : out.htmlName;
     styleguideKnown.add(styleguideSlug(outPath));
 
-    if (SECTION_FOLDERS[frontmatter.section] === 'website'
+    // Foundations and Web hold the engine's pages since the 2026-10-08
+    // restructure; brand pages that moved into Foundations are this brand's
+    // content, not a specimen, so they stay out.
+    if (STYLEGUIDE_FOLDERS.has(out.folder)
+        && !isBrandContent(filename)
         && (frontmatter.layer === 'foundation' || frontmatter.layer === 'core')
         && String(frontmatter['styleguide-exempt']) !== 'true') {
       styleguideExpected.push({
@@ -5110,6 +6394,17 @@ async function generateDocs() {
         title: frontmatter.title || filename,
         htmlPath: outPath,
       });
+    }
+
+    // Brand content is kept out of llms-full.txt, the "Use in another product"
+    // appendix and the styleguide by its filename alone (portable.js). Since
+    // the 2026-10-08 restructure brand pages sit inside Foundations › Identity,
+    // so a rename there would leak this brand's content into what ships with
+    // the package without a word. Fail the build instead.
+    const brandHome = BRAND_CONTENT_FOLDERS.has(out.folder)
+      || (out.folder === 'foundations' && frontmatter.subsection === 'Identity');
+    if (brandHome && frontmatter.layer === 'core' && !isBrandContent(filename)) {
+      brandLeaks.push(`  ${filename} (${out.folder}/${out.htmlName})`);
     }
 
     if (frontmatter.type && !Object.prototype.hasOwnProperty.call(PAGE_TYPES, frontmatter.type)) {
@@ -5157,6 +6452,9 @@ async function generateDocs() {
       // page's own field may open it (access-plan.md §12.4): a default of
       // "public" would otherwise open every page that says nothing.
       ownAccess: parsed.frontmatter.access,
+      // Site-absolute hrefs, for a root page served at other URLs - see
+      // generatePage's navBase. Only a filenameOverrides entry can ask.
+      base: FILENAME_OVERRIDES[filename] && FILENAME_OVERRIDES[filename].base ? FILENAME_OVERRIDES[filename].base : null,
       content: markdownContent
     };
 
@@ -5207,7 +6505,7 @@ async function generateDocs() {
   // docs kit.
   if (fs.existsSync(path.join(DOCS_DIR, STYLEGUIDE_SOURCE)) && styleguideExpected.length === 0) {
     console.error('\n❌ The styleguide gate matched no pages at all.');
-    console.error('   Nothing maps to the "website" output folder, so the gate is inert.');
+    console.error('   Nothing maps to the "foundations" or "web" output folder, so the gate is inert.');
     console.error('   Check sectionFolders in docs.config.js.\n');
     process.exit(1);
   }
@@ -5226,6 +6524,15 @@ async function generateDocs() {
       process.exit(1);
     }
     slugOwners.set(slug, page.filename);
+  }
+
+  if (brandLeaks.length > 0) {
+    console.error(`\n❌ ${brandLeaks.length} core page(s) in a brand section lost the brand- / social- / channels- filename prefix:`);
+    console.error(brandLeaks.join('\n'));
+    console.error('\ncms/generator/portable.js keys on that prefix to keep brand content out of llms-full.txt,');
+    console.error('the "Use in another product" appendix and the styleguide. Restore the prefix, or');
+    console.error('separate the engine half from the brand half before renaming (decision 40).\n');
+    process.exit(1);
   }
 
   const { missing, stale, empty } = validateStyleguideCoverage(styleguideExpected, styleguideKnown);
@@ -5261,6 +6568,10 @@ async function generateDocs() {
   // Re-uses the exact rendering order produced by buildNavSectionsHtml.
   const sidebarOrderMap = buildSidebarOrderMap(filesBySection);
 
+  // Which subsections get a heading on their section index — what a doc
+  // page's subsection crumb can link to.
+  const subsectionHeadings = buildSubsectionHeadings(filesBySection);
+
   // Determine which files to write
   const filesToWrite = isSingleFile
     ? allFiles.filter(f => filter.has(f.filename))
@@ -5275,7 +6586,7 @@ async function generateDocs() {
 
   // Generate HTML for target files
   for (const file of filesToWrite) {
-    const pageContent = generatePage(file, template, pageOrder, sidebarOrderMap);
+    const pageContent = generatePage(file, template, pageOrder, sidebarOrderMap, subsectionHeadings);
 
     // Ensure output directory exists
     if (file.htmlFolder) {
@@ -5286,7 +6597,12 @@ async function generateDocs() {
     const outputPath = path.join(OUTPUT_DIR, file.htmlPath);
     fs.writeFileSync(outputPath, pageContent);
     console.log(`📄 Generated: ${file.htmlPath}`);
-    if (file.ownAccess === 'public') publicPages.add('/' + file.htmlPath);
+    pageAccess.set('/' + file.htmlPath, {
+      level: normaliseLevel(file.ownAccess),
+      section: file.htmlFolder,
+      type: resolvePageType(file.frontmatter).name,
+      title: file.title,
+    });
   }
 
   // Section index pages — only during full build
@@ -5296,6 +6612,20 @@ async function generateDocs() {
       if (!sectionFolder) continue;
       const sectionIndexHtml = generateSectionIndexPage(section, template, filesBySection[section], filesBySection);
       if (sectionIndexHtml) {
+        // Every subsection heading is a breadcrumb landing, so its id has to
+        // be the only one on the page — a second element with it would take
+        // the crumb somewhere else without an error. The emitted HTML covers
+        // the generator's own ids; RUNTIME_IDS covers the ones scripts add
+        // after load (nav.js, search.js).
+        for (const sub of subsectionHeadings[section] || []) {
+          const id = subsectionAnchorId(sub);
+          const count = (sectionIndexHtml.match(new RegExp(`\\sid="${id}"`, 'g')) || []).length;
+          const runtime = RUNTIME_IDS.has(id);
+          if (count !== 1 || runtime) {
+            console.error(`\n❌ ${sectionFolder}/index.html — subsection "${sub}" anchors at #${id}, which ${runtime ? 'a script also assigns at runtime' : `appears ${count} times`}. Rename the subsection.\n`);
+            process.exit(1);
+          }
+        }
         const dir = path.join(OUTPUT_DIR, sectionFolder);
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, 'index.html'), sectionIndexHtml);
@@ -5307,6 +6637,10 @@ async function generateDocs() {
   // Standalone source directories — only during full build. Both join no
   // section, so nothing above depends on them and nothing below reads them.
   if (!isSingleFile) {
+    // Showcase first: the edit view (cms/apps/showcase.html) inlines every
+    // asset through {{showcase-manifest}}, so they must be loaded and checked
+    // before the tools are written.
+    if (CONFIG.showcase) generateShowcasePages(template);
     generateSourceDirPages(template, { dirName: 'apps', toolHook: true });
     // The examples have no index of their own — the page-layouts reference is
     // their contents page, so that is where they close to.
@@ -5318,6 +6652,21 @@ async function generateDocs() {
       closeLabel: 'Page Layouts',
     });
   }
+
+  // Glossary entry pages and the feed. Full builds only, like the source
+  // directories above: they join no section and nothing else reads them.
+  // Entry pages take the Glossary page's own level, so opening the glossary
+  // is one field in cms/glossary.md rather than one per entry.
+  if (!isSingleFile && GLOSSARY) {
+    const index = allFiles.find(f => f.htmlPath === 'glossary.html');
+    generateGlossaryPages(template, GLOSSARY, normaliseLevel(index ? index.ownAccess : undefined));
+  }
+
+  // The site-map data behind experiments/site-map.html — every page with its
+  // template, place, level and status, from the objects built above. Full
+  // builds only, like the section indexes: a single-file run has not walked
+  // cms/apps/ and would write a map with no tools on it.
+  if (!isSingleFile && CONFIG.siteMap) writeSiteMapData(allFiles, cmsDefaults);
 
   // Always regenerate nav.js (sidebar needs to stay current)
   const navJs = generateNavJs(filesBySection);
@@ -5341,9 +6690,11 @@ async function generateDocs() {
     writeThemeConfig(themes);
   }
 
-  // After every emitter has run. Never on a single-file build: a partial set
-  // written here would gate every page the filter left out.
-  if (!isSingleFile) writePublicPages();
+  // After every emitter has run. Never on a single-file build: a partial map
+  // written here would gate every page the filter left out as a team page
+  // that does not exist.
+  if (!isSingleFile && CONFIG.accessGate) writePageAccess();
+  if (!isSingleFile && CONFIG.assetLibrary) writeLibraryIndex();
 
   if (isSingleFile) {
     console.log(`✅ Done — regenerated ${filesToWrite.length} page(s) + nav.js`);

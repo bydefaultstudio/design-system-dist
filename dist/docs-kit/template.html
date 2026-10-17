@@ -3,6 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Motion guard, ahead of every stylesheet. bd-animate.css holds the
+         elements bd-animate.js animates at opacity 0 only under html.js, so
+         a reader with scripts off never waits for anything. The timed
+         release lets a page whose engine never arrived (a 404, an exception
+         before init) reveal itself late rather than never; the engine's
+         own font wait is 2500ms, so it normally signals ready first. The
+         second timer is the curtain's: bd-intro.css shows the curtain
+         under html.js from first paint, so one whose script never ran
+         (a 404) is hidden again at 5s, and the timer says so the way the
+         script would (the latch and bd:intro-leaving), or the engine's
+         held reveals would wait forever. The script's own cap is 4.5s on
+         the same clock, so on a working page this never fires. Kept
+         outside the theme loader's try/catch (head.html) on purpose. -->
+    <script>document.documentElement.classList.add('js');setTimeout(function(){if(!document.documentElement.hasAttribute('data-bd-ready'))document.documentElement.classList.add('bd-animate-off');},3000);setTimeout(function(){var h=document.documentElement;if(h.hasAttribute('data-bd-intro-left'))return;h.classList.add('bd-intro-off');h.setAttribute('data-bd-intro-left','');document.dispatchEvent(new CustomEvent('bd:intro-leaving'));},5000);</script>
     <title>{{PAGE_TITLE}} - {{SITE_NAME}}</title>
     <meta name="description" content="{{META_DESCRIPTION}}">
 {{SEARCH_META}}
@@ -31,6 +45,7 @@
     {{EXTRA_HEAD}}
 </head>
 <body{{BODY_ATTRS}}>
+    {{EXTRA_BODY_START}}
 
     <!-- Pre-paint sidebar-state guard: nav.js restores the collapsed state
          from localStorage only after it loads, so without this a collapsed
@@ -42,12 +57,16 @@
          collapsed) unless the last session check in this browser said
          signed in: the check itself lands after paint, and a sidebar
          dropping from full width to the rail would be a visible shift.
-         header-account.js writes bd-session-hint; nav.js applies the lock.
-         A gated page never starts locked: the gate already proved a
-         session. Neither branch writes the stored collapse preference.
-         With storage blocked there is no hint, so a signed-in reader sees
-         a public page paint locked and then open once the check lands. -->
-    <script>(function(){var b=document.body,h=null,c=null;try{h=localStorage.getItem('bd-session-hint');c=localStorage.getItem('docs-sidebar-collapsed');}catch(e){}var l=b.getAttribute('data-access')==='public'&&h!=='in';if(l)b.classList.add('is-signed-out');if(l||c==='true')b.classList.add('sidebar-collapsed');})();</script>
+         header-account.js writes bd-session-hint - the reader's role,
+         admin, team or guest, or out - and nav.js applies the locks.
+         The role goes on body[data-role] so admin links and cards are
+         hidden before paint for everyone else rather than flickering
+         away (permissions-plan.md §4.5); the CSS keys on it. A gated page
+         never starts locked: the gate already proved a session. Neither
+         branch writes the stored collapse preference. With storage blocked
+         there is no hint, so a signed-in reader sees a public page paint
+         locked and then open once the check lands. -->
+    <script>(function(){var b=document.body,h=null,c=null;try{h=localStorage.getItem('bd-session-hint');c=localStorage.getItem('docs-sidebar-collapsed');}catch(e){}var r=h==='admin'||h==='team'||h==='guest';if(r)b.setAttribute('data-role',h);var l=b.getAttribute('data-access')==='public'&&!r&&h!=='in';if(l)b.classList.add('is-signed-out');if(l||c==='true')b.classList.add('sidebar-collapsed');})();</script>
 
     <!-- Design system missing banner (shown by JS if CSS variables fail to load) -->
     <div id="ds-missing-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#fffbea;border-bottom:1px solid #f0c040;padding:12px 20px;font-family:sans-serif;font-size:14px;color:#7a5c00;align-items:center;gap:12px;">
@@ -67,8 +86,15 @@
          to `generic` instead of `contentinfo`, because footer only becomes the
          landmark when it is not inside main. nav.js gives this element id="main"
          for the skip link, which it finds by class, so the element name is free
-         to be the honest one. -->
-    <div class="docs-layout" id="site-nav" data-base="{{NAV_BASE}}"{{LAYOUT_ATTRS}}>
+         to be the honest one.
+
+         data-bd-chrome marks the persistent chrome for bd-animate.js: the
+         entrances (data-bd-enter only) in the header and sidebar nav.js
+         injects here play once per document (bdAnimateChromeIn), never on
+         a page swap. The engine skips anything already on its way in, so
+         the page container sitting inside this scope is not entered
+         twice. -->
+    <div class="docs-layout" id="site-nav" data-base="{{NAV_BASE}}" data-bd-chrome{{LAYOUT_ATTRS}}>
     <div class="docs-main-area">
     <div{{WRAPPER_ATTRS}}>
     <div{{CONTAINER_ATTRS}}>
@@ -244,7 +270,7 @@
     <!-- Back to Top -->
     <div class="back-to-top-wrapper">
       <button class="button back-to-top-btn" data-icon-only aria-label="Back to top" type="button">
-        {{icon:arrow-top}}
+        {{icon:arrow-up-to-line}}
       </button>
     </div>
     <script>
@@ -267,8 +293,10 @@
     {{EXTRA_SCRIPTS}}
 
     <script>
-      /* Tag dismiss — delegated to document, attached once */
+      /* Tag dismiss — delegated to document, attached once. A component that
+         owns its tag's lifecycle (hides and reuses it) calls preventDefault. */
       document.addEventListener('click', function (e) {
+        if (e.defaultPrevented) return;
         var removeBtn = e.target.closest('.tag-remove');
         if (removeBtn) {
           var tag = removeBtn.closest('.tag');

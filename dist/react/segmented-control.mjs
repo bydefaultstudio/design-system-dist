@@ -1,14 +1,15 @@
 'use client';
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 /**
  * <SegmentedControl> — React adapter over both segmented contracts
- * (cms/form.md): the flat button group and the thumb variant's
- * radio-backed markup, switched by `variant="thumb"`.
+ * (cms/form.md): the button group (the default and `variant="underline"`)
+ * and the faded variant's radio-backed markup (`variant="faded"`).
+ * `variant="thumb"` is the 6.0 name for faded and still renders it.
  *
  * The flat form has no design-system module — the contract says its
  * is-active / aria-pressed pair is the consumer's script to keep in step —
  * so this adapter owns that state natively: controlled through `value` +
- * `onChange`, or uncontrolled through `defaultValue`. The thumb form is
+ * `onChange`, or uncontrolled through `defaultValue`. The faded form is
  * native radios and needs no script at all; the adapter just renders the
  * contract and lets the browser carry the radiogroup.
  *
@@ -20,7 +21,7 @@ import { cx, warnOnce } from './internal.mjs';
 var h = React.createElement;
 
 export function SegmentedControl(props) {
-  var variant = props.variant;
+  var variant = props.variant === 'thumb' ? 'faded' : props.variant;
   var label = props.label;
   var options = (props.options || []).filter(Boolean);
   var value = props.value;
@@ -31,6 +32,13 @@ export function SegmentedControl(props) {
   var className = props.className;
 
   var autoId = React.useId();
+
+  if (props.variant === 'thumb') {
+    warnOnce('SegmentedControl: `variant="thumb"` is now `variant="faded"`. The old name still renders the faded variant.');
+  }
+  if (variant !== undefined && variant !== 'faded' && variant !== 'underline') {
+    warnOnce('SegmentedControl: unknown `variant="' + variant + '"` — use "faded", "underline", or omit it for the default. Rendering the default.');
+  }
   var controlled = value !== undefined;
 
   if (!label) {
@@ -46,7 +54,7 @@ export function SegmentedControl(props) {
   var seenValues = {};
   for (var vi = 0; vi < options.length; vi++) {
     if (seenValues[options[vi].value]) {
-      warnOnce('SegmentedControl: two options share the value "' + options[vi].value + '" — they collide as React keys, and in the thumb variant as radios sharing a name and a value.');
+      warnOnce('SegmentedControl: two options share the value "' + options[vi].value + '" — they collide as React keys, and in the faded variant as radios sharing a name and a value.');
       break;
     }
     seenValues[options[vi].value] = true;
@@ -67,10 +75,10 @@ export function SegmentedControl(props) {
     if (onChange) onChange(next);
   }
 
-  if (variant === 'thumb') {
+  if (variant === 'faded') {
     if (options.length < 2 || options.length > 5) {
       warnOnce(
-        'SegmentedControl: the thumb variant supports two to five segments — a sixth renders flat by design (cms/form.md). Use the flat form or a dropdown.'
+        'SegmentedControl: the faded variant supports two to five segments — a sixth renders flat by design (cms/form.md). Use the flat form or a dropdown.'
       );
     }
     var groupName = name || autoId + '-segmented';
@@ -79,7 +87,7 @@ export function SegmentedControl(props) {
       {
         id: id,
         className: cx('segmented-control', className),
-        'data-variant': 'thumb',
+        'data-variant': 'faded',
         role: 'radiogroup',
         'aria-label': label,
       },
@@ -115,7 +123,13 @@ export function SegmentedControl(props) {
 
   return h(
     'div',
-    { id: id, className: cx('segmented-control', className), role: 'group', 'aria-label': label },
+    {
+      id: id,
+      className: cx('segmented-control', className),
+      'data-variant': variant === 'underline' ? 'underline' : undefined,
+      role: 'group',
+      'aria-label': label,
+    },
     options.map(function (opt) {
       var active = selected === opt.value;
       return h(

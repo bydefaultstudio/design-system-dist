@@ -14,9 +14,9 @@ colors:
   border-secondary: '#a3a3a3'
   border-faded: '#00000026'
   status-info: '#1E3A8A'
-  status-success: '#14532D'
+  status-success: '#155F31'
   status-warning: '#78350F'
-  status-danger: '#7F1D1D'
+  status-danger: '#991B1B'
 typography:
   headline:
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
@@ -78,7 +78,7 @@ rounded:
   surface: '0px'
   detail: '0px'
 ---
-<!-- @bydefaultstudio/design-system v6.0.2 -->
+<!-- @bydefaultstudio/design-system v7.0.0 -->
 
 # By Default Design System
 
@@ -188,11 +188,11 @@ Conventions shared by every component:
 - Icons come from the shipped sprite only, always inside the wrapper. Never a bare `<svg>`, never an external icon library. Valid `data-icon` names are the `<symbol>` ids in the shipped `icons.svg`; list them from that file rather than guessing:
 
 ```html
-<div class="svg-icn" data-icon="arrow-right">
+<span class="svg-icn" data-icon="arrow-right">
   <svg fill="none" width="100%" height="100%" aria-hidden="true">
     <use href="/assets/icons/icons.svg#arrow-right"></use>
   </svg>
-</div>
+</span>
 ```
 
 - Motion reads the semantic motion tokens (`--motion-*`), which compose the easing and duration primitives (`--ease-out`, `--duration-s`). Never hardcode a duration or easing in a transition or animation.
@@ -208,7 +208,7 @@ Button variation accepts only these values, generated from the CSS; omitting an 
 
 The semantic motion token set:
 
-`--motion-page-open-duration`, `--motion-page-open-easing`, `--motion-page-close-duration`, `--motion-page-close-easing`, `--motion-page-swap-duration`, `--motion-page-swap-easing`, `--motion-page-fade-duration`, `--motion-page-fade-easing`
+`--motion-page-open-duration`, `--motion-page-open-easing`, `--motion-page-close-duration`, `--motion-page-close-easing`, `--motion-page-swap-duration`, `--motion-page-swap-easing`, `--motion-page-fade-duration`, `--motion-page-fade-easing`, `--motion-page-reduced-duration`, `--motion-page-reduced-easing`, `--motion-page-content-offset`, `--motion-page-intro-duration`, `--motion-page-intro-easing`, `--motion-element-enter-duration`, `--motion-element-enter-easing`, `--motion-element-reveal-start`, `--motion-element-enter-distance`, `--motion-element-text-distance`, `--motion-element-scale-from`, `--motion-element-blur-from`, `--motion-element-exit-duration`, `--motion-element-exit-easing`, `--motion-element-fade-easing`, `--motion-element-stagger-duration`, `--motion-feedback-hover-duration`, `--motion-feedback-hover-easing`, `--motion-feedback-press-duration`, `--motion-feedback-press-easing`, `--motion-surface-toggle-duration`, `--motion-surface-toggle-easing`, `--motion-surface-open-duration`, `--motion-surface-open-easing`, `--motion-surface-close-duration`, `--motion-surface-close-easing`, `--motion-surface-reduced-duration`
 
 ## Do's and Don'ts
 

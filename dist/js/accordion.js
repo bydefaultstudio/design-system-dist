@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 /**
  * Accordion component
  * Initialises all .accordion containers on the page.
@@ -9,7 +9,7 @@
  *     <div class="accordion-item">
  *       <button class="accordion-header" aria-expanded="false" aria-controls="panel-id">
  *         <span class="accordion-title">Heading</span>
- *         <div class="svg-icn"><svg data-icon="add" aria-hidden="true">…</svg></div>
+ *         <span class="svg-icn"><svg data-icon="add" aria-hidden="true">…</svg></span>
  *       </button>
  *       <div class="accordion-content" id="panel-id" role="region">
  *         <div class="accordion-inner">

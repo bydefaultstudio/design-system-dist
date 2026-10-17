@@ -1,4 +1,1 @@
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-<path d="M22 19V21H2V19H22Z" fill="currentColor"/>
-<path d="M22 4.82812L14.5 12.3281L10 7.82812L2 15.8281V13L10 5L14.5 9.5L22 2V4.82812Z" fill="currentColor"/>
-</svg>
+<svg viewBox="0 0 24 24" fill="none" width="100%" height="100%"><path d="M22 20V22H2V20H22Z" fill="currentColor"/><path d="M22 4.82812L14.5 12.3281L10.7071 8.53523C10.3166 8.14471 9.68342 8.14471 9.29289 8.53523L2 15.8281V13L10 5L13.7929 8.79289C14.1834 9.18342 14.8166 9.18342 15.2071 8.79289L22 2V4.82812Z" fill="currentColor"/></svg>

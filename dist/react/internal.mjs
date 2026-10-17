@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 /**
  * Shared internals for the React adapters — class joining, one-shot
  * warnings, and the inline icon markup the components reproduce from
@@ -37,13 +37,13 @@ export function warnOnce(message) {
 /** The close glyph, exactly as the Dialog/Drawer/Toast contracts inline it. */
 export function closeIcon() {
   return h(
-    'div',
+    'span',
     { className: 'svg-icn', 'data-icon': 'close' },
     h(
       'svg',
       { width: '100%', height: '100%', viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true' },
       h('path', {
-        d: 'M6.4 19L5 17.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L5 6.4L6.4 5L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L17.6 5L19 6.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L19 17.6L17.6 19L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L6.4 19Z',
+        d: 'M7.4 18L6 16.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L6 7.4L7.4 6L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L16.6 6L18 7.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L18 16.6L16.6 18L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L7.4 18Z',
         fill: 'currentColor',
       })
     )
@@ -62,19 +62,19 @@ export function starIcon() {
 /** The check glyph the Dropdown checkable-item contract inlines. */
 export function checkIcon() {
   return h(
-    'div',
+    'span',
     { className: 'svg-icn', 'data-icon': 'check' },
     h(
       'svg',
       { width: '100%', height: '100%', viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true' },
-      h('path', { d: 'M9.55 17.6L4 12.05L5.4 10.65L9.55 14.8L18.6 5.75L20 7.15L9.55 17.6Z', fill: 'currentColor' })
+      h('path', { d: 'M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z', fill: 'currentColor' })
     )
   );
 }
 
 function brandIcon(name, d) {
   return h(
-    'div',
+    'span',
     { className: 'svg-icn', 'data-icon': name },
     h(
       'svg',
@@ -85,6 +85,11 @@ function brandIcon(name, d) {
 }
 
 /** The calendar glyph on the Date Picker trigger (assets/images/svg-icons/calendar.svg). */
+/** The ellipsis the Breadcrumb's overflow trigger carries. */
+export function ellipsisIcon() {
+  return brandIcon('ellipsis', 'M6 11H8V13H6V11ZM11 11H13V13H11V11ZM16 11H18V13H16V11Z');
+}
+
 export function calendarIcon() {
   return brandIcon(
     'calendar',
@@ -98,9 +103,9 @@ export function calendarIcon() {
  * children the parsed markup already moved. */
 function brandIconHtml(name, d) {
   return (
-    '<div class="svg-icn" data-icon="' + name + '">' +
+    '<span class="svg-icn" data-icon="' + name + '">' +
     '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
-    '<path d="' + d + '" fill="currentColor"></path></svg></div>'
+    '<path d="' + d + '" fill="currentColor"></path></svg></span>'
   );
 }
 

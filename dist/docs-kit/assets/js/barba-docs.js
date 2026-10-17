@@ -85,6 +85,53 @@
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
+  // ── Landing on a fragment ──
+  // Mirrors assets/js/barba-init.js 4.1.0.
+
+  // The element a fragment names, or null. Decoded first so a percent-encoded
+  // id resolves, then raw, for an id that merely looks encoded.
+  function findHashTarget(hash) {
+    if (!hash || hash.length < 2) return null;
+    var id = hash.slice(1);
+    var target = null;
+    try {
+      target = document.getElementById(decodeURIComponent(id));
+    } catch (err) {
+      target = null;
+    }
+    return target || document.getElementById(id);
+  }
+
+  // Scroll the target into view and move focus to it (the skip-link
+  // pattern). scroll-margin-top keeps it clear of sticky chrome. Smooth only
+  // when asked and motion is allowed; preventScroll so focus never fights
+  // the scroll.
+  function landOn(target, smooth) {
+    target.scrollIntoView({
+      block: 'start',
+      behavior: smooth && !prefersReducedMotion() ? 'smooth' : 'instant'
+    });
+    if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
+  }
+
+  // /docs/ and /docs/index.html are the same page on most hosts, but Barba
+  // compares raw URLs.
+  function normPath(path) {
+    return path.replace(/\/index\.html$/, '/');
+  }
+
+  // A link to the page already on screen, by path and query. Barba's click
+  // handler does not look at defaultPrevented, so shouldPrevent asks this too.
+  function isSamePageLink(link) {
+    if (!link || !link.pathname) return false;
+    if (link.origin !== window.location.origin) return false;
+    var href = link.getAttribute('href') || '';
+    if (href.charAt(0) === '#') return false;
+    return normPath(link.pathname) === normPath(window.location.pathname)
+      && link.search === window.location.search;
+  }
+
   function readNumberAttr(el, attr) {
     if (!el) return NaN;
     var raw = el.getAttribute(attr);
@@ -130,6 +177,7 @@
           && el.closest('.site-sidebar, .page-nav-link[data-gated]')) return true;
       if (el.hasAttribute && el.hasAttribute('download')) return true;
       if (el.target === '_blank') return true;
+      if (isSamePageLink(el)) return true;
 
       var href = el.getAttribute && el.getAttribute('href');
       if (href) {
@@ -151,22 +199,35 @@
 
   // Clicking a link to the page already on screen: Barba's built-in sameUrl
   // check bails WITHOUT preventDefault, so the browser hard-reloads the page.
-  // Intercept at capture phase and swallow the click instead. Hash links stay
-  // native (the anchor jump must work), as do modified clicks and new-tab
-  // targets.
+  // Intercept at capture phase instead. With a fragment the click lands on
+  // the target in place, replacing the history entry; without one it does
+  // nothing. Bare `#x` links stay native (shouldPrevent), as do modified
+  // clicks and new-tab targets.
   function interceptSameUrlClick(e) {
     if (e.defaultPrevented || e.button !== 0) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
 
     var link = e.target && e.target.closest ? e.target.closest('a[href]') : null;
     if (!link) return;
-    if (link.hash || link.target === '_blank' || link.hasAttribute('download')) return;
-    if (link.origin !== window.location.origin) return;
+    if (link.target === '_blank' || link.hasAttribute('download')) return;
+    if (link.hasAttribute('data-barba-prevent')) return;
+    if (!isSamePageLink(link)) return;
 
-    if (link.pathname === window.location.pathname &&
-        link.search === window.location.search) {
+    if (!link.hash) {
       e.preventDefault();
+      return;
     }
+    // Always handled here: shouldPrevent has already taken the link away
+    // from Barba, so falling through would let the browser reload the page.
+    e.preventDefault();
+    history.replaceState(history.state, '', link.hash);
+    // Keep Barba's own record of the entry in step with the address bar
+    // (the pattern search.js follows).
+    if (window.barba && barba.history && typeof barba.history.update === 'function') {
+      barba.history.update({ url: window.location.href });
+    }
+    var target = findHashTarget(link.hash);
+    if (target) landOn(target, true);
   }
 
   document.addEventListener('click', interceptSameUrlClick, true);
@@ -684,7 +745,8 @@
       var stuck = scrollY > 0 ? measureStickyElements(data.current.container) : [];
       document.body.classList.add('is-animating');
       if (scrollY > 0) {
-        window.scrollTo(0, 0);
+        // instant: a site may set scroll-behavior:smooth on html
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       }
       var scrollOffset = -scrollY;
       holdStickyElements(stuck, scrollOffset);
@@ -705,6 +767,8 @@
     barba.init({
       transitions: [bdTransition],
       prevent: shouldPrevent,
+      // A second click mid-transition is ignored rather than hard-reloading.
+      preventRunning: true,
       prefetchIgnore: OPTIONS.prefetchIgnore !== undefined ? OPTIONS.prefetchIgnore : true,
       cacheIgnore: OPTIONS.cacheIgnore !== undefined ? OPTIONS.cacheIgnore : false,
       // Barba's own default is 2000ms, which aborts slow fetches and falls
@@ -772,13 +836,23 @@
         }
       }
 
-      window.scrollTo(0, 0);
-
-      // Re-inits run last, from here rather than afterEnter: the leaving
-      // container is out of the DOM and layout is settled, so inits can
-      // never bind to (or measure) the departing page.
+      // Re-inits run here rather than afterEnter: the leaving container is
+      // out of the DOM and layout is settled, so inits can never bind to (or
+      // measure) the departing page.
       if (data && data.next && data.next.container) {
         refreshPageInit(data.next.container);
+      }
+
+      // Land where the URL says: a pushState navigation gets no native
+      // fragment scroll. After the inits, so a smooth scroll aims at the
+      // final layout and no init's focus or scroll restore overrides it. A
+      // click arrives at the top, then glides to the target; Back and Forward
+      // jump (data.trigger is a string for those).
+      var anchorTarget = findHashTarget(window.location.hash);
+      if (anchorTarget) {
+        landOn(anchorTarget, !!(data && data.trigger && data.trigger.nodeType === 1));
+      } else {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       }
     });
   }

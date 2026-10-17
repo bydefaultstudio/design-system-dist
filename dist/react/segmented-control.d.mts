@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 import * as React from 'react';
 
 export interface SegmentedOption {
@@ -11,16 +11,20 @@ export interface SegmentedOption {
 }
 
 export interface SegmentedControlProps {
-  /** Omit for the flat button group; "thumb" renders the radio-backed track. */
-  variant?: 'thumb';
+  /**
+   * Omit for the default button group. "underline" marks the selection with
+   * a rule on the same buttons; "faded" renders the radio-backed track.
+   * @deprecated "thumb" — the 6.0 name for "faded", still accepted.
+   */
+  variant?: 'faded' | 'underline' | 'thumb';
   label?: string;
-  /** Two to five options in the thumb variant. */
+  /** Two to five options in the faded variant. */
   options?: SegmentedOption[];
   /** Controlled value. Supply it from the first render or not at all. */
   value?: string;
   defaultValue?: string;
   onChange?: (value: string) => void;
-  /** Thumb variant only: the radio group name. Generated when absent. */
+  /** Faded variant only: the radio group name. Generated when absent. */
   name?: string;
   id?: string;
   className?: string;

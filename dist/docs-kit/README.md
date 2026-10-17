@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^6.0.2"
+npm install "github:bydefaultstudio/design-system-dist#semver:^7.0.0"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -125,6 +125,10 @@ automatically — external URLs pass through untouched.
 | `search` | `false` | the header search button and dialog. The kit ships no `search.js` or indexer, so leave it off unless the project supplies both |
 | `validateLayers` | `false` | require a valid `layer:` field in every file's frontmatter |
 | `pageTransitions` | `false` | animated Barba.js page transitions — **opt-in only**; read the "Page transitions" section before enabling |
+| `showcase` | `false` | By Default OS's Showcase: public `/showcase/` pages from `cms/showcase/`, `worker/showcase-assets.mjs`, and two cursor drawings under `assets/images/svg-cursors/` |
+| `siteMap` | `false` | writes `experiments/site-map-data.js`, every page as data for the site-map experiment |
+| `accessGate` | `false` | writes `worker/page-access.mjs` and draws a `lock` icon on the rows `nav.js` locks; the project's icon set must hold `lock` |
+| `assetLibrary` | `false` | writes `worker/library-index.mjs`, the Asset Library's download map |
 
 ### Extension surface
 

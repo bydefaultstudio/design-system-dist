@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v6.0.2 */
+/* @bydefaultstudio/design-system v7.0.0 */
 /**
  * Script Purpose: Configurable video player — play/pause, scrubber, mute, fullscreen, keyboard shortcuts, timed cues
  * Author: By Default
@@ -140,11 +140,11 @@ function ensureBdVideoSprite() {
 
 function bdVideoIcon(name, dataIconName) {
   return ''
-    + '<div class="svg-icn">'
+    + '<span class="svg-icn">'
     +   '<svg data-icon="' + dataIconName + '" width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
     +     '<use href="#bd-video-' + name + '"/>'
     +   '</svg>'
-    + '</div>';
+    + '</span>';
 }
 
 var ICON_PLAY = bdVideoIcon("play", "play");
@@ -875,7 +875,7 @@ function initPlayerInstance(video) {
       // (native pointer stays) — window.bdVideoConfig.cueLabel, defaulting to
       // "View case study". Badge cursor only.
       if (badgeCursor) {
-        cueSlot.setAttribute("data-cursor-icon", "arrow-top-right");
+        cueSlot.setAttribute("data-cursor-icon", "arrow-up-right");
         cueSlot.setAttribute("data-cursor-label", moduleConfig.cueLabel);
       }
 
