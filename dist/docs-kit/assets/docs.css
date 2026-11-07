@@ -417,6 +417,14 @@
   position: relative;
 }
 
+/* The topics take the room the close button leaves and scroll sideways in
+   it (the Scroller, glossary.js), so a term with two or three topics stays
+   on one line inside the bar on a phone instead of wrapping out of it. */
+.glossary-drawer .glossary-topics-scroller {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
 /* The close is the engine's (design-system.css, "The close on a dialog or
    drawer"); the bar centres it, so it takes no pull upward, only toward the
    end edge, which lands it the same distance from the top and the end. */
@@ -455,7 +463,9 @@
    control, so it takes no ring at all: the site's ring only covers controls,
    and leaving it to the browser drew Safari's default blue ring on every
    open, tap included (2026-10-16). Tab moves on into the text and Shift+Tab
-   back to the close button, both carrying the site's ring. */
+   back to the close button, both carrying the site's ring. A term with an
+   animated drawing puts its pause button between the two: Shift+Tab reaches
+   the pause first, then the close. */
 .glossary-drawer-title:focus {
   outline: none;
 }
@@ -477,6 +487,100 @@
 @media (max-width: 767px) {
   .glossary-drawer-title {
     font-size: var(--font-4xl);
+  }
+}
+
+/* -- Art strip --
+   A term with an os-illustration opens on it: a band the full width of the
+   drawer (under its bar, before the title) or of the entry page (leading
+   <main>, above the page header and its docked bar) (Kobbie's mock-up, approved 2026-11-05). The generator emits it on the
+   entry page (buildGlossaryArtHtml); the drawer holds one of its own and
+   lifts the page's drawing into it (glossary.js). A term with no drawing has
+   no strip, and its page and drawer are untouched.
+
+   The term's hue paints the band edge to edge, the way a page header paints
+   its field: data-color on the strip puts it in the colour scope
+   (design-system.css §2d layer 5), and the band reads the field role. It
+   restates the page header's semantic mapping (design-system.css, the
+   moded page header), so the pause button, its hover and its focus ring read
+   on the field in both themes rather than taking the root's dark-mode tokens.
+
+   --glossary-art-height is a component token: no space step is 280 or 220,
+   and the band's height is the drawing's, a size rather than a gap. The
+   drawing is a 500 square with its own safe margin, so it sits centred at
+   the band's full height and nothing is cropped. */
+.glossary-art {
+  --glossary-art-height: 280px;
+
+  position: relative;
+  display: flex;
+  justify-content: center;
+  block-size: var(--glossary-art-height);
+  background: var(--os-illustration-field);
+  color-scheme: light;
+
+  --color-background: var(--os-illustration-field);
+  --color-text: var(--os-illustration-text);
+  --background-primary: var(--color-background);
+  --background-secondary: var(--color-background);
+  --background-faded: var(--color-raised);
+  --text-primary: var(--color-text);
+  --input-focus: var(--color-text);
+  --text-secondary: var(--color-text-muted);
+  --border-faded: var(--color-border-faded);
+}
+
+/* The page header's hover mix, for the same reason it restates it there:
+   the default mix is calibrated for a neutral ground. */
+.glossary-art .button:not([data-color]):not([data-variant]):hover,
+.glossary-art .button:not([data-color]):not([data-variant]).is-hover {
+  --button-color: color-mix(in srgb, var(--color-text) var(--color-hover-mix), var(--color-background));
+}
+
+.glossary-art[hidden] {
+  display: none;
+}
+
+.glossary-art > .os-illustration {
+  inline-size: auto;
+  block-size: 100%;
+  aspect-ratio: 1;
+}
+
+/* An animated drawing's pause button (os-illustration.js), in the band's
+   bottom end corner, as in the page header's illustration slot. */
+.glossary-art > .button {
+  position: absolute;
+  inset-block-end: var(--space-s);
+  inset-inline-end: var(--space-s);
+}
+
+.glossary-art > .button:not([aria-pressed="true"]) .svg-icn[data-icon="play"],
+.glossary-art > .button[aria-pressed="true"] .svg-icn[data-icon="pause"] {
+  display: none;
+}
+
+/* In the drawer the band leads the scrolling body, so it leaves with the
+   text, and bleeds through the body's inset to meet the bar and both edges.
+   The body is a flex column, so the strip stretches across the negative
+   margins. */
+.glossary-drawer .glossary-art {
+  flex: none;
+  margin-block-start: calc(-1 * var(--drawer-gap));
+  margin-inline: calc(-1 * var(--drawer-padding));
+}
+
+@media (max-width: 767px) {
+  .glossary-art {
+    --glossary-art-height: 220px;
+  }
+}
+
+/* Forced colours flattens the field, so the art goes with it, as it does in
+   the page header and on a cover. */
+@media (forced-colors: active) {
+  .glossary-art {
+    display: none;
   }
 }
 
@@ -632,6 +736,248 @@
   max-width: 100%;
   max-height: 600px;
   object-fit: contain;
+}
+
+
+/* ------ 5B. FORMAT CARD ------
+ * One format from the registry, drawn live through layer-stack.js, with
+ * its layer switches, size and ratio and its two verbs (cms/format-card.md,
+ * assets/js/format-card.js). It replaces the asset card for formats.
+ *
+ *   .format-card
+ *     .format-card-preview   — the drawing's area, faded ground, ratio badge
+ *       .format-card-stage   — sized in px by the script to the view's ratio
+ *       .format-card-ratio   — a .badge in the corner
+ *     .format-card-body
+ *       .format-card-title / .format-card-meta
+ *       .format-card-layers  — a bare fieldset of .form-toggle switches
+ *       .format-card-actions — a .button-group
+ *
+ * data-variant="tile" is the Formats tool's grid tile: a <button>, the
+ * artwork as a still picture (.format-card-picture), no switches or verbs,
+ * with a hover, a focus ring and a selected ring (aria-current).
+ *
+ * --format-card-preview-height sets the drawing's area; the embed fills
+ * the frame instead (Format embed, below).
+ */
+
+.format-card {
+  --format-card-preview-height: 24rem;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: var(--border-s) solid var(--border-faded);
+  /* A role, never a scale step (cms/border.md): a card is a surface. The
+     preview's ground is clipped to it. */
+  border-radius: var(--radius-surface);
+  overflow: hidden;
+  background: var(--background-plain);
+  color: var(--text-primary);
+}
+
+.format-card-preview {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--format-card-preview-height);
+  padding: var(--space-xl) var(--space-3xl);
+  background-color: var(--background-faded);
+  overflow: hidden;
+}
+
+/* Until the script has built the card, the artwork stands in it. */
+.format-card-fallback {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: var(--format-card-preview-height);
+  margin-inline: auto;
+  padding: var(--space-xl);
+}
+
+.format-card-stage {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.format-card-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.format-card-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.format-card-ratio {
+  position: absolute;
+  inset-block-start: var(--space-xs);
+  inset-inline-start: var(--space-xs);
+}
+
+.format-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+  padding: var(--space-m) var(--space-l) var(--space-l);
+  border-top: var(--border-s) solid var(--border-faded);
+}
+
+.format-card-title {
+  margin: 0;
+  font-size: var(--font-l);
+  line-height: var(--line-height-s);
+}
+
+.format-card-meta {
+  margin: 0;
+  font-size: var(--font-s);
+  color: var(--text-secondary);
+}
+
+.format-card-layers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-s) var(--space-l);
+}
+
+/* A switch's note, opened by its info button, takes its own line under
+   the switch, so an open one never sits beside the next switch. */
+.format-layer-note {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.format-card-actions {
+  flex-wrap: wrap;
+}
+
+/* -- Tile --
+   The Formats tool's grid tile. A fixed picture area, so every tile is the
+   same size whatever the format's ratio, the artwork fitted inside it. */
+/* The button reset centres its content; a tile stretches its picture and
+   caption across the full width instead. */
+.format-card[data-variant="tile"] {
+  /* A tile is a control. */
+  border-radius: var(--radius-control);
+  /* Clear of the tool's sticky bar when the arrow keys bring it into view. */
+  scroll-margin-top: var(--scroll-offset);
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color var(--duration-xs) var(--ease-out);
+}
+
+.format-card[data-variant="tile"] .format-card-preview {
+  height: auto;
+  aspect-ratio: 4 / 3;
+  padding: var(--space-m);
+}
+
+.format-card-picture {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* A mark linked rather than downloaded is drawn at half the picture, as
+   its spec places it. */
+.format-card-picture[data-inset] {
+  max-width: 50%;
+  max-height: 50%;
+}
+
+.format-card[data-variant="tile"] .format-card-body {
+  gap: var(--space-2xs);
+  padding: var(--space-s) var(--space-m) var(--space-m);
+}
+
+.format-card[data-variant="tile"] .format-card-title {
+  font-size: var(--font-m);
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.format-card[data-variant="tile"]:hover {
+  border-color: var(--border-control);
+}
+
+.format-card[data-variant="tile"][aria-current="true"] {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 var(--border-s) var(--text-primary);
+}
+
+.format-card[data-variant="tile"]:focus-visible {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-offset) + var(--border-s));
+}
+
+/* -- Format embed --
+   tools/formats-embed.html: one card filling the frame, no site chrome. */
+.format-embed {
+  margin: 0;
+  background: var(--background-plain);
+}
+
+/* The frame is the viewport, exactly: the card fills it and the drawing
+   takes what the caption leaves. contain: size keeps the drawing's own
+   size out of the preview's, so the ResizeObserver that fits it sees the
+   frame shrink as well as grow. Under 16rem of drawing the frame scrolls
+   rather than squeezing it to a sliver. */
+.format-embed-frame {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  padding: var(--space-s);
+}
+
+.format-embed-frame > .format-card {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.format-embed-frame > .format-card > .format-card-preview {
+  flex: 1 1 0;
+  height: auto;
+  min-height: 0;
+  contain: size;
+}
+
+@media (max-height: 30rem) {
+  .format-embed-frame {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .format-embed-frame > .format-card {
+    flex: 1 0 auto;
+  }
+
+  .format-embed-frame > .format-card > .format-card-preview {
+    flex: 0 0 16rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .format-card[data-variant="tile"][aria-current="true"] {
+    outline: var(--border-m) solid Highlight;
+    outline-offset: calc(var(--border-m) * -1);
+  }
 }
 
 
@@ -1937,9 +2283,16 @@ body[data-role="guest"] .header-search-btn {
   margin: 0;
 }
 
-.page-feedback.is-submitted .page-feedback-prompt,
-.page-feedback.is-submitted .page-feedback-description,
-.page-feedback.is-submitted .button-group {
+/* The question: heading, line and Yes / No. One wrapper, so the submitted
+   state hides it in one rule. */
+.page-feedback-ask {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-l);
+}
+
+.page-feedback.is-submitted .page-feedback-ask {
   display: none;
 }
 
@@ -1969,22 +2322,136 @@ body[data-role="guest"] .header-search-btn {
  *     in the markup because feedback.js selects on it. */
 
 .feedback-modal {
-  /* Narrower than the component's 560px: the form is a label and one field. */
-  --dialog-max-width: 480px;
+  /* The component's 560px: the topic chips sit two to a row. */
+  --dialog-max-width: 560px;
+}
+
+/* Hierarchy, three steps and no more: the title, then each question
+   (semi-bold, primary), then everything that answers or explains it
+   (regular). The subtitle belongs to the title, so it sits tight under it in
+   the header rather than floating in the body. */
+.feedback-modal .dialog-title {
+  font-size: var(--font-2xl);
+  text-wrap: balance;
+}
+
+.feedback-modal-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
 }
 
 .feedback-modal-subtitle {
   font-size: var(--font-s);
   color: var(--text-secondary);
-  margin: 0 0 var(--space-m) 0;
+  margin: 0;
+  line-height: var(--line-height-l);
+  text-wrap: balance; /* at 375 "better." would otherwise sit alone */
 }
 
-.feedback-error {
+.feedback-form legend,
+.feedback-form .feedback-message-label,
+.feedback-form .form-toggle label {
   font-size: var(--font-s);
-  color: var(--status-danger);
-  margin-top: var(--space-s);
+  font-weight: var(--font-weight-semi-bold);
+  color: var(--text-primary);
 }
 
+/* The follow-up question reads like the others, with its switch at the end of
+   the row and the hint under both. */
+.feedback-form .form-toggle {
+  justify-content: space-between;
+}
+
+.feedback-form .form-toggle label {
+  order: -1;
+}
+
+.feedback-form .form-hint {
+  margin-top: var(--space-2xs);
+}
+
+/* Topics as an even 2 x 2 grid at every width: a wrap leaves the last chip
+   alone on its own row. */
+.feedback-modal .chip-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.feedback-modal .chip {
+  justify-content: center;
+}
+
+/* The form is a stack of form groups: topic, impact (bugs only), message and
+   follow-up. Spacing comes from the stack's gap, never the groups: one step
+   between questions, a smaller one (the bare fieldset's) from each question
+   to its answers. */
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+/* The stack's gap is the only space between groups: a .form-group's own
+   bottom margin and the error's top margin would add to it. */
+.feedback-form > * {
+  margin: 0;
+}
+
+/* The flex rule above would beat the attribute, so a hidden group (impact,
+   until a bug is picked) takes no room. */
+.feedback-form [hidden] {
+  display: none;
+}
+
+/* At phone width the dialog becomes a bottom sheet: full width, anchored to
+   the bottom edge, clear of the home indicator. Same element, same component;
+   only where it sits changes. */
+@media (max-width: 479px) {
+  .feedback-modal {
+    --dialog-max-width: 100%;
+    margin: auto 0 0 0;
+    width: 100%;
+    max-width: 100%;
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .feedback-modal .dialog-title {
+    font-size: var(--font-xl);
+  }
+
+  /* One line per chip. "Something's not working" is wider than half a 375
+     sheet, so the chips pair by content rather than by equal columns: two
+     to a row, each row stretched edge to edge, never one left alone. */
+  .feedback-modal .chip-group {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .feedback-modal .chip {
+    flex: 1 1 auto;
+    justify-content: center;
+    white-space: nowrap;
+    font-size: var(--font-s);
+    padding-inline: var(--space-s);
+  }
+
+  /* The buttons stay pinned while the form scrolls; a rule marks the edge
+     the form scrolls under, and the two share the width. */
+  .feedback-modal .dialog-footer {
+    flex-wrap: nowrap;
+    padding-block-start: var(--space-m);
+    border-top: var(--border-s) solid var(--border-faded);
+  }
+
+  .feedback-modal .dialog-footer .button {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+}
 
 /* ------ 3. DOCS MAIN CONTENT ------ */
 

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.0.0 */
+/* @bydefaultstudio/design-system v7.1.0 */
 /**
  * layer-stack.js — the engine behind Layout Spec: a canvas, the specimen on
  * it, and an ordered stack of rules drawn over (or under) it.
@@ -70,7 +70,7 @@
  *                  outside), an amount; display ring or area
  *     shape        placed: x, y, w, h, a form
  *     guide, grid  a pattern over a box
- *     measure      dimension lines with their values
+ *     measure      one dimension line, width or height, with its value
  *     note, image  placed: a note at x, y; an image in x, y, w, h
  *
  * Every length is { value, unit } — or a bare number, read as px (as %
@@ -132,7 +132,15 @@
  * converted on the way in (splitPaint) and draws as it did: a zone's or a
  * shape's outline keeps the 2.5× strength the stylesheet used to give it.
  *
- * @version 3.0.0
+ * 4.0.0 (format version 4): a measure is one line, as the Figma Annotation
+ * kit's measure is (owner, 2026-10-29): axis width or height, an edge for
+ * where the line sits, a value placed on or beside it, filled (a pill in
+ * the measure's colour) or text, at Default or Large. A zone is measured
+ * by its inset or by the area inside it. A note takes a colour, and a
+ * coloured note is a pill. A measure from an earlier spec reads as its
+ * width line (nobody had saved one, so nothing splits it in two).
+ *
+ * @version 4.0.0
  */
 (function () {
   'use strict';
@@ -141,7 +149,7 @@
   console.log('[layer-stack] v' + VERSION + ' loaded');
 
   var SVG_NS = 'http://www.w3.org/2000/svg';
-  var SPEC_VERSION = 3;
+  var SPEC_VERSION = 4;
 
   //
   //------- Types -------//
@@ -181,11 +189,11 @@
     // A measure is lines and numbers: nothing to fill.
     measure: {
       label: 'Measure',
-      fields: ['target', 'zone', 'lineWeight', 'lineStyle', 'colour', 'opacity']
+      fields: ['target', 'zone', 'axis', 'edge', 'value', 'size', 'valueStyle', 'lineWeight', 'lineStyle', 'colour', 'opacity']
     },
     note: {
       label: 'Note',
-      fields: ['text', 'x', 'y']
+      fields: ['text', 'colour', 'x', 'y']
     },
     image: {
       label: 'Image',
@@ -204,7 +212,13 @@
     'guide.kind': [['centre', 'Centre lines'], ['diagonal', 'Diagonals'], ['circle', 'Keyline circle'], ['square', 'Keyline rectangle'], ['thirds', 'Thirds'], ['line', 'Single line']],
     'guide.axis': [['vertical', 'Vertical'], ['horizontal', 'Horizontal']],
     'grid.kind': [['cells', 'Cells'], ['columns', 'Columns'], ['rows', 'Rows']],
-    'measure.target': [['canvas', 'The canvas'], ['specimen', 'The specimen'], ['zone', 'A zone'], ['all', 'Canvas + bleed']],
+    'measure.target': [['canvas', 'The canvas'], ['specimen', 'The specimen'], ['zone-inset', 'A zone\'s inset'], ['zone-area', 'The area inside a zone'], ['all', 'Canvas + bleed']],
+    'measure.axis': [['width', 'Width'], ['height', 'Height']],
+    // Across the box: a width's start is its top, a height's its left.
+    'measure.edge': [['start', 'Start'], ['centre', 'Centre'], ['end', 'End']],
+    'measure.value': [['on-line', 'On line'], ['left', 'Left'], ['right', 'Right'], ['top', 'Top'], ['bottom', 'Bottom']],
+    'measure.size': [['default', 'Default'], ['large', 'Large']],
+    'measure.valueStyle': [['filled', 'Filled'], ['text', 'Text']],
     'image.fit': [['contain', 'Fit inside'], ['cover', 'Fill and crop']],
     'canvas.shape': [['rectangle', 'Rectangle'], ['circle', 'Circle'], ['rounded', 'Rounded'], ['app-icon', 'App icon']],
     'canvas.shapeShow': [['outside', 'Shade outside: what the shape cuts away'], ['inside', 'Shade inside: what stays'], ['outline', 'Outline']],
@@ -251,7 +265,8 @@
     'grid.rows':            { type: 'grid',       label: 'Rows',           settings: { kind: 'rows', reference: 'canvas', count: 2 } },
     'measure.canvas':       { type: 'measure',    label: 'Canvas size',    settings: { target: 'canvas' } },
     'measure.specimen':     { type: 'measure',    label: 'Specimen size',  settings: { target: 'specimen' } },
-    'measure.zone':         { type: 'measure',    label: 'Zone size',      settings: { target: 'zone' } },
+    'measure.zone-inset':   { type: 'measure',    label: 'Zone inset',     settings: { target: 'zone-inset' } },
+    'measure.zone-area':    { type: 'measure',    label: 'Zone area',      settings: { target: 'zone-area' } },
     'note':                 { type: 'note',       label: 'Note',           settings: { text: 'Note' } },
     'image.ui':             { type: 'image',      label: 'Platform UI',    settings: { src: '', fit: 'contain', opacity: 1 } },
     // A platform's own interface, drawn over the frame at full size. The
@@ -261,7 +276,7 @@
   };
 
   /* Preset ids that were renamed, read as they are now. */
-  var PRESET_RENAMES = { 'artwork': 'specimen', 'measure.artwork': 'measure.specimen' };
+  var PRESET_RENAMES = { 'artwork': 'specimen', 'measure.artwork': 'measure.specimen', 'measure.zone': 'measure.zone-inset' };
 
   function pct(value) {
     return { value: value, unit: '%' };
@@ -301,10 +316,13 @@
       draw: 'outline', lineWeight: { token: '--overlay-line-weight', unit: 'px' }, lineStyle: 'solid',
       outlineColour: 'var(--overlay-grid)', outlineOpacity: { token: '--overlay-grid-opacity' },
       fillColour: 'var(--overlay-grid)', fillOpacity: { token: '--overlay-grid-opacity' } },
-    // A measure's lines take the ground's ink unless given a colour; its
-    // numbers always do, so they read on any ground.
-    measure: { target: 'canvas', zone: '', lineWeight: { token: '--overlay-line-weight', unit: 'px' }, lineStyle: 'solid', colour: '', opacity: 1 },
-    note: { text: 'Note', x: pct(50), y: pct(50) },
+    // A measure takes the ground's ink unless given a colour, so a mark
+    // with none flips on a dark ground. One line: the width below the box,
+    // its value under it, as the kit's measure starts.
+    measure: { target: 'canvas', zone: '', axis: 'width', edge: 'end', value: 'bottom', size: 'default', valueStyle: 'filled',
+      lineWeight: { token: '--overlay-line-weight', unit: 'px' }, lineStyle: 'solid', colour: '', opacity: 1 },
+    // A note with no colour is text on the ground's paper; with one, a pill.
+    note: { text: 'Note', colour: '', x: pct(50), y: pct(50) },
     image: { src: '', x: pct(0), y: pct(0), w: pct(100), h: pct(100), fit: 'contain', opacity: 1 }
   };
 
@@ -314,6 +332,18 @@
   //
   //------- Templates -------//
   //
+
+  /* A canvas's width and height: two one-line measures in one group, so a
+     host shows one switch for both. */
+  function canvasSize(visible) {
+    var group = createGroup('Canvas size');
+    group.visible = visible;
+    group.layers = [
+      createLayer('measure.canvas', { label: 'Canvas width' }),
+      createLayer('measure.canvas', { label: 'Canvas height', settings: { axis: 'height', value: 'right' } })
+    ];
+    return group;
+  }
 
   /* Starting specs. A template is a function so each call gets fresh ids.
      Templates name a KIND of specimen, never a brand's asset: the host picks
@@ -360,7 +390,7 @@
           createLayer('grid.x', { visible: false }),
           createLayer('specimen'),
           createLayer('guide.centre', { settings: { reference: 'specimen', bleed: true } }),
-          createLayer('measure.zone', { visible: false, settings: { zone: clear.id } })
+          createLayer('measure.zone-inset', { visible: false, settings: { zone: clear.id } })
         ];
       }
     },
@@ -386,7 +416,7 @@
         return [
           createLayer('specimen'),
           createLayer('guide.centre', { visible: false }),
-          createLayer('measure.canvas', { visible: false }),
+          canvasSize(false),
           createLayer('image.instagram-reels')
         ];
       }
@@ -402,7 +432,7 @@
           createLayer('grid.percent', { visible: false }),
           createLayer('guide.thirds', { visible: false }),
           createLayer('guide.centre'),
-          createLayer('measure.canvas'),
+          canvasSize(true),
           createLayer('image.ui', { visible: false })
         ];
       }
@@ -416,7 +446,7 @@
           createLayer('specimen'),
           createLayer('zone.safe-area', { settings: { amount: pct(6) } }),
           createLayer('guide.centre'),
-          createLayer('measure.canvas')
+          canvasSize(true)
         ];
       }
     },
@@ -429,7 +459,7 @@
           createLayer('specimen'),
           createLayer('zone.safe-area', { settings: { amount: pct(6) } }),
           createLayer('guide.centre'),
-          createLayer('measure.canvas')
+          canvasSize(true)
         ];
       }
     },
@@ -443,7 +473,7 @@
           createLayer('zone.safe-area', { label: 'Title safe', settings: { amount: pct(10) } }),
           createLayer('zone.safe-area', { label: 'Action safe', settings: { amount: pct(5), display: 'area', lineStyle: 'dashed' } }),
           createLayer('guide.centre'),
-          createLayer('measure.canvas')
+          canvasSize(true)
         ];
       }
     },
@@ -585,7 +615,7 @@
   function parseSpec(input, notes) {
     var spec = typeof input === 'string' ? JSON.parse(input) : clone(input);
     if (!spec || typeof spec !== 'object') { throw new Error('The spec is not an object.'); }
-    if ([1, 2, SPEC_VERSION].indexOf(spec.version) === -1) { throw new Error('This spec is version ' + spec.version + '; this tool reads versions 1 to ' + SPEC_VERSION + '.'); }
+    if (!(Number.isInteger(spec.version) && spec.version >= 1 && spec.version <= SPEC_VERSION)) { throw new Error('This spec is version ' + spec.version + '; this tool reads versions 1 to ' + SPEC_VERSION + '.'); }
     if (!spec.canvas || typeof spec.canvas !== 'object') { throw new Error('The spec has no canvas size.'); }
     if (!Array.isArray(spec.layers)) { throw new Error('The spec has no layers.'); }
     var fromVersion = spec.version;
@@ -606,7 +636,7 @@
       var out = {
         id: cleanId(layer.id),
         type: layer.type,
-        preset: typeof layer.preset === 'string' ? layer.preset.slice(0, 64) : '',
+        preset: typeof layer.preset === 'string' ? (has(PRESET_RENAMES, layer.preset) ? PRESET_RENAMES[layer.preset] : layer.preset.slice(0, 64)) : '',
         label: String(layer.label || TYPES[layer.type].label).slice(0, 200),
         visible: layer.visible !== false
       };
@@ -645,6 +675,9 @@
       children.filter(function (layer) { return layer.type === 'specimen'; }).forEach(function (layer) { top.push(cleanLayer(layer)); });
     });
     spec.layers = top;
+    if (fromVersion < 4 && Array.isArray(notes) && flatLayers(spec).some(function (layer) { return layer.type === 'measure'; })) {
+      notes.push('Measures draw one line now: each shows its width, and a zone measure its inset. Add a measure set to Height, or to the area inside the zone, for the other.');
+    }
     var specimens = spec.layers.filter(function (layer) { return layer.type === 'specimen'; });
     if (specimens.length === 0) { spec.layers.unshift(createLayer('specimen')); }
     if (specimens.length > 1) {
@@ -723,6 +756,7 @@
     }
     if (settings.reference === 'artwork') { settings.reference = 'specimen'; }
     if (type === 'measure' && settings.target === 'artwork') { settings.target = 'specimen'; }
+    if (type === 'measure' && settings.target === 'zone') { settings.target = 'zone-inset'; }
     return splitPaint(type, settings);
   }
 
@@ -878,6 +912,16 @@
       settings.reference = 'canvas';
       settings.bleed = true;
     }
+    // Before version 4 a measure drew two lines; it reads as its width now,
+    // and a zone measure as the zone's inset.
+    // Its lines ran through the middle of the zone, and still do.
+    // A v1 spec's zone measure arrives as zone-inset (convertV1 renames it
+    // first), so either name marks one.
+    if (fromVersion < 4 && type === 'measure' && (settings.target === 'zone' || settings.target === 'zone-inset')) {
+      settings.target = 'zone-inset';
+      if (settings.edge === undefined) { settings.edge = 'centre'; }
+      if (settings.value === undefined) { settings.value = 'top'; }
+    }
     return splitPaint(type, settings);
   }
 
@@ -893,7 +937,7 @@
       copy.settings = { target: 'canvas' };
     } else if (old.kind === 'measure') {
       copy.type = 'measure';
-      copy.settings = { target: 'zone', zone: typeof old.target === 'string' ? old.target : '' };
+      copy.settings = { target: 'zone-inset', zone: typeof old.target === 'string' ? old.target : '' };
     } else {
       copy.type = 'note';
       copy.settings = {};
@@ -1602,16 +1646,27 @@
     return { shapes: shapes, labels: labels, extent: span };
   }
 
-  /* Dimension lines with their numbers: a box's width below it and its
-     height to its right, or a zone's inset and the area inside it. */
+  /* One dimension line with its number, as the Figma Annotation kit's
+     measure draws one (owner, 2026-10-29): a box's width or height, a
+     zone's inset, or the area inside a zone. The edge says where the line
+     sits across the box — start is a width's top or a height's left —
+     and a box's line stands off it, as the kit's does; a zone's lies on
+     its own edges. The value goes on the line or beside it. */
   function computeMeasure(layer, ctx, scope, results) {
     var s = layer.settings;
     var shapes = [];
     var labels = [];
     var canvas = ctx.canvas;
-    var tick = Math.min(canvas.w, canvas.h) * 0.015;
+    var large = s.size === 'large';
+    var tick = Math.min(canvas.w, canvas.h) * 0.015 * (large ? 2 : 1);
     var centre = { x: canvas.x + canvas.w / 2, y: canvas.y + canvas.h / 2 };
-    if (s.target === 'zone') {
+    var across = s.axis !== 'height';
+    var from;
+    var to;
+    var at;
+    var text;
+    var extent;
+    if (s.target === 'zone-inset' || s.target === 'zone-area') {
       var target = results[s.zone];
       if (!target || !target.boxes || target.boxes.d === undefined) {
         labels.push({ hint: true, text: 'Pick the zone to measure', x: centre.x, y: centre.y, anchor: 'centre' });
@@ -1620,26 +1675,60 @@
       if (!(target.boxes.d > 0)) { return { shapes: shapes, labels: labels, extent: canvas }; }
       var outer = target.boxes.outer;
       var inner = target.boxes.inner;
-      var my = inner.y + inner.h / 2;
-      var mx = inner.x + inner.w / 2;
-      shapes.push(part(dimension(outer.x, my, inner.x, my, tick), 'Left inset'));
-      shapes.push(part(dimension(mx, inner.y + inner.h, mx, outer.y + outer.h, tick), 'Bottom inset'));
-      labels.push({ text: unitLabel(target.boxes.amount), x: (outer.x + inner.x) / 2, y: my, anchor: 'above' });
-      labels.push({ text: format(inner.w) + ' × ' + format(inner.h), x: mx, y: inner.y + inner.h, anchor: 'above' });
-      return { shapes: shapes, labels: labels, extent: outer };
+      at = across ? sideOf(inner.y, inner.h, s.edge) : sideOf(inner.x, inner.w, s.edge);
+      if (s.target === 'zone-inset') {
+        // The left inset for a width, the bottom one for a height: one
+        // amount on every side, so one side says it.
+        from = across ? outer.x : inner.y + inner.h;
+        to = across ? inner.x : outer.y + outer.h;
+        text = unitLabel(target.boxes.amount);
+      } else {
+        from = across ? inner.x : inner.y;
+        to = across ? inner.x + inner.w : inner.y + inner.h;
+        text = format(across ? inner.w : inner.h);
+      }
+      extent = outer;
+    } else {
+      if (s.target === 'specimen' && !ctx.hasArtwork) {
+        labels.push({ hint: true, text: 'No specimen to measure', x: centre.x, y: centre.y, anchor: 'centre' });
+        return { shapes: shapes, labels: labels, extent: canvas };
+      }
+      var box = s.target === 'specimen' || s.target === 'all' ? referenceBox(s.target, ctx) : canvas;
+      var standOff = s.edge === 'centre' ? 0 : (s.edge === 'start' ? -1 : 1) * tick * 3;
+      at = (across ? sideOf(box.y, box.h, s.edge) : sideOf(box.x, box.w, s.edge)) + standOff;
+      from = across ? box.x : box.y;
+      to = across ? box.x + box.w : box.y + box.h;
+      text = format(across ? box.w : box.h);
+      extent = union(canvas, { x: box.x - tick * 4, y: box.y - tick * 4, w: box.w + tick * 8, h: box.h + tick * 8 });
     }
-    if (s.target === 'specimen' && !ctx.hasArtwork) {
-      labels.push({ hint: true, text: 'No specimen to measure', x: centre.x, y: centre.y, anchor: 'centre' });
-      return { shapes: shapes, labels: labels, extent: canvas };
-    }
-    var box = s.target === 'specimen' || s.target === 'all' ? referenceBox(s.target, ctx) : canvas;
-    var by = box.y + box.h + tick * 3;
-    var rx = box.x + box.w + tick * 3;
-    shapes.push(part(dimension(box.x, by, box.x + box.w, by, tick), 'Width'));
-    shapes.push(part(dimension(rx, box.y, rx, box.y + box.h, tick), 'Height'));
-    labels.push({ text: format(box.w), x: box.x + box.w / 2, y: by, anchor: 'below' });
-    labels.push({ text: format(box.h), x: rx, y: box.y + box.h / 2, anchor: 'right' });
-    return { shapes: shapes, labels: labels, extent: union(canvas, { x: box.x, y: box.y, w: box.w + tick * 4, h: box.h + tick * 4 }) };
+    shapes.push(part(across ? dimension(from, at, to, at, tick) : dimension(at, from, at, to, tick), across ? 'Width' : 'Height'));
+    labels.push(valueLabel(text, s, across, from, to, at));
+    return { shapes: shapes, labels: labels, extent: extent };
+  }
+
+  /* A side of a span, or its middle. */
+  function sideOf(start, length, edge) {
+    return edge === 'start' ? start : edge === 'centre' ? start + length / 2 : start + length;
+  }
+
+  /* A measure's value, placed as the Figma kit's is: on the line's middle;
+     past one of its ends (left or right of a width, above or below a
+     height), the kit's 6px gap off the end; or beside its middle, across
+     it (above or below a width, left or right of a height), clear of the
+     ticks (offset 'across': 16px from the line). The label grows away from
+     the line (anchor), never over it; the gaps are the stylesheet's. */
+  function valueLabel(text, s, across, from, to, at) {
+    var mid = (from + to) / 2;
+    var place = s.value || 'bottom';
+    var x = across ? mid : at;
+    var y = across ? at : mid;
+    var anchor = 'centre';
+    if (place === 'top') { anchor = 'above'; if (!across) { y = from; } }
+    if (place === 'bottom') { anchor = 'below'; if (!across) { y = to; } }
+    if (place === 'left') { anchor = 'left'; if (across) { x = from; } }
+    if (place === 'right') { anchor = 'right'; if (across) { x = to; } }
+    var beside = (across && (place === 'top' || place === 'bottom')) || (!across && (place === 'left' || place === 'right'));
+    return { text: text, x: x, y: y, anchor: anchor, offset: beside ? 'across' : '', style: s.valueStyle === 'text' ? 'text' : 'filled', size: s.size === 'large' ? 'large' : 'default', colour: s.colour || '' };
   }
 
   /* A point on the canvas from two lengths: % of the canvas on that axis,
@@ -1674,7 +1763,7 @@
     var extent = canvas;
     if (s.text) {
       var at = placeOnCanvas(s.x, s.y, ctx, scope);
-      labels.push({ text: String(s.text), x: at.x, y: at.y, anchor: 'centre' });
+      labels.push({ text: String(s.text), x: at.x, y: at.y, anchor: 'centre', style: s.colour ? 'filled' : 'text', colour: s.colour || '' });
       extent = union(canvas, { x: at.x, y: at.y, w: 0, h: 0 });
     }
     return { shapes: [], labels: labels, extent: extent };
@@ -1903,6 +1992,8 @@
         'data-type': layer.type,
         'data-layer-id': layer.id,
         'data-line': layer.settings.lineStyle === 'dashed' ? 'dashed' : null,
+        // Large doubles a measure's line weight (design-system.css, Layer stack).
+        'data-size': layer.type === 'measure' && layer.settings.size === 'large' ? 'large' : null,
         'data-approximate': layer.approximate ? 'true' : null
       });
       paint(g, layer, opts.scope);
@@ -1936,7 +2027,10 @@
         g.appendChild(reference ? clipped(shape, clipId) : shape);
       });
       if (item.shown) {
-        results[layer.id].labels.forEach(function (label) { labels.push({ layerId: layer.id, text: label.text, x: label.x, y: label.y, anchor: label.anchor, hint: !!label.hint }); });
+        results[layer.id].labels.forEach(function (label) {
+          labels.push({ layerId: layer.id, text: label.text, x: label.x, y: label.y, anchor: label.anchor, hint: !!label.hint,
+            offset: label.offset || '', style: label.style || 'text', size: label.size || 'default', colour: label.colour || '' });
+        });
       }
       svgRoot.appendChild(g);
     });
@@ -2091,11 +2185,51 @@
       span.className = className || 'layer-stack-label';
       span.dataset.anchor = label.anchor || 'centre';
       span.dataset.layerId = label.layerId;
+      labelLook(span, label);
       span.style.left = ((label.x - result.view.x) / result.view.w * 100) + '%';
       span.style.top = ((label.y - result.view.y) / result.view.h * 100) + '%';
       span.textContent = label.text;
       host.appendChild(span);
     });
+  }
+
+  /* A label's style, size and colour on its element, for the stylesheet:
+     a filled label is a pill in its colour (the ground's ink when it has
+     none), its text the colour's own --annotation-*-on, or the paper. */
+  function labelLook(node, label) {
+    if (label.style === 'filled') { node.dataset.style = 'filled'; }
+    if (label.offset === 'across') { node.dataset.offset = 'across'; }
+    if (label.size === 'large') { node.dataset.size = 'large'; }
+    if (label.colour) {
+      node.style.setProperty('--layer-stack-label-fill', label.colour);
+      var named = /^var\(--annotation-([a-z-]+)\)$/.exec(label.colour);
+      node.style.setProperty('--layer-stack-label-on', named ? 'var(--annotation-' + named[1] + '-on)' : (isLight(label.colour) ? 'var(--annotation-ink)' : 'var(--annotation-on)'));
+    }
+  }
+
+  /* Whether a colour that is not one of the kit's (an earlier spec's hue, a
+     pasted hex) is light enough to want ink on it: past 0.18 luminance ink
+     reads better than light text. A var() is read off the document; what
+     cannot be read is taken as dark, the kit's own case. */
+  function isLight(colour) {
+    var value = String(colour).trim();
+    var token = /^var\((--[\w-]+)\)$/.exec(value);
+    if (token && typeof document !== 'undefined') { value = window.getComputedStyle(document.documentElement).getPropertyValue(token[1]).trim(); }
+    var rgb = null;
+    var hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value);
+    if (hex) {
+      var h = hex[1].length === 3 ? hex[1].replace(/./g, '$&$&') : hex[1];
+      rgb = [0, 2, 4].map(function (i) { return parseInt(h.slice(i, i + 2), 16); });
+    } else {
+      var fn = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i.exec(value);
+      if (fn) { rgb = [fn[1], fn[2], fn[3]].map(Number); }
+    }
+    if (!rgb) { return false; }
+    var lum = rgb.map(function (c) {
+      var v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * lum[0] + 0.7152 * lum[1] + 0.0722 * lum[2] > 0.18;
   }
 
   //
@@ -2540,38 +2674,66 @@
     if (scaled) { copy.removeAttribute('vector-effect'); }
   }
 
-  /* The labels' type and colours, read from a label the stylesheet styles
-     where the tool's labels sit, so a dark ground's ink comes with it. */
+  /* Where the labels are measured: beside the drawing, where the tool's
+     labels sit, so a dark ground's ink and paper come with them. */
   function readLabelStyle(svgRoot, k) {
+    return { host: svgRoot.parentNode || document.body, k: k, seen: new Map() };
+  }
+
+  /* One label as the stylesheet draws it, read off a hidden copy: its box
+     in screen px (so a pill's padding counts), its gap from its point, its
+     type and its colours, all scaled to canvas units by k. */
+  function measureLabel(label, style) {
+    if (style.seen.has(label)) { return style.seen.get(label); }
     var probe = document.createElement('span');
     probe.className = 'layer-stack-label';
-    probe.textContent = 'X';
-    (svgRoot.parentNode || document.body).appendChild(probe);
-    var style = window.getComputedStyle(probe);
-    var size = (parseFloat(style.fontSize) || 11) * k;
-    var read = { family: firstFamily(style.fontFamily), size: size, ink: cssColour(style.color), paper: cssColour(style.backgroundColor) };
+    probe.dataset.anchor = label.anchor || 'centre';
+    labelLook(probe, label);
+    probe.textContent = cleanText(label.text);
+    probe.style.visibility = 'hidden';
+    // A custom property reads back as written (calc() and all); a margin
+    // reads back in px, and moves nothing on an absolute element's box.
+    probe.style.marginLeft = 'var(--layer-stack-label-gap, 0px)';
+    style.host.appendChild(probe);
+    var computed = window.getComputedStyle(probe);
+    var rect = probe.getBoundingClientRect();
+    var read = {
+      w: rect.width * style.k,
+      h: rect.height * style.k,
+      gap: (parseFloat(computed.marginLeft) || 0) * style.k,
+      size: (parseFloat(computed.fontSize) || 12) * style.k,
+      family: firstFamily(computed.fontFamily),
+      weight: computed.fontWeight,
+      ink: cssColour(computed.color),
+      paper: cssColour(computed.backgroundColor),
+      filled: label.style === 'filled'
+    };
     probe.remove();
+    // A preview with no layout (hidden, collapsed) measures nothing: the
+    // label face is monospaced, so a character is about 0.6em, and a pill
+    // adds its padding.
+    if (!(rect.width > 0)) {
+      var pad = read.filled ? read.size * 1.4 : read.size * 0.4;
+      read.w = cleanText(label.text).length * read.size * 0.62 + pad;
+      read.h = read.size * (read.filled ? 1.6 : 1.4);
+      read.gap = read.gap || read.size * 0.5;
+    }
+    style.seen.set(label, read);
     return read;
   }
 
-  /* Where a label's text sits: the HTML labels' transforms (tools.css), in
-     em of the label size, with the baseline as y. */
-  function labelPlace(label, style) {
-    var anchor = label.anchor || 'centre';
-    var place = { x: label.x, y: label.y + style.size * 0.35, textAnchor: 'middle' };
-    if (anchor === 'above') { place.y = label.y - style.size * 0.55; }
-    if (anchor === 'below') { place.y = label.y + style.size * 1.15; }
-    if (anchor === 'right') { place.x = label.x + style.size * 0.7; place.textAnchor = 'start'; }
-    return place;
-  }
-
-  /* A label's box, near enough to keep it inside the view: the label face
-     is monospaced, so a character is about 0.6em; the halo adds a little. */
+  /* A label's box in canvas units: centred on its point, or grown away
+     from it by the gap, as the HTML labels' transforms place them
+     (design-system.css, Layer stack). */
   function labelBox(label, style) {
-    var place = labelPlace(label, style);
-    var w = String(label.text).length * style.size * 0.62 + style.size * 0.4;
-    var x = place.textAnchor === 'start' ? place.x - style.size * 0.2 : place.x - w / 2;
-    return { x: x, y: place.y - style.size * 1.05, w: w, h: style.size * 1.4 };
+    var m = measureLabel(label, style);
+    var anchor = label.anchor || 'centre';
+    var box = { x: label.x - m.w / 2, y: label.y - m.h / 2, w: m.w, h: m.h, m: m };
+    if (anchor === 'above') { box.y = label.y - m.gap - m.h; }
+    if (anchor === 'below') { box.y = label.y + m.gap; }
+    if (anchor === 'left') { box.x = label.x - m.gap - m.w; }
+    if (anchor === 'right') { box.x = label.x + m.gap; }
+    return box;
   }
 
   /* The first family of a CSS font stack, unquoted. Design tools match a
@@ -2581,19 +2743,27 @@
     return String(stack || '').split(',')[0].trim().replace(/^["']|["']$/g, '') || 'sans-serif';
   }
 
-  /* One label as SVG text, twice: a paper halo under the ink, because not
-     every design tool reads paint-order. Each is named by its text, as a
-     design tool names a text layer, the halo as its outline. */
+  /* One label as SVG. A filled one is its pill and its text; a text one is
+     its text twice, a paper halo under the ink, because not every design
+     tool reads paint-order. Each is named by its text, as a design tool
+     names a text layer: the pill as its background, the halo as its
+     outline. The text sits on the box's middle (0.35em is the x-height's). */
   function labelNodes(label, style, names) {
-    var place = labelPlace(label, style);
-    var common = { x: round(place.x), y: round(place.y), 'text-anchor': place.textAnchor, 'font-family': style.family, 'font-size': round(style.size) };
+    var box = labelBox(label, style);
+    var m = box.m;
     var text = cleanText(label.text);
-    var halo = el('text', Object.assign({ fill: 'none', stroke: style.paper, 'stroke-width': round(style.size * 0.3), 'stroke-linejoin': 'round' }, common));
-    var ink = el('text', Object.assign({ fill: style.ink }, common));
-    halo.setAttribute('id', uniqueName(text.trim() ? text + ' outline' : '', names, 'Label outline'));
+    var common = { x: round(box.x + box.w / 2), y: round(box.y + box.h / 2 + m.size * 0.35), 'text-anchor': 'middle', 'font-family': m.family, 'font-weight': m.weight, 'font-size': round(m.size) };
+    var ink = el('text', Object.assign({ fill: m.ink }, common));
     ink.setAttribute('id', uniqueName(text, names, 'Label'));
-    halo.textContent = text;
     ink.textContent = text;
+    if (m.filled) {
+      var pill = el('rect', { x: round(box.x), y: round(box.y), width: round(box.w), height: round(box.h), rx: round(box.h / 2), fill: m.paper });
+      pill.setAttribute('id', uniqueName(text.trim() ? text + ' background' : '', names, 'Label background'));
+      return [pill, ink];
+    }
+    var halo = el('text', Object.assign({ fill: 'none', stroke: m.paper, 'stroke-width': round(m.size * 0.3), 'stroke-linejoin': 'round' }, common));
+    halo.setAttribute('id', uniqueName(text.trim() ? text + ' outline' : '', names, 'Label outline'));
+    halo.textContent = text;
     return [halo, ink];
   }
 

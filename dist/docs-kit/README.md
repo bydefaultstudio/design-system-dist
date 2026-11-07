@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^7.0.0"
+npm install "github:bydefaultstudio/design-system-dist#semver:^7.1.0"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -125,6 +125,8 @@ automatically — external URLs pass through untouched.
 | `search` | `false` | the header search button and dialog. The kit ships no `search.js` or indexer, so leave it off unless the project supplies both |
 | `validateLayers` | `false` | require a valid `layer:` field in every file's frontmatter |
 | `pageTransitions` | `false` | animated Barba.js page transitions — **opt-in only**; read the "Page transitions" section before enabling |
+| `feedback` | `false` | the feedback form: "Was this helpful?" at the foot of every page, Share feedback and Report a problem in the bar's menu, and one shared dialog. **Opt-in only**: it needs your Worker's `/api/submit-form`; read the "Feedback" section first |
+| `feedbackScript` | kit copy | where the site serves `feedback.js`, when it keeps its own copy; unset, the kit ships it to `assets/docs-kit/feedback.js` |
 | `showcase` | `false` | By Default OS's Showcase: public `/showcase/` pages from `cms/showcase/`, `worker/showcase-assets.mjs`, and two cursor drawings under `assets/images/svg-cursors/` |
 | `siteMap` | `false` | writes `experiments/site-map-data.js`, every page as data for the site-map experiment |
 | `accessGate` | `false` | writes `worker/page-access.mjs` and draws a `lock` icon on the rows `nav.js` locks; the project's icon set must hold `lock` |
@@ -321,6 +323,49 @@ nothing else changes by hand. To back out, remove the key and rebuild.
 No verification tool ships with the kit — after enabling, click through a
 section index, a doc page, sibling pages in both directions, and any page
 with custom scripts, and check the console on each navigation.
+
+## Feedback
+
+`feedback: true` gives every page the same feedback form every By Default OS
+hub runs, so feedback from all of them lands in one Notion database, tagged by
+the hub it came from.
+
+What the generator adds:
+
+- **The footer block** on every page with the footer: "Was this helpful?" with
+  Yes and No. Yes records a thumbs up at once and offers "Tell us more"; No
+  opens the dialog.
+- **Share feedback and Report a problem** at the end of the doc bar's menu.
+  A tool page that authors its own bar adds the same two items itself:
+  `<button type="button" class="dropdown-item" data-feedback-open="share">` and
+  `data-feedback-open="problem"`, each in a `bar-group` with
+  `data-priority="menu"`.
+- **The dialog**, once per page at the end of `<body>`, outside any page
+  container: topic chips, a message, an optional "This is stopping me working"
+  switch for a bug, and a follow-up switch. It closes on sending; the footer
+  thanks the reader, or `showToast` does when the dialog opened from a bar.
+- **`feedback.js`**, shipped to `assets/docs-kit/feedback.js` unless
+  `feedbackScript` names your own copy.
+
+What your site must already have: the design system's CSS and `dialog.js`
+(the dialog, chips and switches are engine components), `toast.js` for the
+bar's thank-you (without it the dialog still closes, silently), and the
+kit's `docs.css` or your own copy of its feedback rules.
+
+**The server is yours to provide.** The form POSTs to `/api/submit-form` with
+`{ formType: "feedback", data, hp }` and expects the sign-in session cookie.
+Copy `worker/submit-form.js` and `worker/notion-config.js` from the design
+system repo into your Worker, route `/api/submit-form` to
+`handleSubmitForm`, add your hub's host to `ALLOWED_APEXES`, and set:
+
+| Name | Kind | Value |
+| --- | --- | --- |
+| `FEEDBACK_HUB` | var (`wrangler.jsonc`) | the name entries are filed under, e.g. `BlackDoctor`. No commas, 100 characters at most |
+| `NOTION_API_KEY` | secret | the Notion integration token |
+| `NOTION_DATABASE_ID_FEEDBACK` | secret | the Feedback database's ID |
+
+The hub, the reader's email (only when they turn follow-up on), the type and
+the status are written by the server, never taken from the browser.
 
 ## Versioning
 

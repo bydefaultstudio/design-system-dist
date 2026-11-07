@@ -1,0 +1,28 @@
+<!-- Page Feedback — "Was this helpful?" (Erlen, 2026-11-07).
+             Yes records a thumbs up at once and offers "Tell us more"; No opens
+             the feedback dialog. The dialog itself is not here: it lives
+             outside the Barba container in feedback-dialog.html, so tool pages,
+             which carry no chrome, can open it from their bar menu too.
+             data-pagefind-ignore is defence in depth: this block is emitted
+             outside <main>, so the search index never reaches it anyway. -->
+        <section class="page-feedback" aria-label="Page feedback" data-pagefind-ignore>
+            <div class="page-feedback-inner padding-global">
+                <div class="page-feedback-ask">
+                    <h3 class="page-feedback-prompt">Was this helpful?</h3>
+                    <p class="page-feedback-description">Tell us your feedback.</p>
+                    <div class="button-group">
+                        <button class="button" data-feedback="yes" type="button">{{icon:thumbs-up}} Yes</button>
+                        <button class="button" data-variant="faded" data-feedback="no" type="button">{{icon:thumbs-down}} No</button>
+                    </div>
+                    <p class="form-error page-feedback-error" role="alert" hidden></p>
+                </div>
+                <div class="page-feedback-success">
+                    <div class="page-feedback-success-icon">{{icon:check-circled}}</div>
+                    <h3 class="page-feedback-success-title" tabindex="-1"></h3>
+                    <button class="button" data-variant="text" type="button" data-feedback-open="more" hidden>Tell us more</button>
+                </div>
+                <!-- Always rendered, so the thank-you is announced when the
+                     block swaps; the visible thank-you is the title above. -->
+                <p class="page-feedback-status visually-hidden" role="status"></p>
+            </div>
+        </section>

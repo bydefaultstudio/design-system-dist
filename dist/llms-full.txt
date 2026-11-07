@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v7.0.0 -->
+<!-- @bydefaultstudio/design-system v7.1.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 7.0.0 (package)**
+**Version: 7.1.0 (package)**
 
 ## Getting the System
 
@@ -737,6 +737,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--green-lighter` | `#DCFCE7` |  |
 | `--green-light` | `#6DD995` |  |
 | `--green` | `#16A34A` |  |
+| `--green-deep` | `#15803D` |  |
 | `--green-dark` | `#155F31` |  |
 | `--purple-lighter` | `#F3E8FF` |  |
 | `--purple-light` | `#E9D5FF` |  |
@@ -750,6 +751,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--pink-light` | `#FBCFE8` |  |
 | `--pink` | `#F9A8D4` |  |
 | `--pink-dark` | `#831843` |  |
+| `--pink-vivid` | `#D61F69` |  |
 | `--peach-lighter` | `#FFEDD5` |  |
 | `--peach-light` | `#FED7AA` |  |
 | `--peach` | `#FDBA74` |  |
@@ -1260,6 +1262,10 @@ These are the actual CSS custom property values from `design-system.css`. Always
 
 | Token | Value | Note |
 | --- | --- | --- |
+| `--segmented-height` | `auto` |  |
+| `--segmented-font` | `var(--font-s)` |  |
+| `--segmented-padding-y` | `var(--space-s)` |  |
+| `--segmented-padding-x` | `var(--space-m)` |  |
 | `--segmented-track-background` | `var(--background-faded)` |  |
 | `--segmented-track-padding` | `3px` | visual inset, same register as --toggle-knob-offset |
 | `--segmented-radius` | `var(--radius-control)` |  |
@@ -1287,6 +1293,13 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--progress-ring-thickness` | `4px` |  |
 
 ### 23. CODE
+
+| Token | Value | Note |
+| --- | --- | --- |
+| `--number-input-height` | `auto` |  |
+| `--number-input-padding-y` | `var(--space-m)` |  |
+
+### 36. DROP CAP
 
 | Token | Value | Note |
 | --- | --- | --- |
@@ -1341,6 +1354,19 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--overlay-line-dash` | `4 3` |  |
 | **The finer dash: the canvas edge and an approximate rule.** | | |
 | `--overlay-dash-fine` | `2 2` |  |
+| `--annotation-ink` | `var(--neutral-900)` |  |
+| `--annotation-white` | `var(--neutral-50)` |  |
+| `--annotation-red` | `var(--red)` |  |
+| `--annotation-blue` | `var(--blue)` |  |
+| `--annotation-pink` | `var(--pink-vivid)` |  |
+| `--annotation-green` | `var(--green-deep)` |  |
+| `--annotation-on` | `var(--neutral-50)` |  |
+| `--annotation-ink-on` | `var(--annotation-on)` |  |
+| `--annotation-white-on` | `var(--neutral-900)` |  |
+| `--annotation-red-on` | `var(--annotation-on)` |  |
+| `--annotation-blue-on` | `var(--annotation-on)` |  |
+| `--annotation-pink-on` | `var(--annotation-on)` |  |
+| `--annotation-green-on` | `var(--annotation-on)` |  |
 
 ### DARK MODE OVERRIDES
 
@@ -1609,7 +1635,7 @@ Each heading size is a primitive `--font-*` token. No new tokens, no fluid units
 
 The default paragraph style used for all running content. The `var(--body-size)` token controls the base size globally. Changing it updates paragraphs, inputs, code, tables, and buttons at once. Size modifier classes let you step up or down from the default.
 
-**Stepped sizing.** The `.text-size-*` utilities are stepped rem — no viewport units, so text tracks browser zoom and user font-size settings (WCAG 1.4.4). `.text-size-xl` steps from 28px to 24px below 960px; the rest hold one size at every width. `.text-size-s` and `.text-size-xs` sit on the 14px accessibility floor. `.text-size-m` resolves to `var(--body-size)` itself, so it's the cleanest way to reset a paragraph to body sizing inside a container that overrides font-size.
+**Stepped sizing.** The `.text-size-*` utilities are stepped rem — no viewport units, so text tracks browser zoom and user font-size settings (WCAG 1.4.4). `.text-size-xl` steps from 28px to 24px below 960px; the rest hold one size at every width. `.text-size-s` and `.text-size-xs` sit on the 14px accessibility floor. `.text-size-m` resolves to `var(--body-size)` and `var(--body-leading)`, the same size and line height a plain paragraph inherits from `body`, so it's the cleanest way to reset a paragraph to body sizing inside a container that overrides font-size or line-height.
 
 **Reusable tokens.** Each utility consumes a matching `--text-size-*` token (`--text-size-xl`, `--text-size-l`, `--text-size-m`, `--text-size-s`, `--text-size-xs`). Use the token directly on any custom selector when you want the utility's sizing without applying the class.
 
@@ -1625,8 +1651,8 @@ The default paragraph style used for all running content. The `var(--body-size)`
 | --- | --- | --- | --- |
 | `.text-size-xl` | `var(--text-size-xl)` → `var(--font-3xl)` | 28px · 24px | `var(--line-height-m)` (1.2) |
 | `.text-size-l` | `var(--text-size-l)` → `var(--font-l)` | 20px | `var(--line-height-l)` (1.4) |
-| `.text-size-m` | `var(--text-size-m)` → `var(--body-size)` | 16px | `var(--line-height-l)` (1.4) |
-| `p` (default) | `var(--body-size)` | 16px | `var(--line-height-l)` (1.4) |
+| `.text-size-m` | `var(--text-size-m)` → `var(--body-size)` | 16px | `var(--body-leading)` (1.6) |
+| `p` (default) | `var(--body-size)` | 16px | `var(--body-leading)` (1.6), inherited from `body` |
 | `.text-size-s` | `var(--text-size-s)` → `var(--font-xs)` | 14px | `var(--line-height-xl)` (1.6) |
 | `.text-size-xs` | `var(--text-size-xs)` → `var(--font-xs)` | 14px | `var(--line-height-xl)` (1.6) |
 
@@ -1812,8 +1838,8 @@ line-height: var(--line-height-l);
 | `var(--line-height-xs)` | 0.7 | Tight display text |
 | `var(--line-height-s)` | 1 | Tight display text |
 | `var(--line-height-m)` | 1.2 | Headings, eyebrows |
-| `var(--line-height-l)` | 1.4 | Body text, paragraphs |
-| `var(--line-height-xl)` | 1.6 | Small text, captions |
+| `var(--line-height-l)` | 1.4 | Large text (`.text-size-l`), h4 to h6 |
+| `var(--line-height-xl)` | 1.6 | Body text and paragraphs (`--body-leading`), small text, captions |
 | `var(--line-height-2xl)` | 1.8 | Spacious body text |
 
 ---
@@ -3760,7 +3786,7 @@ Two presets, both re-points of `--bar-padding-y` underneath.
 
 **`data-density="regular"`** is a fixed height — `--bar-height`, 70px — for a bar whose content is uniform: a breadcrumb and a close. This is the doc page sub-header. The fixed height is also what makes the full-height stretch of the close — and of every menu cell in the actions cluster — safe.
 
-**`data-density="compact"`** collapses the bar to exactly one control tall, for a full-height app shell where every row given to chrome is a row taken from the canvas.
+**`data-density="compact"`** collapses the bar to exactly one control tall, for a full-height app shell where every row given to chrome is a row taken from the canvas. The same attribute on any other container means something else: [Density](/foundations/density.html) takes every control inside it to its small size on a fine pointer. The bar is excluded from those rules; here the word is about the bar's own padding, and its controls are already at the small height.
 
 The default (no attribute) is one control tall plus `--bar-padding-y` of breathing room either side — 52px at today's values. This is what the tool control bars use. The container enforces that floor itself, with a `min-height` built from the two tokens, so the height holds when every control has moved into the overflow panel and only the full-height cells remain. Those cells stretch to the row but never set it; without the floor a tool bar whose controls have all spilled collapses to its own padding, 16px, with the icons overflowing it.
 
@@ -5851,12 +5877,25 @@ States are transient: runtime-toggled, not permanent properties. They use `.is-*
 |---|---|
 | `.is-disabled`, `disabled` or `aria-disabled="true"` | `--opacity-disabled` (0.4), pointer events disabled |
 | `.is-loading` | Pointer disabled, `--opacity-loading` (0.75) |
-| `.is-active` | Pressed or selected state |
+| `.is-active` with `aria-pressed="true"` | A toggle that is on: unfilled variants invert to `--selected-background` and `--selected-text` |
 
 ```html
 <button class="button" disabled>Disabled</button>
 <button class="button is-loading" aria-busy="true">Saving...</button>
-<button class="button is-active" data-variant="faded">Active</button>
+<button class="button is-active" data-variant="faded" aria-pressed="true">Labels</button>
+```
+
+### Toggle buttons
+
+A button that stays on until pressed again (a preview switch, a stage toolbar's Transparent or Safe zone) carries `.is-active` and `aria-pressed="true"` while it is on, and the script moves the two together: the class is the paint, the attribute is what a screen reader hears. On the outline, faded, outline-faded and transparent variants it inverts, the same pair a selected segment uses. The hover wash is not used for "on": it measured 1.13:1 against the page, under the 3:1 a state needs. A hovered toggle stays inverted, and `data-color` does not reach a pressed one. The label stays the same in both states; `aria-pressed` carries on and off. The default variant is already filled, so it has no pressed look; use an unfilled variant for a toggle.
+
+An icon-only toggle names the thing it turns on, not the action, and carries a tooltip with the same words, so a pointer reader learns the name before pressing.
+
+```html
+<button class="button is-active" data-variant="transparent" data-icon-only
+        aria-label="Safe zone" aria-pressed="true" data-tooltip="Safe zone">
+  <span class="svg-icn" data-icon="section"><!-- SVG --></span>
+</button>
 ```
 
 ---
@@ -5942,9 +5981,10 @@ Pair it with `data-color="danger"` when the dismiss genuinely destroys work. Neu
 
 ## Accessibility
 
-- Icon-only buttons (`data-icon-only`) **must** include `aria-label` describing the action
+- Icon-only buttons (`data-icon-only`) **must** include `aria-label` describing the action, or for a toggle, the thing it turns on (the label never changes with state)
 - `disabled` or `aria-disabled="true"` is announced by screen readers; `.is-disabled` paints only and announces nothing
 - Loading buttons (`.is-loading`) must set `aria-busy="true"`, and remove it when the work ends. The class is paint only: it stops the pointer and dims the button, but tells a screen reader nothing. The dim stops at 0.75 because a loading button is still enabled, so its label keeps the 4.5:1 text floor
+- Toggle buttons set `aria-pressed` and keep it in step with `.is-active`; the class alone tells a screen reader nothing
 - Focus ring appears automatically on `:focus-visible`
 - Disabled links require `aria-disabled="true"`, which also paints them
 - Choose elements by semantics: `<button>` for actions, `<a href>` for navigation
@@ -9124,7 +9164,7 @@ An input that carries something inside it — an icon, a clear button, a passwor
 
 ### Sizes
 
-`data-size` on a bare input or select re-points the field tokens. Small shares its height with a [Bar](bar.html)'s controls — the bar reads the same token — though a bar keeps its own type size; large is a hero search or a one-field form. A bar sets its own height and needs no attribute. A side-labelled group takes the size on the `.form-group` instead, so the label's top padding follows the control. On a `fieldset` it sizes every text control inside, and — for small — every [checkbox](#small-checkbox), [radio](#small-radio) and [toggle](#small-toggle) too.
+`data-size` on a bare input or select re-points the field tokens. Small shares its height with a [Bar](bar.html)'s controls — the bar reads the same token — though a bar keeps its own type size; large is a hero search or a one-field form. A bar sets its own height and needs no attribute. A side-labelled group takes the size on the `.form-group` instead, so the label's top padding follows the control. On a `fieldset` it sizes every text control inside, and — for small — every [checkbox](#small-checkbox), [radio](#small-radio) and [toggle](#small-toggle) too. A compact container, [Density](/foundations/density.html), sets small on every control inside it at once, on a fine pointer.
 
 ```html
 <input type="text" data-size="small">
@@ -9673,6 +9713,20 @@ Read the value the same way as any radio group — `input:checked` in script, or
 
 This variant shipped in 6.0 as `data-variant="thumb"`. That name still works — every rule matches both — but new markup uses `faded`. The `--segmented-thumb-*` tokens keep their names: the thumb is the part that slides, not the variant.
 
+### Sizes
+
+`data-size="small"` takes any variant to the field's small height, 36px, with the small type and no block padding: the height the [bar](bar.html) already gives its flat and underline segments. The faded track takes it too. Its labels sit inside the 3px inset at the small type, which is why the bar excludes that variant and this size does not. On a `.form-group` or a `fieldset` it sizes every segmented control inside, as the text sizes do, and a compact container ([Density](/foundations/density.html)) sets the same values on every control it holds.
+
+```html
+<div class="segmented-control" data-size="small" role="group" aria-label="View">…</div>
+<div class="segmented-control" data-variant="faded" data-size="small" role="radiogroup" aria-label="Export as">…</div>
+```
+
+| Size | `--segmented-height` | `--segmented-font` | `--segmented-padding-y` | `--segmented-padding-x` |
+|---|---|---|---|---|
+| `small` | `--field-height-s` (36px) | `--font-xs` | `0` | `--space-s` |
+| default | `auto` | `--font-s` | `--space-s` | `--space-m` |
+
 ### Styling
 
 - **Segments:** transparent, `var(--text-faded)`, `var(--radius-control)` corners, no border
@@ -9720,7 +9774,7 @@ This variant shipped in 6.0 as `data-variant="thumb"`. That name still works —
 </div>
 ```
 
-Requires `assets/js/number-input.js`.
+Requires `assets/js/number-input.js`. `data-size="small"` takes it to the field's small height, on the control, a `.form-group` or a `fieldset`; see [Sizes](number-input.html#sizes).
 
 ---
 
@@ -9805,6 +9859,9 @@ This section documents how the component is built. For usage, see the sections a
 | `--segmented-underline-width` | `2px` | Underline variant: the selected mark's thickness, matching the tabs |
 | `--segmented-underline-color` | `var(--selected-background)` | Underline variant: the selected mark |
 | `--segmented-underline-baseline` | `var(--border-faded)` | Underline variant: the 1px baseline under the group |
+| `--segmented-height` | `auto` | The control's height, every variant; small re-points it to `--field-height-s` and every form fills it |
+| `--segmented-font` | `var(--font-s)` | Segment type size; small is `--font-xs` |
+| `--segmented-padding-y`, `--segmented-padding-x` | `var(--space-s)`, `var(--space-m)` | Segment padding, flat button and faded option alike; small is `0` and `--space-s` |
 | `--select-picker-max-height` | `18rem` | Scroll ceiling for the option list |
 
 The customizable select picker reuses `--dropdown-background`, `--dropdown-border` and `--dropdown-item-hover` rather than defining its own surface, so a native select and a `.dropdown` read as the same object.
@@ -9858,9 +9915,11 @@ The customizable select picker reuses `--dropdown-background`, `--dropdown-borde
 | `.segmented-control-option` | Segment label: metrics, colour transition, checked and focus states via `:has()` — all rules scoped to the variant |
 | `.segmented-control-option input[type="radio"]` | The invisible radio, stretched over its label as the hit area |
 | `.segmented-control-option:has(input:disabled)` | Disabled segment: `--input-disabled-text` at half opacity, not-allowed cursor |
+| `.segmented-control[data-size="small"]`, `.form-group[data-size="small"]`, `fieldset[data-size="small"]` | Small: re-points the `--segmented-*` size tokens, inherited by every segment inside |
 | `.slider-wrapper` | Labelled slider container |
 | `.number-input` | Stepper wrapper: flex, border |
 | `.number-input-btn` | Increment/decrement button |
+| `.number-input[data-size="small"]`, `.form-group[data-size="small"]`, `fieldset[data-size="small"]` | Small: the field's small height, no block padding, `--font-xs` |
 | `.radio-group` | Radio group wrapper, vertical stack |
 | `.radio-group.is-horizontal` | Horizontal radio layout |
 | `.radio-group-label` | Group legend styling |
@@ -10736,6 +10795,21 @@ The number input wraps a native `<input type="number">` with decrement and incre
 
 ---
 
+## Sizes
+
+`data-size="small"` takes the control to the field's small height, 36px, with the small type and no block padding, the size a text input takes from the same attribute. On a `.form-group` or a `fieldset` it sizes every number input inside, as the text sizes do, and a compact container ([Density](/foundations/density.html)) sets the same values on every control it holds. The steppers keep their 2rem width, above the 24px target floor.
+
+```html
+<div class="number-input" data-size="small" role="group" aria-label="Size in pixels">…</div>
+```
+
+| Size | `--number-input-height` | `--number-input-padding-y` | `--field-font` |
+|---|---|---|---|
+| `small` | `--field-height-s` (36px) | `0` | `--font-xs` |
+| default | `auto` (48px at the body size) | `--space-m` | `--body-size` |
+
+---
+
 ## Disabled
 
 ---
@@ -10779,6 +10853,35 @@ Inside a [bar](bar.html) it takes the bar's control height and a fixed 4.5rem fi
 **Don't:**
 - Don't use for large numeric ranges. Use a slider instead
 - Don't use for values that aren't truly numeric (e.g. phone numbers)
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | What it controls |
+|---|---|---|
+| `--number-input-radius` | `var(--field-radius)` | The box's corner, the field's |
+| `--number-input-height` | `auto` | The box's height; small re-points it to `--field-height-s` and the stretched input fills it |
+| `--number-input-padding-y` | `var(--space-m)` | The input's block padding; small is `0` |
+| `--field-font` | `var(--body-size)` | The value's type size, read through the base input rule; small is `--font-xs` |
+| `--input-border`, `--input-background`, `--input-focus` | the form's | Border, surface and focus ring, shared with every text control |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.number-input` | The box: inline-flex, stretched children, the border and corner, `overflow: hidden` so the steppers clip to the corner |
+| `.number-input:focus-within` | The focus ring, on the box rather than the input |
+| `.number-input:has(input[readonly]:not(:disabled))` | Read-only: the faded surface, as a `.field` takes |
+| `.number-input input[type="number"]` | The value: no border or shadow of its own, centred, tabular figures, native spinner hidden |
+| `.number-input-btn` | A stepper: 2rem wide, transparent until hovered, focus ring inset |
+| `.number-input-btn:disabled` | At the limit: faded, not-allowed cursor |
+| `.number-input[data-size="small"]`, `.form-group[data-size="small"]`, `fieldset[data-size="small"]` | Small: re-points the height, padding and type tokens, inherited by every number input inside |
+| `.bar .number-input` | In a bar: the bar's control height and a fixed `--bar-number-input-width` |
 
 ### Page Header
 
@@ -13141,10 +13244,10 @@ This section documents how the component is built. For usage, see the sections a
 
 The neutral toast, meaning one with no `data-type`, inverts with the theme:
 
-| Property | Value (Light) | Value (Dark) |
-|---|---|---|
-| Background | `var(--brown-dark)` | `var(--neutral-100)` |
-| Text colour | `var(--off-white)` | `var(--brown-dark)` |
+| Property | Value |
+|---|---|
+| Background | `var(--background-inverted)` — swaps with the theme |
+| Text colour | `var(--text-inverted)` — swaps with the theme |
 
 A typed toast keeps its status colour as text in both themes and reads its surface from the paired token:
 
@@ -13236,12 +13339,12 @@ This section documents how the component is built. For usage, see the sections a
 
 ### Styling
 
-The tooltip defines no component tokens — values are set directly on the component rules, and dark mode is handled on the component rather than by token swaps.
+The tooltip defines no component tokens. It reads the inverted semantic tokens, which swap with the theme, so dark mode needs no rules of its own.
 
 | Property | Value |
 |---|---|
-| Background | `var(--brown-dark)` — dark mode: `var(--neutral-100)` |
-| Text colour | `var(--off-white)` — dark mode: `var(--brown-dark)` |
+| Background | `var(--background-inverted)` — swaps with the theme |
+| Text colour | `var(--text-inverted)` — swaps with the theme |
 | Corner radius | `var(--tooltip-radius)` → `var(--radius-surface)` |
 | Padding | `var(--space-xs) var(--space-s)` |
 | Typography | `var(--font-primary)`, `var(--font-xs)`, `var(--font-weight-regular)`, `var(--line-height-m)` — pinned in full (with letter-spacing, case, style, and stretch normalised), because an unpinned pseudo-element inherits typography from its trigger: the same tooltip would render tighter on a button than on a span, and uppercase on a badge |
@@ -13453,8 +13556,8 @@ Package consumers control which icons they ship via `icons.manifest.json` at the
 
 ### When to Subset
 
-Most sites reference 15–45 of the 237 icons in the registry. The sprite carries
-281 symbols — the extra 44 are deprecated names kept resolving for consumers
+Most sites reference 15–45 of the 249 icons in the registry. The sprite carries
+293 symbols — the extra 44 are deprecated names kept resolving for consumers
 (`icons.aliases.json`) and deliberately hidden from the registry. The master sprite — every icon, unfiltered — is roughly 165KB; a subset sprite trims that to just what the site uses.
 
 | Situation | What to do |
@@ -13639,7 +13742,7 @@ Name the drawing, not the job. An edit button uses `pencil`, a measure button `r
 
 The full brand icon set. This table is generated at build time from `assets/images/svg-icons/`, so it always matches the source directory. The `data-icon` value is the name to use with the wrapper, the shorthand, and the sprite. For a categorised view with copy and download, see the [brand iconography page](/foundations/brand-iconography.html).
 
-`3d`, `accessibility`, `accessibility-circled`, `ad-left`, `ad-right`, `ad-top`, `add`, `add-circled`, `animation`, `ar`, `archive`, `arrow-corner-up-right`, `arrow-down`, `arrow-down-from-line`, `arrow-down-long`, `arrow-left`, `arrow-right`, `arrow-right-to-line`, `arrow-turn-up-left`, `arrow-turn-up-right`, `arrow-up`, `arrow-up-right`, `arrow-up-to-line`, `back-arrow`, `bolt`, `book`, `book-cover`, `book-open`, `bookmark`, `browser`, `browser-stack`, `bullseye`, `calendar`, `cart`, `chart`, `chat`, `chat-sparkle`, `check`, `check-circled`, `check-filled-circled`, `check-squared`, `checklist`, `chess-knight`, `chess-pawn`, `chevron-down`, `chevron-down-large`, `chevron-left`, `chevron-left-large`, `chevron-right`, `chevron-right-large`, `chevron-up`, `chevron-up-large`, `chevrons-left-right`, `circle`, `clock`, `close`, `close-circled`, `close-full`, `close-large`, `code`, `cog`, `columns`, `compass`, `component`, `contrast`, `contrast-reverse`, `copy`, `credit-card`, `crosshair`, `cursor`, `cursor-click`, `cursor-pointer`, `cursor-ripple`, `design`, `desktop`, `direction-circled`, `download`, `drag`, `easel`, `ellipsis`, `ellipsis-large`, `ellipsis-large-vertical`, `ellipsis-vertical`, `exclamation-circled`, `external-link`, `eye`, `eye-off`, `facebook`, `fast-forward`, `file`, `file-audio`, `file-css`, `file-doc`, `file-font`, `file-html`, `file-image`, `file-json`, `file-md`, `file-pdf`, `file-svg`, `file-txt`, `file-video`, `filter`, `flame`, `folder`, `folder-open`, `folder-zip`, `font-size`, `full-screen`, `game`, `gamepad`, `github`, `globe`, `grid`, `headphones`, `heart`, `height`, `home`, `info-circled`, `instagram`, `layer-add`, `line`, `link`, `linkedin`, `list`, `list-123`, `list-abc`, `lock`, `login`, `logout`, `loop`, `loop-reverse`, `mail`, `map`, `mask`, `menu`, `minus`, `minus-circled`, `mobile`, `mobile-video`, `moon`, `news`, `open-full`, `page`, `page-check`, `paint-bucket`, `paintbrush`, `partner`, `pause`, `pencil`, `pencil-draw`, `percent`, `photo`, `photos`, `pie-10-circled`, `pie-100-circled`, `pie-25-circled`, `pie-50-circled`, `pie-75-circled`, `pin`, `play`, `play-circled`, `play-outline`, `present`, `question-circled`, `reddit`, `refresh`, `repost`, `return-arrow`, `return-key`, `rewind`, `rows`, `ruler`, `search`, `search-large`, `search-scan`, `section`, `send`, `shapes`, `share`, `shopping-bag`, `shopping-bag-check`, `sidebar-left-close`, `sidebar-left-open`, `sidebar-right-close`, `sidebar-right-open`, `skip-back-10`, `skip-back-15`, `skip-back-5`, `skip-forward-10`, `skip-forward-15`, `skip-forward-5`, `sliders`, `sliders-vertical`, `smile`, `sound`, `sound-off`, `sound-on`, `sparkle`, `sparkle-large`, `spotify`, `square`, `square-dashed`, `stack`, `stacked`, `sticky-bottom`, `sticky-top`, `substack`, `sun`, `sun-2`, `swap`, `swords`, `t-shirt`, `tablet`, `tag`, `tag-rotated`, `tap`, `tap-ripple`, `text`, `thumbs-down`, `thumbs-up`, `tiktok`, `trash`, `trending-up`, `unlock`, `upload`, `user`, `user-add`, `user-circled`, `users`, `video`, `warning`, `width`, `x`, `youtube`, `zoom-in`, `zoom-out`
+`3d`, `accessibility`, `accessibility-circled`, `ad-left`, `ad-right`, `ad-top`, `add`, `add-circled`, `align-center`, `align-left`, `align-right`, `animation`, `ar`, `archive`, `arrow-corner-up-right`, `arrow-down`, `arrow-down-from-line`, `arrow-down-long`, `arrow-left`, `arrow-right`, `arrow-right-to-line`, `arrow-turn-up-left`, `arrow-turn-up-right`, `arrow-up`, `arrow-up-right`, `arrow-up-to-line`, `back-arrow`, `bold`, `bolt`, `book`, `book-cover`, `book-open`, `bookmark`, `browser`, `browser-stack`, `bullseye`, `calendar`, `cart`, `chart`, `chat`, `chat-sparkle`, `check`, `check-circled`, `check-filled-circled`, `check-squared`, `checklist`, `chess-knight`, `chess-pawn`, `chevron-down`, `chevron-down-large`, `chevron-left`, `chevron-left-large`, `chevron-right`, `chevron-right-large`, `chevron-up`, `chevron-up-large`, `chevrons-left-right`, `circle`, `circle-dashed`, `clock`, `close`, `close-circled`, `close-full`, `close-large`, `code`, `cog`, `columns`, `compass`, `component`, `contrast`, `contrast-reverse`, `copy`, `credit-card`, `crosshair`, `cursor`, `cursor-click`, `cursor-pointer`, `cursor-ripple`, `design`, `desktop`, `direction-circled`, `download`, `drag`, `easel`, `ellipsis`, `ellipsis-large`, `ellipsis-large-vertical`, `ellipsis-vertical`, `exclamation-circled`, `external-link`, `eye`, `eye-off`, `facebook`, `fast-forward`, `file`, `file-audio`, `file-css`, `file-doc`, `file-font`, `file-html`, `file-image`, `file-json`, `file-md`, `file-pdf`, `file-svg`, `file-txt`, `file-video`, `filter`, `flame`, `folder`, `folder-open`, `folder-zip`, `font-size`, `full-screen`, `game`, `gamepad`, `github`, `globe`, `grid`, `headphones`, `heart`, `height`, `home`, `info-circled`, `instagram`, `italic`, `layer-add`, `line`, `link`, `linkedin`, `list`, `list-123`, `list-abc`, `lock`, `login`, `logout`, `loop`, `loop-reverse`, `mail`, `map`, `mask`, `menu`, `mic`, `mic-off`, `minus`, `minus-circled`, `mobile`, `mobile-video`, `moon`, `motion`, `news`, `numbers`, `open-full`, `page`, `page-check`, `paint-bucket`, `paintbrush`, `partner`, `pause`, `pencil`, `pencil-draw`, `percent`, `photo`, `photos`, `pie-10-circled`, `pie-100-circled`, `pie-25-circled`, `pie-50-circled`, `pie-75-circled`, `pin`, `play`, `play-circled`, `play-outline`, `present`, `question-circled`, `reddit`, `refresh`, `repost`, `return-arrow`, `return-key`, `rewind`, `rows`, `ruler`, `search`, `search-large`, `search-scan`, `section`, `send`, `shapes`, `share`, `shopping-bag`, `shopping-bag-check`, `sidebar-left-close`, `sidebar-left-open`, `sidebar-right-close`, `sidebar-right-open`, `skip-back-10`, `skip-back-15`, `skip-back-5`, `skip-forward-10`, `skip-forward-15`, `skip-forward-5`, `sliders`, `sliders-vertical`, `smile`, `sound`, `sound-off`, `sound-on`, `sparkle`, `sparkle-large`, `spotify`, `square`, `square-dashed`, `square-rounded-dashed`, `stack`, `stacked`, `sticky-bottom`, `sticky-top`, `substack`, `sun`, `sun-2`, `swap`, `swords`, `t-shirt`, `tablet`, `tag`, `tag-rotated`, `tap`, `tap-ripple`, `text`, `thumbs-down`, `thumbs-up`, `tiktok`, `trash`, `trending-up`, `underline`, `unlock`, `upload`, `user`, `user-add`, `user-circled`, `users`, `video`, `warning`, `width`, `x`, `youtube`, `zoom-in`, `zoom-out`
 
 ---
 

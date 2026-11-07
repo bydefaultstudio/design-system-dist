@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.0.0 */
+/* @bydefaultstudio/design-system v7.1.0 */
 import * as React from 'react';
 
 export interface CellInputProps {

@@ -1,0 +1,54 @@
+<!-- Feedback dialog — the Dialog component (design-system.css §29), with
+    .feedback-modal as the role class feedback.js binds to. One copy per page,
+    outside the Barba container, so a page swap never holds it open over an
+    inert page and every page type can open it: the footer's Yes and No, and
+    the Share feedback and Report a problem items in a bar's menu
+    ([data-feedback-open]). Spec: agency internal/bydefault-os/feedback-form-spec.md.
+
+    The option values are the Notion option names and must match the lists in
+    worker/notion-config.js (feedback.options). -->
+    <dialog class="dialog feedback-modal" aria-labelledby="feedback-title" aria-describedby="feedback-subtitle">
+      <div class="dialog-header">
+        <div class="feedback-modal-heading">
+          <h2 class="dialog-title" id="feedback-title">Tell us what you think</h2>
+          <p class="feedback-modal-subtitle" id="feedback-subtitle">Every message helps us make this better.</p>
+        </div>
+        <button class="button close-btn feedback-modal-close" type="button" data-icon-only data-size="small" aria-label="Close">{{icon:close-large}}</button>
+      </div>
+      <div class="dialog-body">
+        <form class="feedback-form" id="feedback-form" novalidate>
+          <fieldset data-variant="bare">
+            <legend>What's this about?</legend>
+            <div class="chip-group">
+              <label class="chip"><input type="radio" name="topic" value="Something's not working" required><span>Something's not working</span></label>
+              <label class="chip"><input type="radio" name="topic" value="An idea"><span>An idea</span></label>
+              <label class="chip"><input type="radio" name="topic" value="Content is wrong"><span>Content is wrong</span></label>
+              <label class="chip"><input type="radio" name="topic" value="I like it"><span>I like it</span></label>
+            </div>
+          </fieldset>
+          <div class="form-group">
+            <label for="feedback-text" class="feedback-message-label">Your message</label>
+            <textarea id="feedback-text" name="feedback" class="feedback-textarea" rows="4" placeholder="Pick a topic, then tell us more"></textarea>
+          </div>
+          <div class="form-group feedback-impact" hidden>
+            <div class="form-toggle">
+              <input type="checkbox" id="feedback-impact" name="impact" role="switch" aria-describedby="feedback-impact-hint">
+              <label for="feedback-impact">This is stopping me working</label>
+            </div>
+            <p class="form-hint" id="feedback-impact-hint">Optional. We look at these first.</p>
+          </div>
+          <div class="form-group">
+            <div class="form-toggle">
+              <input type="checkbox" id="feedback-follow-up" name="follow-up" role="switch" aria-describedby="feedback-follow-up-hint">
+              <label for="feedback-follow-up">Can we follow up with you?</label>
+            </div>
+            <p class="form-hint" id="feedback-follow-up-hint">Turn this on if you'd like a reply.</p>
+          </div>
+          <p class="form-error" id="feedback-error" role="alert" hidden></p>
+        </form>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="button feedback-modal-close" data-size="small" data-variant="faded">Cancel</button>
+        <button type="submit" form="feedback-form" class="button" data-size="small">Send feedback</button>
+      </div>
+    </dialog>

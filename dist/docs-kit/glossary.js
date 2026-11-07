@@ -175,8 +175,13 @@ function publishedTopics(glossary) {
  * data-barba-prevent: glossary.js takes a plain click to open the drawer, and
  * Barba ignores defaultPrevented, so without it Barba would navigate as well.
  * A modified click still opens the entry page, as a full page load.
+ *
+ * artHue(slug) names the hue of the term's drawing, or '' for none. A term
+ * with one carries it as data-glossary-art, so the drawer paints its art
+ * strip the moment it opens and the drawing lands in it with the article.
+ * Not data-color: that would put the card itself in the colour scope.
  */
-function renderGlossaryList(glossary, entryHref) {
+function renderGlossaryList(glossary, entryHref, artHue = () => '') {
   const topicSlugs = new Set(publishedTopics(glossary).map(t => t.slug));
   const groups = new Map();
   for (const e of glossary.published) {
@@ -199,7 +204,9 @@ function renderGlossaryList(glossary, entryHref) {
     out.push('      <div class="glossary-grid">');
     for (const e of entries) {
       const topics = e.tags.filter(t => topicSlugs.has(t)).join(' ');
-      out.push(`        <a class="card card--interactive glossary-card" id="term-${e.slug}" href="${entryHref(e.slug)}" data-glossary-term="${e.slug}" data-letter="${letter}" data-topics="${topics}" data-barba-prevent>`);
+      const hue = artHue(e.slug);
+      const art = hue ? ` data-glossary-art="${hue}"` : '';
+      out.push(`        <a class="card card--interactive glossary-card" id="term-${e.slug}" href="${entryHref(e.slug)}" data-glossary-term="${e.slug}" data-letter="${letter}" data-topics="${topics}"${art} data-barba-prevent>`);
       out.push(`          <h4 class="book-contents-item-title">${escapeHtml(e.title)}</h4>`);
       out.push(`          <p class="book-contents-item-description">${escapeHtml(e.short)}.</p>`);
       out.push('        </a>');

@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const { readIconAliases } = require('./icon-aliases');
 const assetLibrary = require('./asset-library');
+const formatRegistry = require('./formats');
+const formatCard = require('./format-card');
 const siteMap = require('./site-map');
 const showcase = require('./showcase');
 const { marked } = require('marked');
@@ -80,6 +82,14 @@ const CONFIG = {
   search: userConfig.search === true,
   validateLayers: userConfig.validateLayers === true,
   pageTransitions: userConfig.pageTransitions === true,
+  // The feedback form (opt-in): the footer's "Was this helpful?" block, the
+  // shared dialog, Share feedback / Report a problem in the doc bar's menu,
+  // and feedback.js. It posts to /api/submit-form, which the site's own
+  // Worker must provide — see the docs-kit README, "Feedback".
+  feedback: userConfig.feedback === true,
+  // A site that serves feedback.js from its own tree names it here; unset,
+  // the kit's copy is shipped into assets/docs-kit/.
+  feedbackScript: userConfig.feedbackScript || null,
   // By Default OS features. Each writes files a docs-kit project does not own
   // (worker/*.mjs, experiments/, a public /showcase/), and a project with its
   // own Worker has a worker/ folder for other reasons, so each is opt-in.
@@ -119,6 +129,11 @@ if (CONFIG.basePath && (!CONFIG.basePath.startsWith('/') || CONFIG.basePath.ends
 // silently coerced to off.
 if (userConfig.pageTransitions !== undefined && typeof userConfig.pageTransitions !== 'boolean') {
   console.error(`❌ Invalid pageTransitions: expected true or false, got ${JSON.stringify(userConfig.pageTransitions)}. Page transitions are opt-in — set pageTransitions: true only after reading the "Page transitions" section of the docs-kit README.`);
+  process.exit(1);
+}
+
+if (userConfig.feedback !== undefined && typeof userConfig.feedback !== 'boolean') {
+  console.error(`❌ Invalid feedback: expected true or false, got ${JSON.stringify(userConfig.feedback)}. The feedback form is opt-in — read the "Feedback" section of the docs-kit README before enabling it.`);
   process.exit(1);
 }
 
@@ -750,6 +765,55 @@ function renderAssetManifest() {
 }
 
 /**
+ * The format registry, inlined on the Formats tool page from
+ * {{format-manifest}}: every assets/data/formats/<platform>.json, checked by
+ * the loader the verify script shares (cms/generator/formats.js). A bad file
+ * stops the build rather than shipping a broken tile.
+ * @returns {string} HTML string
+ */
+let formatPlatforms = null;
+/**
+ * The format registry, read and checked once per build. A bad file stops
+ * the build: the tool page, every {{format:}} tag and the embed read it.
+ * @returns {object[]} the platforms
+ */
+function loadFormatRegistry() {
+  if (formatPlatforms) return formatPlatforms;
+  const { platforms, errors } = formatRegistry.loadFormats(ROOT);
+  if (errors.length) {
+    console.error('\n❌ Format registry is invalid — fix assets/data/formats/:');
+    errors.forEach((e) => console.error('  ' + e));
+    process.exit(1);
+  }
+  formatPlatforms = platforms;
+  return platforms;
+}
+
+/**
+ * tools/formats-embed.html, the public embed of one format card
+ * (cms/format-card.md). Written only when the registry has formats, so a
+ * deployment without any ships no empty embed.
+ */
+function writeFormatsEmbed() {
+  const platforms = loadFormatRegistry();
+  if (!platforms.length) return;
+  const html = formatCard.renderEmbedPage({ platforms, getIcon, themeLink: rootThemeCss('/') });
+  const out = path.join(OUTPUT_DIR, formatCard.EMBED_PATH);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, html);
+  console.log(`📄 Generated: ${formatCard.EMBED_PATH}`);
+}
+
+function renderFormatManifest() {
+  const platforms = loadFormatRegistry();
+  if (!platforms.length) console.warn('{{format-manifest}}: no assets/data/formats/*.json — the Formats tool renders empty');
+  const json = formatRegistry.manifestJson(platforms);
+  const count = platforms.reduce((n, p) => n + p.formats.length, 0);
+  console.log(`Format manifest: ${count} formats across ${platforms.length} platforms, ${Math.round(json.length / 1024)} KB`);
+  return `<script type="application/json" id="format-manifest">${json}</script>`;
+}
+
+/**
  * Render a .book-cover anchor with the standard header/content/footer layout.
  *
  *   header  → full-screen icon (top right)
@@ -1351,7 +1415,49 @@ function renderImageShortcode(params, line) {
  */
 function expandImageShortcodes(markdown) {
   if (!markdown.includes('{{image:')) return markdown;
+  return mapLinesOutsideFences(markdown, (line) => {
+    if (!line.startsWith('{{image:')) return line;
 
+    const match = /^\{\{image:\s*(.*?)\s*\}\}[^\S\n]*$/.exec(line);
+    if (!match) {
+      throw new Error(
+        `{{image}}: the shortcode has to be the whole line — it must close with }} and carry nothing after it`
+        + `\n  ${line}\n  (grep cms/ for that line)`
+      );
+    }
+    return renderImageShortcode(match[1], line);
+  });
+}
+
+/**
+ * Expand every {{format: …}} line outside a fenced code block into a format
+ * card shell, and every {{format-table: <platform>}} line into the
+ * platform's at-a-glance table (cms/generator/format-card.js). Column 0 and the whole line,
+ * like {{image:}}, so a mention in prose or code stays text. A bad id or
+ * layer stops the build, naming the page.
+ * @param {string} markdown
+ * @param {string} source the page, for the error
+ */
+function expandFormatShortcodes(markdown, source) {
+  if (!markdown.includes('{{format:') && !markdown.includes('{{format-table:')) return markdown;
+  const platforms = loadFormatRegistry();
+  const byId = formatCard.indexFormats(platforms);
+  return mapLinesOutsideFences(markdown, (line) => {
+    if (line.startsWith('{{format:')) return formatCard.expandTag(line, byId, getIcon, source);
+    if (line.startsWith('{{format-table:')) return formatCard.expandTable(line, platforms, source);
+    return line;
+  });
+}
+
+/**
+ * Run fn over every line that is not inside a fenced code block.
+ *
+ * Fence state is tracked line by line rather than by splitting on a pattern,
+ * because a fence is defined by its marker AND its length: a ```` block may
+ * contain ``` lines, and only a run of the same character at least as long
+ * closes it.
+ */
+function mapLinesOutsideFences(markdown, fn) {
   let fence = null;
   return markdown.split('\n').map((line) => {
     const marker = /^([`~]{3,})/.exec(line);
@@ -1372,23 +1478,14 @@ function expandImageShortcodes(markdown) {
       return line;
     }
 
-    if (!line.startsWith('{{image:')) return line;
-
-    const match = /^\{\{image:\s*(.*?)\s*\}\}[^\S\n]*$/.exec(line);
-    if (!match) {
-      throw new Error(
-        `{{image}}: the shortcode has to be the whole line — it must close with }} and carry nothing after it`
-        + `\n  ${line}\n  (grep cms/ for that line)`
-      );
-    }
-    return renderImageShortcode(match[1], line);
+    return fn(line);
   }).join('\n');
 }
 
 /**
  * Convert markdown to HTML using marked
  */
-function markdownToHtml(markdown) {
+function markdownToHtml(markdown, source = 'a cms/*.md page') {
   // Configure marked options
   marked.setOptions({
     gfm: true, // GitHub Flavored Markdown
@@ -1418,10 +1515,15 @@ function markdownToHtml(markdown) {
   // see expandImageShortcodes for why that is the only order that works.
   markdown = expandImageShortcodes(markdown);
 
+  // {{format: <id>}} becomes a format card shell, before marked for the
+  // same reason as {{image:}}; its {{icon:}} shorthand is expanded by the
+  // icon pass after marked, like the rest of the page's.
+  markdown = expandFormatShortcodes(markdown, source);
+
   // {{icon-manifest}} is a tool-body placeholder (cms/apps/<slug>.html). In
   // markdown it would publish as literal text, so say so at build time. Same
   // line-only match as the registry, so a doc can still mention it inline.
-  for (const name of ['icon-manifest', 'asset-manifest']) {
+  for (const name of ['icon-manifest', 'asset-manifest', 'format-manifest']) {
     if (new RegExp(`^\\{\\{${name}\\}\\}[^\\S\\n]*$`, 'm').test(markdown)) {
       console.warn(`{{${name}}} only resolves in a tool body (cms/apps/<slug>.html) — here it renders as text`);
     }
@@ -2126,6 +2228,26 @@ function buildPageBody({ frame, content, toc = '', article = true }) {
         </div>`;
 }
 
+/**
+ * The feedback form's markup. In the shipped package it sits in the kit's
+ * assets/feedback/; in this repo, which is where it is edited, it is
+ * cms/chrome/. One source either way: scripts/build-package.js copies the
+ * latter into the former. A missing partial with the flag on fails the build,
+ * because a bar item that opens nothing is worse than no form.
+ */
+function readFeedbackPartial(kitName, sourceName) {
+  const candidates = [
+    path.join(KIT_ASSETS, 'feedback', kitName),
+    path.join(__dirname, '..', 'chrome', sourceName),
+  ];
+  const found = candidates.find((p) => fs.existsSync(p));
+  if (!found) {
+    console.error(`❌ feedback is on but its markup is missing (looked for ${candidates.join(' and ')}) — reinstall the docs-kit package.`);
+    process.exit(1);
+  }
+  return fs.readFileSync(found, 'utf8');
+}
+
 let _extraContentHtml = null;
 function buildPageChrome(footerText) {
   // Icons are expanded here, not inherited from the template's pre-pass. This
@@ -2134,7 +2256,8 @@ function buildPageChrome(footerText) {
   // rather than computed at module load, because the icon map is built at the
   // start of generateDocs and is empty before then.
   if (_extraContentHtml === null) {
-    _extraContentHtml = CONFIG.extraContentHtml
+    const feedbackBlock = CONFIG.feedback ? readFeedbackPartial('block.html', 'feedback.html') : '';
+    _extraContentHtml = (CONFIG.extraContentHtml + feedbackBlock)
       .trimEnd()
       .replace(/\{\{icon:([a-z0-9-]+)\}\}/g, (match, name) => getIcon(name));
   }
@@ -2728,6 +2851,64 @@ function buildPageHeaderHtml({ title, subtitle = '', eyebrow = '', actions = '',
 }
 
 /**
+ * A glossary term's drawing: the os-illustration named after its slug, when
+ * one exists (the import names the glossary drawings by term). Coloured as a
+ * page header is: the drawing's authored hue, else the Glossary home card's,
+ * so a drawing with no authored hue still renders in the section's colour.
+ * Null when the term has none, which keeps its page and drawer as they were.
+ * @param {string} slug - the entry's slug, cms/glossary/<slug>.md
+ * @returns {{ svg: string, color: string, field: string, motion: boolean } | null}
+ */
+/**
+ * Every drawing a page already takes: what pageOsIllustration resolves for
+ * each cms/*.md (its source name, a -docs page's tool, or a frontmatter
+ * os-illustration), plus each home card's. Built once and cached.
+ */
+let claimedOsIllustrationsCache = null;
+function claimedOsIllustrations() {
+  if (claimedOsIllustrationsCache) return claimedOsIllustrationsCache;
+  const claimed = new Set((CONFIG.indexCards || []).map(c => c.osIllustration).filter(Boolean));
+  for (const filename of fs.readdirSync(DOCS_DIR)) {
+    if (!filename.endsWith('.md')) continue;
+    const { frontmatter } = parseFrontmatter(fs.readFileSync(path.join(DOCS_DIR, filename), 'utf8'));
+    const art = pageOsIllustration(frontmatter, { filename });
+    if (art.osIllustration) claimed.add(art.osIllustration);
+  }
+  claimedOsIllustrationsCache = claimed;
+  return claimed;
+}
+
+function glossaryOsIllustration(slug) {
+  if (!hasOsIllustration(slug)) return null;
+  // A drawing that already belongs to a page is that page's art, not the
+  // term's: a doc page claims it by its source name (cms/<slug>.md) and a
+  // home card by its osIllustration. Glossary art is drawn for the glossary
+  // in its own hue, so `tabs` or `typography` don't borrow a component cover
+  // in another colour (Kobbie, 2026-11-05).
+  if (claimedOsIllustrations().has(slug)) return null;
+  const card = (CONFIG.indexCards || []).find(c => c.href === `/${GLOSSARY_FOLDER}.html`);
+  return resolveOsIllustration(
+    { osIllustration: slug, fallbackHue: card ? card.hue : '' },
+    `cms/${GLOSSARY_FOLDER}/${slug}.md`
+  );
+}
+
+/**
+ * The art strip at the top of a glossary entry (docs-site.css, "Art strip"):
+ * the term's hue painted edge to edge, the drawing centred at the strip's
+ * height. The entry page emits it before the page header; the reading drawer
+ * lifts its contents into its own strip (glossary.js), so one builder serves
+ * both. data-os-illustration-loop makes an animated drawing loop while on
+ * screen with its pause button, as a page header's does (os-illustration.js).
+ */
+function buildGlossaryArtHtml(illustration) {
+  if (!illustration) return '';
+  const loop = illustration.motion ? ' data-os-illustration-loop' : '';
+  return `<div class="glossary-art"${osIllustrationAttrs(illustration)}${loop}>${illustration.svg}${renderOsIllustrationPause(illustration)}</div>
+        `;
+}
+
+/**
  * The core Breadcrumb component (design-system.css §18) for a bar. Empty when
  * the trail is the current page alone — a crumb that only names the page you
  * are on links nowhere and repeats the heading.
@@ -2814,6 +2995,7 @@ function buildBar({ crumbs, closeHref, closeLabel, mdHref = null, width = 'docs'
                 <span>Copy link</span>
               </button>
               ${mdSourceItems}
+              ${feedbackMenuItems()}
             </div>
           </div>
           <a href="${closeHref}" class="bar-close" data-page-close aria-label="Back to ${closeLabel}">
@@ -2822,6 +3004,27 @@ function buildBar({ crumbs, closeHref, closeLabel, mdHref = null, width = 'docs'
         </div>
       </div>
     </div>`;
+}
+
+/**
+ * The two feedback items at the end of a bar's menu, when the site has the
+ * feedback form on (CONFIG.feedback). Each opens the feedback
+ * dialog (cms/chrome/feedback-dialog.html) through feedback.js, which listens
+ * for [data-feedback-open] on the document. Tool bars author the same two
+ * items in their own markup (cms/apps/*.html), as bar-groups the overflow
+ * menu collects.
+ */
+function feedbackMenuItems() {
+  if (!CONFIG.feedback) return '';
+  return `<div class="dropdown-divider" role="separator"></div>
+              <button type="button" class="dropdown-item" role="menuitem" data-feedback-open="share">
+                ${getIcon('chat')}
+                <span>Share feedback</span>
+              </button>
+              <button type="button" class="dropdown-item" role="menuitem" data-feedback-open="problem">
+                ${getIcon('warning')}
+                <span>Report a problem</span>
+              </button>`;
 }
 
 /**
@@ -3029,7 +3232,12 @@ function expandGlossaryPlaceholders(content, file) {
     /(<!--[\s\S]*?-->)|^[^\S\n]*\{\{glossary-(terms|topics)\}\}[^\S\n]*$|\{\{glossary-count\}\}/gm,
     (match, comment, block) => {
       if (comment) return match;
-      if (block === 'terms') return renderGlossaryList(GLOSSARY, entryHref);
+      if (block === 'terms') {
+        return renderGlossaryList(GLOSSARY, entryHref, slug => {
+          const art = glossaryOsIllustration(slug);
+          return art ? art.color : '';
+        });
+      }
       if (block === 'topics') return renderTopicChips(GLOSSARY);
       return String(GLOSSARY.published.length);
     }
@@ -3071,7 +3279,7 @@ function generateGlossaryPages(template, glossary, level) {
       navBase: '../',
       title,
       description: short,
-      header: buildPageHeaderHtml({ title, subtitle: short }),
+      header: buildGlossaryArtHtml(glossaryOsIllustration(entry.slug)) + buildPageHeaderHtml({ title, subtitle: short }),
       stickyBar: buildBar({
         crumbs: [{ label: 'Glossary', href: indexHref }, { label: title }],
         closeHref: indexHref,
@@ -3138,7 +3346,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}, subsectio
         /(<code[^>]*>[\s\S]*?<\/code>)|(<pre[^>]*>[\s\S]*?<\/pre>)|(<!--[\s\S]*?-->)|\{\{icon:([a-z0-9-]+)\}\}/g,
         (match, code, pre, comment, name) => (code || pre || comment) ? match : getIcon(name)
       )
-    : markdownToHtml(content + buildComponentUsage(file));
+    : markdownToHtml(content + buildComponentUsage(file), `cms/${file.filename}`);
 
   // Apply drop cap to first paragraph if enabled in frontmatter
   if (frontmatter.dropcap === 'true') {
@@ -4617,7 +4825,13 @@ function writeLibraryIndex() {
   if (!fs.existsSync(workerDir)) return;
   const { catalog, lock } = loadValidatedLibrary();
   const entries = assetLibrary.buildIndex(catalog, lock);
-  fs.writeFileSync(path.join(workerDir, 'library-index.mjs'), assetLibrary.renderLibraryIndex(entries));
+  // The level the library's downloads need, as the tool page's container
+  // says it (downloadAccess, else the page's access): the Worker checks it on
+  // every original, so the lock in download-lock.js is never only a button.
+  const appFile = path.join(ROOT, 'cms', 'apps', 'asset-library.md');
+  const app = fs.existsSync(appFile) ? parseFrontmatter(fs.readFileSync(appFile, 'utf8')).frontmatter : {};
+  const level = app.downloadAccess ? normaliseLevel(app.downloadAccess) : deriveDataAccess(app);
+  fs.writeFileSync(path.join(workerDir, 'library-index.mjs'), assetLibrary.renderLibraryIndex(entries, level));
   console.log(`📄 Generated: worker/library-index.mjs (${entries.length} downloadable file${entries.length === 1 ? '' : 's'})`);
 }
 
@@ -4930,6 +5144,15 @@ function generateSourceDirPages(template, {
       closeErrors.push(`  ${dirName}/${slug}.md - invalid access "${frontmatter.access}" (must be one of: public, team, admin, or absent, which is team)`);
       continue;
     }
+    // The level a tool's downloads need, when the page opens wider than its
+    // files (a public Icon Library whose SVGs are the team's). Defaults to
+    // the page's own level, so a tool that says nothing changes nothing.
+    // download-lock.js reads it off the container as data-download-access.
+    if (!isValidAccess(frontmatter.downloadAccess)) {
+      closeErrors.push(`  ${dirName}/${slug}.md - invalid downloadAccess "${frontmatter.downloadAccess}" (must be one of: public, team, admin, or absent, which is the page's access)`);
+      continue;
+    }
+    const downloadAccess = frontmatter.downloadAccess ? normaliseLevel(frontmatter.downloadAccess) : deriveDataAccess(frontmatter);
 
     // An HTML-bodied type needs its sibling; a markdown-bodied one must not
     // have one, or the .md's own content would be silently ignored.
@@ -4981,6 +5204,7 @@ function generateSourceDirPages(template, {
       // duplicate its id.
       content = content.replace(/^[^\S\n]*\{\{icon-manifest\}\}[^\S\n]*$/m, renderIconManifest);
       content = content.replace(/^[^\S\n]*\{\{asset-manifest\}\}[^\S\n]*$/m, renderAssetManifest);
+      content = content.replace(/^[^\S\n]*\{\{format-manifest\}\}[^\S\n]*$/m, renderFormatManifest);
       content = content.replace(/^[^\S\n]*\{\{showcase-manifest\}\}[^\S\n]*$/m, renderShowcaseManifest);
     }
     // A tool's chrome animates in without its author writing a word of it;
@@ -5046,7 +5270,7 @@ function generateSourceDirPages(template, {
       // email-signature.js already scopes every one of its queries to
       // [data-tool="email-signature"] and returns early without it, so the
       // tool goes silently dead if this is missing.
-      containerExtra: toolHook ? ` data-tool="${escapeAttr(slug)}"` : '',
+      containerExtra: toolHook ? ` data-tool="${escapeAttr(slug)}" data-download-access="${downloadAccess}"` : '',
     });
 
     const dir = path.join(OUTPUT_DIR, folder);
@@ -6217,6 +6441,31 @@ function applyTemplateChrome(rawTemplate) {
     containerAttrs += ' data-barba="container" data-barba-namespace="{{SECTION_SLUG}}" data-section="{{PAGE_SECTION}}" data-order="{{PAGE_ORDER}}" data-level="{{PAGE_LEVEL}}"';
   }
 
+  // Feedback form (opt-in): the script, and the dialog at the end of <body>,
+  // outside the page container so a swap never strands it open. The footer
+  // block is per page (buildPageChrome); the bar items are feedbackMenuItems.
+  let extraBodyEndHtml = CONFIG.extraBodyEndHtml.trimEnd();
+  if (CONFIG.feedback) {
+    let feedbackSrc = CONFIG.feedbackScript;
+    if (!feedbackSrc) {
+      feedbackSrc = 'assets/docs-kit/feedback.js';
+      const kitJs = fs.existsSync(path.join(KIT_ASSETS, 'js', 'feedback.js'))
+        ? path.join(KIT_ASSETS, 'js', 'feedback.js')
+        : path.join(__dirname, '..', '..', 'assets', 'js', 'feedback.js');
+      if (!fs.existsSync(kitJs)) {
+        console.error(`❌ feedback is on but feedback.js is missing: ${kitJs} — reinstall the docs-kit package.`);
+        process.exit(1);
+      }
+      const dest = path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'feedback.js');
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.copyFileSync(kitJs, dest);
+    }
+    const feedbackTag = `<script src="${nav(feedbackSrc)}" defer></script>`;
+    extraScriptTags = extraScriptTags ? `${extraScriptTags}\n    ${feedbackTag}` : feedbackTag;
+    const dialog = readFeedbackPartial('dialog.html', 'feedback-dialog.html').trimEnd();
+    extraBodyEndHtml = extraBodyEndHtml ? `${extraBodyEndHtml}\n${dialog}` : dialog;
+  }
+
   return rawTemplate
     .replaceAll('{{CONFIG_PATH}}', `${path.basename(DOCS_DIR)}/docs.config.js`)
     .replace('{{DOCS_CSS}}', () => `<link rel="stylesheet" href="${docsCssHref}">`)
@@ -6234,7 +6483,7 @@ function applyTemplateChrome(rawTemplate) {
     .replace('{{HIGHLIGHT_JS}}', () => highlightTag)
     .replace('{{UI_SCRIPTS}}', () => uiScriptTags)
     .replace('{{EXTRA_SCRIPTS}}', () => extraScriptTags)
-    .replace('{{EXTRA_BODY_END}}', () => CONFIG.extraBodyEndHtml.trimEnd());
+    .replace('{{EXTRA_BODY_END}}', () => extraBodyEndHtml);
 }
 
 /**
@@ -6695,6 +6944,7 @@ async function generateDocs() {
   // that does not exist.
   if (!isSingleFile && CONFIG.accessGate) writePageAccess();
   if (!isSingleFile && CONFIG.assetLibrary) writeLibraryIndex();
+  if (!isSingleFile) writeFormatsEmbed();
 
   if (isSingleFile) {
     console.log(`✅ Done — regenerated ${filesToWrite.length} page(s) + nav.js`);

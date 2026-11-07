@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.0.0 */
+/* @bydefaultstudio/design-system v7.1.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -68,6 +68,9 @@
   --green-lighter: #DCFCE7;
   --green-light: #6DD995;
   --green: #16A34A;
+  /* A step deeper than the base, for light text on it (4.8:1): the
+     annotation green. Read through --annotation-green. */
+  --green-deep: #15803D;
   --green-dark: #155F31;
   --purple-lighter: #F3E8FF;
   --purple-light: #E9D5FF;
@@ -84,6 +87,9 @@
   --pink-light: #FBCFE8;
   --pink: #F9A8D4;
   --pink-dark: #831843;
+  /* The saturated step pink's pastel base lacks, deep enough for light
+     text (4.7:1): the annotation pink. Read through --annotation-pink. */
+  --pink-vivid: #D61F69;
   --peach-lighter: #FFEDD5;
   --peach-light: #FED7AA;
   --peach: #FDBA74;
@@ -667,7 +673,7 @@
      stays light. */
   --mark-background: var(--yellow);
   --mark-color: var(--brown-dark);
-  /* -- Toggle/Card/Tooltip/Toast/Dialog color tokens removed — dark mode handled on components -- */
+  /* -- Toggle/Card/Dialog color tokens removed — dark mode handled on components; tooltip and toast read the inverted tokens -- */
 
   /* -- Dropdown -- */
   --dropdown-background: var(--background-plain);
@@ -736,7 +742,7 @@
     /* -- Highlight -- */
     --mark-background: var(--yellow);
     --mark-color: var(--brown-dark);
-    /* -- Toggle/Card/Tooltip/Toast/Dialog color tokens removed — dark mode handled on components -- */
+    /* -- Toggle/Card/Dialog color tokens removed — dark mode handled on components; tooltip and toast read the inverted tokens -- */
 
     /* -- Dropdown -- */
     --dropdown-background: var(--background-plain);
@@ -1852,7 +1858,7 @@ font-family: var(--font-secondary);
 .text-size-m,
 .text-size-medium {
   font-size: var(--text-size-m);
-  line-height: var(--line-height-l);
+  line-height: var(--body-leading);
 }
 
 .text-size-s,
@@ -2085,6 +2091,40 @@ button.button {
 .button[data-variant="outline-faded"].is-hover,
 .button[data-variant="transparent"].is-hover {
   background-color: color-mix(in srgb, var(--button-color), var(--alpha-5));
+}
+
+/* -- Pressed (a toggle that is on) --
+   .is-active with aria-pressed="true", moved together by the script: the
+   class is the paint, the attribute is what a screen reader hears. It
+   inverts on the system's selected pair, as a selected segment does,
+   because the hover wash measured 1.13:1 against the page, under the 3:1 a
+   state needs (1.4.11). Declared after the hover rule so a hovered toggle
+   stays inverted, and data-color does not reach it. Unfilled variants only:
+   the default button is already filled, and a text button has no box to
+   fill. The outline colour under forced colours keeps the focus ring
+   visible on Highlight, as the selected segment's does. */
+.button[data-variant="outline"].is-active,
+.button[data-variant="faded"].is-active,
+.button[data-variant="outline-faded"].is-active,
+.button[data-variant="transparent"].is-active {
+  --button-border: var(--selected-background);
+  --button-text-color: var(--selected-text);
+  background-color: var(--selected-background);
+}
+
+/* Backgrounds flatten under forced colours, so the fill that carries the
+   state disappears; the system's own selected pair replaces it. */
+@media (forced-colors: active) {
+  .button[data-variant="outline"].is-active,
+  .button[data-variant="faded"].is-active,
+  .button[data-variant="outline-faded"].is-active,
+  .button[data-variant="transparent"].is-active {
+    forced-color-adjust: none;
+    background-color: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+    outline-color: HighlightText;
+  }
 }
 
 /* -- Size exceptions -- */
@@ -3524,6 +3564,7 @@ input[type="radio"]:disabled:checked {
 .segmented-control {
   display: inline-flex;
   gap: var(--space-2xs);
+  height: var(--segmented-height);
 }
 
 /* An inline-flex row, so an icon written before the label sits beside it
@@ -3534,8 +3575,8 @@ input[type="radio"]:disabled:checked {
   align-items: center;
   justify-content: center;
   gap: var(--space-s);
-  padding: var(--space-s) var(--space-m);
-  font-size: var(--font-s);
+  padding: var(--segmented-padding-y) var(--segmented-padding-x);
+  font-size: var(--segmented-font);
   font-weight: var(--font-weight-regular);
   border-radius: var(--segmented-radius);
   border: none;
@@ -3565,10 +3606,26 @@ input[type="radio"]:disabled:checked {
 }
 
 .segmented-control-btn.is-icon {
-  padding: var(--space-s);
+  padding: var(--segmented-padding-y) var(--space-s);
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* -- Small --
+   On the control, a .form-group or a fieldset, re-pointing the size tokens:
+   the field's small height, the small type, no block padding, a tighter
+   inline one. Every form fills the height (see the tokens), the icon segment
+   included: its inline padding is its own, its block padding is the token.
+   A compact container (data-density="compact", Density) sets the same
+   values on every control inside it. */
+.segmented-control[data-size="small"],
+.form-group[data-size="small"],
+fieldset[data-size="small"] {
+  --segmented-height: var(--field-height-s);
+  --segmented-font: var(--font-xs);
+  --segmented-padding-y: 0;
+  --segmented-padding-x: var(--space-s);
 }
 
 /* Backgrounds flatten under forced colours, so the fill that carries selection
@@ -3672,6 +3729,22 @@ input[type="radio"]:disabled:checked {
  * matches both names, so thumb keeps working as an alias. The --segmented-
  * thumb-* tokens keep their names — the thumb is the part, not the variant. */
 :root {
+  /* -- Size --
+     The metrics a segment reads, bare or in a faded track. Defined here, not
+     on the control, so data-size="small" on the control, a .form-group, a
+     fieldset or a compact container reaches every segment by inheritance,
+     as the field and check tokens do. Height is auto by default: the flat
+     form is padding plus line box, as it always was. Small fixes it at the
+     field's small height with the block padding zeroed, and every form
+     fills it (flex and grid children stretch), so the faded track, excluded
+     from the bar's clamp because its labels did not fit, fits here. An icon
+     segment keeps its own inline padding, 8 + the 1.3rem icon + 8, and takes
+     the block padding from the token so it stretches to the small height
+     rather than overflowing it by the icon's extra 0.8px. */
+  --segmented-height: auto;
+  --segmented-font: var(--font-s);
+  --segmented-padding-y: var(--space-s);
+  --segmented-padding-x: var(--space-m);
   --segmented-track-background: var(--background-faded);
   --segmented-track-padding: 3px; /* visual inset, same register as --toggle-knob-offset */
   --segmented-radius: var(--radius-control);
@@ -3721,9 +3794,9 @@ input[type="radio"]:disabled:checked {
   align-items: center;
   justify-content: center;
   gap: var(--space-s);
-  padding: var(--space-s) var(--space-m);
+  padding: var(--segmented-padding-y) var(--segmented-padding-x);
   margin-bottom: 0; /* this is a segment, not a field label — undo the form label margin */
-  font-size: var(--font-s);
+  font-size: var(--segmented-font);
   font-weight: var(--font-weight-regular);
   color: var(--text-faded);
   border-radius: var(--segmented-thumb-radius);
@@ -4061,6 +4134,41 @@ fieldset[data-size="small"],
 .form-toggle[data-variant="mono"] input[type="checkbox"][data-size="small"]::before,
 :is(.form-group, fieldset)[data-size="small"] .form-toggle[data-variant="mono"] input[type="checkbox"]::before {
   content: none;
+}
+
+
+/* -- Forced colours --
+   The track and the knob are background colours, which the mode flattens to
+   Canvas, and the mono word is gone at the small size and under compact
+   density, so nothing carried the state. The system pair paints it: a
+   CanvasText knob on a Canvas track, and a HighlightText knob on a Highlight
+   track when checked, with forced-color-adjust: none on the parts that
+   paint, the answer the segmented control gives its selected segment. The
+   mono variant's own selectors are repeated so its colours yield too. */
+@media (forced-colors: active) {
+  .form-toggle input[type="checkbox"],
+  .form-toggle[data-variant="mono"] input[type="checkbox"] {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+  }
+
+  .form-toggle input[type="checkbox"]::after,
+  .form-toggle[data-variant="mono"] input[type="checkbox"]::after {
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
+
+  .form-toggle input[type="checkbox"]:checked,
+  .form-toggle[data-variant="mono"] input[type="checkbox"]:checked {
+    background-color: Highlight;
+    border-color: Highlight;
+  }
+
+  .form-toggle input[type="checkbox"]:checked::after,
+  .form-toggle[data-variant="mono"] input[type="checkbox"]:checked::after {
+    background-color: HighlightText;
+  }
 }
 
 
@@ -4455,7 +4563,10 @@ fieldset[data-size="small"],
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--target-min);
+  /* The field's height, not --target-min: square in a 44px field and square
+     in a small or compact 36px one, where a 44px-wide action read as a
+     slab beside the value. The bar does not re-point the token. */
+  width: var(--field-height);
   padding: 0;
   border: none;
   border-radius: 0;
@@ -5161,8 +5272,8 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
 .progress-tooltip {
   position: absolute;
   bottom: calc(100% + var(--space-xs));
-  background-color: var(--brown-dark);
-  color: var(--off-white);
+  background-color: var(--background-inverted);
+  color: var(--text-inverted);
   border-radius: var(--tooltip-radius);
   padding: var(--space-xs) var(--space-s);
   white-space: nowrap;
@@ -5196,8 +5307,8 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
   bottom: calc(100% + var(--space-xs));
   left: 50%;
   transform: translateX(-50%);
-  background-color: var(--brown-dark);
-  color: var(--off-white);
+  background-color: var(--background-inverted);
+  color: var(--text-inverted);
   border-radius: var(--tooltip-radius);
   padding: var(--space-xs) var(--space-s);
   white-space: nowrap;
@@ -5273,19 +5384,8 @@ a[data-tooltip],
 }
 
 /* -- Tooltip dark mode -- */
-[data-theme="dark"] [data-tooltip]::before,
-[data-theme="dark"] .progress-tooltip {
-  background-color: var(--neutral-100);
-  color: var(--brown-dark);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) [data-tooltip]::before,
-  :root:not([data-theme]) .progress-tooltip {
-    background-color: var(--neutral-100);
-    color: var(--brown-dark);
-  }
-}
+/* None needed: --background-inverted and --text-inverted swap with the
+   theme, so the bubble inverts against the page in both modes. */
 
 
 /* ------ 22. TOAST ------ */
@@ -5308,8 +5408,8 @@ a[data-tooltip],
 .toast {
   --toast-exit-duration: var(--duration-xs);
   pointer-events: all;
-  background-color: var(--brown-dark);
-  color: var(--off-white);
+  background-color: var(--background-inverted);
+  color: var(--text-inverted);
   padding: var(--space-m) var(--space-l);
   border: var(--border-s) solid var(--border-faded);
   display: flex;
@@ -5377,30 +5477,11 @@ a[data-tooltip],
 }
 
 /* -- Toast dark mode -- */
-/* Only the neutral toast inverts its surface. A typed toast keeps its status
-   colour as text in both themes, and its surface now comes straight from
-   --status-*-bg — the dark theme derives those from the page ground, so the
-   local re-derivation that used to live here is retired.
-
-   Scoped on the absence of data-type, which matches what toast.js emits: it
-   sets dataset.type only when the type is not 'default' (toast.js:65), so a
-   neutral toast carries no attribute at all. Selecting on that makes these
-   rules mutually exclusive with the .toast[data-type] rules above rather than
-   competing with them on specificity and source order. Previously they matched
-   every .toast and won — (0,2,0) tying with the typed rules and beating them on
-   source order, (0,3,0) beating them outright — which flattened success,
-   warning, danger and info to the same grey the moment dark mode was on. */
-[data-theme="dark"] .toast:not([data-type]) {
-  background-color: var(--neutral-100);
-  color: var(--brown-dark);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .toast:not([data-type]) {
-    background-color: var(--neutral-100);
-    color: var(--brown-dark);
-  }
-}
+/* None needed. The neutral toast reads --background-inverted and
+   --text-inverted, which swap with the theme. A typed toast keeps its status
+   colour as text in both themes and its surface from --status-*-bg, which
+   the dark theme derives from the page ground; .toast[data-type] outranks
+   .toast, so typed toasts are never flattened to the neutral surface. */
 
 
 /* ------ 23. CODE ------ */
@@ -7449,6 +7530,17 @@ input[type="range"]:disabled::-webkit-slider-thumb {
 
 /* ------ 34. NUMBER INPUT ------ */
 
+/* -- Size --
+   Height is auto by default, the input's padding plus its line box, as it
+   always was. Small fixes the box at the field's small height and zeroes the
+   input's block padding; the input is stretched, so it fills what the border
+   leaves. Defined on :root so the attribute on a .form-group, a fieldset or a
+   compact container reaches the control by inheritance. */
+:root {
+  --number-input-height: auto;
+  --number-input-padding-y: var(--space-m);
+}
+
 /* One field with two steppers on it, not three controls in a row. The border and
    radius belong to the whole thing; the steppers are transparent until pointed
    at, so the field reads as the subject and the buttons as affordances on it. */
@@ -7456,6 +7548,7 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   display: inline-flex;
   align-items: stretch;
   width: fit-content;
+  height: var(--number-input-height);
   border: var(--border-m) solid var(--input-border);
   border-radius: var(--number-input-radius);
   overflow: hidden;
@@ -7480,7 +7573,7 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   text-align: center;
   width: 4rem;
   min-height: 0;
-  padding: var(--space-m) var(--space-xs);
+  padding: var(--number-input-padding-y) var(--space-xs);
   font-variant-numeric: tabular-nums;
   box-shadow: none;
   -moz-appearance: textfield;
@@ -7530,6 +7623,20 @@ input[type="range"]:disabled::-webkit-slider-thumb {
 .number-input-btn:disabled {
   opacity: var(--opacity-disabled);
   cursor: not-allowed;
+}
+
+/* -- Small --
+   The field's small height and type. The input reads --field-font through
+   the base input rule, but .number-input is not in the field size list, so
+   the type is re-pointed here as well; from a group, a fieldset or a compact
+   container it arrives by inheritance either way. The steppers keep their
+   2rem width, above the 24px target floor. */
+.number-input[data-size="small"],
+.form-group[data-size="small"],
+fieldset[data-size="small"] {
+  --number-input-height: var(--field-height-s);
+  --number-input-padding-y: 0;
+  --field-font: var(--font-xs);
 }
 
 
@@ -7638,6 +7745,7 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   --input-focus: var(--color-text);
   --text-secondary: var(--color-text-muted);
   --text-inverted: var(--color-background);
+  --background-inverted: var(--color-text);
   --border-faded: var(--color-border-faded);
   /* Prose colours, easy to miss: a { color: var(--text-plain) } renders black
      inside a shade header without these, and --text-faded is near-invisible on
@@ -7713,6 +7821,7 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   --input-focus: var(--color-text);
   --text-secondary: var(--color-text-muted);
   --text-inverted: var(--color-background);
+  --background-inverted: var(--color-text);
   --border-faded: var(--color-border-faded);
   --text-plain: var(--color-text);
   --text-link: var(--color-text);
@@ -7757,6 +7866,7 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   --input-focus: var(--color-text);
   --text-secondary: var(--color-text-muted);
   --text-inverted: var(--color-background);
+  --background-inverted: var(--color-text);
   --border-faded: var(--color-border-faded);
   --text-plain: var(--color-text);
   --text-link: var(--color-text);
@@ -12381,6 +12491,29 @@ section[id] {
   --overlay-line-dash: 4 3;
   /* The finer dash: the canvas edge and an approximate rule. */
   --overlay-dash-fine: 2 2;
+
+  /* -- Annotation paint --
+     The Figma Annotation kit's six colours, for measures and notes only:
+     each a pill colour and the text it carries (-on), 4.5:1 at the
+     label's 12px. Every pill but white carries light text, so pink and
+     green take a deeper step than the mid ones that read badly with
+     either. A theme that re-points --red, --blue, --green-deep or
+     --pink-vivid checks the matching -on. A
+     measure or note with no colour takes the ground's ink instead, so it
+     still flips on a dark ground. */
+  --annotation-ink: var(--neutral-900);
+  --annotation-white: var(--neutral-50);
+  --annotation-red: var(--red);
+  --annotation-blue: var(--blue);
+  --annotation-pink: var(--pink-vivid);
+  --annotation-green: var(--green-deep);
+  --annotation-on: var(--neutral-50);
+  --annotation-ink-on: var(--annotation-on);
+  --annotation-white-on: var(--neutral-900);
+  --annotation-red-on: var(--annotation-on);
+  --annotation-blue-on: var(--annotation-on);
+  --annotation-pink-on: var(--annotation-on);
+  --annotation-green-on: var(--annotation-on);
 }
 
 /* On a dark ground the zone hue lifts a step and its fill thickens, or a
@@ -12504,15 +12637,22 @@ section[id] {
   pointer-events: none;
 }
 
-/* Annotation text, as HTML over the drawing so it keeps its size. The host
-   sets --layer-stack-label-ink and --layer-stack-label-paper; they default to the page's. */
+/* Annotation text, as HTML over the drawing so it keeps its size: the
+   Figma Annotation kit's label, a semibold sans. The host sets
+   --layer-stack-label-ink and --layer-stack-label-paper; they default to
+   the page's. A label beside its point stands --layer-stack-label-gap off
+   it and grows away from it (the kit's 6px past a line's end, 16px across
+   it, clear of the ticks; the export reads the same gap). A text label
+   takes its layer's colour (--layer-stack-label-fill), as the kit's does. */
 .layer-stack-label {
+  --layer-stack-label-gap: calc(var(--space-xs) * 1.5);
   position: absolute;
   padding: 0 var(--space-2xs);
   border-radius: var(--radius-detail);
   background: var(--layer-stack-label-paper, var(--background-primary));
-  color: var(--layer-stack-label-ink, var(--text-primary));
-  font-family: var(--font-quaternary);
+  color: var(--layer-stack-label-fill, var(--layer-stack-label-ink, var(--text-primary)));
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-semi-bold);
   font-size: var(--font-2xs);
   line-height: var(--line-height-m);
   white-space: nowrap;
@@ -12520,9 +12660,42 @@ section[id] {
   transform: translate(-50%, -50%);
 }
 
-.layer-stack-label[data-anchor="above"] { transform: translate(-50%, calc(-100% - var(--space-2xs))); }
-.layer-stack-label[data-anchor="below"] { transform: translate(-50%, var(--space-2xs)); }
-.layer-stack-label[data-anchor="right"] { transform: translate(var(--space-xs), -50%); }
+.layer-stack-label[data-anchor="above"] { transform: translate(-50%, calc(-100% - var(--layer-stack-label-gap))); }
+.layer-stack-label[data-anchor="below"] { transform: translate(-50%, var(--layer-stack-label-gap)); }
+.layer-stack-label[data-anchor="left"] { transform: translate(calc(-100% - var(--layer-stack-label-gap)), -50%); }
+.layer-stack-label[data-anchor="right"] { transform: translate(var(--layer-stack-label-gap), -50%); }
+
+/* A filled value: the kit's pill, in the layer's colour with that colour's
+   own text (both set by the engine), or the ground's ink with its paper. */
+.layer-stack-label[data-style="filled"] {
+  padding: var(--space-2xs) var(--space-s);
+  border-radius: var(--radius-full);
+  background: var(--layer-stack-label-fill, var(--layer-stack-label-ink, var(--text-primary)));
+  color: var(--layer-stack-label-on, var(--layer-stack-label-paper, var(--background-primary)));
+}
+
+.layer-stack-label[data-offset="across"] {
+  --layer-stack-label-gap: var(--space-l);
+}
+
+/* Large doubles the value, its pill and its gaps; the measure's lines
+   double with it (below). */
+.layer-stack-label[data-size="large"] {
+  --layer-stack-label-gap: var(--space-m); /* twice the default gap */
+  font-size: var(--font-2xl);
+}
+
+.layer-stack-label[data-size="large"][data-offset="across"] {
+  --layer-stack-label-gap: var(--space-2xl);
+}
+
+.layer-stack-label[data-size="large"][data-style="filled"] {
+  padding: var(--space-xs) var(--space-l);
+}
+
+.layer-stack-layer[data-size="large"] {
+  --layer-stack-line-weight: calc(var(--layer-stack-line-weight-set, var(--overlay-line-weight)) * 2);
+}
 
 /* -- Markers --
    A zone's marker: a glyph, text, SVG or image drawn in the band, as wide
@@ -12549,6 +12722,12 @@ section[id] {
    colours arrive as -set properties (the outline's, the fill's, a
    measure's), so these definitions decide. */
 @media (forced-colors: active) {
+  /* The pill's fill is repainted to the ground: an outline keeps its
+     shape, so the line does not run into floating text. */
+  .layer-stack-label[data-style="filled"] {
+    outline: 1px solid CanvasText;
+  }
+
   .layer-stack-layer {
     --layer-stack-colour: CanvasText;
     --layer-stack-outline-colour: CanvasText;
@@ -12624,6 +12803,85 @@ section[id] {
 
 .os-illustration[data-motion].is-playing * {
   animation-play-state: running !important;
+}
+
+/* ------ 56. DENSITY ------
+ * One setting across every control, so it sits after all of them rather than
+ * inside any one. Foundation layer: it declares no component of its own and
+ * ships with the engine (CLAUDE.md §17).
+ *
+ * -- Compact density --
+ * data-density="compact" on a container takes every control inside it to its
+ * Small size: fields, checks and toggles, segmented controls, number inputs
+ * and buttons. On a fine pointer only. A mouse or trackpad does not need the
+ * 44px touch target, and a dock of controls sized for a finger pushes its
+ * last panel below the fold; on touch the attribute does nothing, so the
+ * 44px floor holds with no second rule. The values are the Small rules'
+ * values (the field sizes above, the small checks, .button[data-size=
+ * "small"], and the segmented and number-input Small rules); keep them in
+ * step.
+ *
+ * Only tokens are declared on the container, so a data-size on a control or
+ * a nearer ancestor still wins, by inheritance rather than specificity. The
+ * button declares its tokens on itself (as `.button, button.button`, so at
+ * (0,1,1) on a <button>), so it takes a descendant rule: the container in
+ * :where(), which counts for nothing, and the same :is(.button, button.button)
+ * pair, so the rule sits at (0,1,1), ties with the base and wins by source
+ * order, and loses to every (0,2,0) modifier, data-size, data-icon-only and
+ * the text variant. Without :where() the :not(.bar) would count as a class
+ * and an icon-only button in a compact dock would lose its square.
+ *
+ * Not the bar. A bar carries the same attribute with an older meaning, the
+ * bar's own padding (see 41. BAR), and its controls already sit at the small
+ * height with the bar's own type size; :not(.bar) keeps the two apart. A bar
+ * nested inside a compact container is not excluded: it keeps its height and
+ * takes the small type with everything else, which no page does today. */
+@media (pointer: fine) {
+  [data-density="compact"]:not(.bar) {
+    --field-height: var(--field-height-s);
+    --field-font: var(--font-xs);
+    --field-padding-y: 0;
+    --field-padding-x: var(--space-m);
+    --check-size: var(--space-l);
+    --check-mark-size: 11px;
+    --radio-dot-inset: 3px;
+    --check-gap: var(--space-xs);
+    --check-label-font: var(--font-xs);
+    --toggle-width: 28px;
+    --toggle-height: var(--space-l);
+    --toggle-knob-size: 10px;
+    --segmented-height: var(--field-height-s);
+    --segmented-font: var(--font-xs);
+    --segmented-padding-y: 0;
+    --segmented-padding-x: var(--space-s);
+    --number-input-height: var(--field-height-s);
+    --number-input-padding-y: 0;
+  }
+
+  :where([data-density="compact"]:not(.bar)) :is(.button, button.button) {
+    --button-padding-y: var(--space-m);
+    --button-padding-x: var(--space-l);
+    --button-text-size: var(--font-xs);
+  }
+
+  /* A dropdown trigger has no small size of its own and declares its padding
+     on itself, so, as in the bar, the block padding goes and the small height
+     holds the row; the type stays, a menu label is not a field value. */
+  :where([data-density="compact"]:not(.bar)) .dropdown-trigger {
+    --dropdown-trigger-padding-y: 0;
+    min-height: var(--field-height-s);
+  }
+
+  /* The mono toggle's state word and the extra track length that holds it
+     are matched by data-size selectors above; a small track has no room for
+     the word, so compact drops both the same way. */
+  [data-density="compact"]:not(.bar) .form-toggle[data-variant="mono"] input[type="checkbox"] {
+    --toggle-mono-extra-width: 0px;
+  }
+
+  [data-density="compact"]:not(.bar) .form-toggle[data-variant="mono"] input[type="checkbox"]::before {
+    content: none;
+  }
 }
 
 /* ------ 15. COMPONENTS IN PROGRESS ------ */

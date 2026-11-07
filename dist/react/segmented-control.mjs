@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v7.0.0 */
+/* @bydefaultstudio/design-system v7.1.0 */
 /**
  * <SegmentedControl> — React adapter over both segmented contracts
  * (cms/form.md): the button group (the default and `variant="underline"`)
@@ -30,6 +30,7 @@ export function SegmentedControl(props) {
   var name = props.name;
   var id = props.id;
   var className = props.className;
+  var size = props.size === 'small' ? 'small' : undefined;
 
   var autoId = React.useId();
 
@@ -38,6 +39,9 @@ export function SegmentedControl(props) {
   }
   if (variant !== undefined && variant !== 'faded' && variant !== 'underline') {
     warnOnce('SegmentedControl: unknown `variant="' + variant + '"` — use "faded", "underline", or omit it for the default. Rendering the default.');
+  }
+  if (props.size !== undefined && props.size !== 'small') {
+    warnOnce('SegmentedControl: unknown `size="' + props.size + '"` — the only size is "small"; omit it for the default. Rendering the default.');
   }
   var controlled = value !== undefined;
 
@@ -88,6 +92,7 @@ export function SegmentedControl(props) {
         id: id,
         className: cx('segmented-control', className),
         'data-variant': 'faded',
+        'data-size': size || undefined,
         role: 'radiogroup',
         'aria-label': label,
       },
@@ -127,6 +132,7 @@ export function SegmentedControl(props) {
       id: id,
       className: cx('segmented-control', className),
       'data-variant': variant === 'underline' ? 'underline' : undefined,
+      'data-size': size || undefined,
       role: 'group',
       'aria-label': label,
     },

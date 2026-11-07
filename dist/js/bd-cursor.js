@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.0.0 */
+/* @bydefaultstudio/design-system v7.1.0 */
 /**
  * BD Cursor — desktop custom cursor (native / label / badge / graphic / halo)
  * ONE overlay element (.cursor-overlay) becomes every author-driven render.
