@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.3.0 */
+/* @bydefaultstudio/design-system v7.4.0 */
 /**
  * gate-entry.mjs - createGate(), the access gate as one factory
  * (levels-groups-plan.md Phase 3, D21). Shipped as
@@ -29,7 +29,7 @@
  */
 import { AUTH_BASE_PATH, guestScopes, handleAuth } from './auth.js';
 import { PEOPLE_BASE_PATH, handlePeople } from './people.js';
-import { embeddableHeaders, hasSessionCookie, isEmbeddablePath, isPublicPath, privateHeaders, servesLanding } from './gate.mjs';
+import { embeddableHeaders, hasSessionCookie, isConflictCopyPath, isEmbeddablePath, isPublicPath, privateHeaders, servesLanding } from './gate.mjs';
 import { requireSession } from './session.js';
 import { hideForReader, isHtml } from './hidden-nav.mjs';
 import { SITE, configureSite } from './site.mjs';
@@ -127,6 +127,16 @@ export function createGate(options = {}) {
       // Sign-in endpoints first: they must never sit behind the gate they serve.
       if (pathname.startsWith(`${AUTH_BASE_PATH}/`)) {
         return handleAuth(request, env, ctx);
+      }
+
+      // A sync-conflict duplicate's name ("people 3.html") is never a page the
+      // build meant to ship: on the iCloud-mounted checkout it is a stale copy
+      // of a real page, often an admin or owner one, that a local deploy can
+      // upload. 404 before the asset layer can serve it, for everyone, so no
+      // level is ever asked of a file the map cannot know (security audit
+      // 2026-11-09, finding 4). authorise() refuses the same shape.
+      if (isConflictCopyPath(pathname)) {
+        return new Response('Not found', { status: 404, headers: { 'Cache-Control': 'private, no-store' } });
       }
 
       // The site's public routes: open to everyone, before the gate.

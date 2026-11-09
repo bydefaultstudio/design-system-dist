@@ -847,11 +847,14 @@
   gap: var(--space-s) var(--space-l);
 }
 
-/* A switch's note, opened by its info button, takes its own line under
-   the switch, so an open one never sits beside the next switch. */
-.format-layer-note {
-  flex-basis: 100%;
-  margin: 0;
+/* A switch with a note reads as the word, its info button beside it, then
+   the switch at the far end of the row (owner, 2026-11-09). The script
+   builds the row in that order, so tabbing follows it; the switch takes the
+   free space before it. In a row as wide as its panel (the Format
+   Library's dock) the two ends sit apart; in the card's wrapping row,
+   which hugs its content, they sit together. */
+.form-toggle:has(> .format-layer-info) > input {
+  margin-inline-start: auto;
 }
 
 .format-card-actions {

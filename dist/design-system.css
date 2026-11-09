@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.3.0 */
+/* @bydefaultstudio/design-system v7.4.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -72,6 +72,10 @@
      annotation green. Read through --annotation-green. */
   --green-deep: #15803D;
   --green-dark: #155F31;
+  /* The Figma Formats templates' safe-area green (layout/safe-area), a
+     bright step with no lightness name in the ramp. Read through
+     --overlay-safe; never for text. */
+  --green-vivid: #00D26A;
   --purple-lighter: #F3E8FF;
   --purple-light: #E9D5FF;
   --purple: #9333EA;
@@ -12521,6 +12525,11 @@ section[id] {
   --overlay-guide-opacity: 1;
   --overlay-grid: var(--blue);
   --overlay-grid-opacity: 0.35;
+  /* A platform format's safe area, as the Figma Formats templates draw it
+     (owner, 2026-11-09): the file shaded outside the safe area in the
+     templates' bright green at 30%, and the area outlined in it. */
+  --overlay-safe: var(--green-vivid);
+  --overlay-safe-opacity: 0.3;
   /* Every line's weight and a dashed line's dash and gap, in screen px
      (the strokes do not scale). A layer's own weight overrides the first. */
   --overlay-line-weight: 1px;
@@ -12696,6 +12705,9 @@ section[id] {
   transform: translate(-50%, -50%);
 }
 
+/* start: the point is the label's top-left corner, so a note sits inside a
+   corner whatever its text measures (a safe area's size, 16px in). */
+.layer-stack-label[data-anchor="start"] { transform: none; }
 .layer-stack-label[data-anchor="above"] { transform: translate(-50%, calc(-100% - var(--layer-stack-label-gap))); }
 .layer-stack-label[data-anchor="below"] { transform: translate(-50%, var(--layer-stack-label-gap)); }
 .layer-stack-label[data-anchor="left"] { transform: translate(calc(-100% - var(--layer-stack-label-gap)), -50%); }

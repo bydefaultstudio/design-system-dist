@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.3.0 */
+/* @bydefaultstudio/design-system v7.4.0 */
 /**
  * layer-stack.js — the engine behind Layout Spec: a canvas, the specimen on
  * it, and an ordered stack of rules drawn over (or under) it.
@@ -140,12 +140,21 @@
  * coloured note is a pill. A measure from an earlier spec reads as its
  * width line (nobody had saved one, so nothing splits it in two).
  *
- * @version 4.0.0
+ * 4.1.0 (format version 4, additive): a measure's target can be a span,
+ * from one point to another along its axis at a position across it, so a
+ * dimension line can run from a canvas edge to a safe area (the Formats
+ * tool, owner, 2026-11-09). A shape's draw can be outside: the shape
+ * outlined and everything beyond it shaded out to the canvas edge, as the
+ * Figma Formats templates draw a safe area. A note takes an anchor: centre,
+ * or start, its top-left corner on the point. Nothing an older spec holds
+ * reads differently.
+ *
+ * @version 4.1.0
  */
 (function () {
   'use strict';
 
-  var VERSION = '3.0.0';
+  var VERSION = '4.1.0';
   console.log('[layer-stack] v' + VERSION + ' loaded');
 
   var SVG_NS = 'http://www.w3.org/2000/svg';
@@ -189,11 +198,11 @@
     // A measure is lines and numbers: nothing to fill.
     measure: {
       label: 'Measure',
-      fields: ['target', 'zone', 'axis', 'edge', 'value', 'size', 'valueStyle', 'lineWeight', 'lineStyle', 'colour', 'opacity']
+      fields: ['target', 'zone', 'from', 'to', 'at', 'axis', 'edge', 'value', 'size', 'valueStyle', 'lineWeight', 'lineStyle', 'colour', 'opacity']
     },
     note: {
       label: 'Note',
-      fields: ['text', 'colour', 'x', 'y']
+      fields: ['text', 'colour', 'x', 'y', 'anchor']
     },
     image: {
       label: 'Image',
@@ -209,10 +218,13 @@
     'zone.markerOrient': [['follow', 'Turns with each edge'], ['fixed', 'The same on every edge']],
     'zone.markerRepeat': [['edges', 'One on each edge'], ['tile', 'Repeated along each edge']],
     'shape.form': [['rectangle', 'Rectangle'], ['circle', 'Circle'], ['rounded', 'Rounded rectangle']],
+    // A shape alone can shade what lies beyond it: the file outside a safe area.
+    'shape.draw': [['outline', 'Outline'], ['fill', 'Fill'], ['both', 'Both'], ['outside', 'Outside: the outline, and everything beyond it shaded']],
+    'note.anchor': [['centre', 'Centred on the point'], ['start', 'Top-left corner on the point']],
     'guide.kind': [['centre', 'Centre lines'], ['diagonal', 'Diagonals'], ['circle', 'Keyline circle'], ['square', 'Keyline rectangle'], ['thirds', 'Thirds'], ['line', 'Single line']],
     'guide.axis': [['vertical', 'Vertical'], ['horizontal', 'Horizontal']],
     'grid.kind': [['cells', 'Cells'], ['columns', 'Columns'], ['rows', 'Rows']],
-    'measure.target': [['canvas', 'The canvas'], ['specimen', 'The specimen'], ['zone-inset', 'A zone\'s inset'], ['zone-area', 'The area inside a zone'], ['all', 'Canvas + bleed']],
+    'measure.target': [['canvas', 'The canvas'], ['specimen', 'The specimen'], ['zone-inset', 'A zone\'s inset'], ['zone-area', 'The area inside a zone'], ['all', 'Canvas + bleed'], ['span', 'A span: from one point to another']],
     'measure.axis': [['width', 'Width'], ['height', 'Height']],
     // Across the box: a width's start is its top, a height's its left.
     'measure.edge': [['start', 'Start'], ['centre', 'Centre'], ['end', 'End']],
@@ -319,10 +331,11 @@
     // A measure takes the ground's ink unless given a colour, so a mark
     // with none flips on a dark ground. One line: the width below the box,
     // its value under it, as the kit's measure starts.
-    measure: { target: 'canvas', zone: '', axis: 'width', edge: 'end', value: 'bottom', size: 'default', valueStyle: 'filled',
+    // A span starts as the canvas's full width, its line through the middle.
+    measure: { target: 'canvas', zone: '', from: pct(0), to: pct(100), at: pct(50), axis: 'width', edge: 'end', value: 'bottom', size: 'default', valueStyle: 'filled',
       lineWeight: { token: '--overlay-line-weight', unit: 'px' }, lineStyle: 'solid', colour: '', opacity: 1 },
     // A note with no colour is text on the ground's paper; with one, a pill.
-    note: { text: 'Note', colour: '', x: pct(50), y: pct(50) },
+    note: { text: 'Note', colour: '', x: pct(50), y: pct(50), anchor: 'centre' },
     image: { src: '', x: pct(0), y: pct(0), w: pct(100), h: pct(100), fit: 'contain', opacity: 1 }
   };
 
@@ -947,7 +960,7 @@
   }
 
   var LENGTH_KEYS = ['amount', 'size', 'position', 'cell', 'margin', 'gutter', 'x', 'y', 'w', 'h', 'lineWeight',
-    'offsetX', 'offsetY', 'overshootTop', 'overshootRight', 'overshootBottom', 'overshootLeft'];
+    'offsetX', 'offsetY', 'overshootTop', 'overshootRight', 'overshootBottom', 'overshootLeft', 'from', 'to', 'at'];
 
   /* A length as the spec holds one: { value, unit } or { token, unit }. A
      bare number is read in the type's own unit for it. */
@@ -1688,6 +1701,19 @@
         text = format(across ? inner.w : inner.h);
       }
       extent = outer;
+    } else if (s.target === 'span') {
+      // From one point to another along the axis, at a position across it:
+      // a canvas edge to a safe area. Lengths read as a shape's do, from
+      // the canvas's top left; the span's length is its value.
+      var along = across ? 'x' : 'y';
+      var origin = across ? canvas.x : canvas.y;
+      var a = origin + toCanvas(resolveLength(s.from, '%', scope), ctx, canvas, along);
+      var b = origin + toCanvas(resolveLength(s.to, '%', scope), ctx, canvas, along);
+      from = Math.min(a, b);
+      to = Math.max(a, b);
+      at = (across ? canvas.y : canvas.x) + toCanvas(resolveLength(s.at, '%', scope), ctx, canvas, across ? 'y' : 'x');
+      text = format(to - from);
+      extent = union(canvas, across ? { x: from, y: at - tick, w: to - from, h: tick * 2 } : { x: at - tick, y: from, w: tick * 2, h: to - from });
     } else {
       if (s.target === 'specimen' && !ctx.hasArtwork) {
         labels.push({ hint: true, text: 'No specimen to measure', x: centre.x, y: centre.y, anchor: 'centre' });
@@ -1763,7 +1789,9 @@
     var extent = canvas;
     if (s.text) {
       var at = placeOnCanvas(s.x, s.y, ctx, scope);
-      labels.push({ text: String(s.text), x: at.x, y: at.y, anchor: 'centre', style: s.colour ? 'filled' : 'text', colour: s.colour || '' });
+      // Centred on its point, or hung from it by its top-left corner (start),
+      // so a note sits inside a corner whatever its text measures.
+      labels.push({ text: String(s.text), x: at.x, y: at.y, anchor: s.anchor === 'start' ? 'start' : 'centre', style: s.colour ? 'filled' : 'text', colour: s.colour || '' });
       extent = union(canvas, { x: at.x, y: at.y, w: 0, h: 0 });
     }
     return { shapes: [], labels: labels, extent: extent };
@@ -1774,15 +1802,36 @@
   function computeShape(layer, ctx, scope) {
     var s = layer.settings;
     var box = placedBox(s, ctx, scope);
+    var radius = s.form === 'rounded' ? Math.min(box.w, box.h) * Math.max(0, Math.min(50, Number(s.radius) || 0)) / 100 : 0;
     var node;
     if (s.form === 'circle') {
       node = stroked(el('ellipse', { cx: box.x + box.w / 2, cy: box.y + box.h / 2, rx: box.w / 2, ry: box.h / 2 }));
     } else {
-      var radius = s.form === 'rounded' ? Math.min(box.w, box.h) * Math.max(0, Math.min(50, Number(s.radius) || 0)) / 100 : 0;
       node = rect(box, radius ? { rx: radius } : null);
+    }
+    if (s.draw === 'outside') {
+      // The shape is the line; the fill is everything beyond it, out to
+      // the canvas edge (even-odd cuts the shape out of the canvas), the
+      // way a safe area is drawn: what lies outside it is what is marked.
+      // A shape dragged past the canvas has that overflow shaded too, as
+      // the even-odd rule reads it; a safe area never leaves the canvas.
+      var canvas = ctx.canvas;
+      var inner = s.form === 'circle' ? ellipsePath(box) : s.form === 'rounded' && radius ? roundedPath(box, radius) : boxPath(box);
+      var outside = el('path', { d: boxPath(canvas) + inner, 'fill-rule': 'evenodd', class: 'layer-stack-fill' });
+      node.setAttribute('class', 'layer-stack-edge');
+      return { shapes: [part(outside, 'Outside'), part(node, 'Shape')], labels: [], extent: union(canvas, box), boxes: { outer: box } };
     }
     node.setAttribute('class', 'layer-stack-fill layer-stack-edge');
     return { shapes: [part(node, 'Shape')], labels: [], extent: box, boxes: { outer: box } };
+  }
+
+  /* An ellipse filling a box, as a path d. */
+  function ellipsePath(box) {
+    var rx = box.w / 2;
+    var ry = box.h / 2;
+    var cx = box.x + rx;
+    var cy = box.y + ry;
+    return 'M' + (cx - rx) + ' ' + cy + 'a' + rx + ' ' + ry + ' 0 1 0 ' + (2 * rx) + ' 0a' + rx + ' ' + ry + ' 0 1 0 ' + (-2 * rx) + ' 0Z';
   }
 
   /* The canvas shape's outline as a path d, or null for a plain rectangle
@@ -2729,6 +2778,7 @@
     var m = measureLabel(label, style);
     var anchor = label.anchor || 'centre';
     var box = { x: label.x - m.w / 2, y: label.y - m.h / 2, w: m.w, h: m.h, m: m };
+    if (anchor === 'start') { box.x = label.x; box.y = label.y; }
     if (anchor === 'above') { box.y = label.y - m.gap - m.h; }
     if (anchor === 'below') { box.y = label.y + m.gap; }
     if (anchor === 'left') { box.x = label.x - m.gap - m.w; }

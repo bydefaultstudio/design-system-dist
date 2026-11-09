@@ -233,6 +233,7 @@ function renderEmbedPage({ platforms, getIcon, themeLink }) {
   <template id="format-embed-icons">${getIcon('download')}${getIcon('arrow-up-right')}${getIcon('info-circled')}</template>
   <script type="application/json" id="format-manifest">${manifest}</script>
   <script src="/assets/js/layer-stack.js"></script>
+  <script src="/assets/js/dropdown.js"></script>
   <script src="/assets/js/format-card.js"></script>
   <script src="/assets/js/formats-embed.js"></script>
 </body>

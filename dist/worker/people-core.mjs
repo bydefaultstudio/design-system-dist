@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.3.0 */
+/* @bydefaultstudio/design-system v7.4.0 */
 /**
  * people-core.mjs - the pure half of the People API (permissions-plan.md §5).
  *
@@ -95,6 +95,20 @@ export function parseExpiry(value, now) {
   if (seconds === null) return { ok: false, error: 'Access ends needs a full date, or leave it empty.' };
   if (seconds <= now) return { ok: false, error: 'That end date has passed. Pick a later one, or leave it empty.' };
   return { ok: true, value: seconds };
+}
+
+/**
+ * How a submitted end date differs from the stored one. `changed` is any
+ * difference, clearing the date included: the row's admission changes either
+ * way, and the self-row and owner guards refuse any change. `set` is a date
+ * being added or moved, a removal on a timer, which is all the last-owner and
+ * last-admin guards care about: a clear only adds access (security audit
+ * 2026-11-09, finding 8).
+ */
+export function expiryChange(stored, submitted) {
+  const before = stored === null || stored === undefined ? null : Number(stored);
+  const changed = submitted !== before;
+  return { changed, set: changed && submitted !== null };
 }
 
 /**

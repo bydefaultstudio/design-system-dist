@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.3.0 */
+/* @bydefaultstudio/design-system v7.4.0 */
 /**
  * gate.mjs — the pure half of the access gate: route lists and predicates.
  *
@@ -29,7 +29,10 @@
  *
  * Anything matching neither is gated at the team level: a new folder ships
  * gated, a path the build never wrote is a team page that does not exist.
- * Fail closed.
+ * Two exceptions fail higher still: a markdown source off the map is admin
+ * only, and an HTML file under a section folder off the map is owner only,
+ * because the build wrote every page it generated into the map, and a section
+ * file it did not is a copy nobody chose to ship. Fail closed.
  */
 import { normaliseRole } from './auth-schema.mjs';
 import { SITE } from './site.mjs';
@@ -133,8 +136,39 @@ function isSourcePath(pathname) {
   return pathname.startsWith(SITE.sourcePrefix) && pathname.endsWith('.md') && pathname.length > SITE.sourcePrefix.length + 3;
 }
 
-export function pageEntry(pathname, pages = SITE.pages) {
-  return pages.get(pathname) || (isSourcePath(pathname) ? UNMAPPED_SOURCE_ENTRY : DEFAULT_ENTRY);
+/**
+ * An HTML page under one of the site's section folders that the map does not
+ * know: owner only. The build writes every page it generates into the map,
+ * so a section file off it is one the build never meant to ship, and on the
+ * iCloud-mounted checkout that is a sync-conflict copy of a real page, often
+ * an admin or owner one (security audit 2026-11-09, finding 4). It fails to
+ * the top, not to team. A hand-authored page a site does want under a
+ * section is added to the map it passes createGate() (site-config.mjs).
+ */
+export const UNMAPPED_PAGE_ENTRY = Object.freeze({ level: 'owner', section: '', type: '' });
+
+/**
+ * A sync-conflict duplicate's name in any segment of the path: the original's
+ * with a space and a number before the extension ("people 3.html", or "%203"
+ * once in a URL), or a whole folder's ("web 2/people.html"). Never a page
+ * the build wrote; refused outright, before any level is asked.
+ */
+export function isConflictCopyPath(pathname) {
+  return /(?: |%20)\d+(?:\.[a-z0-9]+)?(?:\/|$)/i.test(pathname);
+}
+
+function isUnmappedSectionPage(pathname, pages, sections) {
+  if (!pathname.endsWith('.html') || pages.has(pathname)) return false;
+  const section = sectionOf(pathname);
+  return section !== '' && Object.prototype.hasOwnProperty.call(sections, section);
+}
+
+export function pageEntry(pathname, pages = SITE.pages, sections = SITE.sections) {
+  const entry = pages.get(pathname);
+  if (entry) return entry;
+  if (isSourcePath(pathname)) return UNMAPPED_SOURCE_ENTRY;
+  if (isUnmappedSectionPage(pathname, pages, sections)) return UNMAPPED_PAGE_ENTRY;
+  return DEFAULT_ENTRY;
 }
 
 /**
@@ -253,8 +287,12 @@ export function isClosedToGroups(level) {
  * Owner, admin and team never reach 'grant': their verdict costs a Map lookup and
  * nothing else, which is what keeps the hot path free of D1 (§8).
  */
-export function authorise(role, pathname, pages = SITE.pages) {
-  const entry = pageEntry(pathname, pages);
+export function authorise(role, pathname, pages = SITE.pages, sections = SITE.sections) {
+  if (isConflictCopyPath(pathname)) return 'deny';
+  // A reader's own account opens for every role, before any level is read:
+  // it sits under a folder the map does not list.
+  if (SIGNED_IN_EXACT.has(pathname)) return 'allow';
+  const entry = pageEntry(pathname, pages, sections);
   if (entry.level === 'public') return 'allow';
   if (role === 'owner') return 'allow';
   // An owner page runs the engine and the deployment (D23): closed to a
@@ -263,7 +301,7 @@ export function authorise(role, pathname, pages = SITE.pages) {
   if (role === 'admin') return 'allow';
   if (entry.level === 'admin') return 'deny';
   if (role === 'team') return 'allow';
-  if (isIndexPath(pathname) || SIGNED_IN_EXACT.has(pathname)) return 'allow';
+  if (isIndexPath(pathname)) return 'allow';
   return 'grant';
 }
 
@@ -404,6 +442,54 @@ export const SEND_LIMITS = {
   ip: 10, // one address hammering the endpoint
   email: 3, // one mailbox being flooded, from however many addresses
 };
+
+/**
+ * Failed verifications per address, over a day. Better Auth caps attempts per
+ * CODE (three), and a resend whose code is spent mints a fresh one, so the
+ * guesses an address allows renewed with every send window: nine per ten
+ * minutes, about 1,300 a day, for as long as anyone cared to keep going
+ * (security audit 2026-11-09, finding 2). This caps them per ADDRESS: every
+ * code Better Auth rejects is recorded under `fail:<address>` on the send
+ * log, and once the day's count is over, the verify route answers the same
+ * REJECTED_CODE as a wrong code without asking Better Auth, so no code for
+ * that address can be guessed again until the window moves on. Ten a day
+ * makes a hit about one in a hundred thousand per address per day. The
+ * cap is judged before anything is recorded, and a guess counts only while a
+ * code is live for the address, so a stranger cannot start or extend a block
+ * by posting at an address: it takes codes the send caps meter and the
+ * person is emailed, and ten wrong guesses at them. That is still a day's
+ * lockout of sign-in (existing sessions stand) for anyone, the owner
+ * included, which an admin lifts from the People page (worker/people.js
+ * `unlock`). The code stays six digits (owner decision, 2026-11-09): the cap
+ * is what bounds guessing, and a longer code would not stop a lockout.
+ */
+export const FAIL_LIMITS = {
+  windowSeconds: 24 * 60 * 60,
+  max: 10,
+};
+
+/** The send log's keys that live a day (FAIL_LIMITS), not a send window. */
+export const FAIL_KEY_PREFIX = 'fail:';
+
+/**
+ * The two statements that sweep the send log: send and invite keys past the
+ * send window, failure keys past the day. Every writer of the log runs both
+ * first, so no sweep can take a key another limit still counts.
+ */
+export function sweepSendLog(db, now) {
+  return [
+    db.prepare('DELETE FROM otp_send_log WHERE at <= ?1 AND key NOT LIKE ?2').bind(now - SEND_LIMITS.windowSeconds, `${FAIL_KEY_PREFIX}%`),
+    db.prepare('DELETE FROM otp_send_log WHERE at <= ?1 AND key LIKE ?2').bind(now - FAIL_LIMITS.windowSeconds, `${FAIL_KEY_PREFIX}%`),
+  ];
+}
+
+/** Whether a day's failure count for an address is over the cap. `rows` is the per-key COUNT the caller selected. */
+export function overFailLimit(rows, failKey, limits = FAIL_LIMITS) {
+  for (const row of rows || []) {
+    if (row.key === failKey) return Number(row.n) >= limits.max;
+  }
+  return false;
+}
 
 /**
  * Decide from the counts in the window, which INCLUDE the attempt being

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.3.0 */
+/* @bydefaultstudio/design-system v7.4.0 */
 /**
  * people.js - the People API (permissions-plan.md §5): the list, invites,
  * roles, groups and removal, so adding a person never needs a terminal.
@@ -22,17 +22,19 @@
  *   POST /api/people/update         { email, role, groups, expiresAt, demo, note }
  *   POST /api/people/resend         { email }
  *   POST /api/people/remove         { email }   - the row AND every session (§15, enforced)
+ *   POST /api/people/unlock         { email }   - lifts a sign-in lockout (FAIL_LIMITS, SEND_LIMITS)
  *   POST /api/people/groups/save    { id?, name, note, grants }
  *   POST /api/people/groups/remove  { id }
  */
 import { allowedRow, parseAddress } from './auth.js';
-import { SEND_LIMITS, evaluateRateLimit, isOwnerEmail, isSameOrigin, managesPeople, privateHeaders } from './gate.mjs';
+import { FAIL_KEY_PREFIX, FAIL_LIMITS, SEND_LIMITS, evaluateRateLimit, isOwnerEmail, isSameOrigin, managesPeople, privateHeaders, sweepSendLog } from './gate.mjs';
 import { SITE } from './site.mjs';
 import { inviteSubject, renderInviteEmail, renderInviteText } from './email-template.mjs';
 import {
   PEOPLE_BASE_PATH,
   canAssignRole,
   canManageRow,
+  expiryChange,
   grantablePages,
   personStatus,
   toMillis,
@@ -61,7 +63,7 @@ const COPY = {
   makeOwner: 'Only an owner can make someone an owner.',
   lastOwner: 'This is the last owner. Make someone else an owner first.',
   lastAdmin: 'This is the last admin. Make someone else an admin first.',
-  selfExpiry: 'You cannot set an end date on your own access. Another admin or an owner can.',
+  selfExpiry: 'You cannot change the end date on your own access. Another admin or an owner can.',
   ownerExpiry: 'The owner of the deployment has no end date.',
   ownerAddress: 'This address is the owner of the deployment. Only an owner adds it, as an owner, never as a demo.',
   demoResend: 'A demo account gets no email: any six digits sign it in.',
@@ -98,6 +100,7 @@ export async function handlePeople(request, env, url, reader, setCookies = []) {
       case 'update': result = await update(env, reader, body, now); break;
       case 'resend': result = await resend(env, url, reader, body, now); break;
       case 'remove': result = await remove(env, reader, body, now); break;
+      case 'unlock': result = await unlock(env, reader, body); break;
       case 'groups/save': result = await saveGroup(env, body); break;
       case 'groups/remove': result = await removeGroup(env, body); break;
       default: result = { status: 404, body: { error: COPY.failed } };
@@ -113,7 +116,7 @@ export async function handlePeople(request, env, url, reader, setCookies = []) {
 
 async function listEverything(env, reader) {
   const now = Math.floor(Date.now() / 1000);
-  const [people, members, groups, grants] = await env.DB.batch([
+  const [people, members, groups, grants, failures] = await env.DB.batch([
     env.DB.prepare(
       `SELECT a.email, a.role, a.expires_at, a.invited_by, a.demo, a.note, a.added_at,
               u.id AS user_id, u.name AS user_name,
@@ -124,6 +127,9 @@ async function listEverything(env, reader) {
     env.DB.prepare('SELECT group_id, email FROM access_group_member'),
     env.DB.prepare('SELECT id, name, note FROM access_group ORDER BY name'),
     env.DB.prepare('SELECT group_id, scope FROM access_group_grant ORDER BY scope'),
+    // The day's failed sign-in codes per address, for the Locked out badge.
+    env.DB.prepare('SELECT key, COUNT(*) AS n FROM otp_send_log WHERE key LIKE ?1 AND at > ?2 GROUP BY key')
+      .bind(`${FAIL_KEY_PREFIX}%`, now - FAIL_LIMITS.windowSeconds),
   ]);
 
   const groupsByEmail = new Map();
@@ -135,6 +141,10 @@ async function listEverything(env, reader) {
   for (const row of grants.results) {
     if (!grantsByGroup.has(row.group_id)) grantsByGroup.set(row.group_id, []);
     grantsByGroup.get(row.group_id).push(row.scope);
+  }
+  const lockedOut = new Set();
+  for (const row of failures.results) {
+    if (Number(row.n) >= FAIL_LIMITS.max) lockedOut.add(row.key.slice(FAIL_KEY_PREFIX.length));
   }
   const membersByGroup = new Map();
   for (const row of members.results) {
@@ -157,6 +167,8 @@ async function listEverything(env, reader) {
       signedUp: !!row.user_id,
       lastSignIn: toMillis(row.last_sign_in),
       status: personStatus(row, now),
+      // Over the day's failed-code cap: sign-in refused until it is lifted.
+      locked: lockedOut.has(row.email),
       // The owner named in wrangler.jsonc is an owner whatever the row says.
       owner: row.role === 'owner' || isOwner(env, row.email),
       // The ACCESS_OWNER row itself: never removed, never demoted.
@@ -248,18 +260,22 @@ async function update(env, reader, body, now) {
   if (demo && row.demo !== 1) return { status: 409, body: { error: COPY.demoLater } };
   // An end date is a removal on a timer, so it meets the same guards as
   // one (code review, 2026-11-08): never on your own row, never on the
-  // ACCESS_OWNER row, and never on the last owner or last manager.
-  const expiryChanged = expiresAt !== null && expiresAt !== row.expires_at;
-  if (expiryChanged && email === reader.email) return { status: 409, body: { error: COPY.selfExpiry } };
-  if (expiryChanged && isOwner(env, email)) return { status: 409, body: { error: COPY.ownerExpiry } };
-  if (role !== current || expiryChanged) {
+  // ACCESS_OWNER row, and never on the last owner or last manager. Any
+  // change to one's own date counts, clearing it included: an admin on a
+  // timer could otherwise make their own access open-ended (security audit
+  // 2026-11-09, finding 8). The page resubmits the stored day on an
+  // untouched row, so editing one's own note still passes.
+  const expiry = expiryChange(row.expires_at, expiresAt);
+  if (expiry.changed && email === reader.email) return { status: 409, body: { error: COPY.selfExpiry } };
+  if (expiry.changed && isOwner(env, email)) return { status: 409, body: { error: COPY.ownerExpiry } };
+  if (role !== current || expiry.set) {
     if (role !== current && email === reader.email) return { status: 409, body: { error: COPY.selfRole } };
     // The ACCESS_OWNER floor is an owner whatever the row says; a demotion
     // would show on the page and change nothing at the gate.
     if (role !== current && isOwner(env, email)) return { status: 409, body: { error: COPY.owner } };
     const people = await listRows(env);
-    if ((role !== 'owner' || expiryChanged) && wouldRemoveLastOwner(people, email, now)) return { status: 409, body: { error: COPY.lastOwner } };
-    if ((!managesPeople(role) || expiryChanged) && wouldRemoveLastAdmin(people, email, now)) return { status: 409, body: { error: COPY.lastAdmin } };
+    if ((role !== 'owner' || expiry.set) && wouldRemoveLastOwner(people, email, now)) return { status: 409, body: { error: COPY.lastOwner } };
+    if ((!managesPeople(role) || expiry.set) && wouldRemoveLastAdmin(people, email, now)) return { status: 409, body: { error: COPY.lastAdmin } };
   }
   // An unchanged role is written back as stored, so editing the note on the
   // ACCESS_OWNER row before migration 0008 does not trip the old CHECK.
@@ -287,6 +303,14 @@ async function update(env, reader, body, now) {
   }
   if (demoted) {
     statements.push(env.DB.prepare('DELETE FROM session WHERE userId IN (SELECT id FROM user WHERE email = ?1)').bind(email));
+  }
+  // A demo's fixed code lives in Better Auth's verification table, under the
+  // plugin's identifier for a sign-in code, and outlives the flag: turned
+  // off, the address still signed in with 000000 until the code expired,
+  // and a resend (resendStrategy 'reuse') kept it alive (security audit
+  // 2026-11-09, finding 5). Demo off is credential revocation too.
+  if (row.demo === 1 && !demo) {
+    statements.push(env.DB.prepare('DELETE FROM verification WHERE identifier = ?1').bind(signInCodeIdentifier(email)));
   }
   await env.DB.batch(statements);
   return { status: 200, body: { ok: true, signedOut: demoted } };
@@ -323,11 +347,34 @@ async function remove(env, reader, body, now) {
   // Both statements of access-plan.md §15, as one transaction: the row (its
   // memberships cascade) and the person's sessions, through the user row,
   // which cascades them. A re-invite later makes a fresh user with the role
-  // the new row says, rather than inheriting a stale one.
+  // the new row says, rather than inheriting a stale one. Any live sign-in
+  // code goes with them: the create hook would refuse it anyway, but a
+  // removed demo's fixed code has no business outliving the row.
   await env.DB.batch([
     env.DB.prepare('DELETE FROM allowed_email WHERE email = ?1').bind(email),
     env.DB.prepare('DELETE FROM user WHERE email = ?1').bind(email),
+    env.DB.prepare('DELETE FROM verification WHERE identifier = ?1').bind(signInCodeIdentifier(email)),
   ]);
+  return { status: 200, body: { ok: true } };
+}
+
+/**
+ * Lift a sign-in lockout (security audit 2026-11-09, findings 2 and 3): the
+ * day's failed codes, the address's send window, and any live code, so the
+ * person can ask for a fresh one at once. The IP keys stay: they meter a
+ * network, not this person. Allowed wherever Edit is (canManageRow), the
+ * viewer's own row included, since lifting changes no access.
+ */
+async function unlock(env, reader, body) {
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+  const row = await allowedRow(env.DB, email);
+  if (!row) return { status: 404, body: { error: COPY.notFound } };
+  if (!canManageRow(reader.role, rowRole(env, row))) return { status: 403, body: { error: COPY.ownerRow } };
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM otp_send_log WHERE key IN (?1, ?2)').bind(`${FAIL_KEY_PREFIX}${row.email}`, `email:${row.email}`),
+    env.DB.prepare('DELETE FROM verification WHERE identifier = ?1').bind(signInCodeIdentifier(row.email)),
+  ]);
+  console.info(JSON.stringify({ event: 'people.unlock', by: reader.email, email: row.email }));
   return { status: 200, body: { ok: true } };
 }
 
@@ -367,6 +414,15 @@ function isOwner(env, email) {
   return isOwnerEmail(email, env.ACCESS_OWNER);
 }
 
+/**
+ * The `verification.identifier` Better Auth's email-otp plugin stores a
+ * sign-in code under: `${type}-otp-${email}` (dist/plugins/email-otp/utils.mjs,
+ * 1.7.7). The one place outside worker/auth.js that touches that table.
+ */
+function signInCodeIdentifier(email) {
+  return `sign-in-otp-${email}`;
+}
+
 /** A row's role as the gate acts on it: the ACCESS_OWNER row is an owner whatever it says. */
 function rowRole(env, row) {
   return isOwner(env, row.email) ? 'owner' : row.role;
@@ -394,7 +450,7 @@ async function listRows(env) {
 async function recordAndCheckSends(env, adminEmail, emails, now) {
   const adminKey = `invite:${adminEmail}`;
   const windowStart = now - INVITE_LIMITS.windowSeconds;
-  const statements = [env.DB.prepare('DELETE FROM otp_send_log WHERE at <= ?1').bind(windowStart)];
+  const statements = sweepSendLog(env.DB, now);
   for (const email of emails) {
     statements.push(env.DB.prepare('INSERT INTO otp_send_log (key, at) VALUES (?1, ?3), (?2, ?3)').bind(adminKey, `invite-to:${email}`, now));
   }

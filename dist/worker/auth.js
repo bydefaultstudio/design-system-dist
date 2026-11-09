@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.3.0 */
+/* @bydefaultstudio/design-system v7.4.0 */
 /**
  * auth.js — Better Auth in the Worker: the sign-in endpoints (access-plan.md §4).
  *
@@ -38,16 +38,21 @@ import { emailOTP } from 'better-auth/plugins';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { SITE } from './site.mjs';
 import {
+  FAIL_KEY_PREFIX,
+  FAIL_LIMITS,
   REJECTED_CODE,
   SEND_LIMITS,
   collapsesToRejectedCode,
   evaluateRateLimit,
+  hasSessionCookie,
   hasUsableSecret,
   isAllowedHost,
   isOwnerEmail,
   isServedAuthRoute,
   normalizeEmail,
+  overFailLimit,
   resolveRole,
+  sweepSendLog,
 } from './gate.mjs';
 import { USER_ADDITIONAL_FIELDS } from './auth-schema.mjs';
 import { otpSubject, renderOtpEmail, renderOtpText } from './email-template.mjs';
@@ -57,6 +62,7 @@ const SEND_ROUTE = '/email-otp/send-verification-otp';
 const SEND_PATH = `${AUTH_BASE_PATH}${SEND_ROUTE}`;
 const VERIFY_PATH = `${AUTH_BASE_PATH}/sign-in/email-otp`;
 const SESSION_PATH = `${AUTH_BASE_PATH}/get-session`;
+const SIGN_OUT_PATH = `${AUTH_BASE_PATH}/sign-out`;
 const SEND_BODY_MAX_BYTES = 1024; // an email and a type; anything larger is not a client
 const VERIFY_BODY_MAX_BYTES = 1024; // an email and a code
 
@@ -198,8 +204,22 @@ export async function handleAuth(request, env, ctx) {
     return json({ error: 'Sign-in is unavailable' }, 503);
   }
 
+  // No session cookie, nothing to look up: the answer Better Auth would give
+  // after a D1 read and a rate-limit row, given here for free. Every page's
+  // header asks this on load, signed in or not, so without the pre-check
+  // every anonymous visit wrote a row (security audit 2026-11-09, needs-
+  // validation 10). The page gate makes the same check first (session.js).
+  // Sign-out with no cookie has nothing to end: the library's 400 becomes
+  // the success the page expects, with no Clear-Site-Data, since nothing
+  // gated was fetched under this cookie-less visit.
+  if (!hasSessionCookie(request.headers.get('cookie'))) {
+    if ((request.method === 'GET' || request.method === 'HEAD') && url.pathname === SESSION_PATH) return json(null, 200);
+    if (request.method === 'POST' && url.pathname === SIGN_OUT_PATH) return json({ success: true }, 200);
+  }
+
   let forwarded = request;
   let demo = false;
+  let email = null;
   if (request.method === 'POST' && url.pathname === SEND_PATH) {
     const outcome = await preflightSend(request, env);
     if (outcome instanceof Response) return outcome;
@@ -210,9 +230,38 @@ export async function handleAuth(request, env, ctx) {
     if (outcome instanceof Response) return outcome;
     forwarded = outcome.request;
     demo = outcome.demo;
+    email = outcome.email;
   }
 
   const auth = getAuth(env, url.origin);
+
+  // The send route answers before Better Auth runs. Only a listed address
+  // reaches this line, and the library's work for it (the user lookup, the
+  // code's write, the old code's delete) cost two or three D1 round trips an
+  // unlisted address never paid, so the response time said who was on the
+  // list (security audit 2026-11-09, residue of finding 1). The whole send
+  // now runs in the background and the answer is the preflight's, the same
+  // body and headers as an unlisted address gets. Anything the library
+  // refuses (its origin check on a foreign Origin, a Cookie with no Origin, a
+  // Sec-Fetch header) is logged, never shown: a cross-site send costs nothing
+  // to absorb, it emails the listed person their own code under the
+  // preflight's caps. The demo answer stays the one deliberate difference
+  // (see the file comment); it comes from the preflight's read of the row.
+  if (url.pathname === SEND_PATH) {
+    const sending = execContext.run({ ctx, demo }, () => auth.handler(forwarded)).then(
+      async (response) => {
+        if (!response.ok) {
+          const reason = await response.clone().json().then((b) => b && (b.code || b.message), () => null);
+          console.warn(JSON.stringify({ event: 'auth.send_refused', status: response.status, reason }));
+        }
+        response.body?.cancel();
+      },
+      (error) => console.error(JSON.stringify({ event: 'auth.send_failed', error: String(error && error.message) })),
+    );
+    if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(sending);
+    return json(demo ? { success: true, demo: true } : { success: true }, 200);
+  }
+
   const response = await execContext.run({ ctx, demo }, () => auth.handler(forwarded));
 
   // Wrong, expired, locked and refused codes all read the same (gate.mjs
@@ -224,6 +273,21 @@ export async function handleAuth(request, env, ctx) {
     const reason = await response.clone().json().then((b) => b && (b.code || b.message), () => null);
     console.warn(JSON.stringify({ event: 'auth.code_rejected', status: response.status, reason }));
     response.body?.cancel();
+    // Counted against the address, so the day's cap (gate.mjs FAIL_LIMITS)
+    // holds, but only while a code is live for it: a guess at an address
+    // that was never sent a code could never have succeeded, and counting
+    // it would let ten cookieless posts lock anyone out for a day with no
+    // send at all (code review, 2026-11-09). The same statement runs for
+    // every address, listed or not, and the response is already decided, so
+    // the write says nothing about the list. A failed write is logged and
+    // the answer stands: the cap is defence in depth, not the verdict.
+    try {
+      await env.DB.prepare('INSERT INTO otp_send_log (key, at) SELECT ?1, ?2 WHERE EXISTS (SELECT 1 FROM verification WHERE identifier = ?3)')
+        .bind(`${FAIL_KEY_PREFIX}${email}`, Math.floor(Date.now() / 1000), `sign-in-otp-${email}`)
+        .run();
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'auth.fail_count_failed', error: String(error && error.message) }));
+    }
     return json(REJECTED_CODE, 400);
   }
 
@@ -232,7 +296,7 @@ export async function handleAuth(request, env, ctx) {
   // (asset-library-plan.md §3) — the one exception to the gate's no-store —
   // so on a shared machine the next person must not find them in the cache.
   // Clear-Site-Data takes the public /assets/ cache with it; accepted.
-  if (url.pathname === `${AUTH_BASE_PATH}/sign-out` && response.ok) {
+  if (url.pathname === SIGN_OUT_PATH && response.ok) {
     const cleared = new Response(response.body, response);
     cleared.headers.set('Clear-Site-Data', '"cache"');
     return cleared;
@@ -243,12 +307,6 @@ export async function handleAuth(request, env, ctx) {
   // is a session any script can steal (security audit, 2026-11-08, finding 4).
   if (url.pathname === VERIFY_PATH && response.ok) {
     return withoutToken(response, env);
-  }
-
-  // A demo address learns it is one, so the login page can say no code is
-  // needed (see the file comment on why this is the one non-neutral answer).
-  if (demo && url.pathname === SEND_PATH && response.ok) {
-    return withJsonBody(response, { success: true, demo: true });
   }
 
   // The page's one session call (header-account.js) learns the role the
@@ -271,7 +329,7 @@ export async function handleAuth(request, env, ctx) {
  * membership test.)
  *
  * Neutrality by construction: ONE D1 batch — sweep, record the attempt, count
- * the window, look up the list — the same four statements in the same order
+ * the window, look up the list — the same five statements in the same order
  * whatever the outcome, and only then a verdict. The count includes the row
  * just written, so the limit is `count > max`, and two concurrent requests
  * cannot both slip under it: a batch is one transaction.
@@ -288,8 +346,8 @@ async function preflightSend(request, env) {
   const now = Math.floor(Date.now() / 1000);
   const windowStart = now - SEND_LIMITS.windowSeconds;
 
-  const [, , counts, allowed] = await env.DB.batch([
-    env.DB.prepare('DELETE FROM otp_send_log WHERE at <= ?1').bind(windowStart),
+  const [, , , counts, allowed] = await env.DB.batch([
+    ...sweepSendLog(env.DB, now),
     env.DB.prepare('INSERT INTO otp_send_log (key, at) VALUES (?1, ?3), (?2, ?3)').bind(ipKey, emailKey, now),
     env.DB.prepare(
       'SELECT key, COUNT(*) AS n, MIN(at) AS oldest FROM otp_send_log WHERE key IN (?1, ?2) AND at > ?3 GROUP BY key',
@@ -320,17 +378,24 @@ async function preflightSend(request, env) {
  * address normalised and nothing else changed - a wrong code is still
  * wrong, and Better Auth still counts the attempts. A missing or expired row
  * needs no refusal here: the send preflight never wrote a code for it.
+ *
+ * Third: the day's failed verifications for the address (gate.mjs
+ * FAIL_LIMITS). Over the cap, the request never reaches Better Auth and is
+ * answered as a wrong code, so the codes an address can be sent no longer
+ * renew the guesses it allows.
  */
 async function preflightVerify(request, env) {
   const body = await readJsonBody(request, VERIFY_BODY_MAX_BYTES);
   if (!body) return json({ error: 'Bad request' }, 400);
   const email = normalizeEmail(body.email);
   if (!email) return json({ error: 'Bad request' }, 400);
-  // One batch, the same two statements for every address: a separate UPDATE
+  const failKey = `${FAIL_KEY_PREFIX}${email}`;
+  const now = Math.floor(Date.now() / 1000);
+  // One batch, the same three statements for every address: a separate UPDATE
   // run only for a listed one was an extra round trip, and the response time
   // said what the body refuses to. The UPDATE reads the role itself and
   // matches nothing for an unlisted address (EXISTS), so it is a no-op there.
-  const [, lookup] = await env.DB.batch([
+  const [, lookup, failures] = await env.DB.batch([
     env.DB.prepare(
       `UPDATE user SET role = (SELECT role FROM allowed_email WHERE email = ?1)
        WHERE email = ?1
@@ -338,7 +403,12 @@ async function preflightVerify(request, env) {
          AND role IS NOT (SELECT role FROM allowed_email WHERE email = ?1)`,
     ).bind(email),
     env.DB.prepare('SELECT demo, role FROM allowed_email WHERE email = ?1').bind(email),
+    env.DB.prepare('SELECT key, COUNT(*) AS n FROM otp_send_log WHERE key = ?1 AND at > ?2 GROUP BY key').bind(failKey, now - FAIL_LIMITS.windowSeconds),
   ]);
+  if (overFailLimit(failures.results, failKey)) {
+    console.warn(JSON.stringify({ event: 'auth.verify_capped', email }));
+    return json(REJECTED_CODE, 400);
+  }
   const row = lookup.results[0] || null;
   // Never a demo for a role that manages people or opens owner pages: a
   // demo address is a password anyone holds (security audit, 2026-11-08,
@@ -346,7 +416,7 @@ async function preflightVerify(request, env) {
   // was made before it did, or by hand.
   const demo = isDemoRow(row, email, env.ACCESS_OWNER);
   const otp = demo ? DEMO_CODE : body.otp;
-  return { request: rebuildJson(request, { ...body, email, otp }), demo };
+  return { request: rebuildJson(request, { ...body, email, otp }), demo, email };
 }
 
 /**

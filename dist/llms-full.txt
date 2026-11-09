@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v7.3.0 -->
+<!-- @bydefaultstudio/design-system v7.4.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 7.3.0 (package)**
+**Version: 7.4.0 (package)**
 
 ## Getting the System
 
@@ -739,6 +739,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--green` | `#16A34A` |  |
 | `--green-deep` | `#15803D` |  |
 | `--green-dark` | `#155F31` |  |
+| `--green-vivid` | `#00D26A` |  |
 | `--purple-lighter` | `#F3E8FF` |  |
 | `--purple-light` | `#E9D5FF` |  |
 | `--purple` | `#9333EA` |  |
@@ -1350,6 +1351,8 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--overlay-guide-opacity` | `1` |  |
 | `--overlay-grid` | `var(--blue)` |  |
 | `--overlay-grid-opacity` | `0.35` |  |
+| `--overlay-safe` | `var(--green-vivid)` |  |
+| `--overlay-safe-opacity` | `0.3` |  |
 | `--overlay-line-weight` | `1px` |  |
 | `--overlay-line-dash` | `4 3` |  |
 | **The finer dash: the canvas edge and an approximate rule.** | | |
@@ -2665,7 +2668,7 @@ Every interactive component must include:
 | Mark / Abbr / Figure | `mark`, `abbr`, `figure` | No | `mark.md` |
 | Skeleton | `.skeleton-line`, `.skeleton-label`, `.skeleton-input` | No | `skeleton.md` |
 
-> Asset Card, Book Cover and Don't Card are documented separately as **docs-site components**. They only exist to power this By Default OS docs site and are not part of the portable design system. See [Layer Discipline](/docs/setup.html) and CLAUDE.md §17.
+> Asset Card, Book Cover and Don't Card are documented separately as **docs-site components**. They only exist to power this By Default OS docs site and are not part of the portable design system. See layer discipline, CLAUDE.md §17.
 
 ---
 

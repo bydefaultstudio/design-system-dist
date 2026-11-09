@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.3.0 */
+/* @bydefaultstudio/design-system v7.4.0 */
 /**
  * BD Audio — UI sound-feedback engine
  * Plays short micro-sounds (click / hover / success / error / bump) as

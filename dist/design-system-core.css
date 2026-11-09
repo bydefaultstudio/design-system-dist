@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.3.0 */
+/* @bydefaultstudio/design-system v7.4.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK: CORE
    The foundation, type, buttons, basic forms and simple components.
@@ -74,6 +74,10 @@
      annotation green. Read through --annotation-green. */
   --green-deep: #15803D;
   --green-dark: #155F31;
+  /* The Figma Formats templates' safe-area green (layout/safe-area), a
+     bright step with no lightness name in the ramp. Read through
+     --overlay-safe; never for text. */
+  --green-vivid: #00D26A;
   --purple-lighter: #F3E8FF;
   --purple-light: #E9D5FF;
   --purple: #9333EA;

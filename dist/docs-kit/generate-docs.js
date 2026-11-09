@@ -174,6 +174,61 @@ const pageAccess = new Map();
 // team. Written beside PAGE_ACCESS by writePageAccess().
 const sourcePages = new Map();
 
+// Every page's level by URL, filled from the file list BEFORE any page is
+// rendered (see the main build): pageAccess fills as pages are written, so a
+// body link to a page not yet written would otherwise find nothing. Read by
+// levelOf() for the links stampBodyLinks() marks and the covers the index
+// builders draw. A page in neither map reads as team: under 'hidden' a
+// signed-out reader loses that link and a guest keeps it only where their
+// grants reach the path, which is the gate's own default for the page.
+const linkLevels = new Map();
+function levelOf(pathname) {
+  const known = pageAccess.get(pathname);
+  return (known && known.level) || linkLevels.get(pathname) || 'team';
+}
+
+const LEVEL_RANK = { public: 0, team: 1, admin: 2, owner: 3 };
+// Body links that point above their page's level, reported at the end of the
+// build: under 'hidden' they fail it, since a reader who may open the page
+// could never open the link, and the sentence would still name the page. A
+// link to the home or a section index is never one: the gate opens those to
+// every signed-in reader and their titles are the section labels.
+const bodyLinkViolations = [];
+function isIndexPagePath(pathname) {
+  return pathname === '/index.html' || /^\/[a-z0-9-]+\/index\.html$/.test(pathname);
+}
+
+/**
+ * Stamp every link in a page's body that points at a site page with that
+ * page's level, so the hidden-navigation cut (worker/hidden-nav.mjs) applies
+ * to prose links and inline cards as it does to the sidebar, the index cards
+ * and the pager. Without it a sentence linking an owner page named that page
+ * to every reader, whatever their level (security audit 2026-11-09, finding
+ * 7). A link that already carries data-access, an external one, a fragment,
+ * or a target that is not a page is left as written. Under 'locked' the
+ * attribute is inert on prose: nav.js locks cards, pager and sidebar only.
+ */
+function stampBodyLinks(html, pagePath, pageLevel) {
+  // Attribute values are matched whole, so a `>` inside one (a title, an
+  // aria-label) does not end the tag early.
+  const ATTRS = `(?:[^>"']|"[^"]*"|'[^']*')`;
+  return html.replace(new RegExp(`<a\\b(${ATTRS}*?)\\shref="([^"]+)"(${ATTRS}*)>`, 'g'), (match, before, href, after) => {
+    if (/\sdata-access=/.test(before + after)) return match;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith('//') || href.startsWith('#')) return match;
+    let target;
+    try {
+      target = new URL(href, `https://x${pagePath}`).pathname;
+    } catch {
+      return match;
+    }
+    if (target.endsWith('/')) target += 'index.html';
+    if (!target.endsWith('.html')) return match;
+    const level = levelOf(target);
+    if (LEVEL_RANK[level] > LEVEL_RANK[pageLevel] && !isIndexPagePath(target)) bodyLinkViolations.push(`  ${pagePath} (${pageLevel}) links to ${target} (${level})`);
+    return `<a${before} href="${href}"${after} data-access="${level}">`;
+  });
+}
+
 /**
  * The four levels a page can declare; a missing field is its section's
  * default (sectionAccess), else team. A PRESENT value outside the four fails
@@ -2418,7 +2473,7 @@ function generateIndexPage(template, filesBySection) {
 
     for (const card of shelf) {
       cards += `
-        ${renderBookCover({ ...card, osIllustration: illustrated ? card.osIllustration : '', headingLevel: 2 })}`;
+        ${renderBookCover({ ...card, access: card.access || levelOf(card.href), osIllustration: illustrated ? card.osIllustration : '', headingLevel: 2 })}`;
     }
 
     cards += `
@@ -2450,7 +2505,7 @@ function generateIndexPage(template, filesBySection) {
       <div class="book-shelf"${MOTION.shelf}>`;
       for (const file of files) {
         cards += `
-        ${renderBookCover({ href: file.htmlPath, title: file.title, subtitle: file.frontmatter.subtitle })}`;
+        ${renderBookCover({ href: file.htmlPath, title: file.title, subtitle: file.frontmatter.subtitle, access: deriveDataAccess(file.frontmatter) })}`;
       }
       cards += `
       </div>
@@ -3415,8 +3470,9 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}, subsectio
     htmlContent = htmlContent.replace(/<p>/, '<p class="drop-cap">');
   }
 
-  const tableOfContents = type.toc ? generateTableOfContents(htmlContent) : '';
   const access = deriveDataAccess(frontmatter);
+  htmlContent = stampBodyLinks(htmlContent, '/' + file.htmlPath, access);
+  const tableOfContents = type.toc ? generateTableOfContents(htmlContent) : '';
 
   // Generate full-width page header (lives outside the content grid)
   const actionUrl = frontmatter.actionUrl || frontmatter.toolUrl;
@@ -5411,7 +5467,7 @@ function generateSourceDirPages(template, {
       header: type.header
         ? buildPageHeaderHtml({ title: frontmatter.title, subtitle: frontmatter.subtitle })
         : '',
-      content,
+      content: stampBodyLinks(content, `/${folder}/${slug}.html`, deriveDataAccess(frontmatter)),
       toc: type.toc ? generateTableOfContents(content) : '',
       frame: type.frame,
       article: type.article,
@@ -5890,6 +5946,7 @@ function generateBrandSectionOverviews(template, themes) {
           href: page.href,
           title: page.title,
           subtitle: page.subtitle,
+          access: levelOf(page.href),
         });
       }
       cards += '</div></div>';
@@ -5910,6 +5967,7 @@ function generateBrandSectionOverviews(template, themes) {
           href: `/tools/${toolKey}.html`,
           title: tool.title,
           subtitle: tool.subtitle,
+          access: levelOf(`/tools/${toolKey}.html`),
         });
       }
       cards += '</div></div>';
@@ -6430,6 +6488,7 @@ function generateBrandIndexPages(template, themes) {
           title: page.title,
           subtitle: page.subtitle,
           author: page.author,
+          access: levelOf(page.href),
         });
       }
       contentHtml += `</div></div>`;
@@ -6448,6 +6507,7 @@ function generateBrandIndexPages(template, themes) {
           href: toolsOverviewPage.href,
           title: 'Overview',
           subtitle: 'All available tools and utilities',
+          access: levelOf(toolsOverviewPage.href),
         });
       }
       for (const toolKey of brandToolKeys) {
@@ -6457,6 +6517,7 @@ function generateBrandIndexPages(template, themes) {
           title: tool.title,
           subtitle: tool.subtitle,
           author: tool.author,
+          access: levelOf(`/tools/${toolKey}.html`),
         });
       }
       contentHtml += `</div></div>`;
@@ -6902,6 +6963,28 @@ async function generateDocs() {
     allFiles.push(file);
   }
 
+  // Every page's level by URL, before anything is rendered, for the links and
+  // covers stampBodyLinks() and the index builders mark (levelOf). The cms
+  // pages from the list just read; the indexes, which the gate opens to every
+  // signed-in reader; the tool pairs under cms/apps/, which are written after
+  // the pages that link to them, read the way generateSourceDirPages reads
+  // them, own level else the section default.
+  for (const file of allFiles) linkLevels.set('/' + file.htmlPath, normaliseLevel(file.ownAccess));
+  linkLevels.set('/index.html', 'team');
+  for (const section of Object.keys(filesBySection)) {
+    if (SECTION_FOLDERS[section]) linkLevels.set(`/${SECTION_FOLDERS[section]}/index.html`, 'team');
+  }
+  const appsDir = path.join(DOCS_DIR, 'apps');
+  if (fs.existsSync(appsDir)) {
+    for (const name of fs.readdirSync(appsDir).filter((f) => f.endsWith('.md'))) {
+      const { frontmatter: app } = parseFrontmatter(fs.readFileSync(path.join(appsDir, name), 'utf8'));
+      const appSection = app.section || 'Tools';
+      const appFolder = SECTION_FOLDERS[appSection] || appSection.toLowerCase();
+      const own = app.access !== undefined && app.access !== null && app.access !== '' ? app.access : sectionLevel(appFolder);
+      linkLevels.set(`/${appFolder}/${name.replace(/\.md$/, '')}.html`, normaliseLevel(own));
+    }
+  }
+
   console.log(`📂 Found sections: ${Object.keys(filesBySection).join(', ')}`);
   // Under accessNav 'hidden' every page carries the sidebar list itself, for
   // the Worker to cut per reader; nav.js then holds none of it.
@@ -7124,6 +7207,18 @@ async function generateDocs() {
   // After every emitter has run. Never on a single-file build: a partial map
   // written here would gate every page the filter left out as a team page
   // that does not exist.
+  // Body links that point above their page's level (stampBodyLinks). Under
+  // 'hidden' the build fails: the Worker would cut the link, but a page that
+  // names a higher page in its prose is a page written for the wrong reader.
+  // Under 'locked' every reader sees every title already, so it is a note.
+  if (!isSingleFile && bodyLinkViolations.length) {
+    if (CONFIG.accessNav === 'hidden') {
+      console.error(`\n❌ ${bodyLinkViolations.length} body link(s) point at a page above the linking page's level. Under accessNav 'hidden' the reader would see a sentence about a page they cannot open. Reword or move the link:\n${bodyLinkViolations.join('\n')}\n`);
+      process.exit(1);
+    }
+    console.log(`🔗 ${bodyLinkViolations.length} body link(s) point above their page's level (stamped; a note under accessNav 'locked', a build error under 'hidden')`);
+  }
+
   if (!isSingleFile && CONFIG.accessGate) writePageAccess();
   if (!isSingleFile && CONFIG.assetLibrary) writeLibraryIndex();
   if (!isSingleFile) writeFormatsEmbed();
