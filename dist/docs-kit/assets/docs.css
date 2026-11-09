@@ -2014,7 +2014,8 @@ body.is-guest .sidebar-lock-note {
 }
 
 /* --- Admin pages are hidden, not locked, from everyone but admins ---
-   (permissions-plan.md §3.2). Keyed on body[data-role], which the template's
+   (permissions-plan.md §3.2), and owner pages from everyone but owners
+   (levels-groups-plan.md D23). Keyed on body[data-role], which the template's
    pre-paint script sets from the last session answer and nav.js settles, so
    nothing flickers away after paint. A signed-out reader has no role and
    sees them locked with everything else. Search is closed to a guest for
@@ -2027,6 +2028,10 @@ body[data-role="team"] .book-contents-item[data-access="admin"],
 body[data-role="guest"] .book-contents-item[data-access="admin"],
 body[data-role="team"] .book-cover[data-access="admin"],
 body[data-role="guest"] .book-cover[data-access="admin"],
+body[data-role]:not([data-role="owner"]) .site-sidebar [data-access="owner"],
+body[data-role]:not([data-role="owner"]) .site-sidebar li:has(> [data-access="owner"]),
+body[data-role]:not([data-role="owner"]) .book-contents-item[data-access="owner"],
+body[data-role]:not([data-role="owner"]) .book-cover[data-access="owner"],
 body[data-role="guest"] .header-search-btn {
   display: none;
 }
@@ -3550,12 +3555,18 @@ main > .page-header:has(~ .docs-content-grid) ~ .page-nav {
   margin: 0;
 }
 
-.locked-panel-title > span {
+.locked-panel-title > span,
+.locked-panel-description > span {
   display: none;
 }
 
-.locked-panel[data-locked-level="admin"] .locked-panel-title > [data-for="admin"],
-.locked-panel:not([data-locked-level="admin"]) .locked-panel-title > [data-for="team"] {
+.locked-panel[data-locked-level="owner"] #locked-ask {
+  display: none;
+}
+
+.locked-panel[data-locked-level="owner"] [data-for="owner"],
+.locked-panel[data-locked-level="admin"] [data-for="admin"],
+.locked-panel:not([data-locked-level="admin"]):not([data-locked-level="owner"]) [data-for="team"] {
   display: inline;
 }
 

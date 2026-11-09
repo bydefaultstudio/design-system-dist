@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v7.2.0 */
+/* @bydefaultstudio/design-system v7.3.0 */
 /**
  * <DatePicker> — React adapter over the Date Picker markup contract
  * (cms/date-picker.md).

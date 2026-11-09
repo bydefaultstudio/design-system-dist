@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.2.0 */
+/* @bydefaultstudio/design-system v7.3.0 */
 /**
  * BD Animate
  * Entrances, scroll reveals and split-text staggers, driven by data-bd-*

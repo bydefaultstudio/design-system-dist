@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v7.2.0 */
+/* @bydefaultstudio/design-system v7.3.0 */
 /**
  * <Rating> — React adapter over the Rating markup contract (cms/rating.md).
  *

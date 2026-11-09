@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.2.0 */
+/* @bydefaultstudio/design-system v7.3.0 */
 /**
  * layer-stack.js — the engine behind Layout Spec: a canvas, the specimen on
  * it, and an ordered stack of rules drawn over (or under) it.

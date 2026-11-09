@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.2.0 */
+/* @bydefaultstudio/design-system v7.3.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK: CORE
    The foundation, type, buttons, basic forms and simple components.
@@ -2971,7 +2971,7 @@ input[type="radio"] {
   border-radius: 50%;
 }
 
-input[type="checkbox"]:checked {
+input[type="checkbox"]:checked:not(:indeterminate, .is-mixed) {
   background-color: var(--checkbox-selected);
   border-color: var(--checkbox-selected);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
@@ -2983,6 +2983,23 @@ input[type="checkbox"]:checked {
 input[type="radio"]:checked {
   background-color: var(--checkbox-selected);
   border-color: var(--checkbox-selected);
+}
+
+/* Mixed (half ticked): some of what the box stands for is chosen, some is
+   not. Set in script with el.indeterminate = true; there is no attribute,
+   and the browser announces it as mixed. .is-mixed paints the same look for
+   a picture of the state (styleguide, docs) and nothing else. The tick rules
+   skip a mixed box, so one that is also checked shows the dash. The dash is a
+   bar in --checkbox-checkmark, so a brand theme and dark mode both follow the
+   token. A switch is never mixed. */
+input[type="checkbox"]:not([role="switch"]):indeterminate,
+input[type="checkbox"]:not([role="switch"]).is-mixed {
+  background-color: var(--checkbox-selected);
+  border-color: var(--checkbox-selected);
+  background-image: linear-gradient(var(--checkbox-checkmark), var(--checkbox-checkmark));
+  background-size: calc(var(--check-mark-size) * 0.6) max(2px, calc(var(--check-mark-size) / 7));
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 input[type="radio"]:checked::after {
@@ -3008,7 +3025,9 @@ input[type="radio"]:disabled {
   opacity: 0.5;
 }
 
-input[type="checkbox"]:disabled:checked {
+input[type="checkbox"]:disabled:checked,
+input[type="checkbox"]:disabled:indeterminate,
+input[type="checkbox"]:disabled.is-mixed {
   background-color: var(--input-disabled-text);
   border-color: var(--input-disabled-text);
 }
@@ -3019,13 +3038,29 @@ input[type="radio"]:disabled:checked {
 }
 
 /* Dark mode checkmark */
-[data-theme="dark"] input[type="checkbox"]:checked {
+[data-theme="dark"] input[type="checkbox"]:checked:not(:indeterminate, .is-mixed) {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
 }
 
+
+
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) input[type="checkbox"]:checked {
+  :root:not([data-theme]) input[type="checkbox"]:checked:not(:indeterminate, .is-mixed) {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
+  }
+}
+
+/* Forced colours (Windows High Contrast) replace the fill with Canvas but
+   keep a background image, so a mark would sit on a ground of its own colour
+   and vanish. A chosen box takes the system Highlight pair instead. */
+@media (forced-colors: active) {
+  input[type="checkbox"]:not([role="switch"]):checked,
+  input[type="checkbox"]:not([role="switch"]):indeterminate,
+  input[type="checkbox"]:not([role="switch"]).is-mixed {
+    forced-color-adjust: none;
+    --checkbox-checkmark: HighlightText;
+    background-color: Highlight;
+    border-color: Highlight;
   }
 }
 

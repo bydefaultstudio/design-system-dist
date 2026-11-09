@@ -1,0 +1,525 @@
+/* @bydefaultstudio/design-system v7.3.0 */
+/**
+ * auth.js — Better Auth in the Worker: the sign-in endpoints (access-plan.md §4).
+ *
+ * Mounted at /api/auth/* by worker/index.js. Email one-time code only (D5),
+ * named individuals only (D5, §4.6): the `allowed_email` table in D1 is the
+ * policy, and it is consulted HERE, before Better Auth sees the request. Since
+ * permissions-plan.md (2026-10-07) the row also says what the person is -
+ * admin, team or guest - and that role is copied onto the user record as it is
+ * created, so it rides the session cookie from then on.
+ *
+ * Why not a Better Auth hook: the email-OTP plugin writes the code to
+ * `verification` and hands it to the sender before it asks whether the user
+ * exists (dist/plugins/email-otp/routes.mjs — createVerificationValue, then
+ * the user check, then sendVerificationOTP). A hook fires too late to stop the
+ * write, and a `before` hook cannot return a response at all. So the send
+ * endpoint gets a preflight, and the preflight answers anyone not on the list
+ * with the same body Better Auth sends on success: nothing written, nothing
+ * sent, nothing learned (§4.4 step 3). Everything else on /api/auth/* goes
+ * straight to Better Auth.
+ *
+ * Demo accounts (allowed_email.demo = 1) sign in with any code: the code the
+ * plugin stores for them is a fixed one (generateOTP), no email is sent, and
+ * the verify preflight replaces whatever was typed with that fixed code. For
+ * walking the system in a call, one account per role. The send response says
+ * `demo: true` for them so the login page can say no code is needed, the one
+ * place the send endpoint is not neutral, by design: a demo address is meant
+ * to be handed out, and knowing it is one tells nobody anything they could not
+ * learn by typing six digits.
+ *
+ * Better Auth's tables come from worker/migrations/0002_better_auth.sql and
+ * 0003_user_role.sql, generated from the installed package by
+ * scripts/generate-auth-migration.mjs, never typed by hand.
+ */
+import { betterAuth } from 'better-auth';
+import { APIError } from 'better-auth/api';
+import { emailOTP } from 'better-auth/plugins';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { SITE } from './site.mjs';
+import {
+  REJECTED_CODE,
+  SEND_LIMITS,
+  collapsesToRejectedCode,
+  evaluateRateLimit,
+  hasUsableSecret,
+  isAllowedHost,
+  isOwnerEmail,
+  isServedAuthRoute,
+  normalizeEmail,
+  resolveRole,
+} from './gate.mjs';
+import { USER_ADDITIONAL_FIELDS } from './auth-schema.mjs';
+import { otpSubject, renderOtpEmail, renderOtpText } from './email-template.mjs';
+
+export const AUTH_BASE_PATH = '/api/auth';
+const SEND_ROUTE = '/email-otp/send-verification-otp';
+const SEND_PATH = `${AUTH_BASE_PATH}${SEND_ROUTE}`;
+const VERIFY_PATH = `${AUTH_BASE_PATH}/sign-in/email-otp`;
+const SESSION_PATH = `${AUTH_BASE_PATH}/get-session`;
+const SEND_BODY_MAX_BYTES = 1024; // an email and a type; anything larger is not a client
+const VERIFY_BODY_MAX_BYTES = 1024; // an email and a code
+
+const OTP_LENGTH = 6;
+const OTP_EXPIRES_SECONDS = 5 * 60;
+const OTP_ALLOWED_ATTEMPTS = 3;
+const SESSION_EXPIRES_SECONDS = 30 * 24 * 60 * 60; // §4.7: thirty days, rolling
+const SESSION_UPDATE_AGE_SECONDS = 24 * 60 * 60; // …extended at most once a day
+const COOKIE_CACHE_SECONDS = 5 * 60; // §10: no D1 read on a warm session
+// Bumped when the cached user shape changes, so every cached session is rebuilt
+// from D1 on its next request rather than trusted without the new field. '2'
+// added user.role (2026-10-07).
+const COOKIE_CACHE_VERSION = '2';
+
+// The code a demo account's verification row holds. Never shown to anyone:
+// the verify preflight substitutes it for whatever a demo visitor typed.
+const DEMO_CODE = '000000';
+
+// Carries the request's ExecutionContext to Better Auth's background-task
+// handler, so the email send outlives the response via ctx.waitUntil without
+// the instance — memoised per isolate — holding any per-request state. This is
+// Better Auth's own documented Workers pattern (init-options: backgroundTasks).
+// Backgrounding is not an optimisation here: if the send were awaited, a
+// listed address would answer hundreds of milliseconds after an unlisted one,
+// and the response time would say what the body refuses to.
+//
+// The same store carries the preflight's verdict on whether the address is a
+// demo account, so generateOTP and the sender learn it without a second read.
+const execContext = new AsyncLocalStorage();
+
+// One Better Auth instance per isolate per origin — baseURL is baked in, so
+// localhost and the custom domain each get their own. Keyed on the
+// origin alone: bindings are isolate-wide, so the `env` captured by the first
+// request serves every later one, and nothing depends on `env` keeping its
+// identity between requests. Bounded by the hosts that route here.
+const instances = new Map();
+
+export function getAuth(env, origin) {
+  // Thrown, not returned: requireSession turns any throw into a denial, and
+  // handleAuth checks first so it can answer 503 instead.
+  if (!hasUsableSecret(env.BETTER_AUTH_SECRET)) throw new Error('BETTER_AUTH_SECRET is missing or too short');
+  let auth = instances.get(origin);
+  if (!auth) {
+    auth = createAuth(env, origin);
+    instances.set(origin, auth);
+  }
+  return auth;
+}
+
+function createAuth(env, origin) {
+  return betterAuth({
+    appName: SITE.name,
+    baseURL: origin,
+    basePath: AUTH_BASE_PATH,
+    secret: env.BETTER_AUTH_SECRET,
+    // D1. @better-auth/kysely-adapter recognises it by shape (batch/exec/prepare)
+    // and picks its D1 dialect, transactions off — D1 has none.
+    database: env.DB,
+    trustedOrigins: [origin],
+    user: { additionalFields: USER_ADDITIONAL_FIELDS },
+    session: {
+      expiresIn: SESSION_EXPIRES_SECONDS,
+      updateAge: SESSION_UPDATE_AGE_SECONDS,
+      cookieCache: { enabled: true, maxAge: COOKIE_CACHE_SECONDS, strategy: 'compact', version: COOKIE_CACHE_VERSION },
+    },
+    // Better Auth's own per-IP limiter guards the verify and session routes,
+    // persisted so it survives isolate restarts (NODE_ENV is unset on Workers,
+    // so `enabled` is explicit). It is switched OFF for the send route: only
+    // listed addresses ever reach it there, so its 429 would say who is on the
+    // list — preflightSend limits that route for everyone instead.
+    rateLimit: { enabled: true, storage: 'database', customRules: { [SEND_ROUTE]: false } },
+    advanced: {
+      useSecureCookies: origin.startsWith('https://'),
+      // Better Auth reads x-forwarded-for by default; Cloudflare's truth is here.
+      ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] },
+      backgroundTasks: { handler: runInBackground },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          // Second line behind the preflight — an address removed from the list
+          // between its code being sent and being entered. Throwing gives a
+          // clean 403; returning false would make the sign-in route read
+          // `.id` off a null user and 500. The row that admits the person also
+          // says what they are: the role is copied onto the user here, the
+          // one time anything but the People page writes it (§4.2).
+          before: async (user) => {
+            const row = await allowedRow(env.DB, user.email);
+            if (!row || isExpired(row)) {
+              throw new APIError('FORBIDDEN', { message: 'This address is not on the list.' });
+            }
+            return { data: { role: row.role } };
+          },
+        },
+      },
+    },
+    plugins: [
+      emailOTP({
+        otpLength: OTP_LENGTH,
+        expiresIn: OTP_EXPIRES_SECONDS,
+        allowedAttempts: OTP_ALLOWED_ATTEMPTS,
+        // A resend sends the code already live rather than replacing it, so a
+        // stranger requesting codes for someone's address cannot invalidate
+        // the one in their inbox (owner decision 2026-10-08). Reuse needs the
+        // code recoverable, hence encrypted with the auth secret, not hashed.
+        // The attempt count carries over, so a resend buys no extra guesses;
+        // a code whose attempts are spent is replaced as before.
+        resendStrategy: 'reuse',
+        storeOTP: 'encrypted',
+        // A demo account's code is the fixed one; undefined hands the plugin
+        // back its own random generator for everyone else.
+        generateOTP: () => (execContext.getStore()?.demo ? DEMO_CODE : undefined),
+        sendVerificationOTP: (data) => sendCode(env, origin, data),
+      }),
+    ],
+  });
+}
+
+function runInBackground(promise) {
+  const store = execContext.getStore();
+  if (store && store.ctx) store.ctx.waitUntil(promise);
+  else promise.catch(() => {}); // outside a request there is nothing to extend
+}
+
+/**
+ * The router. Refuses hostnames that are not ours before anything is built —
+ * baseURL is derived from the request, so an unexpected Host must not become
+ * a trusted origin — and any route the site does not call (gate.mjs
+ * SERVED_AUTH_ROUTES).
+ */
+export async function handleAuth(request, env, ctx) {
+  const url = new URL(request.url);
+  if (!isAllowedHost(url.hostname)) return new Response('Not found', { status: 404 });
+  if (!isServedAuthRoute(request.method, url.pathname.slice(AUTH_BASE_PATH.length))) {
+    return new Response('Not found', { status: 404 });
+  }
+  if (!hasUsableSecret(env.BETTER_AUTH_SECRET)) {
+    console.error(JSON.stringify({ event: 'auth.secret_missing' }));
+    return json({ error: 'Sign-in is unavailable' }, 503);
+  }
+
+  let forwarded = request;
+  let demo = false;
+  if (request.method === 'POST' && url.pathname === SEND_PATH) {
+    const outcome = await preflightSend(request, env);
+    if (outcome instanceof Response) return outcome;
+    forwarded = outcome.request;
+    demo = outcome.demo;
+  } else if (request.method === 'POST' && url.pathname === VERIFY_PATH) {
+    const outcome = await preflightVerify(request, env);
+    if (outcome instanceof Response) return outcome;
+    forwarded = outcome.request;
+    demo = outcome.demo;
+  }
+
+  const auth = getAuth(env, url.origin);
+  const response = await execContext.run({ ctx, demo }, () => auth.handler(forwarded));
+
+  // Wrong, expired, locked and refused codes all read the same (gate.mjs
+  // REJECTED_CODE), or the difference says who is on the list.
+  if (url.pathname === VERIFY_PATH && collapsesToRejectedCode(response.status)) {
+    // Logged, because a 403 from Better Auth's own origin check and a 500
+    // from an undecryptable code collapse too, and would otherwise read as
+    // people mistyping their codes.
+    const reason = await response.clone().json().then((b) => b && (b.code || b.message), () => null);
+    console.warn(JSON.stringify({ event: 'auth.code_rejected', status: response.status, reason }));
+    response.body?.cancel();
+    return json(REJECTED_CODE, 400);
+  }
+
+  // Signing out also empties what the browser cached behind the gate. The
+  // Asset Library serves its thumbnails `private, max-age=31536000, immutable`
+  // (asset-library-plan.md §3) — the one exception to the gate's no-store —
+  // so on a shared machine the next person must not find them in the cache.
+  // Clear-Site-Data takes the public /assets/ cache with it; accepted.
+  if (url.pathname === `${AUTH_BASE_PATH}/sign-out` && response.ok) {
+    const cleared = new Response(response.body, response);
+    cleared.headers.set('Clear-Site-Data', '"cache"');
+    return cleared;
+  }
+
+  // A successful sign-in answers with the user and without the session
+  // token: the cookie carries it, and a token in a body any script can read
+  // is a session any script can steal (security audit, 2026-11-08, finding 4).
+  if (url.pathname === VERIFY_PATH && response.ok) {
+    return withoutToken(response, env);
+  }
+
+  // A demo address learns it is one, so the login page can say no code is
+  // needed (see the file comment on why this is the one non-neutral answer).
+  if (demo && url.pathname === SEND_PATH && response.ok) {
+    return withJsonBody(response, { success: true, demo: true });
+  }
+
+  // The page's one session call (header-account.js) learns the role the
+  // gate will act on - resolved the way worker/gate.mjs resolves it, owner
+  // floor included, so the page never hides admin links from the owner -
+  // and, for a guest, the sections and pages their groups grant, so the
+  // sidebar can lock what they cannot open. One D1 read, guests only.
+  if (request.method === 'GET' && url.pathname === SESSION_PATH && response.ok) {
+    return withReaderAccess(response, env);
+  }
+  return response;
+}
+
+/**
+ * Runs before Better Auth on the send endpoint. Returns a Response to short-
+ * circuit, or { request, demo } to hand on, the request rebuilt with the
+ * normalised address, so Better Auth validates the same string the allowlist
+ * was asked about. (It trims nothing itself: a leading space would be our 200
+ * for an unlisted address and its 400 for a listed one, a one-request
+ * membership test.)
+ *
+ * Neutrality by construction: ONE D1 batch — sweep, record the attempt, count
+ * the window, look up the list — the same four statements in the same order
+ * whatever the outcome, and only then a verdict. The count includes the row
+ * just written, so the limit is `count > max`, and two concurrent requests
+ * cannot both slip under it: a batch is one transaction.
+ */
+async function preflightSend(request, env) {
+  const body = await readJsonBody(request, SEND_BODY_MAX_BYTES);
+  if (!body || body.type !== 'sign-in') return json({ error: 'Bad request' }, 400);
+  const email = normalizeEmail(body.email);
+  if (!email) return json({ error: 'Bad request' }, 400);
+
+  const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+  const ipKey = `ip:${ip}`;
+  const emailKey = `email:${email}`;
+  const now = Math.floor(Date.now() / 1000);
+  const windowStart = now - SEND_LIMITS.windowSeconds;
+
+  const [, , counts, allowed] = await env.DB.batch([
+    env.DB.prepare('DELETE FROM otp_send_log WHERE at <= ?1').bind(windowStart),
+    env.DB.prepare('INSERT INTO otp_send_log (key, at) VALUES (?1, ?3), (?2, ?3)').bind(ipKey, emailKey, now),
+    env.DB.prepare(
+      'SELECT key, COUNT(*) AS n, MIN(at) AS oldest FROM otp_send_log WHERE key IN (?1, ?2) AND at > ?3 GROUP BY key',
+    ).bind(ipKey, emailKey, windowStart),
+    env.DB.prepare('SELECT demo, role, expires_at FROM allowed_email WHERE email = ?1').bind(email),
+  ]);
+  const verdict = evaluateRateLimit(counts.results, ipKey, emailKey, now);
+
+  if (verdict.limited) {
+    return json({ error: 'Too many requests' }, 429, { 'Retry-After': String(verdict.retryAfter) });
+  }
+  // Not on the list, or no longer admitted: the exact body Better Auth
+  // returns after a real send.
+  const row = allowed.results[0];
+  if (!row || isExpired(row, now)) return json({ success: true }, 200);
+
+  return { request: rebuildJson(request, { ...body, email }), demo: isDemoRow(row, email, env.ACCESS_OWNER) };
+}
+
+/**
+ * Runs before Better Auth on the verify endpoint, for two reasons. A demo
+ * account signs in with any code, so the code typed is replaced with the one
+ * the plugin stored for that address. And the list is the policy: a person
+ * signing in again gets the role their row says NOW, written onto the user
+ * record before the session is built, so the cookie cache never starts a
+ * sign-in with a role the list no longer holds (the create hook does the
+ * same for a first sign-in). Everyone else's request is handed on with the
+ * address normalised and nothing else changed - a wrong code is still
+ * wrong, and Better Auth still counts the attempts. A missing or expired row
+ * needs no refusal here: the send preflight never wrote a code for it.
+ */
+async function preflightVerify(request, env) {
+  const body = await readJsonBody(request, VERIFY_BODY_MAX_BYTES);
+  if (!body) return json({ error: 'Bad request' }, 400);
+  const email = normalizeEmail(body.email);
+  if (!email) return json({ error: 'Bad request' }, 400);
+  // One batch, the same two statements for every address: a separate UPDATE
+  // run only for a listed one was an extra round trip, and the response time
+  // said what the body refuses to. The UPDATE reads the role itself and
+  // matches nothing for an unlisted address (EXISTS), so it is a no-op there.
+  const [, lookup] = await env.DB.batch([
+    env.DB.prepare(
+      `UPDATE user SET role = (SELECT role FROM allowed_email WHERE email = ?1)
+       WHERE email = ?1
+         AND EXISTS (SELECT 1 FROM allowed_email WHERE email = ?1)
+         AND role IS NOT (SELECT role FROM allowed_email WHERE email = ?1)`,
+    ).bind(email),
+    env.DB.prepare('SELECT demo, role FROM allowed_email WHERE email = ?1').bind(email),
+  ]);
+  const row = lookup.results[0] || null;
+  // Never a demo for a role that manages people or opens owner pages: a
+  // demo address is a password anyone holds (security audit, 2026-11-08,
+  // finding 1). The People API refuses such a row; this refuses one that
+  // was made before it did, or by hand.
+  const demo = isDemoRow(row, email, env.ACCESS_OWNER);
+  const otp = demo ? DEMO_CODE : body.otp;
+  return { request: rebuildJson(request, { ...body, email, otp }), demo };
+}
+
+/**
+ * Whether a list row signs in as a demo, with no code. Only a team member or
+ * a guest: a demo address is a password anyone holds, so a row that manages
+ * people or opens owner pages signs in with a real code whatever its demo
+ * flag says (security audit, 2026-11-08, finding 1). The send and the verify
+ * preflights both ask this, so the code sent and the code checked agree.
+ */
+function isDemoRow(row, email, ownerEmail) {
+  // The ACCESS_OWNER address is an owner whatever its row says, so a demo
+  // flag on it would be a codeless sign-in as the owner (code review,
+  // 2026-11-08). Never, however the row was made.
+  if (isOwnerEmail(email, ownerEmail)) return false;
+  return !!row && row.demo === 1 && (row.role === 'team' || row.role === 'guest');
+}
+
+async function readJsonBody(request, maxBytes) {
+  const declared = Number(request.headers.get('content-length'));
+  if (declared > maxBytes) return null;
+  let body;
+  try {
+    const text = await request.clone().text();
+    if (text.length > maxBytes) return null;
+    body = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  return body && typeof body === 'object' && !Array.isArray(body) ? body : null;
+}
+
+function rebuildJson(request, body) {
+  const headers = new Headers(request.headers);
+  headers.delete('content-length'); // recomputed for the rebuilt body
+  return new Request(request.url, { method: request.method, headers, body: JSON.stringify(body) });
+}
+
+/** The same response with a different JSON body: status and headers (cookies included) kept. */
+function withJsonBody(response, body) {
+  const out = new Response(JSON.stringify(body), response);
+  out.headers.set('Content-Type', 'application/json');
+  out.headers.delete('Content-Length');
+  return out;
+}
+
+async function withoutToken(response, env) {
+  let data;
+  try {
+    data = await response.clone().json();
+  } catch {
+    return response;
+  }
+  if (!data || typeof data !== 'object') return response;
+  const { token, ...rest } = data;
+  // The role the gate will act on, owner floor included, so the login page's
+  // pre-paint hint is right from the first page (it was the stored role).
+  if (rest.user && typeof rest.user === 'object') rest.user = { ...rest.user, role: resolveRole(rest.user, env.ACCESS_OWNER) };
+  return withJsonBody(response, rest);
+}
+
+async function withReaderAccess(response, env) {
+  let data;
+  try {
+    data = await response.clone().json();
+  } catch {
+    return response;
+  }
+  if (!data || typeof data !== 'object' || !data.user || !data.session) return response;
+  // The session token is the cookie's secret. No page reads it, and in the
+  // body any script on the page could, HttpOnly or not (security audit,
+  // 2026-11-08, finding 4). Only the expiry leaves.
+  const session = { expiresAt: data.session.expiresAt };
+  const role = resolveRole(data.user, env.ACCESS_OWNER);
+  if (role !== 'guest') return withJsonBody(response, { ...data, session, role });
+  let scopes = [];
+  try {
+    scopes = await guestScopes(env.DB, data.user.email);
+  } catch {
+    scopes = []; // fail closed: a guest with no scopes sees every team page locked
+  }
+  return withJsonBody(response, { ...data, session, role, scopes });
+}
+
+/* ------ The list ------ */
+
+/**
+ * The allowlist row for an address, normalised the way the table stores it,
+ * or null. The row is the policy: it admits the person (its existence), says
+ * what they are (role), how long for (expires_at) and whether they are a demo
+ * account. Read by the sign-in preflights, the user-create hook, the gate's
+ * cookie-rebuild check and the People API.
+ */
+export async function allowedRow(db, rawEmail) {
+  const email = normalizeEmail(rawEmail);
+  if (!email) return null;
+  return db
+    .prepare('SELECT email, role, expires_at, invited_by, demo, note, added_at FROM allowed_email WHERE email = ?1')
+    .bind(email)
+    .first();
+}
+
+export function isExpired(row, now = Math.floor(Date.now() / 1000)) {
+  return row.expires_at !== null && row.expires_at !== undefined && Number(row.expires_at) <= now;
+}
+
+/** The scopes a guest's groups grant, as 'section:<folder>' and 'page:<path>' strings. */
+export async function guestScopes(db, rawEmail) {
+  const email = normalizeEmail(rawEmail);
+  if (!email) return [];
+  const { results } = await db
+    .prepare(
+      'SELECT DISTINCT g.scope FROM access_group_member m JOIN access_group_grant g ON g.group_id = m.group_id WHERE m.email = ?1',
+    )
+    .bind(email)
+    .all();
+  return results.map((row) => row.scope);
+}
+
+/** End every session a user holds, the second statement of access-plan.md §15, as code. */
+export async function revokeSessions(db, userId) {
+  await db.prepare('DELETE FROM session WHERE userId = ?1').bind(userId).run();
+}
+
+/** Write a role onto the list row itself: the ACCESS_OWNER floor made visible (worker/session.js). */
+export async function setListedRole(db, email, role) {
+  await db.prepare('UPDATE allowed_email SET role = ?1 WHERE email = ?2').bind(role, email).run();
+}
+
+/** Write the list's role onto the user record, so the next cookie rebuild carries it. */
+export async function setUserRole(db, userId, role) {
+  await db.prepare('UPDATE user SET role = ?1 WHERE id = ?2').bind(role, userId).run();
+}
+
+/**
+ * Better Auth's sender hook. Runs in the background (see execContext), so it
+ * must never throw — a failure is logged, structured, and the response has
+ * already gone. The failure mode to know: an un-onboarded sender domain makes
+ * send() reject, and the visitor simply never receives a code (§3.1).
+ */
+async function sendCode(env, origin, { email, otp, type }) {
+  if (type !== 'sign-in') return; // the plugin's other flows are not wired
+  // A demo account gets no email: its code is the fixed one and any code is
+  // accepted, so there is nothing to deliver and often no mailbox to deliver to.
+  if (execContext.getStore()?.demo) return;
+  // Braces to the preflight's belt: a request that reached the plugin by a
+  // path the preflight did not match (a trailing slash, should Better Auth's
+  // router ever accept one) still sends nothing to an address not on the list.
+  const row = await allowedRow(env.DB, email);
+  if (!row || isExpired(row)) return;
+  const message = {
+    from: parseAddress(env.AUTH_EMAIL_FROM),
+    to: email,
+    subject: otpSubject(otp),
+    html: renderOtpEmail({ otp, expiresInMinutes: OTP_EXPIRES_SECONDS / 60, origin }),
+    text: renderOtpText({ otp, expiresInMinutes: OTP_EXPIRES_SECONDS / 60, origin }),
+  };
+  try {
+    await env.EMAIL.send(message);
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'auth.email.send_failed', to: email, error: String(error && error.message) }));
+  }
+}
+
+/** "By Default OS <admin@bydefault.studio>" → { name, email }. */
+export function parseAddress(value) {
+  const match = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(String(value || ''));
+  if (match) return { name: match[1], email: match[2] };
+  return { name: '', email: String(value || '').trim() };
+}
+
+function json(body, status, extraHeaders = {}) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...extraHeaders },
+  });
+}

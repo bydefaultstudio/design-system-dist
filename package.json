@@ -1,12 +1,13 @@
 {
   "name": "@bydefaultstudio/design-system",
-  "version": "7.2.0",
+  "version": "7.3.0",
   "description": "By Default design system framework CSS. Neutral engine defaults, brand applied per project via theme.css overrides.",
   "style": "dist/design-system.css",
   "license": "SEE LICENSE IN LICENSE.md",
   "bin": {
     "bd-sprite": "dist/tools/sprite-builder.js",
-    "bd-sync": "dist/tools/sync-consumer.js"
+    "bd-sync": "dist/tools/sync-consumer.js",
+    "bd-migrations": "dist/tools/copy-migrations.js"
   },
   "engines": {
     "node": ">=18"
@@ -18,6 +19,7 @@
       "default": "./dist/react/index.mjs"
     },
     "./react/*": "./dist/react/*",
+    "./worker": "./dist/worker/index.mjs",
     "./package.json": "./package.json",
     "./*": "./*"
   },
@@ -30,6 +32,7 @@
     }
   },
   "dependencies": {
-    "marked": "^16.4.1"
+    "marked": "^16.4.1",
+    "better-auth": "^1.7.5"
   }
 }

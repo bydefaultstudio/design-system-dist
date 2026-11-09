@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.2.0 */
+/* @bydefaultstudio/design-system v7.3.0 */
 /**
  * Tabs component
  * Initialises all .tabs[role="tablist"] on the page.

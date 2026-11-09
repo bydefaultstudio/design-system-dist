@@ -66,7 +66,7 @@
          branch writes the stored collapse preference. With storage blocked
          there is no hint, so a signed-in reader sees a public page paint
          locked and then open once the check lands. -->
-    <script>(function(){var b=document.body,h=null,c=null;try{h=localStorage.getItem('bd-session-hint');c=localStorage.getItem('docs-sidebar-collapsed');}catch(e){}var r=h==='admin'||h==='team'||h==='guest';if(r)b.setAttribute('data-role',h);var l=b.getAttribute('data-access')==='public'&&!r&&h!=='in';if(l)b.classList.add('is-signed-out');if(l||c==='true')b.classList.add('sidebar-collapsed');})();</script>
+    <script>(function(){var b=document.body,h=null,c=null;try{h=localStorage.getItem('bd-session-hint');c=localStorage.getItem('docs-sidebar-collapsed');}catch(e){}var r=h==='owner'||h==='admin'||h==='team'||h==='guest';if(r)b.setAttribute('data-role',h);var l=b.getAttribute('data-access')==='public'&&!r&&h!=='in';if(l)b.classList.add('is-signed-out');if(l||c==='true')b.classList.add('sidebar-collapsed');})();</script>
 
     <!-- Design system missing banner (shown by JS if CSS variables fail to load) -->
     <div id="ds-missing-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#fffbea;border-bottom:1px solid #f0c040;padding:12px 20px;font-family:sans-serif;font-size:14px;color:#7a5c00;align-items:center;gap:12px;">
@@ -94,7 +94,7 @@
          a page swap. The engine skips anything already on its way in, so
          the page container sitting inside this scope is not entered
          twice. -->
-    <div class="docs-layout" id="site-nav" data-base="{{NAV_BASE}}" data-bd-chrome{{LAYOUT_ATTRS}}>
+    <div class="docs-layout" id="site-nav" data-base="{{NAV_BASE}}" data-bd-chrome{{LAYOUT_ATTRS}}>{{NAV_SOURCE}}
     <div class="docs-main-area">
     <div{{WRAPPER_ATTRS}}>
     <div{{CONTAINER_ATTRS}}>

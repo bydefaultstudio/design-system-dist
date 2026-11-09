@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.2.0 */
+/* @bydefaultstudio/design-system v7.3.0 */
 /**
  * Date Picker component — a calendar panel over the native date input
  * Initialises every .date-picker: a .dropdown whose trigger opens a month

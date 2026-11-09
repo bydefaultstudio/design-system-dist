@@ -58,6 +58,10 @@ const CONFIG = {
   // read it (the public Showcase pages' canonical and Open Graph URLs, which
   // must be absolute); unset, those pages emit relative tags and no canonical.
   siteUrl: (userConfig.siteUrl || '').replace(/\/+$/, ''),
+  // A level for every page in an output folder that declares none
+  // (levels-groups-plan.md D18): { social: 'admin' }. A page's own `access:`
+  // still wins; a folder with no entry stays team. Read by sectionLevel().
+  sectionAccess: userConfig.sectionAccess || {},
   designSystemPath: userConfig.designSystemPath || 'assets/css/design-system.css',
   brandCssPath: userConfig.brandCssPath || null,
   googleFontsUrl: userConfig.googleFontsUrl !== undefined ? userConfig.googleFontsUrl : null,
@@ -96,6 +100,13 @@ const CONFIG = {
   showcase: userConfig.showcase === true,
   siteMap: userConfig.siteMap === true,
   accessGate: userConfig.accessGate === true,
+  // How a page above the reader shows in navigation (levels-groups-plan.md
+  // D19): 'locked' (the default, and By Default OS) lists every page and
+  // nav.js paints locks; 'hidden' moves the sidebar list into each page
+  // (#site-nav-source) so the Worker can remove what a reader cannot open
+  // before it leaves (worker/hidden-nav.mjs). Hidden needs the Worker's
+  // rewrite: without it every reader sees every title, as with 'locked'.
+  accessNav: userConfig.accessNav === 'hidden' ? 'hidden' : 'locked',
   assetLibrary: userConfig.assetLibrary === true,
   uiScripts: userConfig.uiScripts || null, // null = kit-bundled copy-button + dropdown
   // Extension surface (all off by default)
@@ -158,23 +169,65 @@ const BRANDS_REL = BRANDS_DIR ? path.relative(ROOT, BRANDS_DIR).split(path.sep).
 // and the section indexes are recorded too, as the index types, which the gate
 // opens to every signed-in reader.
 const pageAccess = new Map();
+// Each published markdown source, by URL, to the page it is the source of, so
+// the gate judges /cms/setup.md at setup.html's level instead of the default
+// team. Written beside PAGE_ACCESS by writePageAccess().
+const sourcePages = new Map();
 
 /**
- * The three levels a page can declare; a missing field is team. A PRESENT
- * value outside the three fails the build (isValidAccess, checked where the
+ * The four levels a page can declare; a missing field is its section's
+ * default (sectionAccess), else team. A PRESENT value outside the four fails
+ * the build (isValidAccess, checked where the
  * layer is) rather than falling to team - a mistyped "admin" would otherwise
  * open a page to the team with no error. The twin of normaliseLevel in
  * worker/auth-schema.mjs: the generator ships to consumers without a
  * worker/, so it cannot import it; scripts/verify-auth-gate.mjs reads the
  * frontmatter independently and counts the map against it.
  */
-const ACCESS_LEVELS = ['public', 'team', 'admin'];
+const ACCESS_LEVELS = ['public', 'team', 'admin', 'owner'];
 function normaliseLevel(value) {
   const level = String(value || '').trim().toLowerCase();
   return ACCESS_LEVELS.includes(level) ? level : 'team';
 }
 function isValidAccess(value) {
   return value === undefined || value === null || value === '' || ACCESS_LEVELS.includes(String(value).trim().toLowerCase());
+}
+
+/**
+ * The level a page in `folder` takes when its own frontmatter says nothing
+ * (D18), or undefined for none. An unknown value in docs.config.js fails the
+ * build at startup (validateSectionAccess), so this never invents a level.
+ */
+function sectionLevel(folder) {
+  const map = CONFIG.sectionAccess;
+  return folder && Object.prototype.hasOwnProperty.call(map, folder) ? map[folder] : undefined;
+}
+
+// Pages whose level came from a section default, listed at the end of a full
+// build so a widening default is never silent (levels-groups-plan.md §5).
+const levelsFromSection = [];
+
+// The sidebar list each page carries under accessNav 'hidden', set once the
+// sections are known and before any page is written. Empty under 'locked'.
+let navSourceHtml = '';
+
+/**
+ * A page's own access value, or its section's default when it has none.
+ * `label` names the page in the build's report of defaulted levels.
+ */
+function ownOrSectionAccess(ownAccess, folder, label) {
+  if (ownAccess !== undefined && ownAccess !== null && ownAccess !== '') return ownAccess;
+  const level = sectionLevel(folder);
+  if (level !== undefined) levelsFromSection.push(`${label} -> ${level} (sectionAccess.${folder})`);
+  return level;
+}
+
+function validateSectionAccess() {
+  const bad = Object.entries(CONFIG.sectionAccess).filter(([, level]) => !ACCESS_LEVELS.includes(level));
+  if (bad.length) {
+    console.error(`❌ sectionAccess in docs.config.js: ${bad.map(([f, l]) => `${f}: "${l}"`).join(', ')} (each must be one of: ${ACCESS_LEVELS.join(', ')})`);
+    process.exit(1);
+  }
 }
 
 // Root-site manifest (config: brandManifest): the site's admin values — name,
@@ -533,7 +586,7 @@ function pageOsIllustration(frontmatter, file) {
   const declared = frontmatter['os-illustration'];
   if (declared === 'none') return {};
   // Keyed on the source name, which is what the Figma frames are named after:
-  // channels-email-signature.md is channels/email-signature.html, and only
+  // formats-email-signature.md is formats/email-signature.html, and only
   // the source name tells it apart from the Email Signature tool.
   const implied = file.filename.replace(/\.md$/, '').replace(/-docs$/, '');
   const slug = declared || (hasOsIllustration(implied) ? implied : '');
@@ -765,7 +818,7 @@ function renderAssetManifest() {
 }
 
 /**
- * The format registry, inlined on the Formats tool page from
+ * The format registry, inlined on the Format Library page from
  * {{format-manifest}}: every assets/data/formats/<platform>.json, checked by
  * the loader the verify script shares (cms/generator/formats.js). A bad file
  * stops the build rather than shipping a broken tile.
@@ -806,7 +859,7 @@ function writeFormatsEmbed() {
 
 function renderFormatManifest() {
   const platforms = loadFormatRegistry();
-  if (!platforms.length) console.warn('{{format-manifest}}: no assets/data/formats/*.json — the Formats tool renders empty');
+  if (!platforms.length) console.warn('{{format-manifest}}: no assets/data/formats/*.json — the Format Library renders empty');
   const json = formatRegistry.manifestJson(platforms);
   const count = platforms.reduce((n, p) => n + p.formats.length, 0);
   console.log(`Format manifest: ${count} formats across ${platforms.length} platforms, ${Math.round(json.length / 1024)} KB`);
@@ -917,6 +970,7 @@ function renderBookContentsItem(opts) {
 function audienceTag(access) {
   if (access === 'public') return '<span class="tag">Public</span>';
   if (access === 'admin') return '<span class="tag" data-color="warning">Admin</span>';
+  if (access === 'owner') return '<span class="tag" data-color="warning">Owner</span>';
   return '';
 }
 
@@ -1682,7 +1736,7 @@ const STYLEGUIDE_SOURCE = 'styleguide.md';
 // Output folders whose foundation and core pages must appear on the styleguide.
 const STYLEGUIDE_FOLDERS = new Set(['foundations', 'web']);
 // Output folders whose core pages are this brand's content, never the engine's.
-const BRAND_CONTENT_FOLDERS = new Set(['brand', 'social', 'channels']);
+const BRAND_CONTENT_FOLDERS = new Set(['brand', 'formats']);
 
 function styleguideSlug(htmlPath) {
   return path.basename(htmlPath, '.html');
@@ -2131,7 +2185,11 @@ function renderPage(template, {
   searchable = space.key === null,
 }) {
   const assets = assetBase === null ? navBase : assetBase;
-  const sectionLabel = searchable ? sectionLabelFromSlug(pageSection) : '';
+  // The indexes are one file every team reader fetches, so a page above team
+  // never enters them: its text would reach the team through search when the
+  // page itself refuses them (security audit, 2026-11-08, finding 2).
+  const indexed = searchable && (access === 'public' || access === 'team');
+  const sectionLabel = indexed ? sectionLabelFromSlug(pageSection) : '';
   const searchMeta = sectionLabel
     ? `    <meta data-pagefind-filter="section[content]" data-pagefind-meta="section[content]" content="${escapeAttr(sectionLabel)}">\n`
     : '';
@@ -2157,7 +2215,7 @@ function renderPage(template, {
     .replaceAll('{{PAGE_TITLE}}', () => title)
     .replaceAll('{{META_DESCRIPTION}}', () => description)
     .replace('{{SEARCH_META}}', () => searchMeta)
-    .replace('{{MAIN_ATTRS}}', () => (searchable ? ' data-pagefind-body' : ''))
+    .replace('{{MAIN_ATTRS}}', () => (indexed ? ' data-pagefind-body' : ''))
     .replace('{{PAGE_HEADER}}', () => header)
     .replace('{{PAGE_STICKY_BAR}}', () => stickyBar)
     .replace('{{DESIGN_SYSTEM_PATH}}', () => prefixHref(assets, PROJECT_CONFIG.designSystemPath))
@@ -2182,6 +2240,7 @@ function renderPage(template, {
     .replaceAll('{{PAGE_LEVEL}}', () => String(level))
     .replace('{{CONTAINER_EXTRA}}', () => containerExtra)
     .replace('{{LAYOUT_ATTRS}}', () => sidebar ? ` data-sidebar-default="${escapeAttr(sidebar)}"` : '')
+    .replace('{{NAV_SOURCE}}', () => (navSourceHtml ? `\n      <div id="site-nav-source" hidden>${navSourceHtml}</div>` : ''))
     .replaceAll('{{NAV_BASE}}', () => navBase)
     .replace('{{PAGE_BODY}}', () => buildPageBody({ frame, content, toc, article }));
 }
@@ -2486,7 +2545,9 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
           const stripped = cardActionUrl.replace(/^(\.\.?\/)+/, '');
           cardHref = '/' + sectionFolder + '/' + stripped;
         }
-        cardAccess = file.frontmatter.actionAccess || file.frontmatter.toolAccess || cardAccess;
+        // The card opens the app, so it carries the app's level, as the
+        // sidebar link does; an explicit actionAccess or toolAccess still wins.
+        cardAccess = file.frontmatter.actionAccess || file.frontmatter.toolAccess || appAccess(path.basename(cardHref, '.html'), cardAccess);
       }
       cards += renderBookContentsItem({
         href: cardHref,
@@ -2515,7 +2576,8 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
     // The id is what a doc page's subsection crumb lands on. It goes on the
     // h2, not the .docs-section div: §39B's scroll-margin-top covers
     // headings, main and section, so a div would land under the sticky bar.
-    cards += `<div class="docs-section"><h2 class="book-contents-title" id="${subsectionAnchorId(sub)}">${sub}</h2><div class="book-contents"${MOTION.contents}>`;
+    const groupEntries = grouped[sub].map((file) => ({ level: deriveDataAccess(file.frontmatter), path: '/' + file.htmlPath }));
+    cards += `<div class="docs-section"${accessAnyAttr(groupEntries)}><h2 class="book-contents-title" id="${subsectionAnchorId(sub)}">${sub}</h2><div class="book-contents"${MOTION.contents}>`;
     for (const file of grouped[sub]) {
       cards += renderBookContentsItem({
         href: '/' + file.htmlPath,
@@ -3482,7 +3544,9 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}, subsectio
  */
 function generateNavJs(filesBySection) {
   // Build navigation HTML (no active page — active detection is done at runtime)
-  const navSectionsHtml = buildNavSectionsHtml(filesBySection);
+  // Under 'hidden' the list lives in each page (#site-nav-source), where the
+  // Worker can cut it per reader; a list here would reach every reader.
+  const navSectionsHtml = CONFIG.accessNav === 'hidden' ? '' : buildNavSectionsHtml(filesBySection);
 
   // Escape backticks and backslashes for embedding in a JS template literal
   const esc = (s) => s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$').replace(/'/g, "\\'");
@@ -3753,6 +3817,72 @@ function generateNavJs(filesBySection) {
   // BEFORE the existing <main>, preserving it in place as a grid sibling.
   mount.insertAdjacentHTML('afterbegin', headerHtml + sidebarHtml + searchDialogHtml);
 
+${CONFIG.accessNav === 'hidden' ? `
+  // ── Hidden navigation (accessNav: 'hidden', levels-groups-plan.md D19) ──
+  // The sidebar list arrives in the page, already cut by the Worker to what
+  // this reader may open (worker/hidden-nav.mjs). Its nodes move into the
+  // sidebar here, and what the cut left empty goes: a list item with no
+  // link, a subsection with none, a section with nothing but its Overview.
+  // Emitted only under 'hidden': under 'locked' nothing is ever cut.
+  var navSource = document.getElementById('site-nav-source');
+  if (navSource) {
+    var navContent = mount.querySelector('.site-sidebar-content');
+    if (navContent) {
+      while (navSource.firstChild) navContent.appendChild(navSource.firstChild);
+      pruneHiddenNav(navContent);
+    }
+    // The role the Worker cut this sidebar for. The sidebar outlives every
+    // Barba swap, so a session answer naming another role means it is stale:
+    // a full load fetches one cut for the reader as they are now.
+    var cutFor = navSource.getAttribute('data-cut-for') || '';
+    navSource.remove();
+    if (cutFor) document.addEventListener('bd:session', function reloadStaleNav() {
+      var s = window.bdSession;
+      var now = s && s.signedIn ? s.role || '' : 'out';
+      if (!now || now === cutFor) return;
+      // Once per page and role: should the session answer and the Worker
+      // keep disagreeing, a second load must not become a loop.
+      var key = 'bd-nav-cut:' + window.location.pathname + ':' + now;
+      try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch (e) { return; }
+      window.location.reload();
+    });
+  }
+  pruneEmptyCardSections(document);
+
+  function pruneHiddenNav(root) {
+    var subsections = root.querySelectorAll('.sidebar-nav-subsection');
+    for (var i = 0; i < subsections.length; i++) {
+      if (!subsections[i].querySelector('.sidebar-nav-link')) {
+        var item = subsections[i].closest('li');
+        (item || subsections[i]).remove();
+      }
+    }
+    var items = root.querySelectorAll('.sidebar-nav-section li');
+    for (var j = 0; j < items.length; j++) {
+      if (!items[j].querySelector('a[href], details')) items[j].remove();
+    }
+    var sections = root.querySelectorAll('.sidebar-nav-section');
+    for (var k = 0; k < sections.length; k++) {
+      if (!sections[k].querySelector('.sidebar-nav-link:not([data-order="0"])')) sections[k].remove();
+    }
+  }
+
+  // An index heading whose cards the Worker removed is a heading over
+  // nothing. barba-init.js calls this on every arriving container.
+  function pruneEmptyCardSections(scope) {
+    if (!scope || !scope.querySelectorAll) return;
+    var groups = scope.querySelectorAll('.docs-section');
+    for (var i = 0; i < groups.length; i++) {
+      var contents = groups[i].querySelector('.book-contents');
+      if (contents && contents.children.length === 0) groups[i].remove();
+    }
+  }
+  window.bdPruneEmptyCardSections = pruneEmptyCardSections;
+` : `
+  // Under 'locked' the Worker cuts nothing, so there is nothing to prune;
+  // barba-init.js calls this on every swap whichever mode the site is in.
+  window.bdPruneEmptyCardSections = function pruneEmptyCardSections() {};
+`}
   // The sidebar's entrances are played by bd-animate's chrome pass, which
   // runs after this script on every page today (defer order). Should the
   // engine ever run first, its pass would miss a sidebar not yet in the
@@ -3934,9 +4064,10 @@ function generateNavJs(filesBySection) {
       out: 'Log in to access the rest of the system.',
       guest: 'Locked pages are for the team. ',
       team: 'Locked pages are for admins.',
-      admin: ''
+      admin: '',
+      owner: ''
     };
-    var LOCK_TOOLTIPS = { out: 'Log in to access', guest: 'For the team', team: 'For admins', admin: '' };
+    var LOCK_TOOLTIPS = { out: 'Log in to access', guest: 'For the team', team: 'For admins', admin: 'For the owner', owner: '' };
     var SUPPORT_PATH = '${siteHref('/support.html')}';
     var lockNote = sidebarEl ? sidebarEl.querySelector('#' + LOCK_NOTE_ID) : null;
 
@@ -3960,7 +4091,7 @@ function generateNavJs(filesBySection) {
       var s = window.bdSession;
       if (!s) return null;
       if (!s.signedIn) return { role: 'out', scopes: [] };
-      var role = s.role === 'admin' || s.role === 'team' || s.role === 'guest' ? s.role : 'guest';
+      var role = s.role === 'owner' || s.role === 'admin' || s.role === 'team' || s.role === 'guest' ? s.role : 'guest';
       return { role: role, scopes: Array.isArray(s.scopes) ? s.scopes : [] };
     }
 
@@ -3986,8 +4117,12 @@ function generateNavJs(filesBySection) {
     // sidebar locks even links to other public pages, by the 2026-10-01
     // decision, so a signed-out reader is told to log in once, not page by page.
     function canOpen(reader, level, p) {
-      if (reader.role === 'out') return false;
+      // Under 'hidden' the Worker leaves a signed-out reader the public
+      // pages only, so those stay open; under 'locked' everything locks.
+      if (reader.role === 'out') return ${CONFIG.accessNav === 'hidden' ? "level === 'public'" : 'false'};
       if (level === 'public') return true;
+      if (reader.role === 'owner') return true;
+      if (level === 'owner') return false;
       if (reader.role === 'admin') return true;
       if (level === 'admin') return false;
       if (reader.role === 'team') return true;
@@ -4356,6 +4491,17 @@ function generateNavJs(filesBySection) {
  * for the sidebar entry that opens it. Falls back to the guide's level when
  * the pair has no .md - a guide with no app lists itself.
  */
+/**
+ * Under accessNav 'hidden', a wrapper that holds links (a sidebar section or
+ * subsection, an index group) carries every link it holds as level:path, so
+ * the Worker can drop the wrapper, label and all, when the reader may open
+ * none of them (worker/hidden-nav.mjs). Empty under 'locked'.
+ */
+function accessAnyAttr(entries) {
+  if (CONFIG.accessNav !== 'hidden' || entries.length === 0) return '';
+  return ` data-access-any="${escapeAttr(entries.map((e) => `${e.level}:${e.path}`).join(' '))}"`;
+}
+
 function appAccess(slug, fallback) {
   const source = path.join(DOCS_DIR, 'apps', `${slug}.md`);
   if (!fs.existsSync(source)) return fallback;
@@ -4378,7 +4524,9 @@ function buildNavSectionsHtml(filesBySection) {
   // the trailing edge of a root link. Hidden from the accessibility tree —
   // aria-disabled carries the state and the lock note (aria-describedby)
   // the reason.
-  const navLock = lockIcon('sidebar-nav-lock');
+  // Under 'hidden' nothing in the list is ever locked: the Worker removes it
+  // instead. The icon would be 300-odd unused SVGs in every page.
+  const navLock = CONFIG.accessNav === 'hidden' ? '' : lockIcon('sidebar-nav-lock');
 
   // Shared chevron for section and subsection toggles
   const navChevron = `<span class="sidebar-nav-toggle-icon">
@@ -4459,7 +4607,9 @@ function buildNavSectionsHtml(filesBySection) {
       ? `<a href="${sectionIndexHref}" class="sidebar-nav-section-icon" data-section="${sectionSlug}" aria-label="${escapeAttr(sectionLabel)}"><span class="svg-icn">${sectionIcon.icon}</span></a>`
       : '';
 
-    html += `<details class="sidebar-nav-section"${MOTION.sidebarItem}>
+    const sectionStart = html.length;
+    const sectionEntries = [];
+    html += `<details class="sidebar-nav-section"__ACCESS_ANY__${MOTION.sidebarItem}>
       <summary class="sidebar-nav-section-toggle" aria-label="${escapeAttr(sectionLabel)}" data-tooltip="${escapeAttr(sectionLabel)}" data-tooltip-position="right">
         ${iconHtml}<span>${sectionLabel}</span>
         ${navLock}${navChevron}
@@ -4506,6 +4656,7 @@ function buildNavSectionsHtml(filesBySection) {
         linkHref = siteHref('/' + sectionFolder + '/' + fileName);
         linkAccess = appAccess(fileName.replace(/\.html$/, ''), linkAccess);
       }
+      sectionEntries.push({ level: linkAccess, path: linkHref });
       html += `<li><a href="${linkHref}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span>${navLock}</a></li>`;
       navPos++;
     }
@@ -4540,7 +4691,9 @@ function buildNavSectionsHtml(filesBySection) {
     // Each subsection is its own collapsed dropdown so long sections (Design
     // System, Brand Book) stay scannable. setActiveLink opens the active one.
     for (const sub of subsections) {
-      html += `<li><details class="sidebar-nav-subsection">
+      const subEntries = grouped[sub].map((file) => ({ level: deriveDataAccess(file.frontmatter), path: siteHref('/' + file.htmlPath) }));
+      sectionEntries.push(...subEntries);
+      html += `<li${accessAnyAttr(subEntries)}><details class="sidebar-nav-subsection">
         <summary class="sidebar-nav-subsection-toggle"><span>${sub}</span>${navChevron}</summary>
         <ul class="sidebar-nav-sublist">`;
       for (const file of grouped[sub]) {
@@ -4552,6 +4705,7 @@ function buildNavSectionsHtml(filesBySection) {
     }
 
     html += `</ul></details>`;
+    html = html.slice(0, sectionStart) + html.slice(sectionStart).replace('__ACCESS_ANY__', accessAnyAttr(sectionEntries));
   }
 
   return html;
@@ -4761,7 +4915,7 @@ function writePageAccess() {
   const workerDir = path.join(ROOT, 'worker');
   if (!fs.existsSync(workerDir)) return;
   const entries = [...pageAccess.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
-  const counts = { public: 0, team: 0, admin: 0 };
+  const counts = Object.fromEntries(ACCESS_LEVELS.map((level) => [level, 0]));
   for (const [, entry] of entries) counts[entry.level]++;
   const sections = Object.fromEntries(
     Object.entries(SECTION_FOLDERS).map(([label, folder]) => [folder, label]).sort((a, b) => (a[0] < b[0] ? -1 : 1)),
@@ -4770,23 +4924,36 @@ function writePageAccess() {
  * page-access.mjs - GENERATED by cms/generator/generate-docs.js, do not edit.
  *
  * Every generated page by output URL, with the level its OWN frontmatter
- * declares, public, team or admin (access-plan.md §12.4; permissions-plan.md
- * §3.1). _defaults.md cannot set a level; a missing field, a typo or another
- * value is team. The home shelf and the section indexes carry the index types,
- * which the gate opens to every signed-in reader. worker/gate.mjs imports it as
- * the pages half of the gate; the infrastructure half is gate.mjs's own static
- * lists. To change a page's level, set the field and re-run a FULL docgen:
+ * declares, public, team, admin or owner (access-plan.md §12.4;
+ * permissions-plan.md §3.1; levels-groups-plan.md D23). _defaults.md cannot
+ * set a level; a missing field takes its section's default (sectionAccess in
+ * docs.config.js), else team. The home shelf and the section indexes carry the index types,
+ * which the gate opens to every signed-in reader. The site's worker passes it
+ * to createGate() (worker/site-config.mjs here) as the pages half of the gate;
+ * the infrastructure half is the engine's and the site's own public lists. To change a page's level, set the field and re-run a FULL docgen:
  * cd cms/generator && npm run docgen. A single-file run leaves this file alone.
  *
  * SECTIONS maps each output folder to its section label, the sections a
  * group can be granted (worker/people.js).
+ *
+ * SOURCE_PAGES maps each published markdown source to its page, so the gate
+ * judges the source at the page's level (gate.mjs accessTarget()).
+ *
+ * ACCESS_NAV is docs.config.js accessNav: 'hidden' turns on the Worker's
+ * per-reader cut of every page's links (worker/hidden-nav.mjs).
  */
 `;
   const lines = entries.map(([p, e]) => `  [${JSON.stringify(p)}, { level: ${JSON.stringify(e.level)}, section: ${JSON.stringify(e.section)}, type: ${JSON.stringify(e.type)}, title: ${JSON.stringify(e.title)} }],`);
-  const body = `export const SECTIONS = Object.freeze(${JSON.stringify(sections)});\n\n`
-    + `export const PAGE_ACCESS = new Map([\n${lines.join('\n')}\n]);\n`;
+  const sources = [...sourcePages.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  const body = `export const ACCESS_NAV = ${JSON.stringify(CONFIG.accessNav)};\n\n`
+    + `export const SECTIONS = Object.freeze(${JSON.stringify(sections)});\n\n`
+    + `export const PAGE_ACCESS = new Map([\n${lines.join('\n')}\n]);\n\n`
+    + `export const SOURCE_PAGES = new Map([\n${sources.map(([s, p]) => `  [${JSON.stringify(s)}, ${JSON.stringify(p)}],`).join('\n')}\n]);\n`;
   fs.writeFileSync(path.join(workerDir, 'page-access.mjs'), banner + body);
-  console.log(`📄 Generated: worker/page-access.mjs (${entries.length} pages: ${counts.public} public, ${counts.team} team, ${counts.admin} admin)`);
+  console.log(`📄 Generated: worker/page-access.mjs (${entries.length} pages: ${ACCESS_LEVELS.map((level) => `${counts[level]} ${level}`).join(', ')})`);
+  if (levelsFromSection.length) {
+    console.log(`🔐 ${levelsFromSection.length} page level(s) from sectionAccess:\n${levelsFromSection.map((line) => `   ${line}`).join('\n')}`);
+  }
 }
 
 /**
@@ -5141,7 +5308,7 @@ function generateSourceDirPages(template, {
       continue;
     }
     if (!isValidAccess(frontmatter.access)) {
-      closeErrors.push(`  ${dirName}/${slug}.md - invalid access "${frontmatter.access}" (must be one of: public, team, admin, or absent, which is team)`);
+      closeErrors.push(`  ${dirName}/${slug}.md - invalid access "${frontmatter.access}" (must be one of: ${ACCESS_LEVELS.join(', ')}, or absent, which is the section default or team)`);
       continue;
     }
     // The level a tool's downloads need, when the page opens wider than its
@@ -5149,10 +5316,10 @@ function generateSourceDirPages(template, {
     // the page's own level, so a tool that says nothing changes nothing.
     // download-lock.js reads it off the container as data-download-access.
     if (!isValidAccess(frontmatter.downloadAccess)) {
-      closeErrors.push(`  ${dirName}/${slug}.md - invalid downloadAccess "${frontmatter.downloadAccess}" (must be one of: public, team, admin, or absent, which is the page's access)`);
+      closeErrors.push(`  ${dirName}/${slug}.md - invalid downloadAccess "${frontmatter.downloadAccess}" (must be one of: ${ACCESS_LEVELS.join(', ')}, or absent, which is the page's access)`);
       continue;
     }
-    const downloadAccess = frontmatter.downloadAccess ? normaliseLevel(frontmatter.downloadAccess) : deriveDataAccess(frontmatter);
+
 
     // An HTML-bodied type needs its sibling; a markdown-bodied one must not
     // have one, or the .md's own content would be silently ignored.
@@ -5171,6 +5338,11 @@ function generateSourceDirPages(template, {
 
     const section = frontmatter.section || defaultSection;
     const folder = outputFolder || SECTION_FOLDERS[section] || section.toLowerCase();
+    // The section default, as for a cms page (D18): written onto the
+    // frontmatter so the map, the cards and the body all read one level.
+    const sectionAccess = ownOrSectionAccess(frontmatter.access, folder, `${folder}/${slug}.html`);
+    if (sectionAccess !== undefined) frontmatter.access = sectionAccess;
+    const downloadAccess = frontmatter.downloadAccess ? normaliseLevel(frontmatter.downloadAccess) : deriveDataAccess(frontmatter);
     const navBase = '../';
     const upHref = siteHref(closeHref || `/${folder}/index.html`);
     const upLabel = closeLabel || section;
@@ -6516,6 +6688,7 @@ function parseCliFilter() {
  * Main generation function
  */
 async function generateDocs() {
+  validateSectionAccess();
   const filter = parseCliFilter();
   const isSingleFile = filter !== null;
 
@@ -6614,7 +6787,7 @@ async function generateDocs() {
     // Validate the level. Absent is team; present and unknown fails the
     // build, the way a bad layer does - the gate reads this field.
     if (!isValidAccess(parsed.frontmatter.access)) {
-      typeErrors.push(`  ${filename} - invalid access "${parsed.frontmatter.access}" (must be one of: public, team, admin, or absent, which is team)`);
+      typeErrors.push(`  ${filename} - invalid access "${parsed.frontmatter.access}" (must be one of: ${ACCESS_LEVELS.join(', ')}, or absent, which is the section default or team)`);
     }
 
     // Validate page type. Unlike layer, `type:` is optional — an absent type
@@ -6687,6 +6860,11 @@ async function generateDocs() {
     const { folder, htmlName } = deriveOutputPath(filename, section);
     const htmlPath = folder ? folder + '/' + htmlName : htmlName;
     const markdownPath = filename;
+    // The section default fills a page that declares no level (D18), and is
+    // written onto the frontmatter so every emitter (map, sidebar, cards,
+    // pager, body) reads the same level the gate will.
+    const ownAccess = ownOrSectionAccess(parsed.frontmatter.access, folder, htmlPath);
+    if (ownAccess !== undefined) frontmatter.access = ownAccess;
 
     const file = {
       filename,
@@ -6700,7 +6878,7 @@ async function generateDocs() {
       // The page's own access value, before _defaults.md is merged in. Only a
       // page's own field may open it (access-plan.md §12.4): a default of
       // "public" would otherwise open every page that says nothing.
-      ownAccess: parsed.frontmatter.access,
+      ownAccess,
       // Site-absolute hrefs, for a root page served at other URLs - see
       // generatePage's navBase. Only a filenameOverrides entry can ask.
       base: FILENAME_OVERRIDES[filename] && FILENAME_OVERRIDES[filename].base ? FILENAME_OVERRIDES[filename].base : null,
@@ -6725,6 +6903,9 @@ async function generateDocs() {
   }
 
   console.log(`📂 Found sections: ${Object.keys(filesBySection).join(', ')}`);
+  // Under accessNav 'hidden' every page carries the sidebar list itself, for
+  // the Worker to cut per reader; nav.js then holds none of it.
+  if (CONFIG.accessNav === 'hidden') navSourceHtml = buildNavSectionsHtml(filesBySection);
 
   // Fail the build if any file is missing a valid layer (see CLAUDE.md §17)
   if (layerErrors.length > 0) {
@@ -6776,7 +6957,7 @@ async function generateDocs() {
   }
 
   if (brandLeaks.length > 0) {
-    console.error(`\n❌ ${brandLeaks.length} core page(s) in a brand section lost the brand- / social- / channels- filename prefix:`);
+    console.error(`\n❌ ${brandLeaks.length} core page(s) in a brand section lost the brand- / formats- filename prefix:`);
     console.error(brandLeaks.join('\n'));
     console.error('\ncms/generator/portable.js keys on that prefix to keep brand content out of llms-full.txt,');
     console.error('the "Use in another product" appendix and the styleguide. Restore the prefix, or');
@@ -6846,6 +7027,7 @@ async function generateDocs() {
     const outputPath = path.join(OUTPUT_DIR, file.htmlPath);
     fs.writeFileSync(outputPath, pageContent);
     console.log(`📄 Generated: ${file.htmlPath}`);
+    if (CONFIG.markdownSourceBase) sourcePages.set(`/${CONFIG.markdownSourceBase}/${file.markdownPath}`, '/' + file.htmlPath);
     pageAccess.set('/' + file.htmlPath, {
       level: normaliseLevel(file.ownAccess),
       section: file.htmlFolder,

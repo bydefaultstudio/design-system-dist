@@ -4,7 +4,7 @@
  * assets/data/formats/<platform>.json holds one platform's formats
  * (format-system.md §6, decision D1), each with its size, its rules and
  * their provenance, its default artwork and the Layout Spec whose top-level
- * groups are the Formats tool's layer switches. Two readers share this
+ * groups are the Format Library's layer switches. Two readers share this
  * module, so they can never disagree about what a valid file is:
  *
  *   cms/generator/generate-docs.js — inlines the registry on the Formats

@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v7.2.0 -->
+<!-- @bydefaultstudio/design-system v7.3.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 7.2.0 (package)**
+**Version: 7.3.0 (package)**
 
 ## Getting the System
 
@@ -9397,6 +9397,26 @@ A checkbox uses `appearance: none` with custom styling. Wrap each in `.form-chec
 The 16px box is under the 24px minimum target. It meets it by spacing — a check's label is always held at least 24px tall, so rows never sit closer than that — and a visible `<label for>` widens the click area to the words. Keep one, keep the label a sibling of the input inside `.form-check` (a label wrapped around the input is not a flex item, so the 24px floor does not apply), and never stack small checks tighter than 24px. Where a row cannot carry a label, use the default size.
 
 A small group has no per-control way back to the default size: if one control in a panel must stay default, put `data-size="small"` on the rows instead of the group. A group's `<legend>` keeps its own size.
+
+### Mixed checkbox
+
+A box that stands for several others is mixed when some of them are chosen and some are not: a section with two of its eighteen pages picked, a "select all" over a half-selected list. It shows a dash instead of a tick.
+
+```html
+<div class="form-check">
+  <input type="checkbox" id="foundations">
+  <label for="foundations">Foundations</label>
+</div>
+<script>
+  document.getElementById('foundations').indeterminate = true;
+</script>
+```
+
+Mixed has no HTML attribute: set `indeterminate` in script, and the browser announces the box as mixed (VoiceOver), half checked (NVDA) or partially checked (JAWS, TalkBack). A click, or Space, clears the dash and flips `checked`, so set `checked = false` whenever you set `indeterminate = true`: then a click always means choose all, and the `change` handler sets every child to the parent's new value. Work the parent out from its children whenever a child changes: all chosen is checked, none is unchecked, anything between is mixed. Do it on load too, and after a page swap, because the state is not stored in the markup and is lost on a back-navigation or a Barba swap.
+
+`.is-mixed` paints the same look for a picture of the state, in a specimen or a doc, the way `.is-focus` does. It never makes the box mixed for a screen reader, so a working form uses `indeterminate`, never the class, and a specimen that uses the class is made `inert`, as the two above are, so it is not announced as an unchecked box. A switch is never mixed.
+
+**Properties:** the checked fill, `var(--checkbox-selected)`, with a bar in `var(--checkbox-checkmark)` in place of the tick, 60% of `--check-mark-size` wide. A box that is both checked and mixed shows the dash. Disabled follows the checked box's disabled colours. Under forced colours (Windows High Contrast) a checked or mixed box takes the system Highlight and HighlightText pair, so the mark stays visible.
 
 ---
 
