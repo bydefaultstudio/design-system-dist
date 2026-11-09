@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.1.0 */
+/* @bydefaultstudio/design-system v7.2.0 */
 /**
  * Rating component — interactive star ratings
  * Initialises all .rating elements that are not .is-readonly.

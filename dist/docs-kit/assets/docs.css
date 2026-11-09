@@ -2324,6 +2324,13 @@ body[data-role="guest"] .header-search-btn {
 .feedback-modal {
   /* The component's 560px: the topic chips sit two to a row. */
   --dialog-max-width: 560px;
+  /* One height whatever the topic: picking "Something's not working" adds
+     the impact switch (about 90px) and an error adds a line, and a dialog
+     that grows as you tap reads as a jump (Erlen, 2026-11-07). 44rem holds
+     the tallest state at desktop; the 85% cap matches the component's own
+     max-height, past which the body scrolls. */
+  min-height: min(44rem, 85vh);
+  min-height: min(44rem, 85dvh);
 }
 
 /* Hierarchy, three steps and no more: the title, then each question

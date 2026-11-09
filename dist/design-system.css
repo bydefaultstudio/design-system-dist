@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.1.0 */
+/* @bydefaultstudio/design-system v7.2.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -4722,6 +4722,7 @@ details .disclosure-content {
 /* ------ 16. BADGE ------ */
 
 .badge {
+  --badge-font: var(--font-primary);
   --badge-case: uppercase;
   --badge-tracking: var(--letter-spacing-l);
   --badge-radius: var(--radius-detail);
@@ -4733,7 +4734,7 @@ details .disclosure-content {
 
   display: inline-flex;
   align-items: center;
-  font-family: var(--font-tertiary);
+  font-family: var(--badge-font);
   font-size: var(--font-2xs);
   font-weight: var(--font-weight-bold);
   text-transform: var(--badge-case);

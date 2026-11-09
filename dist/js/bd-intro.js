@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.1.0 */
+/* @bydefaultstudio/design-system v7.2.0 */
 /**
  * BD Intro
  * The first-load curtain. Plays on every real document load and never on a

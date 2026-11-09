@@ -3,12 +3,12 @@
  * feedback dialog every page can open.
  *
  * Entry points (spec: agency internal/bydefault-os/feedback-form-spec.md):
- *   - Footer Yes   records a thumbs up at once, then offers "Tell us more".
- *   - Footer No    opens the dialog. Closed without sending, it still records
- *                  one "Not helpful", so every Yes and No is counted once.
- *   - [data-feedback-open="more"|"share"|"problem"]  opens the dialog: Tell
- *                  us more (topic "I like it"), and the Share feedback and
- *                  Report a problem items in a bar's menu.
+ *   - Footer Yes   opens the dialog with "I like it" picked, so they can say why.
+ *   - Footer No    opens the dialog with nothing picked.
+ *     Either way the footer thanks them only once they send. Closed without
+ *     sending, the Yes or No is still recorded, once per page, with no thanks.
+ *   - [data-feedback-open="share"|"problem"]  the Share feedback and Report a
+ *                  problem items in a bar's menu.
  *
  * The dialog (cms/chrome/feedback-dialog.html) is one per page, outside the
  * Barba container; the footer block is inside it and swaps with the page. So
@@ -20,13 +20,13 @@
  * Escape because the dialog carries .dialog. Hub and Email are never sent from
  * here: the server writes them (worker/notion-config.js).
  *
- * @version 3.1.0
+ * @version 3.2.0
  * @author By Default
  */
 (function () {
   'use strict';
 
-  console.log('feedback.js v3.1.0 loaded');
+  console.log('feedback.js v3.2.0 loaded');
 
   //
   //------- Configuration -------//
@@ -41,8 +41,8 @@
   // What each entry point opens with. Source values match the pinned list in
   // worker/notion-config.js.
   var ENTRY_POINTS = {
+    yes: { source: 'Footer', topic: TOPIC_LIKE, helpful: 'Yes', fromFooter: true },
     no: { source: 'Footer', topic: null, helpful: 'No', fromFooter: true },
-    more: { source: 'Footer', topic: TOPIC_LIKE, helpful: null, fromFooter: true },
     share: { source: 'Bar menu: Share feedback', topic: null, helpful: null, fromFooter: false },
     problem: { source: 'Bar menu: Report a problem', topic: TOPIC_BROKEN, helpful: null, fromFooter: false }
   };
@@ -57,15 +57,12 @@
   var MESSAGE_DEFAULT = { label: 'Your message', placeholder: 'Pick a topic, then tell us more', required: true };
 
   var COPY = {
-    thanksYes: 'Thank you. Glad it helped.',
     thanksSent: "Thank you. That's with the team now.",
-    thanksNo: 'Thank you for telling us.',
     hintOff: "Turn this on if you'd like a reply.",
     hintOn: "We'll reply to the email you signed in with.",
     needTopic: 'Pick what this is about.',
     needMessage: 'Tell us a little about it.',
     sendFailed: "That didn't send. Your message is still here, so try again.",
-    yesFailed: "That didn't send. Try again in a moment.",
     sending: 'Sending…'
   };
 
@@ -174,60 +171,19 @@
     window.requestAnimationFrame(function () { el.textContent = message; });
   }
 
-  function showFooterThanks(section, message, offerMore) {
+  function showFooterThanks(section, message) {
     if (!section) return;
     // Was focus in the block (on the button about to hide) or lost to <body>?
-    // Then it moves to what replaces it, never into nowhere.
+    // Then it moves to the thanks that replaces it, never into nowhere.
     var active = document.activeElement;
     var moveFocus = !active || active === document.body || section.contains(active);
 
     var title = section.querySelector('.page-feedback-success-title');
-    var more = section.querySelector('[data-feedback-open="more"]');
-    var error = section.querySelector('.page-feedback-error');
     if (title) title.textContent = message;
-    if (more) more.hidden = !offerMore;
-    if (error) { error.textContent = ''; error.hidden = true; }
     section.classList.add('is-submitted');
     announce(section.querySelector('.page-feedback-status'), message);
 
-    if (moveFocus) {
-      var target = offerMore && more ? more : title;
-      if (target) target.focus();
-    }
-  }
-
-  function showFooterError(section, message) {
-    var error = section && section.querySelector('.page-feedback-error');
-    if (!error) return;
-    error.hidden = false;
-    announce(error, message);
-  }
-
-  // aria-disabled plus a busy flag, not `disabled`: disabling the focused
-  // button would drop keyboard focus to <body>.
-  function setBusy(list, busy) {
-    Array.prototype.forEach.call(list, function (el) {
-      if (busy) el.setAttribute('aria-disabled', 'true');
-      else el.removeAttribute('aria-disabled');
-    });
-  }
-
-  function handleYes(button) {
-    var section = button.closest('.page-feedback');
-    if (!section || section.dataset.feedbackBusy === '1') return;
-    var buttons = section.querySelectorAll('[data-feedback]');
-    section.dataset.feedbackBusy = '1';
-    setBusy(buttons, true);
-
-    submitVerdict('Yes').then(function () {
-      showFooterThanks(section, COPY.thanksYes, true);
-    }).catch(function (err) {
-      console.error('[Feedback] Yes not recorded:', err);
-      setBusy(buttons, false);
-      showFooterError(section, COPY.yesFailed);
-    }).then(function () {
-      delete section.dataset.feedbackBusy;
-    });
+    if (moveFocus && title) title.focus();
   }
 
   //
@@ -311,11 +267,16 @@
     var config = ENTRY_POINTS[entry];
     if (!config) return;
 
+    var section = config.fromFooter ? (sourceSection || getFooter()) : null;
+    // A Yes or No already counted on this page (closed without sending
+    // earlier) is not counted again when they come back to write.
+    var counted = section && section.dataset.feedbackCounted === '1';
+
     state = {
       source: config.source,
-      helpful: config.helpful,
+      helpful: counted ? null : config.helpful,
       fromFooter: config.fromFooter,
-      section: config.fromFooter ? (sourceSection || getFooter()) : null,
+      section: section,
       sent: false
     };
 
@@ -379,7 +340,7 @@
       sending.sent = true;
       dialog.close();
       if (sending.fromFooter) {
-        showFooterThanks(sending.section, COPY.thanksSent, false);
+        showFooterThanks(sending.section, COPY.thanksSent);
       } else if (typeof window.showToast === 'function') {
         // A bar menu has no block of its own to thank the reader in.
         window.showToast(COPY.thanksSent, 'success');
@@ -396,15 +357,16 @@
     });
   }
 
-  // A No closed without sending still counts once.
+  // A Yes or No closed without sending still counts, once per page, and
+  // quietly: the thanks is only for a message that was sent.
   function handleClose() {
     var closing = state;
     state = null;
-    if (!closing || closing.sent || closing.helpful !== 'No') return;
-    submitVerdict('No').then(function () {
-      showFooterThanks(closing.section, COPY.thanksNo, false);
-    }).catch(function (err) {
-      console.error('[Feedback] No not recorded:', err);
+    if (!closing || closing.sent || !closing.helpful) return;
+    if (closing.section) closing.section.dataset.feedbackCounted = '1';
+    submitVerdict(closing.helpful).catch(function (err) {
+      console.error('[Feedback] ' + closing.helpful + ' not recorded:', err);
+      if (closing.section) delete closing.section.dataset.feedbackCounted;
     });
   }
 
@@ -415,11 +377,7 @@
   function handleDocumentClick(e) {
     var verdict = e.target.closest('.page-feedback [data-feedback]');
     if (verdict) {
-      if (verdict.getAttribute('data-feedback') === 'yes') {
-        handleYes(verdict);
-      } else {
-        openDialog('no', verdict.closest('.page-feedback'));
-      }
+      openDialog(verdict.getAttribute('data-feedback') === 'yes' ? 'yes' : 'no', verdict.closest('.page-feedback'));
       return;
     }
 

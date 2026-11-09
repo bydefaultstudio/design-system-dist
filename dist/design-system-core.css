@@ -1,0 +1,4195 @@
+/* @bydefaultstudio/design-system v7.2.0 */
+/* ─────────────────────────────
+   DESIGN SYSTEM FRAMEWORK: CORE
+   The foundation, type, buttons, basic forms and simple components.
+   Licensed MIT: see LICENSE.md in the package.
+   ───────────────────────────── */
+
+
+/* ------ 1. BRAND TOKENS ------ */
+
+/*
+ * Neutral engine defaults. A brand expresses itself by overriding these
+ * primitives in its theme.css (cms/brands/<brand>/assets/theme.css);
+ * the §2 semantic layer resolves through them, so a theme never restates
+ * semantics it can reach through a primitive. Instance 0 (By Default)
+ * loads cms/brands/bydefault/assets/theme.css like any other brand.
+ * Neutralize values here, never delete token names: core components and
+ * docs-site.css consume them by name.
+ */
+
+:root {
+  /* -- Typography (neutral system stacks) -- */
+  --font-primary: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-secondary: Georgia, "Times New Roman", serif;
+  --font-tertiary: system-ui, sans-serif;
+  --font-quaternary: ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Accent + semantic aliases. Editorial + code alias the existing slots
+     so call sites can stay role-named even if the underlying face is
+     swapped later. */
+  --font-display:   system-ui, sans-serif;
+  --font-playful:   system-ui, sans-serif;
+  --font-script:    cursive;
+  --font-editorial: var(--font-secondary);
+  --font-code:      var(--font-quaternary);
+
+  /* Greeking slots: a face that renders text unreadable, so a work-in-progress
+     layout can be judged on structure rather than copy. Neutral here, like
+     every slot above — the engine names no face and ships no font. A brand
+     that wants greeking declares the @font-face in its own theme.css and
+     re-points these two. Left alone they resolve to the primary face, so the
+     tokens are always safe to reference and simply do nothing. */
+  --font-placeholder: var(--font-primary);
+  --font-scribble:    var(--font-primary);
+
+  /* -- Palette -- */
+  --off-white: var(--neutral-50);
+  --off-black: var(--neutral-900);
+  /* Brown is the warm palette ramp. It defaults through the neutral scale so a
+     brand that re-points only the neutrals still carries the toast, tooltip and
+     mark surfaces with it; a brand wanting a true brown sets these directly. */
+  --brown-lighter: var(--neutral-100);
+  --brown-light: var(--neutral-300);
+  --brown: var(--neutral-500);
+  --brown-dark: var(--neutral-950);
+
+  /* -- Accent colours (generic) -- */
+  --red-lighter: #FEE2E2;
+  --red-light: #F76969;
+  --red: #DC2626;
+  --red-dark: #991B1B;
+  --blue-lighter: #DBEAFE;
+  --blue-light: #BFDBFE;
+  --blue: #2563EB;
+  --blue-dark: #1E3A8A;
+  --yellow-lighter: #FEF3C7;
+  --yellow-light: #FDE68A;
+  --yellow: #D97706;
+  --yellow-dark: #78350F;
+  --green-lighter: #DCFCE7;
+  --green-light: #6DD995;
+  --green: #16A34A;
+  /* A step deeper than the base, for light text on it (4.8:1): the
+     annotation green. Read through --annotation-green. */
+  --green-deep: #15803D;
+  --green-dark: #155F31;
+  --purple-lighter: #F3E8FF;
+  --purple-light: #E9D5FF;
+  --purple: #9333EA;
+  --purple-dark: #581C87;
+  /* Aqua, pink and peach are the bright accents: their base step sits a shade
+     lighter than the five signal hues above, so they read as a highlight on a
+     light surface rather than as a status colour. */
+  --aqua-lighter: #CCFBF1;
+  --aqua-light: #99F6E4;
+  --aqua: #5EEAD4;
+  --aqua-dark: #134E4A;
+  --pink-lighter: #FCE7F3;
+  --pink-light: #FBCFE8;
+  --pink: #F9A8D4;
+  --pink-dark: #831843;
+  /* The saturated step pink's pastel base lacks, deep enough for light
+     text (4.7:1): the annotation pink. Read through --annotation-pink. */
+  --pink-vivid: #D61F69;
+  --peach-lighter: #FFEDD5;
+  --peach-light: #FED7AA;
+  --peach: #FDBA74;
+  --peach-dark: #7C2D12;
+  /* -- Base font sizes (rem-based, progressive step scale: +2px body, +4px heading, +8px display) -- */
+  --font-3xs: 0.625rem;  /* 10px */
+  --font-2xs: 0.75rem;   /* 12px */
+  --font-xs: 0.875rem;   /* 14px */
+  --font-s: 1rem;        /* 16px */
+  --font-m: 1.125rem;    /* 18px */
+  --font-l: 1.25rem;     /* 20px */
+  --font-xl: 1.375rem;   /* 22px */
+  --font-2xl: 1.5rem;    /* 24px */
+  --font-3xl: 1.75rem;   /* 28px */
+  --font-4xl: 2rem;      /* 32px */
+  --font-5xl: 2.25rem;   /* 36px */
+  --font-6xl: 2.5rem;    /* 40px */
+  --font-7xl: 3rem;      /* 48px */
+  --font-8xl: 3.5rem;    /* 56px */
+  --font-9xl: 4rem;      /* 64px */
+  --font-10xl: 4.5rem;   /* 72px */
+
+
+  /* -- UI font sizes -- */
+
+  /* -- Line height tokens -- */
+  --line-height-xs: 0.7;
+  --line-height-s: 1;
+  --line-height-m: 1.2;
+  --line-height-l: 1.4;
+  --line-height-xl: 1.6;
+  --line-height-2xl: 1.8;
+
+  /* -- Font weight tokens -- */
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-book: 450;
+  --font-weight-medium: 500;
+  --font-weight-semi-bold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extra-bold: 800;
+  --font-weight-black: 900;
+
+  /* -- Font width tokens (wdth axis, applied via font-stretch) -- */
+  --font-condensed: 75%;
+  --font-narrow:    87.5%;
+  --font-normal:    100%;
+  --font-wide:      112.5%;
+  --font-expanded:  125%;
+
+  /* -- Letter spacing tokens (em-based for proportional scaling) -- */
+  --letter-spacing-xs: -0.03em;
+  --letter-spacing-s: 0.03em;
+  --letter-spacing-m: 0.06em;
+  --letter-spacing-l: 0.12em;
+  --letter-spacing-xl: 0.24em;
+
+  /* -- Type roles — semantic tokens composing the primitives into four
+     role-based building blocks (headline, title, label, body). Each role
+     covers four dimensions: size, weight, leading (line-height), and
+     tracking (letter-spacing).
+
+     Sizes are stepped rem, never clamp() with a vw term: a vw component in
+     font-size doesn't track browser zoom or user font-size preferences
+     (WCAG 1.4.4 Resize Text). Each role steps down through the width tiers
+     below this block. -- */
+
+  /* Headline — the biggest thing on a page; one per page (h1). */
+  --headline-size:     var(--font-8xl);  /* 56px · 48px ≤1439 · 28px ≤959 */
+  --headline-weight:   400;
+  --headline-leading:  var(--line-height-s);
+  --headline-tracking: -0.04em;
+  --headline-width: var(--font-condensed);
+
+  /* Subline — sub-heading scale, sits between title and body. Independent
+     of --text-size-l so it can be tuned without dragging modifier text. */
+  --subline-size:    var(--font-2xl);    /* 24px · 20px ≤1439 */
+  --subline-weight:  300;
+
+
+  /* Title — section heads and recurring labels within a page (h2). */
+  --title-size:     var(--font-6xl);     /* 40px · 36px ≤1439 · 24px ≤959 */
+  --title-weight:   400;
+  --title-leading:  var(--line-height-m);
+  --title-tracking: -0.04em;
+  --title-family: var(--font-primary);
+
+
+  /* Label — meta rows, eyebrows, captions */
+  --label-size:     var(--font-2xs);
+  --label-weight:   500;
+  --label-leading:  var(--line-height-s);
+  --label-tracking: var(--letter-spacing-m);
+
+  /* Body — running text. One size at every width: the old fluid ceiling
+     (18px) only engaged beyond ~1900px viewports, so 16px is the honest
+     static value. */
+  --body-size:     var(--font-s);
+  --body-weight:   var(--font-weight-regular);
+  --body-leading:  var(--line-height-xl);
+  --body-tracking: 0;
+
+  /* Text size utility scale — stepped tokens consumed by .text-size-* utilities.
+     Use these on any selector when you want a utility-style size without the class. */
+  --text-size-xl: var(--font-3xl);       /* 28px · 24px ≤959 */
+  --text-size-l:  var(--font-l);         /* 20px */
+  --text-size-m:  var(--body-size);
+  --text-size-s:  var(--font-xs);        /* 14px — the old fluid ceiling (16px)
+                                            only engaged beyond ~1400px */
+  --text-size-xs: var(--font-xs);
+
+  /* Icon Size */
+  --icon-size: 1.3rem;
+  /* The steps a component or a tool sets --icon-size to, so a hint, a
+     row's thumb and an empty state's icon land on the same few sizes
+     instead of each picking its own. */
+  --icon-size-xs: 1rem;
+  --icon-size-s: 1.25rem;
+  --icon-size-m: 1.5rem;
+  --icon-size-l: 2rem;
+  --icon-size-xl: 2.5rem;
+  --icon-size-2xl: 3rem;
+  /* The optical trim: a negative margin that pulls an icon into the text
+     beside it, so a nav link, a button or a callout keeps its rhythm with
+     the icon in it. A full-site screenshot pass (2026-10-13) showed it
+     holds nearly everywhere an icon sits next to words; an icon standing
+     alone (a tile, an empty state, a thumbnail) sets it to 0. */
+  --icon-trim: -0.175em;
+
+}
+
+/* Laptop typography tier — the top-of-scale sizes are reserved for wide
+   screens; below 1440 the three heading roles step down one rung. */
+@media (max-width: 1439px) {
+  :root {
+    --headline-size:  var(--font-7xl);   /* 48px */
+    --title-size:     var(--font-5xl);   /* 36px */
+    --subline-size:   var(--font-l);     /* 20px */
+  }
+}
+
+/* Mobile typography tier — static rem values for the single-column range.
+   Tablet uses mobile typography because the layout is also single-column
+   at that width (see [data-grid] collapse at the same breakpoint).
+
+   --label-size is bumped from --font-2xs (12px) to --font-xs (14px) on
+   mobile — 12px is below the practitioner floor for body-adjacent text
+   and tap-target-adjacent labels. */
+@media (max-width: 959px) {
+  :root {
+    --headline-size:  var(--font-3xl);   /* 28px */
+    --title-size:     var(--font-2xl);   /* 24px */
+    --subline-size:   var(--font-l);     /* 20px */
+    --label-size:     var(--font-xs);    /* 14px (a11y floor) */
+
+    --text-size-xl:   var(--font-2xl);   /* 24px */
+    --text-size-l:    var(--font-l);     /* 20px */
+    /* --body-size/--text-size-m (16px) and --text-size-s/-xs (14px)
+       hold their size at every width */
+  }
+}
+
+/* -- Artwork rules --
+   The brand's rules for its artwork, read by the layer engine
+   (assets/js/layer-stack.js) when it draws guides and zones: the Icon
+   Library's Guides, the Logo Tool's Safe Zone and every Layout Spec bound
+   to them. Unitless, in the artwork's own measure: an icon's padding
+   and grid cell in the units of its 24 viewBox, a logo's clear space as a
+   multiple of X (the glyph width each logo's manifest entry names). A brand
+   sets them in its theme.css; every layer bound to one redraws. */
+:root {
+  --artwork-icon-padding: 2;
+  --artwork-icon-grid: 1;
+  --artwork-logo-clear-space: 1;
+}
+
+/* ------ 2. SYSTEM TOKENS - COLORS ------ */
+
+:root {
+  /* -- Neutrals -- */
+  --neutral-50:  #fafafa;
+  --neutral-100: #e5e5e5;
+  --neutral-150: #d4d4d4;
+  --neutral-200: #c4c4c4;
+  --neutral-300: #a3a3a3;
+  --neutral-400: #8a8a8a;
+  --neutral-500: #737373;
+  --neutral-600: #5c5c5c;
+  --neutral-650: #555555;
+  --neutral-700: #474747;
+  --neutral-750: #3a3a3a;
+  --neutral-800: #333333;
+  --neutral-850: #2a2a2a;
+  --neutral-875: #222222;
+  --neutral-900: #1f1f1f;
+  --neutral-925: #1a1a1a;
+  --neutral-950: #141414;
+  --neutral-990: #0a0a0a;
+
+  /* -- Warm -- */
+  /* The warm off-whites dark mode sets its text in. Three steps, named on the
+     neutral scale's numbering so they line up with it. */
+  --warm-50: #f0eeeb;
+  --warm-100: #e8e6e3;
+  --warm-400: #a8a5a2;
+
+  /* -- Black & White Alpha Tokens -- */
+  --black: #000000;
+  --black-alpha-3: #00000008;
+  --black-alpha-5: #0000000d;
+  --black-alpha-7: #00000012;
+  --black-alpha-10: #0000001a;
+  --black-alpha-15: #00000026;
+  --black-alpha-20: #00000033;
+  --black-alpha-30: #0000004d;
+  --black-alpha-40: #00000066;
+  --black-alpha-50: #00000080;
+  --black-alpha-60: #00000099;
+  --black-alpha-70: #000000b3;
+  --black-alpha-80: #000000cc;
+  --black-alpha-90: #000000e6;
+  --black-alpha-95: #000000f2;
+
+  --white: #ffffff;
+  --white-alpha-3: #ffffff08;
+  --white-alpha-5: #ffffff0d;
+  --white-alpha-6: #ffffff0f;
+  --white-alpha-7: #ffffff12;
+  --white-alpha-8: #ffffff14;
+  --white-alpha-10: #ffffff1a;
+  --white-alpha-12: #ffffff1f;
+  --white-alpha-15: #ffffff26;
+  --white-alpha-20: #ffffff33;
+  --white-alpha-30: #ffffff4d;
+  --white-alpha-40: #ffffff66;
+  --white-alpha-50: #ffffff80;
+  --white-alpha-60: #ffffff99;
+  --white-alpha-70: #ffffffb3;
+  --white-alpha-80: #ffffffcc;
+  --white-alpha-90: #ffffffe6;
+  --white-alpha-95: #fffffff2;
+
+  --transparent: transparent;
+
+  /* -- Color-Mix Alpha Scale -- */
+  --alpha-5: transparent 95%;
+  --alpha-10: transparent 90%;
+  --alpha-15: transparent 85%;
+  --alpha-20: transparent 80%;
+  --alpha-25: transparent 75%;
+  --alpha-30: transparent 70%;
+  --alpha-35: transparent 65%;
+  --alpha-40: transparent 60%;
+  --alpha-45: transparent 55%;
+  --alpha-50: transparent 50%;
+  --alpha-55: transparent 45%;
+  --alpha-60: transparent 40%;
+  --alpha-65: transparent 35%;
+  --alpha-70: transparent 30%;
+  --alpha-75: transparent 25%;
+  --alpha-80: transparent 20%;
+  --alpha-85: transparent 15%;
+  --alpha-90: transparent 10%;
+  --alpha-95: transparent 5%;
+
+  /* -- Semantic colours -- */
+  --text-primary: var(--off-black);
+  --text-secondary: var(--neutral-700);
+  --text-plain: var(--black);
+  /* a11y: alpha-60 → 5.7:1 on white; alpha-50 computed to 3.9:1, below the
+     4.5:1 WCAG AA minimum for the body copy this token is used on */
+  --text-faded: var(--black-alpha-60);
+  --text-accent: var(--blue);
+  --text-link: var(--text-accent);
+  --text-inverted: var(--off-white);
+  /* The surface --text-inverted reads on: the theme's ink as a ground, so a
+     curtain or a toast is the page turned inside out in either theme. */
+  --background-inverted: var(--text-primary);
+  --text-sidebar: var(--text-primary);
+  --text-top-nav: var(--text-primary);
+
+    /* -- Text with Opacity -- */
+  --text-alpha-5: color-mix(in srgb, var(--text-primary), var(--alpha-5));
+  --text-alpha-10: color-mix(in srgb, var(--text-primary), var(--alpha-10));
+  --text-alpha-15: color-mix(in srgb, var(--text-primary), var(--alpha-15));
+  --text-alpha-20: color-mix(in srgb, var(--text-primary), var(--alpha-20));
+  --text-alpha-30: color-mix(in srgb, var(--text-primary), var(--alpha-30));
+  --text-alpha-40: color-mix(in srgb, var(--text-primary), var(--alpha-40));
+  --text-alpha-50: color-mix(in srgb, var(--text-primary), var(--alpha-50));
+
+
+
+  --background-primary: var(--white);
+  --background-secondary: var(--neutral-100);
+  --background-plain: var(--white);
+  --background-faded: var(--black-alpha-5);
+  --background-darker: var(--black-alpha-10);
+  --background-lighter: var(--white-alpha-10);
+  --bg-faded-3: var(--black-alpha-3);
+  --bg-faded-5: var(--black-alpha-5);
+  --bg-faded-7: var(--black-alpha-7);
+  --bg-faded-10: var(--black-alpha-10);
+  --bg-faded-15: var(--black-alpha-15);
+  --background-modal: rgba(0, 0, 0, 0.75);
+  --background-sidebar: var(--background-primary);
+  --background-top-nav: var(--background-primary);
+
+  /* -- Solid colour backgrounds — for hero blocks, callouts, ad units, etc. -- */
+  --background-accent: var(--text-accent);
+  --background-black: var(--black);
+  --background-white: var(--white);
+  --background-blue: var(--blue);
+  --background-red: var(--red);
+  --background-green: var(--green);
+
+  --border-primary: var(--text-primary);
+  --border-secondary: var(--neutral-300);
+  --border-faded: var(--black-alpha-15);
+  /* The boundary of an interactive control whose surface is transparent — the
+     border is then the only thing saying "this is pressable", so it carries the
+     3:1 that 1.4.11 asks of a control boundary. --border-faded is decorative
+     (1.4:1) and must not be used for one. 4.74:1 on --background-primary. */
+  --border-control: var(--neutral-500);
+
+
+  /* -- Status colours (from brand book or defaults) --
+     Text and surface are a pair: -dark text on a -lighter surface. The mid
+     primitives only reach 3.0-4.2:1 on their own pastels — under AA for small
+     text — so every hue's text takes the -dark step, as warning always has.
+     Buttons consume the text half alone and follow it deliberately. */
+  --status-info: var(--blue-dark);
+  --status-info-bg: var(--blue-lighter);
+  --status-success: var(--green-dark);
+  --status-success-bg: var(--green-lighter);
+  --status-warning: var(--yellow-dark);
+  --status-warning-bg: var(--yellow-lighter);
+  --status-danger: var(--red-dark);
+  --status-danger-bg: var(--red-lighter);
+  /* -- Form semantic tokens -- */
+  --input-border: var(--border-secondary);
+  --input-background: var(--background-primary);
+  --input-text: var(--text-plain);
+  /* The select's closed-state caret. A data URI cannot read a custom
+     property, so each theme carries its own artwork. Light keeps the
+     original #666; dark is --warm-400, its --text-secondary. */
+  --select-caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23666' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E");
+  --input-placeholder: var(--text-faded);
+  --input-focus: var(--text-primary);
+  --input-disabled-bg: var(--background-faded);
+  --input-disabled-text: var(--text-faded);
+  --checkbox-background: var(--neutral-100);
+  --checkbox-selected: var(--text-primary);
+  --checkbox-border: var(--border-faded);
+  --checkbox-checkmark: var(--off-white);
+  /* -- Toggle color tokens removed — uses values directly on component -- */
+
+  /* -- Selection -- */
+  /* Two neighbours one letter apart, doing different jobs. --selection-* is the
+     browser's text highlight (::selection). --selected-* is the state a chosen
+     control wears: a checked chip, a segmented control's active option. They
+     happen to resolve to the same inverted neutral today; they are separate
+     names because a brand can move one without the other. */
+  --selection-text: var(--background-primary);
+  --selection-background: var(--text-primary);
+
+  /* The system's selected pair. A wash cannot carry state — the --bg-faded-*
+     scale tops out near 1.4:1 where WCAG wants 3:1 of a state indicator — so
+     selection is an inverted surface, never a tint. Shared by both segmented
+     forms, the chip group, the docs A-Z rail and the date picker's chosen day.
+     The one exception is the docs search's active row: it holds <mark>
+     highlights that an inverted surface would swallow, so it is a
+     --background-faded wash with a 1px --border-control outline carrying the
+     3:1 (docs-site.css, search). */
+  --selected-background: var(--text-primary);
+  --selected-text: var(--background-primary);
+
+  /* -- Highlight -- */
+  /* The <mark> pair, and the surface a brand re-skins to move every highlight at
+     once. Both halves are opaque, and neither is mixed with the page surface: a
+     highlight lands on whatever is behind it — a faded active search row, an
+     inverted selected surface — and a translucent surface or a surface-derived
+     ink inverts its own contrast when it does. Search excerpts are the
+     heaviest consumer. */
+  --mark-background: var(--yellow-light);
+  --mark-color: var(--brown-dark);
+
+  /* -- Card tokens removed — uses semantic tokens directly -- */
+
+  /* -- Tooltip tokens removed — uses values directly on component -- */
+
+  /* -- Toast tokens removed — uses values directly on component -- */
+
+  /* -- Tab tokens removed — uses semantic tokens directly -- */
+
+  /* -- Progress tokens removed — uses semantic tokens directly -- */
+
+  /* -- Divider tokens -- */
+  --divider-color: var(--border-faded);
+  --divider-thickness: var(--border-s);
+  --divider-spacing: var(--space-xl);
+
+  /* -- Dropdown tokens -- */
+  --dropdown-background: var(--background-primary);
+  --dropdown-border: var(--border-faded);
+  --dropdown-item-hover: var(--background-faded);
+  /* A floor, not a width — menus grow past it on their content. It is a knob
+     because it is the one thing that overflows a 375px screen, so a narrow
+     context needs to drop it rather than override the rule. */
+  --dropdown-menu-min-width: 250px;
+  --dropdown-panel-max-width: 20rem;
+
+  /* -- Select picker tokens -- */
+  /* The customizable-select popup reuses the dropdown surface tokens above so
+     a native select and a .dropdown read as the same object. Only the scroll
+     ceiling is its own, because an option list has no item count limit. */
+  --select-picker-max-height: 18rem;
+
+  /* -- Date picker tokens -- */
+  /* The panel reuses the dropdown surface tokens above. Only the day cell is
+     its own: a square at the touch target minimum, so a month grid is seven
+     targets wide and never narrower than a finger. */
+  --date-picker-cell-size: var(--target-min);
+
+  /* -- Field tokens -- */
+  /* The metrics every text control reads, bare or wrapped in .field. A size,
+     a bar or a wrapper re-points these; nothing sets height or font-size on
+     an input directly, so a control and the box around it can never disagree
+     about how tall the row is. Custom properties inherit, which is how a
+     data-size on the wrapper reaches the input inside it. */
+  --field-height: var(--target-min);
+  /* The two sizes. Small is also the bar's control height — the bar reads
+     this token, so the two can never drift apart. */
+  --field-height-s: 2.25rem;
+  --field-height-l: var(--5xl);
+  --field-font: var(--body-size);
+  --field-padding-x: var(--space-l);
+  --field-padding-y: var(--space-m);
+  --field-icon-size: 1.25rem;
+  --field-radius: var(--radius-control);
+  /* The side-label column. A form re-points it to fit its longest label. */
+  --form-label-width: 10rem;
+
+  /* -- Check tokens: checkbox, radio, toggle -- */
+  /* Here rather than on the control, so a data-size="small" on any ancestor
+     that re-points them — a .form-check, .form-toggle, .form-group or
+     fieldset — reaches every control inside it, as the field tokens do. */
+  --check-size: var(--space-xl);
+  --check-mark-size: 14px;
+  --radio-dot-inset: 5px;
+  --check-gap: var(--space-s);
+  --check-label-font: var(--font-s);
+  --toggle-width: 44px; /* visual width that happens to equal 44 — not --target-min */
+  --toggle-height: var(--space-xl);
+  --toggle-knob-size: 18px;
+  /* Measured from inside the 1px border, not the outer edge — an absolute
+     knob is placed against the padding box. Keep it at
+     (height − knob) / 2 − border and the knob sits the same distance from
+     the side as from the top and bottom: 2px here reads as 3px all round. */
+  --toggle-knob-offset: var(--space-2xs);
+  /* How much longer the mono track is than a plain one, so its state word
+     has room either side instead of crowding the track's rounded end. */
+  --toggle-mono-extra-width: 6px;
+  /* The mono toggle's two colours. Ink is the knob and text when off and the
+     track when on; paper is the reverse. They default to the selected pair,
+     so they flip with the theme and need no dark-mode rule of their own. */
+  --toggle-mono-ink: var(--selected-background);
+  --toggle-mono-paper: var(--selected-text);
+
+  /* -- Tag tokens removed — uses semantic tokens directly -- */
+
+  /* -- Dialog tokens -- */
+  --dialog-max-width: 560px;
+
+  /* -- Slider tokens removed — uses semantic tokens directly -- */
+
+  /* -- Rating tokens -- */
+  --rating-size: 1.5rem;
+
+  /* -- Swatch tokens -- */
+  /* Each variant's height when nothing sets --swatch-height. That one is
+     left undeclared on purpose: a grid or a page sets it for every swatch
+     inside, and declaring it here would flatten the four defaults below. */
+  --swatch-cell-height: 9rem;
+  --swatch-column-height: 20rem;
+  --swatch-band-height: 7rem;  /* also the narrow container query's width */
+  --swatch-strip-height: 3.5rem;
+  /* The ink pair. Named for the side, not the theme: a swatch's ink depends
+     on its fill, so the pair never flips. swatch.js measures these. */
+  --swatch-ink-light: var(--background-white);
+  --swatch-ink-dark: var(--background-black);
+  --swatch-icon-size: 1rem;
+  /* The copy actions' height: WCAG 2.5.8's 24px minimum target. */
+  --swatch-target: 1.5rem;
+  /* The breadcrumb's ⋯ trigger: WCAG 2.5.8's 24px minimum target. */
+  --breadcrumb-overflow-target: 1.5rem;
+  --swatch-columns: 2;
+  /* -- Rating color tokens removed — uses values directly on component -- */
+
+  /* -- Mark tokens removed — uses values directly on component -- */
+
+  color-scheme: light;
+}
+
+/* ------ 2b. THEME TOKENS - DARK MODE ------ */
+/* Set data-theme="dark" on <html> for page-level, or on any element for scoped theming.
+   Every value here points at a primitive, the same as light mode: each
+   semantic token has a light value in :root and a dark value here (Figma's
+   Light and Dark modes). A brand re-skins dark mode by re-pointing the
+   primitives, or a token's dark value, never with a raw colour. */
+
+[data-theme="dark"] {
+  /* -- Text -- */
+  --text-primary: var(--warm-100);
+  --text-secondary: var(--warm-400);
+  --text-plain: var(--warm-50);
+  /* a11y: 0.5 → ~5.0:1 on --neutral-900; 0.45 was 4.4:1, marginal for AA */
+  --text-faded: var(--white-alpha-50);
+  --text-accent: var(--yellow);
+  --text-link: var(--text-accent);
+  --text-inverted: var(--neutral-925);
+  --background-inverted: var(--text-primary);
+  --text-sidebar: var(--text-primary);
+  --text-top-nav: var(--text-primary);
+
+  /* -- Background -- */
+  --background-primary: var(--neutral-900);
+  --background-secondary: var(--neutral-875);
+  --background-plain: var(--neutral-850);
+  --background-faded: var(--white-alpha-6);
+  --background-darker: var(--white-alpha-12);
+  --background-modal: var(--black-alpha-50);
+  --background-sidebar: var(--background-primary);
+  --background-top-nav: var(--background-primary);
+  --bg-faded-3: var(--white-alpha-3);
+  --bg-faded-5: var(--white-alpha-5);
+  --bg-faded-7: var(--white-alpha-7);
+  --bg-faded-10: var(--white-alpha-10);
+  --bg-faded-15: var(--white-alpha-15);
+
+  /* -- Border -- */
+  --border-primary: var(--warm-100);
+  --border-secondary: var(--neutral-750);
+  --border-faded: var(--white-alpha-20);
+  /* Lighter than the light-theme value, not darker — contrast runs the other
+     way against a dark ground. 4.77:1 on --background-primary. */
+  --border-control: var(--neutral-400);
+
+  /* -- Status -- */
+  --status-info: var(--blue-light);
+  --status-success: var(--green-light);
+  --status-warning: var(--yellow-light);
+  --status-danger: var(--red-light);
+  /* The pair flips as a pair: light text over the page ground pulled 15%
+     toward the hue. Anchored to --background-primary rather than --brown-dark
+     (a toast-local colour), so a rethemed dark ground carries these surfaces
+     with it. Danger is the floor at 4.54:1 — --red-light is a mid red, not a
+     pastel, so it sits close to its own surface. Do not lighten the mix or
+     darken --red-light without re-measuring. */
+  --status-info-bg: color-mix(in srgb, var(--status-info), var(--background-primary) 85%);
+  --status-success-bg: color-mix(in srgb, var(--status-success), var(--background-primary) 85%);
+  --status-warning-bg: color-mix(in srgb, var(--status-warning), var(--background-primary) 85%);
+  --status-danger-bg: color-mix(in srgb, var(--status-danger), var(--background-primary) 85%);
+
+  /* -- Form -- */
+  --input-border: var(--neutral-750);
+  --input-background: var(--white-alpha-8);
+  --input-text: var(--warm-50);
+  --select-caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23a8a5a2' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E"); /* --warm-400 */
+  --input-placeholder: var(--text-faded);
+  --input-focus: var(--text-primary);
+  --input-disabled-bg: var(--white-alpha-6);
+  --input-disabled-text: var(--white-alpha-30);
+  --checkbox-background: var(--neutral-750);
+  --checkbox-selected: var(--warm-100);
+  --checkbox-border: var(--neutral-650);
+  --checkbox-checkmark: var(--neutral-925);
+
+  /* -- Highlight -- */
+  /* The full-strength step, not the pale one: --yellow-light is a wash built for
+     white and glares on a dark surface. The ink stays dark because the surface
+     stays light. */
+  --mark-background: var(--yellow);
+  --mark-color: var(--brown-dark);
+  /* -- Toggle/Card/Dialog color tokens removed — dark mode handled on components; tooltip and toast read the inverted tokens -- */
+
+  /* -- Dropdown -- */
+  --dropdown-background: var(--background-plain);
+
+  color-scheme: dark;
+}
+
+/* ------ 2c. SYSTEM PREFERENCE FALLBACK (no-JS) ------ */
+/* Applies dark tokens when the user's OS prefers dark and no data-theme is set */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --text-primary: var(--warm-100);
+    --text-secondary: var(--warm-400);
+    --text-plain: var(--warm-50);
+    --text-faded: var(--white-alpha-50); /* AA — see [data-theme="dark"] above */
+    --text-accent: var(--yellow);
+    --text-link: var(--text-accent);
+    --text-inverted: var(--neutral-925);
+    --background-inverted: var(--text-primary);
+    --text-sidebar: var(--text-primary);
+    --text-top-nav: var(--text-primary);
+
+    --background-primary: var(--neutral-900);
+    --background-secondary: var(--neutral-875);
+    --background-plain: var(--neutral-850);
+    --background-faded: var(--white-alpha-6);
+    --background-darker: var(--white-alpha-12);
+    --background-modal: var(--black-alpha-50);
+    --background-sidebar: var(--background-primary);
+    --background-top-nav: var(--background-primary);
+    --bg-faded-3: var(--white-alpha-3);
+    --bg-faded-5: var(--white-alpha-5);
+    --bg-faded-7: var(--white-alpha-7);
+    --bg-faded-10: var(--white-alpha-10);
+    --bg-faded-15: var(--white-alpha-15);
+
+    --border-primary: var(--warm-100);
+    --border-secondary: var(--neutral-750);
+    --border-faded: var(--white-alpha-20);
+    --border-control: var(--neutral-400);
+
+    --status-info: var(--blue-light);
+    --status-success: var(--green-light);
+    --status-warning: var(--yellow-light);
+    --status-danger: var(--red-light);
+    /* Mirror of the [data-theme="dark"] status surfaces above */
+    --status-info-bg: color-mix(in srgb, var(--status-info), var(--background-primary) 85%);
+    --status-success-bg: color-mix(in srgb, var(--status-success), var(--background-primary) 85%);
+    --status-warning-bg: color-mix(in srgb, var(--status-warning), var(--background-primary) 85%);
+    --status-danger-bg: color-mix(in srgb, var(--status-danger), var(--background-primary) 85%);
+
+    --input-border: var(--neutral-750);
+    --input-background: var(--white-alpha-8);
+    --input-text: var(--warm-50);
+    --select-caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23a8a5a2' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E"); /* --warm-400 */
+    --input-placeholder: var(--text-faded);
+    --input-focus: var(--text-primary);
+    --input-disabled-bg: var(--white-alpha-6);
+    --input-disabled-text: var(--white-alpha-30);
+    --checkbox-background: var(--neutral-750);
+    --checkbox-selected: var(--warm-100);
+    --checkbox-border: var(--neutral-650);
+    --checkbox-checkmark: var(--neutral-925);
+
+    /* -- Highlight -- */
+    --mark-background: var(--yellow);
+    --mark-color: var(--brown-dark);
+    /* -- Toggle/Card/Dialog color tokens removed — dark mode handled on components; tooltip and toast read the inverted tokens -- */
+
+    /* -- Dropdown -- */
+    --dropdown-background: var(--background-plain);
+
+    color-scheme: dark;
+  }
+}
+
+/* -- Selection highlight -- */
+::selection {
+  color: var(--selection-text);
+  background-color: var(--selection-background);
+}
+
+/* ------ 3. SYSTEM TOKENS - SPACING & TYPOGRAPHY ------ */
+
+
+:root {
+  /* -- Unit tokens -- */
+  --none: 0;
+  --2xs: 0.125rem;
+  /* 2px */
+  --xs: 0.25rem;
+  /* 4px */
+  --s: 0.5rem;
+  /* 8px */
+  --m: 0.75rem;
+  /* 12px */
+  --l: 1rem;
+  /* 16px */
+  --xl: 1.5rem;
+  /* 24px */
+  --2xl: 2rem;
+  /* 32px */
+  --3xl: 2.5rem;
+  /* 40px */
+  --4xl: 3rem;
+  /* 48px */
+  --5xl: 3.5rem;
+  /* 56px */
+  --6xl: 4rem;
+  /* 64px */
+  --7xl: 4.5rem;
+  /* 72px */
+  --8xl: 5rem;
+  /* 80px */
+  --9xl: 5.5rem;
+  /* 88px */
+  --10xl: 6rem;
+  /* 96px */
+  --11xl: 6.5rem;
+  /* 104px */
+  --12xl: 7rem;
+  /* 112px */
+  --13xl: 7.5rem;
+  /* 120px */
+  --14xl: 10rem;
+  /* 160px */
+
+  /* -- Spacing scale -- */
+  --space-none: var(--none); /* 0 */
+  --space-2xs: var(--2xs); /* 2px */
+  --space-xs: var(--xs); /* 4px */
+  --space-s: var(--s); /* 8px */
+  --space-m: var(--m); /* 12px */
+  --space-l: var(--l); /* 16px */
+  --space-xl: var(--xl); /* 24px */
+  --space-2xl: var(--2xl); /* 32px */
+  --space-3xl: var(--3xl); /* 40px */
+  --space-4xl: var(--4xl); /* 48px */
+  --space-5xl: var(--5xl); /* 56px */
+  --space-6xl: var(--6xl); /* 64px */
+  --space-7xl: var(--7xl); /* 72px */
+  --space-8xl: var(--8xl); /* 80px */
+  --space-9xl: var(--9xl); /* 88px */
+  --space-10xl: var(--10xl); /* 96px */
+  --space-11xl: var(--11xl); /* 104px */
+  --space-12xl: var(--12xl); /* 112px */
+  --space-13xl: var(--13xl); /* 120px */
+  --space-14xl: var(--14xl); /* 160px */
+
+  /* -- Container widths -- */
+  --container-xs: 480px;
+  --container-s: 640px;
+  --container-m: 960px;
+  --container-l: 1200px;
+  --container-xl: 1440px;
+
+  /* -- Max-widths -- */
+  --max-width-xs: 480px;
+  --max-width-s: 640px;
+  --max-width-m: 960px;
+  --max-width-l: 1200px;
+  --max-width-xl: 1440px;
+
+  /* Image widths — a separate, smaller scale on purpose. The two above size
+     page shells; an image in prose sits inside one, so a shell step is the
+     wrong unit for it. Pointed at --max-width-* until 2026-09-23, which put
+     three of five steps beyond any reading column, where they all silently
+     meant "full width". These three are each visibly different in a column
+     of 700-1000px, which is every column this system puts prose in. */
+  --img-width-s: 200px;
+  --img-width-m: 480px;
+  --img-width-l: 640px;
+
+  /* -- Line length (typographic readability, 45–75ch range) -- */
+  --line-length-headline: 22ch;
+  --line-length-body: 55ch;
+
+  --line-length-xsmall: 35ch;
+  --line-length-small: 45ch;
+  --line-length-medium: 65ch;
+  --line-length-wide: 75ch;
+
+  /* -- Section spacing variables -- */
+  --section-xs: var(--space-xl);
+  --section-s: var(--space-2xl);
+  --section-m: var(--space-6xl);
+  --section-l: var(--space-10xl);
+  --section-xl: var(--space-14xl);
+
+
+  /* -- Accordion variables -- */
+  --accordion-padding-x: var(--space-l);
+  --accordion-padding-y: var(--space-l);
+
+  /* -- State opacity tokens --
+     Disabled: a control that cannot be used, faded whole (button, field
+     action, slider, stepper, chip). Loading: a control still enabled and
+     busy, so its label keeps the 4.5:1 text floor; at 0.6 the primary
+     button's white-on-accent fell to 4.27:1. */
+  --opacity-disabled: 0.4;
+  --opacity-loading: 0.75;
+
+  /* -- Focus ring tokens --
+     The ring every focusable control draws on :focus-visible: its width,
+     and how far it stands off the control. An inset ring (a row flush with
+     its neighbours) offsets by minus the width. */
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  /* How far the widest ring reaches outside a control's edge: the width, the
+     offset, and the one pixel the tool tiles stand off further to clear a
+     selected tile's border. A clipping container that holds controls at its
+     edge keeps at least this much room, or the ring is cut there. */
+  --focus-reach: calc(var(--focus-width) + var(--focus-offset) + var(--border-s));
+
+  /* -- Border width tokens -- */
+  --border-s: 0.0625rem;   /* 1px */
+  --border-m: 0.09375rem;  /* 1.5px */
+  --border-l: 0.1875rem;   /* 3px */
+
+  /* -- Border composition variables -- */
+  --border-width: var(--border-s);
+  --border-style: solid;
+  --border-color: var(--border-primary);
+
+  /* -- Border radius tokens -- */
+  /* The scale. Components never read a step directly; they read a role. */
+  --radius-xs: 4px;
+  --radius-s: 8px;
+  --radius-m: 12px;
+  --radius-l: 16px;
+  --radius-xl: 24px;
+  --radius-full: 999px; /* a capsule or circle: outside the scale, never multiplied */
+
+  /* The switch. 1 draws every stylistic corner at its designed size, 0 squares
+     them all; geometric shapes (--radius-full, 50%) are unaffected. Resolved
+     here on :root — a custom property takes its value where it is declared —
+     so override it on :root (theme.css) and nowhere else: set on a component
+     it does nothing. A component opts out by re-pointing its own
+     --<component>-radius instead. */
+  --radius-scale: 0;
+
+  /* The roles. Every component's --<component>-radius points at one of
+     these, so a corner's size says what kind of thing it is on. */
+  --radius-control: calc(var(--radius-s) * var(--radius-scale));  /* things you operate: button, field, chip, tag */
+  --radius-surface: calc(var(--radius-m) * var(--radius-scale));  /* things that contain: card, dialog, tooltip */
+  --radius-detail: calc(var(--radius-xs) * var(--radius-scale));  /* small finishing corners: code, kbd, badge, skeleton */
+
+  /* Component corners declared here, on :root, so a brand re-points them in
+     theme.css. A component whose other tokens live on its own element (button,
+     badge, tag, dialog, drawer) keeps its radius token beside them and is
+     re-pointed with its selector instead — see cms/border.md. */
+  --card-radius: var(--radius-surface);
+  --tooltip-radius: var(--radius-surface); /* [data-tooltip] and .progress-tooltip */
+  --code-radius: var(--radius-detail);
+  --kbd-radius: var(--radius-detail);
+  --number-input-radius: var(--field-radius);
+
+  /* -- Interaction sizing -- */
+  /* Minimum hit area for standalone pointer targets: WCAG 2.5.5 Target Size
+     (Enhanced, Level AAA) and the Apple HIG target. The AA floor is 2.5.8's
+     24px (WCAG 2.2). Applied as a min size on small controls — the visual
+     size stays, the hit area pads out. Not for dense chrome: bar controls
+     hold their own --bar-control-height and answer 2.5.8 instead. Not a
+     per-theme override surface. */
+  --target-min: 44px;
+
+  /* -- Safe-area insets -- */
+  /* Device cutouts (notch, home indicator) in installed-PWA / standalone
+     contexts. 0px in a normal browser tab, so composing them is always safe:
+     padding-bottom: calc(var(--space-m) + var(--safe-area-bottom)).
+     Non-zero only when the page's viewport meta carries viewport-fit=cover. */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+}
+
+/* ------ 4. SYSTEM TOKENS - MOTION ------ */
+/*
+ * Motion design tokens. Two layers, same model as color and spacing:
+ *
+ *   1. Primitives (--ease-*, --duration-*) — raw building blocks. Same
+ *      t-shirt scale as the rest of the design system. Easing names match
+ *      the standard CSS keywords (in / out / in-out) so anyone with web
+ *      experience already knows what shape they have; the cubic-bezier
+ *      values are our refined replacements for the defaults.
+ *
+ *   2. Semantic tokens (--motion-*) — named by intent ("page-open",
+ *      "page-close"). These compose primitives. Consumers (CSS components,
+ *      JS code) only ever read the semantic layer.
+ *
+ * Naming convention for new semantic tokens:
+ *   --motion-{scope}-{event}-{property}
+ *   scope    = page | surface | element | feedback
+ *   event    = open | close | swap | enter | exit | fade | intro | stagger | hover | press
+ *              | toggle | content | text | scale | blur | reduced
+ *   property = duration | easing | offset | distance | from
+ *
+ * See cms/motion.md for the full reference and demos.
+ */
+
+:root {
+  /* -- Easing primitives -- */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  /* fast start, slow end. for exits. */
+  --ease-out: cubic-bezier(0.3, 0, 0, 1);
+  /* a short, soft lead-in, then a long glide to rest. for entrances and
+     everything that responds to the reader. eBay's standard curve, chosen
+     2026-10-15 over the old expo-like cubic-bezier(0.16, 1, 0.3, 1), which
+     did 75% of its travel in the first fifth and read as a snap. This one
+     is 38% in at a fifth. */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* symmetric. for swaps and continuous motion. */
+  --ease-emphasized: cubic-bezier(0.86, 0, 0.07, 1);
+  /* steeper symmetric curve — near-still start and end, fast middle.
+     for large layout shifts that should feel decisive (panel collapse,
+     sidebar toggle, stage transforms). */
+
+  /* -- Duration primitives -- */
+  --duration-2xs: 100ms;
+  --duration-xs: 200ms;
+  --duration-s: 400ms;
+  --duration-m: 600ms;
+  --duration-l: 1000ms;
+  --duration-xl: 1200ms;
+  --duration-2xl: 1500ms;
+  --duration-3xl: 1800ms;
+  --duration-4xl: 2000ms;
+  --duration-5xl: 2500ms;
+  --duration-6xl: 3000ms;
+  --duration-7xl: 4000ms;
+  --duration-8xl: 6000ms;
+
+  /* -- Stagger offset — per-item delay step for sequenced groups (list
+     items, grid cards). A delay increment, not an animation duration. -- */
+  --duration-stagger: 30ms;
+
+
+  /* -- Page-level semantic motion -- */
+  --motion-page-open-duration: var(--duration-xl);
+  /* 1200ms */
+  --motion-page-open-easing: var(--ease-in-out);
+
+  --motion-page-close-duration: var(--duration-xl);
+  /* 1200ms */
+  --motion-page-close-easing: var(--ease-in-out);
+
+  --motion-page-swap-duration: var(--duration-xl);
+  /* 1200ms */
+  --motion-page-swap-easing: var(--ease-in-out);
+
+  --motion-page-fade-duration: var(--duration-m);
+  /* 600ms */
+  --motion-page-fade-easing: var(--ease-in-out);
+
+  /* Under prefers-reduced-motion every page transition becomes this short
+     crossfade, the arriving page fading in over the one that holds still:
+     the reader still sees the page change, with no travel. Replacement, not
+     removal. */
+  --motion-page-reduced-duration: var(--duration-xs);
+  /* 200ms */
+  --motion-page-reduced-easing: var(--ease-in-out);
+
+  /* How far into a page transition the arriving page's content starts, as
+     a share of that transition's duration: halfway, so the page has
+     visibly moved before its header and on-screen reveals rise into it and
+     the two land as one gesture. Unitless; the page router multiplies it by
+     the transition's duration. */
+  --motion-page-content-offset: 0.5;
+
+  /* The first-load curtain's drop (assets/js/bd-intro.js): how long the
+     wordmark takes to fall and settle, and the curve of the fall. The
+     settle after the fall is a spring the script samples. The fade after
+     it is the page fade above. */
+  --motion-page-intro-duration: var(--duration-2xl);
+  /* 1500ms */
+  --motion-page-intro-easing: var(--ease-in);
+
+  /* -- Element-level semantic motion -- the first consumer is
+     assets/js/bd-animate.js, which reads these and nothing below them.
+     Entrances and scroll reveals move on `enter`; exits on `exit`; a stagger
+     that only changes opacity (split text, list items) takes `fade`'s
+     symmetric curve: with nothing travelling, a run of units reads as one
+     sweep on a curve that is still at both ends, and each unit would land
+     abruptly on one that only decelerates. `stagger` is the step every
+     sequenced group counts in. */
+  --motion-element-enter-duration: var(--duration-l);
+  /* 1000ms: the gentler curve needs the room, and still reads calm */
+  --motion-element-enter-easing: var(--ease-out);
+
+  /* Where a scroll reveal starts: when the element's top crosses this line,
+     measured down the viewport. 95%: it starts as soon as it shows at the
+     bottom edge, so a reveal never reads as late, on a phone or a desktop. */
+  --motion-element-reveal-start: 95%;
+
+  /* How far an entrance travels, how far split text rises, and where a
+     scale or blur entrance starts. */
+  --motion-element-enter-distance: var(--space-3xl);
+  /* 40px */
+  --motion-element-text-distance: var(--space-l);
+  /* 16px */
+  --motion-element-scale-from: 0.9;
+  --motion-element-blur-from: 10px;
+
+  --motion-element-exit-duration: var(--duration-s);
+  /* 400ms */
+  --motion-element-exit-easing: var(--ease-in);
+
+  --motion-element-fade-easing: var(--ease-in-out);
+
+  --motion-element-stagger-duration: var(--duration-stagger);
+  /* 30ms */
+
+  /* -- Feedback -- an element answering the reader: hover, focus, a chevron
+     turning, a fill changing. Short, on the same curve as every entrance,
+     so a hover and a reveal feel like one system. Press is the shorter
+     confirmation of a tap or click. -- */
+  --motion-feedback-hover-duration: var(--duration-xs);
+  /* 200ms */
+  --motion-feedback-hover-easing: var(--ease-out);
+  --motion-feedback-press-duration: var(--duration-2xs);
+  /* 100ms */
+  --motion-feedback-press-easing: var(--ease-out);
+
+  /* -- Surface -- a panel or rail that changes the layout around it (a
+     navigation rail collapsing). Decisive, on the emphasised curve. -- */
+  --motion-surface-toggle-duration: var(--duration-s);
+  /* 400ms */
+  --motion-surface-toggle-easing: var(--ease-emphasized);
+
+  /* -- Surface open and close -- anything that opens over the page: a
+     dialog, a drawer, a sheet. One timing for all of them, so a dialog and
+     a drawer feel like the same system. Opens on the house curve, the glide
+     doing the work so it answers at once; closes accelerating away, on the
+     exit step (cms/motion.md). Under reduced motion, a 200ms fade, the same
+     as a page. -- */
+  --motion-surface-open-duration: var(--duration-m);
+  /* 600ms */
+  --motion-surface-open-easing: var(--ease-out);
+  --motion-surface-close-duration: var(--duration-s);
+  /* 400ms */
+  --motion-surface-close-easing: var(--ease-in);
+  --motion-surface-reduced-duration: var(--duration-xs);
+  /* 200ms */
+}
+
+/* ------ 5. LAYOUT PRIMITIVES ------ */
+
+/* -- Global horizontal padding -- */
+.padding-global {
+  padding-left: var(--space-xl);
+  padding-right: var(--space-xl);
+}
+
+/* -- Padding utilities -- */
+.padding-s {
+  padding: var(--space-s);
+}
+
+.padding-m {
+  padding: var(--space-m);
+}
+
+.padding-l {
+  padding: var(--space-l);
+}
+
+.padding-xl {
+  padding: var(--space-xl);
+}
+
+.padding-2xl {
+  padding: var(--space-2xl);
+}
+
+.padding-3xl {
+  padding: var(--space-3xl);
+}
+
+/* -- Containers -- */
+.container-xs {
+  display: block;
+  max-width: var(--container-xs);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.container-s {
+  display: block;
+  max-width: var(--container-s);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.container-m {
+  display: block;
+  max-width: var(--container-m);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.container-l {
+  display: block;
+  max-width: var(--container-l);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.container-xl {
+  display: block;
+  max-width: var(--container-xl);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* -- Max-width utilities -- */
+.max-width-xs {
+  max-width: var(--max-width-xs);
+}
+
+.max-width-s {
+  max-width: var(--max-width-s);
+}
+
+.max-width-m {
+  max-width: var(--max-width-m);
+}
+
+.max-width-l {
+  max-width: var(--max-width-l);
+}
+
+.max-width-xl {
+  max-width: var(--max-width-xl);
+}
+
+.max-width-full {
+  max-width: 100%;
+}
+
+/* -- Section spacing -- */
+
+section {
+  display: block;
+}
+
+.padding-section {
+  display: block;
+}
+
+/* -- Top spacing combo classes -- */
+.top-xsmall {
+  padding-top: var(--section-xs);
+}
+
+.top-small {
+  padding-top: var(--section-s);
+}
+
+.top-medium {
+  padding-top: var(--section-m);
+}
+
+.top-large {
+  padding-top: var(--section-l);
+}
+
+.top-xl {
+  padding-top: var(--section-xl);
+}
+
+/* -- Bottom spacing combo classes -- */
+.bottom-xsmall {
+  padding-bottom: var(--section-xs);
+}
+
+.bottom-small {
+  padding-bottom: var(--section-s);
+}
+
+.bottom-medium {
+  padding-bottom: var(--section-m);
+}
+
+.bottom-large {
+  padding-bottom: var(--section-l);
+}
+
+.bottom-xl {
+  padding-bottom: var(--section-xl);
+}
+
+/* ------ 6. BLOCKS ------ */
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+}
+
+/* -- Child margin reset --
+   gap-* is the sole source of vertical spacing inside a block: element
+   defaults (headings, p, lists, figure…) are zeroed so gap and margin never
+   compound — flex gap does not collapse with margins, it adds to them.
+   margin-block only: margin-inline auto must survive for data-align="center".
+   Component classes that set their own root margins (e.g. .callout) are
+   declared later in the cascade and keep them inside blocks. */
+.block > * {
+  margin-block: 0;
+}
+
+/* -- Gap modifiers -- */
+.gap-none {
+  gap: var(--space-none);
+}
+
+.gap-xs {
+  gap: var(--space-xs) !important;
+}
+
+.gap-s {
+  gap: var(--space-s) !important;
+}
+
+.gap-m {
+  gap: var(--space-m) !important;
+}
+
+.gap-l {
+  gap: var(--space-l) !important;
+}
+
+.gap-xl {
+  gap: var(--space-xl) !important;
+}
+
+.gap-2xl {
+  gap: var(--space-2xl) !important;
+}
+
+.gap-3xl {
+  gap: var(--space-3xl) !important;
+}
+
+
+/* -- Layout modifiers -- */
+.row {
+  flex-direction: row;
+}
+
+.row-reverse {
+  flex-direction: row-reverse;
+}
+
+.align-start {
+  align-items: flex-start;
+}
+
+.align-center {
+  align-items: center;
+}
+
+.align-end {
+  align-items: flex-end;
+}
+
+.align-stretch {
+  align-items: stretch;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-end {
+  justify-content: flex-end;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+
+/* -- Self alignment. Places a box in its parent, on the inline axis. Only
+      says anything once the box is narrower than the space it is given, so it
+      is inert rather than broken at full width. -- */
+[data-align="left"] {
+  margin-inline: 0 auto;
+  justify-self: start;
+}
+
+[data-align="center"] {
+  margin-inline: auto;
+  justify-self: center;
+}
+
+[data-align="right"] {
+  margin-inline: auto 0;
+  justify-self: end;
+}
+
+
+/* ------ 7. GRID ------ */
+
+/* -- Grid -- */
+/* Tracks are minmax(0, 1fr), not 1fr: a bare 1fr has a min-content floor,
+   so a long word, a wide input or a number field pushed its column wider
+   than its share and the grid overflowed its parent. */
+.grid {
+  display: grid;
+  gap: var(--space-m);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+/* -- Grid column modifiers -- */
+.cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* -- Responsive collapse -- */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.token-col {
+  grid-template-columns: 1fr auto;
+  padding: var(--space-m);
+}
+
+/* -- Grid item width modifiers -- */
+.fit-content {
+  width: fit-content;
+}
+
+/* ------ 8. BORDER UTILITIES ------ */
+
+/* -- Structural classes -- */
+.border {
+  border: var(--border-width) var(--border-style) var(--border-color);
+}
+
+.border-top {
+  border-top: var(--border-width) var(--border-style) var(--border-color);
+}
+
+.border-bottom {
+  border-bottom: var(--border-width) var(--border-style) var(--border-color);
+}
+
+.border-left {
+  border-left: var(--border-width) var(--border-style) var(--border-color);
+}
+
+.border-right {
+  border-right: var(--border-width) var(--border-style) var(--border-color);
+}
+
+/* -- Width combo classes -- */
+.border-s {
+  --border-width: var(--border-s);
+}
+
+.border-m {
+  --border-width: var(--border-m);
+}
+
+.border-l {
+  --border-width: var(--border-l);
+}
+
+/* -- Style combo classes -- */
+.border-solid {
+  --border-style: solid;
+}
+
+.border-dashed {
+  --border-style: dashed;
+}
+
+.border-dotted {
+  --border-style: dotted;
+}
+
+/* -- Color combo classes -- */
+.border-primary {
+  --border-color: var(--border-primary);
+}
+
+.border-secondary {
+  --border-color: var(--border-secondary);
+}
+
+.border-faded {
+  --border-color: var(--border-faded);
+}
+
+/* ------ 9. TYPOGRAPHY UTILITIES ------ */
+
+/* -- Font size utilities -- */
+
+.font-primary {
+font-family: var(--font-primary);
+}
+
+.font-secondary {
+font-family: var(--font-secondary);
+}
+
+/* -- Accent font treatments --
+   Apply on spans inside prose, or to retreat a heading into a different
+   voice. Each sets family + sensible companion properties (weight,
+   tracking, leading where the face needs it). Size stays whatever the
+   host element controls. */
+
+.accent-display {
+  font-family: var(--font-display);
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.accent-playful {
+  font-family: var(--font-playful);
+  font-weight: 700;
+  font-style: normal;
+}
+
+.accent-script {
+  font-family: var(--font-script);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.accent-editorial {
+  font-family: var(--font-editorial);
+  font-weight: 400;
+  font-style: italic;
+}
+
+.accent-code {
+  font-family: var(--font-code);
+  font-weight: 400;
+}
+
+.font-2xs {
+  font-size: var(--font-2xs);
+}
+
+.font-xs {
+  font-size: var(--font-xs);
+}
+
+.font-s {
+  font-size: var(--font-s);
+}
+
+.font-m {
+  font-size: var(--font-m);
+}
+
+.font-l {
+  font-size: var(--font-l);
+}
+
+.font-xl {
+  font-size: var(--font-xl);
+}
+
+.font-2xl {
+  font-size: var(--font-2xl);
+}
+
+.font-3xl {
+  font-size: var(--font-3xl);
+}
+
+.font-4xl {
+  font-size: var(--font-4xl);
+}
+
+.font-5xl {
+  font-size: var(--font-5xl);
+}
+
+.font-6xl {
+  font-size: var(--font-6xl);
+}
+
+.font-7xl {
+  font-size: var(--font-7xl);
+}
+
+.font-8xl {
+  font-size: var(--font-8xl);
+}
+
+.font-9xl {
+  font-size: var(--font-9xl);
+}
+
+.font-10xl {
+  font-size: var(--font-10xl);
+}
+
+/* -- Text size utilities -- */
+/* Each class consumes its matching --text-size-* token (defined in :root). */
+/* xs stays fixed at the a11y floor; m reuses --body-size for clean reset.  */
+
+/* Two spellings, one scale. The long forms were the published API in
+   `classes.md` and were never defined here, so every one of them — 80 across
+   the repo, including generated pages and the docs' own demos — silently did
+   nothing. Aliasing them onto the short forms is what makes the documented
+   names true without minting a second scale that would differ from this one at
+   three of its five steps. The short forms stay: they have 129 working
+   consumers and are what the CSS has always meant. */
+.text-size-xl,
+.text-size-xlarge {
+  font-size: var(--text-size-xl);
+  line-height: var(--line-height-m);
+}
+
+.text-size-l,
+.text-size-large {
+  font-size: var(--text-size-l);
+  line-height: var(--line-height-l);
+}
+
+.text-size-m,
+.text-size-medium {
+  font-size: var(--text-size-m);
+  line-height: var(--body-leading);
+}
+
+.text-size-s,
+.text-size-small {
+  font-size: var(--text-size-s);
+  line-height: var(--line-height-xl);
+}
+
+.text-size-xs,
+.text-size-xsmall {
+  font-size: var(--text-size-xs);
+  line-height: var(--line-height-xl);
+}
+
+/* -- Text wrap utilities -- */
+[data-text-wrap="balance"] {
+  text-wrap: balance;
+}
+
+[data-text-wrap="pretty"] {
+  text-wrap: pretty;
+}
+
+/* -- Font width utilities -- */
+[data-font-width="condensed"] { font-stretch: var(--font-condensed); }
+[data-font-width="narrow"]    { font-stretch: var(--font-narrow); }
+[data-font-width="normal"]    { font-stretch: var(--font-normal); }
+[data-font-width="wide"]      { font-stretch: var(--font-wide); }
+[data-font-width="expanded"]  { font-stretch: var(--font-expanded); }
+
+/* -- Text alignment utilities -- */
+.text-left   { text-align: left; }
+.text-center { text-align: center; }
+.text-right  { text-align: right; }
+
+/* Figures of one width, so a column of numbers lines up digit for digit. */
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* -- Eyebrow text -- */
+.eyebrow {
+  font-size: var(--font-xs);
+  line-height: var(--line-height-m);
+  font-weight: var(--font-weight-regular);
+  letter-spacing: var(--letter-spacing-l);
+  text-transform: uppercase;
+}
+
+/* -- Label text --
+ * The form label's look as a class, for the places something should read as
+ * a label but is not a <label> — a heading over a column of links, a caption
+ * above a control group. Quieter than .eyebrow, which shouts in uppercase
+ * and belongs above a section heading.
+ *
+ * It resets more than it sets, and that is the point: the element this lands
+ * on is usually a heading, and h1–h6 carry a title family, -0.04em tracking
+ * and 24px/16px margins that would otherwise survive underneath. A class
+ * that says "this reads as a label" has to actually win, or it only changes
+ * the size and leaves the rest of the heading showing through.
+ *
+ * `display` is deliberately not set — that positions a label inside a form
+ * row, and a class applied to an arbitrary element should not decide its
+ * layout. Margin is different: it is not this class's margin, it is
+ * inherited debris this class has to clear. .bar-label (section 41)
+ * makes the same call.
+ */
+.label {
+  margin: 0;
+  font-family: var(--font-primary);
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-m);
+  letter-spacing: normal;
+  color: var(--text-primary);
+}
+
+/* -- Button reset (bare element) -- */
+button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-s);
+  transition: transform var(--duration-2xs) var(--ease-out);
+}
+
+/* -- Button component (CUBE pattern) -- */
+/* All tokens live at component level. data-* exceptions override them. */
+
+.button,
+button.button {
+  /* -- Component tokens (overridable by exceptions + role classes) -- */
+  --button-color: var(--text-primary);
+  --button-faded: color-mix(in srgb, var(--button-color), var(--alpha-10));
+  --button-bg: var(--button-color);
+  --button-border: var(--button-color);
+  --button-text-color: var(--text-inverted);
+  --button-font: var(--font-primary);
+  --button-text-size: var(--font-m);
+  /* Leading is a token because the filled button and the text variant need
+     different values. It was 0.7, an optical trim that only holds on one line:
+     a label that wrapped stacked its lines on top of each other. The padding
+     rule below takes the extra half-leading back off the block padding, so a
+     one-line button keeps the height 0.7 gave it (see [data-variant="text"]
+     for the zero-padding case). */
+  --button-leading: var(--line-height-m);
+  --button-padding-y: var(--space-l);
+  --button-padding-x: var(--space-xl);
+  --button-gap: var(--space-m);
+  --button-radius: var(--radius-control);
+
+  /* -- Layout -- */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--button-gap);
+
+  /* -- Box model -- */
+  padding: var(--button-padding-y) var(--button-padding-x);
+  /* Height stays 2 x padding + 0.7em at any leading: the half-leading above
+     0.7 comes back off each side. max() floors a small padding-y at 0. Where
+     padding-y is a unitless 0 (text variant, bar, header action) the calc is
+     invalid and padding-block falls back to its initial 0, the same result.
+     --button-leading must stay a unitless number for the same reason: a
+     length makes the calc invalid and the padding drops to 0. An icon taller
+     than the 0.7em line it used to sit beside (a dropdown chevron) no longer
+     adds height; the label's 1.2em line box covers it. */
+  padding-block: max(0px, calc(var(--button-padding-y) - (var(--button-leading) - var(--line-height-xs)) * 0.5em));
+
+  /* -- Visual -- */
+  background-color: var(--button-bg);
+  border: var(--border-m) solid var(--button-border);
+  border-radius: var(--button-radius);
+  
+
+  /* -- Typography -- */
+  font-family: var(--button-font);
+  font-size: var(--button-text-size);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--button-leading);
+  /* letter-spacing: var(--letter-spacing-s); */
+  text-transform: none;
+  text-decoration: none;
+  color: var(--button-text-color);
+
+  /* -- Icon -- */
+  --icon-size: 0.9em;
+
+
+  /* -- Other -- */
+  cursor: pointer;
+  transition: background-color var(--duration-m) var(--ease-out), color var(--duration-2xs) var(--ease-out), border-color var(--duration-2xs) var(--ease-out), opacity var(--duration-2xs) var(--ease-out), transform var(--duration-2xs) var(--ease-out);
+}
+
+/* -- Hover --
+   .is-hover forces the hover look without a pointer, for a picture of the
+   state beside its neighbours (Showcase, cms/components.md, State classes).
+   Every :hover rule on .button carries it, the context overrides included
+   (page header, bar, breadcrumb), as every :focus-visible carries .is-focus. */
+.button:hover,
+.button.is-hover {
+  --button-color: color-mix(in srgb, var(--text-primary), var(--background-primary) 10%)
+}
+
+/* -- Active (press) -- */
+.button:active {
+  transform: scale(0.98);
+}
+
+/* -- Variant exceptions -- */
+
+.button[data-variant="outline"] {
+  --button-bg: transparent;
+  --button-text-color: var(--button-color);
+}
+
+.button[data-variant="faded"] {
+  --button-bg: var(--button-faded);
+  --button-border: transparent;
+  --button-text-color: var(--button-color);
+}
+
+.button[data-variant="outline-faded"] {
+  --button-bg: transparent;
+  --button-border: var(--button-faded);
+  --button-text-color: var(--button-color);
+}
+
+.button[data-variant="transparent"] {
+  --button-bg: transparent;
+  --button-border: transparent;
+  --button-text-color: var(--button-color);
+}
+
+.button[data-variant="text"] {
+  --button-bg: transparent;
+  --button-border: transparent;
+  --button-text-color: var(--button-color);
+  --button-padding-x: 0;
+  --button-padding-y: 0;
+  /* No padding to build the box, so the line box IS the box: at 0.7 an
+     18px label sat in 12.6px and stacked text buttons collided. */
+  --button-leading: var(--line-height-l);
+  /* Keeps its padding untrimmed: zero here, so there is no half-leading to
+     take back, and a size exception that restores padding-y must not lose
+     the trim's worth of it either. */
+  padding-block: var(--button-padding-y);
+}
+.button[data-variant="text"]:hover,
+.button[data-variant="text"].is-hover {
+  text-decoration: underline;
+  text-underline-offset: 2.5px;
+}
+.button[data-variant="text"]:active {
+  transform: none;
+}
+
+/* Unfilled variants: subtle fill on hover instead of darkening transparent */
+.button[data-variant="outline"]:hover,
+.button[data-variant="faded"]:hover,
+.button[data-variant="outline-faded"]:hover,
+.button[data-variant="transparent"]:hover,
+.button[data-variant="outline"].is-hover,
+.button[data-variant="faded"].is-hover,
+.button[data-variant="outline-faded"].is-hover,
+.button[data-variant="transparent"].is-hover {
+  background-color: color-mix(in srgb, var(--button-color), var(--alpha-5));
+}
+
+/* -- Pressed (a toggle that is on) --
+   .is-active with aria-pressed="true", moved together by the script: the
+   class is the paint, the attribute is what a screen reader hears. It
+   inverts on the system's selected pair, as a selected segment does,
+   because the hover wash measured 1.13:1 against the page, under the 3:1 a
+   state needs (1.4.11). Declared after the hover rule so a hovered toggle
+   stays inverted, and data-color does not reach it. Unfilled variants only:
+   the default button is already filled, and a text button has no box to
+   fill. The outline colour under forced colours keeps the focus ring
+   visible on Highlight, as the selected segment's does. */
+.button[data-variant="outline"].is-active,
+.button[data-variant="faded"].is-active,
+.button[data-variant="outline-faded"].is-active,
+.button[data-variant="transparent"].is-active {
+  --button-border: var(--selected-background);
+  --button-text-color: var(--selected-text);
+  background-color: var(--selected-background);
+}
+
+/* Backgrounds flatten under forced colours, so the fill that carries the
+   state disappears; the system's own selected pair replaces it. */
+@media (forced-colors: active) {
+  .button[data-variant="outline"].is-active,
+  .button[data-variant="faded"].is-active,
+  .button[data-variant="outline-faded"].is-active,
+  .button[data-variant="transparent"].is-active {
+    forced-color-adjust: none;
+    background-color: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+    outline-color: HighlightText;
+  }
+}
+
+/* -- Size exceptions -- */
+
+.button[data-size="small"] {
+  --button-padding-y: var(--space-m);
+  --button-padding-x: var(--space-l);
+  --button-text-size: var(--font-xs);
+}
+
+.button[data-size="xsmall"] {
+  --button-padding-y: var(--space-s);
+  --button-padding-x: var(--space-s);
+  --button-text-size: var(--font-2xs);
+}
+
+/* -- Boolean modifiers -- */
+
+.button[data-icon-only] {
+  --button-padding-x: var(--button-padding-y);
+  --icon-size: 1.3rem;
+  /* No text, so no leading to take back: the trim above would shrink it. */
+  padding-block: var(--button-padding-y);
+}
+
+.button[data-full-width] {
+  width: 100%;
+}
+
+/* -- Colour exceptions -- */
+/* Semantic names and brand aliases produce identical output.
+   --button-color drives bg, border, and faded automatically.
+
+   A colour sets --button-color and nothing else: the text colour belongs to
+   the variant. The base already declares --button-text-color: var(--text-inverted),
+   which is what a filled button wants, and every unfilled variant re-points it to
+   var(--button-color). Restating it here tied those variant rules at (0,2,0) and
+   won on source order, so an unfilled button was painted with text meant to sit
+   on a fill it does not have — inverted text on a transparent surface, i.e.
+   invisible. The role classes below are unaffected either way: .button.close-btn
+   re-points --button-text-color itself, and does so later still. */
+
+.button[data-color="danger"],
+.button[data-color="red"] {
+  --button-color: var(--status-danger);
+}
+
+/* Hover lightens toward the ground, matching .button:hover, rather than
+   darkening toward --text-primary as it once did. The status colours take the
+   -dark step, which is near-black; mixing near-black into near-black gave a
+   1.03:1 rest-to-hover step, i.e. no perceptible feedback. Lightening gives
+   1.39:1, in line with the base button's own 1.31:1, and self-corrects in dark
+   mode because --background-primary flips with the theme. */
+.button[data-color="danger"]:hover,
+.button[data-color="red"]:hover,
+.button[data-color="danger"].is-hover,
+.button[data-color="red"].is-hover {
+  --button-color: color-mix(in srgb, var(--status-danger), var(--background-primary) 15%);
+}
+
+.button[data-color="success"],
+.button[data-color="green"] {
+  --button-color: var(--status-success);
+}
+
+.button[data-color="success"]:hover,
+.button[data-color="green"]:hover,
+.button[data-color="success"].is-hover,
+.button[data-color="green"].is-hover {
+  --button-color: color-mix(in srgb, var(--status-success), var(--background-primary) 15%);
+}
+
+/* The brand accent — what --text-link defaults to. Meant for the text
+   variant, where an action should read as a link among neutral ones (the
+   login screen's recovery actions); a filled accent button works but has no
+   consumer, and under the By Default theme its dark-mode hover step is only
+   1.04:1 — add a hover treatment before giving it one.
+
+   Hover mixes toward the INK, the opposite direction to the status colours
+   above. Engine defaults (--blue / --yellow as declared in this file; a brand
+   theme re-points them and brings its own numbers): the accent sits at about
+   5:1 on the surfaces it lands on (5.17:1 on white; 4.99:1 on the dark card's
+   --background-secondary) — enough for the --font-s these actions use, with
+   no headroom: 15% toward the ground lands at 3.98:1 in both themes, under the
+   4.5:1 that small text needs. Toward the ink it climbs (6.22:1 light / 5.73:1
+   dark) and stays a visible step (1.20:1 / 1.15:1). Self-corrects with the
+   theme because --text-primary flips with it: darkens blue in light mode,
+   brightens yellow in dark. */
+.button[data-color="accent"] {
+  --button-color: var(--text-accent);
+}
+
+.button[data-color="accent"]:hover,
+.button[data-color="accent"].is-hover {
+  --button-color: color-mix(in srgb, var(--text-accent), var(--text-primary) 15%);
+}
+/* -- Role classes -- */
+/* Role classes override component tokens only. They never redeclare the base
+   structure, so padding, focus ring, sizes and states are inherited intact.
+   Must come after the base :hover rule to win on equal specificity.
+   Qualified with .button because the base also matches as `button.button`
+   (0,1,1) — a bare `.close-btn` (0,1,0) would lose to it on <button>. */
+
+.button.close-btn {
+  --button-bg: transparent;
+  --button-border: transparent;
+  --button-color: var(--text-faded);
+  --button-text-color: var(--button-color);
+  flex-shrink: 0;
+}
+
+.button.close-btn:hover,
+.button.close-btn.is-hover {
+  --button-color: var(--text-primary);
+  background-color: color-mix(in srgb, var(--button-color), var(--alpha-5));
+}
+
+/* data-color has to be re-stated here: .button[data-color] and .button.close-btn
+   tie at (0,2,0), and the role class is declared later, so it would win. */
+.button.close-btn[data-color="danger"],
+.button.close-btn[data-color="red"] {
+  --button-color: var(--status-danger);
+}
+
+.button.close-btn[data-color="danger"]:hover,
+.button.close-btn[data-color="red"]:hover,
+.button.close-btn[data-color="danger"].is-hover,
+.button.close-btn[data-color="red"].is-hover {
+  --button-color: var(--status-danger);
+  background-color: color-mix(in srgb, var(--status-danger), var(--alpha-10));
+}
+
+/* -- The close on a dialog or drawer --
+   The way out of a modal surface is the one control everyone needs, so in a
+   dialog or drawer header it is a faded button rather than a bare glyph:
+   at least the 44px target, the glyph at --icon-size-l (the bare one drew a
+   10px cross in a 42px box, under the target), and pulled toward the corner so it sits
+   --space-m from the top and end edges rather than at the full section
+   padding. It overrides any data-size on the markup: a smaller close
+   here is the problem this fixes. Elsewhere (a search field's clear, a
+   dismissible row) .close-btn keeps its quiet transparent form. */
+:is(.dialog-header, .drawer-header) .button.close-btn {
+  --button-color: var(--text-primary);
+  --button-bg: var(--button-faded);
+  --button-padding-y: var(--space-s);
+  --button-padding-x: var(--space-s);
+  --icon-size: var(--icon-size-l);
+}
+
+/* The header's end control (the close, or the actions group that ends in
+   it) moves toward the corner; the title stays on the section padding.
+   :not(:first-child) leaves a header holding only a title alone. */
+.dialog-header > :last-child:not(:first-child) {
+  margin-block-start: calc(var(--space-m) - var(--dialog-padding));
+  margin-inline-end: calc(var(--space-m) - var(--dialog-padding));
+}
+
+.drawer-header > :last-child:not(:first-child) {
+  margin-block-start: calc(var(--space-m) - var(--drawer-padding));
+  margin-inline-end: calc(var(--space-m) - var(--drawer-padding));
+}
+
+/* -- States -- */
+
+/* aria-disabled="true" is the form for a control that must stay
+   focusable, or an <a> with no href, which has no disabled attribute: the
+   script stops the activation, this paints it. */
+.button:disabled,
+.button.is-disabled,
+.button[aria-disabled="true"] {
+  opacity: var(--opacity-disabled);
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.button.is-loading {
+  pointer-events: none;
+  opacity: var(--opacity-loading);
+}
+
+/* -- Reduced motion -- */
+@media (prefers-reduced-motion: reduce) {
+  .button:active {
+    transform: none;
+  }
+}
+
+
+.svg-icn {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  display: flex;
+  aspect-ratio: 1 / 1;
+  transition: color var(--duration-m) var(--ease-out);
+  margin: var(--icon-trim);
+}
+
+.svg-icn svg,
+.svg-icn path {
+  transition: fill var(--duration-m) var(--ease-out);
+}
+
+.svg-icn.is-preview {
+  --icon-size: var(--icon-size-xl);
+}
+
+.svg-logo {
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 210 / 101;
+}
+
+.svg-logo {
+  transition: color var(--duration-m) var(--ease-out);
+}
+
+.svg-logo svg,
+.svg-logo path {
+  transition: fill var(--duration-m) var(--ease-out);
+}
+
+.button-group {
+  grid-column-gap: var(--space-m);
+  grid-row-gap: var(--space-m);
+  flex-wrap: wrap;
+  align-items: center;
+  display: flex;
+}
+
+/* ------ 10. BACKGROUND UTILITIES ------ */
+
+/* -- Background utilities -- */
+.bg-primary {
+  background-color: var(--background-primary);
+}
+
+.bg-secondary {
+  background-color: var(--background-secondary);
+}
+
+.bg-plain {
+  background-color: var(--background-plain);
+}
+
+.bg-faded {
+  background-color: var(--background-faded);
+}
+
+/* -- Text color utilities -- */
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-plain {
+  color: var(--text-plain);
+}
+
+.text-faded {
+  color: var(--text-faded);
+}
+
+.text-accent {
+  color: var(--text-accent);
+}
+
+.text-link {
+  color: var(--text-link);
+}
+
+
+/* -- Global state utilities -- */
+.is-hidden {
+  display: none !important;
+}
+
+/* -- Visually hidden --
+ * Removes something from the page without removing it from the accessibility
+ * tree. .is-hidden is display:none, which hides it from everyone — use this
+ * instead for text that a screen reader still needs: the page heading of a
+ * full-space tool, a live region, an instruction that the visual design makes
+ * obvious and a screen reader does not.
+ *
+ * clip-path over the old clip/1px-height recipe, and white-space: nowrap so a
+ * long string is not collapsed into a single wrapped column before clipping.
+ * Promoted from three private copies (logo tool, email signature, ad preview)
+ * once the third consumer arrived — CLAUDE.md section 17, rule 7. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------ BASE ELEMENTS ------ */
+
+/* -- Reset -- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-primary);
+  color: var(--text-primary);
+  font-size: var(--body-size);
+  font-weight: var(--body-weight);
+  line-height: var(--body-leading);
+  letter-spacing: var(--body-tracking);
+  background-color: var(--background-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* -- Headings --
+   Shared base style for h1–h6: weight, tracking, margins, title family.
+   Sizes follow in the editorial scale below. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  margin-top: var(--space-xl);
+  margin-bottom: var(--space-l);
+  font-family: var(--title-family);
+  line-height: var(--line-height-m);
+
+}
+
+/* Editorial scale. Each level is a foundation --font-* primitive, stepped
+   at the 959px breakpoint rather than clamp() so type tracks browser zoom
+   and user font-size (WCAG 1.4.4). The ladder tops out at 36px — roughly
+   twice body — and lands on body size at h6, where weight rather than size
+   separates it from copy. That mirrors Material 3, Primer, Spectrum and
+   Apple: in-page headings sit at or below 2× body; anything larger is
+   display type. For hero-scale display type, set font-size to
+   --headline-size / --title-size on your own display class instead of
+   restyling the elements. */
+h1 {
+  font-size: var(--font-5xl);  /* 36px · 32px ≤959 */
+}
+
+h2 {
+  font-size: var(--font-3xl);  /* 28px · 24px ≤959 */
+}
+
+h3 {
+  font-size: var(--font-2xl);  /* 24px · 22px ≤959 */
+}
+
+/* h4 to h6 hold their size at every width. The ≤959px ladder above them
+   ends at 22px, so stepping h4 would land it on h5, and stepping h5 would
+   land it on h6 — two levels collapsing into one style on every phone. */
+h4 {
+  font-size: var(--font-l);    /* 20px at every width */
+  line-height: var(--line-height-l);
+}
+
+/* h5 and h6 sit within body range, so weight carries the hierarchy and
+   the negative tracking that suits large sizes is released. */
+h5 {
+  font-size: var(--font-m);    /* 18px at every width */
+  font-weight: var(--font-weight-semi-bold);
+  line-height: var(--line-height-l);
+  letter-spacing: 0;
+}
+
+h6 {
+  font-size: var(--font-s);    /* 16px at every width */
+  font-weight: var(--font-weight-semi-bold);
+  line-height: var(--line-height-l);
+  letter-spacing: 0;
+}
+
+@media (max-width: 959px) {
+  h1 { font-size: var(--font-4xl); }
+  h2 { font-size: var(--font-2xl); }
+  h3 { font-size: var(--font-xl); }
+}
+
+/* -- Paragraphs -- */
+p {
+  margin-top: 0;
+  margin-bottom: var(--space-m);
+}
+
+/* -- Links -- */
+a {
+  color: var(--text-plain);
+  /* explicit length, not auto — the offset transition can't interpolate from auto */
+  text-underline-offset: 0.15em;
+  text-decoration: underline;
+  -webkit-text-decoration-color: var(--text-link);
+  text-decoration-color: var(--text-link);
+  text-decoration-thickness: 0.06em;
+  transition: color var(--duration-m) var(--ease-out),
+              text-decoration-color var(--duration-m) var(--ease-out),
+              text-underline-offset var(--duration-m) var(--ease-out);
+}
+
+a:not(.button):hover {
+  color: var(--text-link);
+  text-underline-offset: 0.25em;
+}
+
+/* The glyph warns that an underlined run of text leaves the site, so it belongs
+   to prose. Anything that sets `text-decoration: none` and carries its own icon
+   slot is not prose and is excluded — on an icon-only button, or on a dropdown
+   row that already leads with a share icon, the mark trails as a second,
+   unexplained glyph. */
+a[target="_blank"]:not(.button):not(.dropdown-item)::after {
+  content: "";
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  margin-left: 0.2em;
+  vertical-align: baseline;
+  background-color: currentColor;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 21V3H9V5H7C5.89543 5 5 5.89543 5 7V17C5 18.1046 5.89543 19 7 19H17C18.1046 19 19 18.1046 19 17V15H21V21H3ZM9.7 15.7L8.3 14.3L15.8929 6.70711C16.5229 6.07714 16.0767 5 15.1858 5H12V3H21V12H19V8.81421C19 7.92331 17.9229 7.47714 17.2929 8.10711L9.7 15.7Z' fill='black'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 21V3H9V5H7C5.89543 5 5 5.89543 5 7V17C5 18.1046 5.89543 19 7 19H17C18.1046 19 19 18.1046 19 17V15H21V21H3ZM9.7 15.7L8.3 14.3L15.8929 6.70711C16.5229 6.07714 16.0767 5 15.1858 5H12V3H21V12H19V8.81421C19 7.92331 17.9229 7.47714 17.2929 8.10711L9.7 15.7Z' fill='black'/%3E%3C/svg%3E");
+  mask-size: contain;
+  mask-repeat: no-repeat;
+}
+
+/* -- Lists -- */
+ul,
+ol {
+  margin-top: 0;
+  margin-bottom: var(--space-m);
+  padding-left: var(--space-2xl);
+}
+
+li {
+  margin-top: var(--space-s);
+  margin-bottom: 0;
+}
+
+li:first-child {
+  margin-top: 0;
+}
+
+/* Nested lists */
+ul ul,
+ul ol,
+ol ul,
+ol ol {
+  margin-top: var(--space-s);
+  margin-bottom: 0;
+}
+
+ol ol,
+ul ol {
+  list-style-type: lower-roman;
+}
+
+ul ul ol,
+ul ol ol,
+ol ul ol,
+ol ol ol {
+  list-style-type: lower-alpha;
+}
+
+/* GFM task lists (- [ ]) render a checkbox inside the list item. Drop the
+   disc bullet so the checkbox is the only marker, and pull the list flush
+   since there's no bullet to indent against. */
+li:has(> input[type="checkbox"]) {
+  list-style: none;
+}
+
+ul:has(> li > input[type="checkbox"]) {
+  padding-left: 0;
+}
+
+li > input[type="checkbox"] {
+  margin-right: var(--space-xs);
+}
+
+/* List items with paragraphs */
+li > p {
+  margin-top: var(--space-l);
+  margin-bottom: 0;
+}
+
+li > p:first-child {
+  margin-top: 0;
+}
+
+/* -- Blockquotes -- */
+blockquote {
+  position: relative;
+  margin: var(--space-xl) 0;
+  padding-left: var(--space-xl);
+  /* border-left: var(--border-m) solid var(--border-secondary); */
+  font-family: var(--font-secondary);
+  color: var(--text-primary);
+  font-size: calc(var(--body-size) + 0.5rem);
+  font-style: italic;
+  hanging-punctuation: first;
+  text-wrap: balance;
+}
+
+blockquote::before {
+  content: "\201C";          /* “ — left double quotation mark */
+  position: absolute;
+  left: var(--space-l);      /* line up with the text edge... */
+  top: 0;
+  transform: translateX(-100%);
+  font-size: 2em;            
+  line-height: 1;
+  font-family: var(--font-secondary);
+}
+
+blockquote p {
+  margin-top: 0;
+  margin-bottom: var(--space-m);
+}
+
+blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* -- Bold -- */
+b,
+strong {
+  font-weight: var(--font-weight-semi-bold);
+}
+
+/* -- Images -- */
+img {
+  border-style: none;
+  max-width: 100%;
+  box-sizing: content-box;
+}
+
+/* -- Definition lists -- */
+dl {
+  padding: 0;
+}
+
+dl dt {
+  padding: 0;
+  font-size: var(--font-s);
+  font-style: italic;
+  font-weight: var(--font-weight-semi-bold);
+}
+
+dl dd {
+  padding: 0 var(--space-l);
+}
+
+dd {
+  margin-left: 0;
+}
+
+/* -- Focus styles -- */
+/* `button` is included so .button and every bare button share one ring
+   instead of falling back to the browser default.
+
+   The widest ring in this section paints 4px outside the border box
+   (2px outline + 2px offset on zero-padding buttons). .dialog-body and
+   .drawer-body hold their full inset inside the scroll box, so no ring in
+   this section reaches their clipping edge. */
+a:focus,
+button:focus,
+[role=button]:focus,
+input[type=radio]:focus,
+input[type=checkbox]:focus {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
+  box-shadow: none;
+}
+
+a:focus:not(:focus-visible),
+button:focus:not(:focus-visible),
+[role=button]:focus:not(:focus-visible),
+input[type=radio]:focus:not(:focus-visible),
+input[type=checkbox]:focus:not(:focus-visible) {
+  outline: solid 1px transparent;
+}
+
+a:focus-visible,
+button:focus-visible,
+[role=button]:focus-visible,
+input[type=radio]:focus-visible,
+input[type=checkbox]:focus-visible,
+a.is-focus,
+button.is-focus,
+[role=button].is-focus,
+input[type=radio].is-focus,
+input[type=checkbox].is-focus {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
+  box-shadow: none;
+}
+
+/* The inset offset above assumes the control has padding to draw into.
+   Zero-padding buttons need the ring outside, or it strikes through the label. */
+.button[data-variant="text"]:focus-visible,
+.button[data-variant="text"].is-focus,
+.dialog-close:focus-visible,
+.toast-close:focus-visible,
+.footer-link:focus-visible {
+  outline-offset: var(--focus-offset);
+}
+
+/* A filled button surrounds the inset ring with its own fill, where the
+   page ink can vanish — --input-focus is --text-primary, the same value as
+   the primary fill. The text colour is the one value guaranteed to clear its
+   own fill, so the ring borrows it. Unfilled variants re-point
+   --button-text-color at --button-color, which sits on the page ground. */
+.button:focus,
+.button:focus-visible,
+.button.is-focus {
+  outline-color: var(--button-text-color);
+}
+
+/* A placeholder link reads as text. A .button keeps its own colours with
+   no href — a Download that waits for a file to be picked — or this rule,
+   at (0,1,1), would out-rank .button's (0,1,0) and paint the label in the
+   page's ink, on a fill of the same colour. */
+a:not([href], .button) {
+  color: inherit;
+  text-decoration: none;
+}
+
+
+
+
+
+/* ------ 11. CALLOUTS & ALERTS ------ */
+
+/* -- Base callout -- */
+/* No outer margin: whatever holds the callout spaces it, a block's gap or
+   the prose flow of a docs page (docs-site.css). A flex column does not
+   collapse margins, so a margin here added to every gap it sat in. */
+.callout {
+  padding: var(--space-l);
+  background-color: var(--background-faded);
+  border: var(--border-s) solid var(--border-faded);
+}
+
+.callout > *:first-child {
+  margin-top: 0;
+}
+
+.callout > *:last-child {
+  margin-bottom: 0;
+}
+
+/* -- Callout title -- */
+.callout-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-m);
+  line-height: var(--line-height-s);
+}
+
+/* -- Callout icon layout -- */
+.callout[data-icon] {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--space-m);
+}
+
+.callout[data-icon] > .svg-icn {
+  grid-column: 1;
+  grid-row: 1;
+  width: 1.25rem;
+  height: 1.25rem;
+  align-self: center;
+}
+
+.callout[data-icon] > :not(.svg-icn) {
+  grid-column: 2;
+}
+
+/* -- Callout description -- */
+.callout-description {
+  margin-top: var(--space-xs);
+  font-size: var(--font-s);
+}
+
+/* -- Callout actions --
+   The way forward under the description: one or two small buttons in a
+   row, wrapping. */
+.callout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-s);
+  margin-top: var(--space-s);
+}
+
+/* -- Callout type variants -- */
+.callout[data-type="info"] {
+  background-color: var(--status-info-bg);
+}
+
+.callout[data-type="info"] .callout-title,
+.callout[data-type="info"] > .svg-icn {
+  color: var(--status-info);
+}
+
+.callout[data-type="success"] {
+  background-color: var(--status-success-bg);
+}
+
+.callout[data-type="success"] .callout-title,
+.callout[data-type="success"] > .svg-icn {
+  color: var(--status-success);
+}
+
+.callout[data-type="warning"] {
+  background-color: var(--status-warning-bg);
+}
+
+.callout[data-type="warning"] .callout-title,
+.callout[data-type="warning"] > .svg-icn {
+  color: var(--status-warning);
+}
+
+.callout[data-type="danger"] {
+  background-color: var(--status-danger-bg);
+}
+
+.callout[data-type="danger"] .callout-title,
+.callout[data-type="danger"] > .svg-icn {
+  color: var(--status-danger);
+}
+
+/* ------ 12. FORM ELEMENTS ------ */
+
+/* -- Labels -- */
+label {
+  display: block;
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+/* Caption: a quieter label for a dense panel of controls, regular weight
+   in the primary ink. On a <label> or a <legend>, so a single field and a
+   group of options read the same; on a <p> only for a group that names
+   itself with aria-labelledby because its caption row carries a button (a
+   legend's text is the group's name, and the button's would join it). No
+   margin of its own: the group's gap spaces it (a .block.gap-s, or a bare
+   fieldset). */
+label[data-variant="caption"],
+legend[data-variant="caption"],
+p[data-variant="caption"] {
+  margin: 0;
+  padding: 0;
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-regular);
+  color: var(--text-primary);
+}
+
+/* -- Text inputs & textarea -- */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="url"],
+input[type="tel"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+textarea,
+select {
+  font-family: var(--font-primary);
+  font-size: var(--field-font);
+  line-height: var(--line-height-l);
+  color: var(--input-text);
+  background-color: var(--input-background);
+  border: var(--border-m) solid var(--input-border);
+  border-radius: var(--field-radius);
+  padding: var(--field-padding-y) var(--field-padding-x);
+  min-height: var(--field-height);
+  width: 100%;
+  display: block;
+  transition: border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+input[type="url"]:focus,
+input[type="tel"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="datetime-local"]:focus,
+input[type="month"]:focus,
+input[type="week"]:focus,
+textarea:focus,
+select:focus {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
+  box-shadow: none;
+}
+
+/* -- Input error state -- */
+input.is-error,
+textarea.is-error,
+select.is-error {
+  border-color: var(--status-danger);
+}
+
+input.is-error:focus,
+textarea.is-error:focus,
+select.is-error:focus {
+  outline-color: var(--status-danger);
+}
+
+/* -- Disabled inputs -- */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background-color: var(--input-disabled-bg);
+  color: var(--input-disabled-text);
+  cursor: not-allowed;
+}
+
+/* -- Read-only inputs --
+   A value the reader can select and copy but not type: a derived total, a
+   filename, a link. On the faded ground, so it does not ask to be typed
+   in; full-strength text, unlike disabled, because it is there to be read.
+   It stays in the tab order. A .field and a .number-input take it on the
+   box. Disabled wins over read-only when an input carries both. */
+input[readonly]:not(:disabled, [type="checkbox"], [type="radio"], [type="range"], [type="color"]) {
+  background-color: var(--background-faded);
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--input-placeholder);
+}
+
+/* -- Sizes -- */
+/* The same attribute on a bare control, on a .field, or on a .form-group,
+   re-pointing the field tokens. Small shares its height with the bar's
+   controls; large is a hero search or a one-field form. A bar sets its own
+   height and needs no attribute. On the group the tokens reach the label
+   too, which is what a side label's top padding needs to stay on the
+   control's first line. */
+input[data-size="small"],
+select[data-size="small"],
+.field[data-size="small"],
+.form-group[data-size="small"],
+fieldset[data-size="small"] {
+  --field-height: var(--field-height-s);
+  --field-font: var(--font-xs);
+  --field-padding-y: 0;
+  --field-padding-x: var(--space-m);
+}
+
+input[data-size="large"],
+select[data-size="large"],
+.field[data-size="large"],
+.form-group[data-size="large"],
+fieldset[data-size="large"] {
+  --field-height: var(--field-height-l);
+  --field-font: var(--font-m);
+  --field-padding-x: var(--space-xl);
+}
+
+/* -- Textarea -- */
+textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* -- Date & time inputs -- */
+/* The field takes the text-input box above; these rules reach the parts the
+   browser draws inside it. Chromium exposes the picker button as a
+   pseudo-element, so it gets the brand calendar (or clock) glyph as a mask
+   painted in the input's own colour. Firefox draws its icon with no hook to
+   restyle it, and desktop Safari draws none — both still follow the theme
+   through color-scheme on :root. */
+input[type="date"]::-webkit-datetime-edit,
+input[type="time"]::-webkit-datetime-edit,
+input[type="datetime-local"]::-webkit-datetime-edit,
+input[type="month"]::-webkit-datetime-edit,
+input[type="week"]::-webkit-datetime-edit {
+  padding: 0;
+}
+
+/* iOS Safari centres the value and collapses the box when it is empty. */
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value,
+input[type="month"]::-webkit-date-and-time-value,
+input[type="week"]::-webkit-date-and-time-value {
+  text-align: start;
+  min-height: 1lh;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="week"]::-webkit-calendar-picker-indicator {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  padding: 0;
+  background-image: none;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11.0184 14V12H13.0184V14H11.0184ZM7.01843 14V12H9.01843V14H7.01843ZM15.0184 14V12H17.0184V14H15.0184ZM11.0184 18V16H13.0184V18H11.0184ZM7.01843 18V16H9.01843V18H7.01843ZM15.0184 18V16H17.0184V18H15.0184ZM3.01843 22V4H5.01843C5.57072 4 6.01843 3.55228 6.01843 3V2H8.01843V3C8.01843 3.55228 8.46615 4 9.01843 4H15.0184C15.5707 4 16.0184 3.55228 16.0184 3V2H18.0184V3C18.0184 3.55228 18.4661 4 19.0184 4H21.0184V22H3.01843ZM5.01843 19C5.01843 19.5523 5.46615 20 6.01843 20H18.0184C18.5707 20 19.0184 19.5523 19.0184 19V11C19.0184 10.4477 18.5707 10 18.0184 10H6.01843C5.46615 10 5.01843 10.4477 5.01843 11V19ZM5.01843 7C5.01843 7.55228 5.46615 8 6.01843 8H18.0184C18.5707 8 19.0184 7.55228 19.0184 7C19.0184 6.44772 18.5707 6 18.0184 6H6.01843C5.46615 6 5.01843 6.44772 5.01843 7Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11.0184 14V12H13.0184V14H11.0184ZM7.01843 14V12H9.01843V14H7.01843ZM15.0184 14V12H17.0184V14H15.0184ZM11.0184 18V16H13.0184V18H11.0184ZM7.01843 18V16H9.01843V18H7.01843ZM15.0184 18V16H17.0184V18H15.0184ZM3.01843 22V4H5.01843C5.57072 4 6.01843 3.55228 6.01843 3V2H8.01843V3C8.01843 3.55228 8.46615 4 9.01843 4H15.0184C15.5707 4 16.0184 3.55228 16.0184 3V2H18.0184V3C18.0184 3.55228 18.4661 4 19.0184 4H21.0184V22H3.01843ZM5.01843 19C5.01843 19.5523 5.46615 20 6.01843 20H18.0184C18.5707 20 19.0184 19.5523 19.0184 19V11C19.0184 10.4477 18.5707 10 18.0184 10H6.01843C5.46615 10 5.01843 10.4477 5.01843 11V19ZM5.01843 7C5.01843 7.55228 5.46615 8 6.01843 8H18.0184C18.5707 8 19.0184 7.55228 19.0184 7C19.0184 6.44772 18.5707 6 18.0184 6H6.01843C5.46615 6 5.01843 6.44772 5.01843 7Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  cursor: pointer;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15.3 16.7L16.7 15.3L13 11.6V7H11V12.4L15.3 16.7ZM12 22C10.6167 22 9.31667 21.7375 8.1 21.2125C6.88333 20.6875 5.825 19.975 4.925 19.075C4.025 18.175 3.3125 17.1167 2.7875 15.9C2.2625 14.6833 2 13.3833 2 12C2 10.6167 2.2625 9.31667 2.7875 8.1C3.3125 6.88333 4.025 5.825 4.925 4.925C5.825 4.025 6.88333 3.3125 8.1 2.7875C9.31667 2.2625 10.6167 2 12 2C13.3833 2 14.6833 2.2625 15.9 2.7875C17.1167 3.3125 18.175 4.025 19.075 4.925C19.975 5.825 20.6875 6.88333 21.2125 8.1C21.7375 9.31667 22 10.6167 22 12C22 13.3833 21.7375 14.6833 21.2125 15.9C20.6875 17.1167 19.975 18.175 19.075 19.075C18.175 19.975 17.1167 20.6875 15.9 21.2125C14.6833 21.7375 13.3833 22 12 22ZM12 20C14.2167 20 16.1042 19.2208 17.6625 17.6625C19.2208 16.1042 20 14.2167 20 12C20 9.78333 19.2208 7.89583 17.6625 6.3375C16.1042 4.77917 14.2167 4 12 4C9.78333 4 7.89583 4.77917 6.3375 6.3375C4.77917 7.89583 4 9.78333 4 12C4 14.2167 4.77917 16.1042 6.3375 17.6625C7.89583 19.2208 9.78333 20 12 20Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15.3 16.7L16.7 15.3L13 11.6V7H11V12.4L15.3 16.7ZM12 22C10.6167 22 9.31667 21.7375 8.1 21.2125C6.88333 20.6875 5.825 19.975 4.925 19.075C4.025 18.175 3.3125 17.1167 2.7875 15.9C2.2625 14.6833 2 13.3833 2 12C2 10.6167 2.2625 9.31667 2.7875 8.1C3.3125 6.88333 4.025 5.825 4.925 4.925C5.825 4.025 6.88333 3.3125 8.1 2.7875C9.31667 2.2625 10.6167 2 12 2C13.3833 2 14.6833 2.2625 15.9 2.7875C17.1167 3.3125 18.175 4.025 19.075 4.925C19.975 5.825 20.6875 6.88333 21.2125 8.1C21.7375 9.31667 22 10.6167 22 12C22 13.3833 21.7375 14.6833 21.2125 15.9C20.6875 17.1167 19.975 18.175 19.075 19.075C18.175 19.975 17.1167 20.6875 15.9 21.2125C14.6833 21.7375 13.3833 22 12 22ZM12 20C14.2167 20 16.1042 19.2208 17.6625 17.6625C19.2208 16.1042 20 14.2167 20 12C20 9.78333 19.2208 7.89583 17.6625 6.3375C16.1042 4.77917 14.2167 4 12 4C9.78333 4 7.89583 4.77917 6.3375 6.3375C4.77917 7.89583 4 9.78333 4 12C4 14.2167 4.77917 16.1042 6.3375 17.6625C7.89583 19.2208 9.78333 20 12 20Z'/%3E%3C/svg%3E");
+}
+
+input:disabled::-webkit-calendar-picker-indicator {
+  cursor: not-allowed;
+}
+
+/* -- Colour input -- */
+input[type="color"] {
+  appearance: none;
+  -webkit-appearance: none;
+  border: var(--border-m) solid var(--input-border);
+  background-color: var(--input-background);
+  padding: 0;
+  width: auto;
+  aspect-ratio: 1 / 1;
+  align-self: stretch;
+  cursor: pointer;
+  transition: border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: none;
+}
+
+input[type="color"]::-moz-color-swatch {
+  border: none;
+}
+
+input[type="color"]:focus {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
+  box-shadow: none;
+}
+
+/* The disabled background cannot show through the swatch, so dim it */
+input[type="color"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* -- Select -- */
+select {
+  appearance: none;
+  background-image: var(--select-caret);
+  background-repeat: no-repeat;
+  background-position: right var(--space-m) center;
+  padding-right: var(--space-2xl);
+  cursor: pointer;
+}
+
+/* A list box (multiple, or a size) is not a dropdown: no caret, and the
+   inset it reserved for one goes back to the options. */
+select[multiple],
+select[size]:not([size="1"]) {
+  background-image: none;
+  padding-right: var(--space-m);
+  cursor: default;
+}
+
+/* -- Disabled states -- */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background-color: var(--input-disabled-bg);
+  color: var(--input-disabled-text);
+  cursor: not-allowed;
+  border: none;
+}
+
+/* -- Fieldset & legend -- */
+fieldset {
+  border: var(--border-s) solid var(--border-secondary);
+  padding: var(--space-l);
+  margin: 0 0 var(--space-l) 0;
+}
+
+/* Bare: a fieldset that draws nothing, for naming a group of radios,
+   chips or switches with a native legend instead of role="group" and
+   aria-labelledby. A column at the --space-s step. A rendered legend is
+   not a flex item, so the gap never reaches it: its own margin spaces it
+   from the first control. */
+fieldset[data-variant="bare"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+fieldset[data-variant="bare"] > legend {
+  margin-bottom: var(--space-s);
+  padding: 0;
+}
+
+legend {
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-semi-bold);
+  padding: 0 var(--space-s);
+  color: var(--text-primary);
+}
+
+/* -- Checkbox & radio -- */
+input[type="checkbox"],
+input[type="radio"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--check-size);
+  height: var(--check-size);
+  margin: 0;
+  cursor: pointer;
+  background-color: var(--checkbox-background);
+  border: var(--border-s) solid var(--checkbox-border);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
+  flex-shrink: 0;
+  position: relative;
+}
+
+input[type="radio"] {
+  border-radius: 50%;
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--checkbox-selected);
+  border-color: var(--checkbox-selected);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
+  background-size: var(--check-mark-size) var(--check-mark-size);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+input[type="radio"]:checked {
+  background-color: var(--checkbox-selected);
+  border-color: var(--checkbox-selected);
+}
+
+input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  inset: var(--radio-dot-inset);
+  border-radius: 50%;
+  background-color: var(--checkbox-checkmark);
+}
+
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
+  box-shadow: none;
+}
+
+input[type="checkbox"]:disabled,
+input[type="radio"]:disabled {
+  background-color: var(--input-disabled-bg);
+  border-color: var(--input-disabled-bg);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+input[type="checkbox"]:disabled:checked {
+  background-color: var(--input-disabled-text);
+  border-color: var(--input-disabled-text);
+}
+
+input[type="radio"]:disabled:checked {
+  background-color: var(--input-disabled-text);
+  border-color: var(--input-disabled-text);
+}
+
+/* Dark mode checkmark */
+[data-theme="dark"] input[type="checkbox"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) input[type="checkbox"]:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
+  }
+}
+
+/* -- Inline label + checkbox/radio pattern -- */
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: var(--check-gap);
+}
+
+/* A flex item, so the label is a block box: min-height holds it at the 24px
+   target even when a small box and small text leave the row shorter, and
+   align-content centres the line inside it. The for= label takes the click,
+   which is what keeps a 16px box usable. */
+.form-check label {
+  display: inline;
+  min-height: var(--space-xl);
+  align-content: center;
+  margin-bottom: 0;
+  font-size: var(--check-label-font);
+  font-weight: var(--font-weight-regular);
+  cursor: pointer;
+}
+
+/* A disabled control's label fades with it, so a locked row reads as locked
+   before the pointer finds out. :has rather than +, so it holds whichever
+   side of the input the label sits. */
+.form-check:has(> input:disabled) label,
+.form-toggle:has(> input:disabled) label {
+  color: var(--text-faded);
+  cursor: not-allowed;
+}
+
+/* -- Toggle / switch -- */
+.form-toggle {
+  --toggle-transition-duration: var(--duration-xs);
+
+  display: flex;
+  align-items: center;
+  gap: var(--check-gap);
+}
+
+/* Same target floor as .form-check label */
+.form-toggle label {
+  display: inline;
+  min-height: var(--space-xl);
+  align-content: center;
+  margin-bottom: 0;
+  font-size: var(--check-label-font);
+  font-weight: var(--font-weight-regular);
+  cursor: pointer;
+  order: -1;
+  white-space: nowrap;
+}
+
+.form-toggle.is-label-right label {
+  order: 1;
+}
+
+/* -- Small: checkbox, radio and toggle together --
+   On the control, its row, a .form-group or a fieldset; one attribute on a
+   filter panel's fieldset shrinks every check inside it, and the field rule
+   above shrinks its text controls. Only tokens move, so the toggle knob's
+   travel follows from its calc with no second rule. The 16px box and track
+   sit under the 24px target floor and meet it by spacing: each label holds
+   its row at 24px (see .form-check label). */
+input[type="checkbox"][data-size="small"],
+input[type="radio"][data-size="small"],
+.form-check[data-size="small"],
+.form-toggle[data-size="small"],
+.form-group[data-size="small"],
+fieldset[data-size="small"],
+/* A row takes the size from its own input too, so the label and gap follow
+   a box sized on the input alone. Forgiving :is(), so a browser without
+   :has() drops this one selector rather than the whole rule. */
+:is(.form-check, .form-toggle):is(:has(> input[data-size="small"])) {
+  --check-size: var(--space-l);
+  --check-mark-size: 11px;
+  --radio-dot-inset: 3px;
+  --check-gap: var(--space-xs);
+  --check-label-font: var(--font-xs);
+  --toggle-width: 28px;
+  --toggle-height: var(--space-l);
+  --toggle-knob-size: 10px;
+}
+
+.form-toggle input[type="checkbox"] {
+  width: var(--toggle-width);
+  height: var(--toggle-height);
+  background-color: var(--black-alpha-3);
+  border: var(--border-s) solid var(--border-faded);
+  border-radius: var(--radius-full);
+  position: relative;
+  transition: background-color var(--toggle-transition-duration) ease;
+}
+
+.form-toggle input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: var(--toggle-knob-offset);
+  transform: translateY(-50%);
+  width: var(--toggle-knob-size);
+  height: var(--toggle-knob-size);
+  border-radius: 50%;
+  background-color: var(--neutral-500);
+  transition:
+    transform var(--toggle-transition-duration) ease,
+    background-color var(--toggle-transition-duration) ease;
+}
+
+.form-toggle input[type="checkbox"]:checked {
+  background-color: var(--text-accent);
+  background-image: none;
+}
+
+.form-toggle input[type="checkbox"]:checked::after {
+  transform: translateY(-50%) translateX(calc(var(--toggle-width) - var(--toggle-knob-size) - var(--toggle-knob-offset) * 2 - var(--border-s) * 2));
+  background-color: var(--off-white);
+}
+
+.form-toggle input[type="checkbox"]:focus-visible,
+.form-toggle input[type="checkbox"].is-focus {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.form-toggle input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* -- Mono toggle --
+   data-variant="mono": two colours and no accent, for tool panels whose
+   preview carries the brand colour — a blue track beside the artwork reads as
+   part of it. Off is a paper track with an ink border and knob; on swaps
+   them. Colour comes from --toggle-mono-ink and --toggle-mono-paper only; the
+   theme overrides further down skip this variant, since the tokens flip
+   themselves. The track is --toggle-mono-extra-width longer than a plain
+   one, and the knob's travel is recomputed from that width. Its border is
+   heavier too, so the knob offset is derived here rather than read from the
+   root token: (height − knob) / 2 − border keeps the knob equidistant from
+   every edge at any size. */
+.form-toggle[data-variant="mono"] input[type="checkbox"] {
+  --toggle-mono-track-width: calc(var(--toggle-width) + var(--toggle-mono-extra-width));
+  --toggle-mono-border-width: var(--border-m);
+  --toggle-knob-offset: calc((var(--toggle-height) - var(--toggle-knob-size)) / 2 - var(--toggle-mono-border-width));
+
+  width: var(--toggle-mono-track-width);
+  border-width: var(--toggle-mono-border-width);
+  background-color: var(--toggle-mono-paper);
+  border-color: var(--toggle-mono-ink);
+  color: var(--toggle-mono-ink);
+}
+
+.form-toggle[data-variant="mono"] input[type="checkbox"]::after {
+  background-color: var(--toggle-mono-ink);
+}
+
+/* Matches the system-dark checkmark rule's specificity and comes after it,
+   so the checkmark image is cleared in every theme. */
+.form-toggle[data-variant="mono"] input[type="checkbox"]:checked {
+  background-color: var(--toggle-mono-ink);
+  background-image: none;
+  color: var(--toggle-mono-paper);
+}
+
+.form-toggle[data-variant="mono"] input[type="checkbox"]:checked::after {
+  transform: translateY(-50%) translateX(calc(var(--toggle-mono-track-width) - var(--toggle-knob-size) - var(--toggle-knob-offset) * 2 - var(--toggle-mono-border-width) * 2));
+  background-color: var(--toggle-mono-paper);
+}
+
+/* The state word sits in the space the knob leaves free. The empty alt text
+   keeps it out of the accessibility tree — the <label> names the switch and
+   role="switch" already announces on/off; a browser without the alt syntax
+   drops that declaration and keeps the first, which the label still
+   outranks. Its size follows the track height (10px at 24px), so it scales
+   with any re-point of --toggle-height. */
+.form-toggle[data-variant="mono"] input[type="checkbox"]::before {
+  content: "Off";
+  content: "Off" / "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--toggle-knob-offset) + var(--toggle-knob-size));
+  right: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-primary); /* a checkbox keeps the UA control font */
+  font-size: calc(var(--toggle-height) / 2.4);
+  font-weight: var(--font-weight-semi-bold);
+  line-height: 1;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.form-toggle[data-variant="mono"] input[type="checkbox"]:checked::before {
+  content: "On";
+  content: "On" / "";
+  left: 0;
+  /* Optical nudge: centred in its slot, the shorter word reads as hugging
+     the track's end, so its slot runs 3px under the knob's edge. */
+  right: calc(var(--toggle-knob-offset) + var(--toggle-knob-size) - 3px);
+}
+
+/* A small track leaves no legible room for the word; the knob position
+   carries the state on its own, as it does on every other toggle. With no
+   word the extra length has no job, so a small mono track is plain width. */
+.form-toggle[data-variant="mono"][data-size="small"] input[type="checkbox"],
+.form-toggle[data-variant="mono"] input[type="checkbox"][data-size="small"],
+:is(.form-group, fieldset)[data-size="small"] .form-toggle[data-variant="mono"] input[type="checkbox"] {
+  --toggle-mono-extra-width: 0px;
+}
+
+.form-toggle[data-variant="mono"][data-size="small"] input[type="checkbox"]::before,
+.form-toggle[data-variant="mono"] input[type="checkbox"][data-size="small"]::before,
+:is(.form-group, fieldset)[data-size="small"] .form-toggle[data-variant="mono"] input[type="checkbox"]::before {
+  content: none;
+}
+
+
+/* -- Forced colours --
+   The track and the knob are background colours, which the mode flattens to
+   Canvas, and the mono word is gone at the small size and under compact
+   density, so nothing carried the state. The system pair paints it: a
+   CanvasText knob on a Canvas track, and a HighlightText knob on a Highlight
+   track when checked, with forced-color-adjust: none on the parts that
+   paint, the answer the segmented control gives its selected segment. The
+   mono variant's own selectors are repeated so its colours yield too. */
+@media (forced-colors: active) {
+  .form-toggle input[type="checkbox"],
+  .form-toggle[data-variant="mono"] input[type="checkbox"] {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+  }
+
+  .form-toggle input[type="checkbox"]::after,
+  .form-toggle[data-variant="mono"] input[type="checkbox"]::after {
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
+
+  .form-toggle input[type="checkbox"]:checked,
+  .form-toggle[data-variant="mono"] input[type="checkbox"]:checked {
+    background-color: Highlight;
+    border-color: Highlight;
+  }
+
+  .form-toggle input[type="checkbox"]:checked::after,
+  .form-toggle[data-variant="mono"] input[type="checkbox"]:checked::after {
+    background-color: HighlightText;
+  }
+}
+
+
+/* -- Reduced motion -- */
+/* Re-points the token rather than disabling the transition, matching .dialog,
+   .drawer and .book-cover. The knob still moves to its new position — it just
+   arrives immediately, so the checked state stays legible as a change. */
+@media (prefers-reduced-motion: reduce) {
+  .form-toggle {
+    --toggle-transition-duration: var(--duration-2xs);
+  }
+}
+
+/* -- Toggle dark mode -- */
+/* The mono variant is excluded: its two tokens flip with the theme. */
+[data-theme="dark"] .form-toggle:not([data-variant="mono"]) input[type="checkbox"] {
+  background-color: #444;
+}
+
+[data-theme="dark"] .form-toggle:not([data-variant="mono"]) input[type="checkbox"]::after {
+  background-color: #888;
+}
+
+[data-theme="dark"] .form-toggle:not([data-variant="mono"]) input[type="checkbox"]:checked {
+  background-color: #e8e6e3;
+}
+
+[data-theme="dark"] .form-toggle:not([data-variant="mono"]) input[type="checkbox"]:checked::after {
+  background-color: #1a1a1a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .form-toggle:not([data-variant="mono"]) input[type="checkbox"] {
+    background-color: #444;
+  }
+
+  :root:not([data-theme]) .form-toggle:not([data-variant="mono"]) input[type="checkbox"]::after {
+    background-color: #888;
+  }
+
+  /* background-image: the system-dark checkbox checkmark outranks the base
+     toggle's `none`, so it has to be cleared again at this specificity. */
+  :root:not([data-theme]) .form-toggle:not([data-variant="mono"]) input[type="checkbox"]:checked {
+    background-color: #e8e6e3;
+    background-image: none;
+  }
+
+  :root:not([data-theme]) .form-toggle:not([data-variant="mono"]) input[type="checkbox"]:checked::after {
+    background-color: #1a1a1a;
+  }
+}
+
+/* -- Form group (label + input pair) -- */
+.form-group {
+  margin-bottom: var(--space-l);
+}
+
+/* -- Required and optional markers -- */
+/* Real text in a span, not generated content: it survives a copy and a
+   screen reader reads it the same way everywhere. The asterisk is
+   aria-hidden in the markup — `required` on the input already says it. */
+.form-required {
+  color: var(--status-danger);
+}
+
+.form-optional {
+  font-weight: var(--font-weight-regular);
+  color: var(--text-secondary);
+}
+
+/* -- Side label -- */
+/* A fixed, right-aligned label column beside the control; hint and error
+   stay in the control's column. The label's top padding matches the input's,
+   so its line sits on the input's first line. Below 768px it stacks like a
+   plain group, the same line the layout grid releases on. */
+.form-group[data-layout="side"] {
+  display: grid;
+  grid-template-columns: var(--form-label-width) minmax(0, 1fr);
+  column-gap: var(--space-l);
+}
+
+.form-group[data-layout="side"] > label {
+  grid-column: 1;
+  margin-bottom: 0;
+  padding-block-start: var(--field-padding-y);
+  text-align: end;
+}
+
+.form-group[data-layout="side"] > :not(label) {
+  grid-column: 2;
+}
+
+@media (max-width: 767px) {
+  .form-group[data-layout="side"] {
+    display: block;
+  }
+
+  .form-group[data-layout="side"] > label {
+    margin-bottom: var(--space-xs);
+    padding-block-start: 0;
+    text-align: start;
+  }
+}
+
+/* -- Form hint text -- */
+.form-hint {
+  font-size: var(--font-s);
+  color: var(--text-secondary);
+  margin-top: var(--space-xs);
+}
+
+/* -- Form error message -- */
+/* A row, so a leading .svg-icn sits beside the words rather than above them.
+   Text-only usage is unchanged: a lone text run is one flex item. The icon
+   is a <span class="svg-icn">, not the usual <div> — a <p> cannot contain a
+   <div>, the parser closes it. */
+.form-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-s);
+  color: var(--status-danger);
+  margin-top: var(--space-xs);
+  --icon-size: 1.25em;
+}
+
+/* display: flex above is an author rule and beats the UA's [hidden], so a
+   message toggled with the attribute — the tools' pattern — still rendered
+   an empty box and its margin under every field. Same restatement as
+   .bar-overflow[hidden]. */
+.form-error[hidden] {
+  display: none;
+}
+
+/* A button toggled with the hidden attribute from script (the People
+   page's Resend, Remove and Delete group) - .button's display: inline-flex
+   is an author rule and would otherwise beat the UA's [hidden]. */
+.button[hidden] {
+  display: none;
+}
+
+/* ------ 13. DISCLOSURE (details / summary) ------ */
+
+/* -- Base disclosure -- */
+
+
+summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-m);
+  font-family: var(--font-primary);
+  font-size: var(--body-size);
+  color: var(--text-primary);
+  padding: var(--space-s) var(--space-m);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+summary::before {
+  content: "";
+  width: 0.5em;
+  height: 0.5em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
+  flex-shrink: 0;
+}
+
+details[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+summary:hover {
+  color: var(--text-secondary);
+}
+
+summary:focus-visible {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
+}
+
+/* -- Disclosure content -- */
+details .disclosure-content {
+  padding: var(--space-s) var(--space-m) var(--space-m) calc(0.5em + var(--space-s) + var(--space-m));
+  font-family: var(--font-primary);
+  font-size: var(--body-size);
+  line-height: var(--line-height-xl);
+  color: var(--text-secondary);
+}
+
+/* -- Disclosure table (key-value pairs) -- */
+.disclosure-table {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2xs) var(--space-l);
+  align-items: baseline;
+  margin: 0;
+}
+
+.disclosure-table dt {
+  color: var(--text-faded);
+  white-space: nowrap;
+}
+
+.disclosure-table dd {
+  color: var(--text-primary);
+  margin: 0;
+}
+
+
+/* ------ 16. BADGE ------ */
+
+.badge {
+  --badge-font: var(--font-primary);
+  --badge-case: uppercase;
+  --badge-tracking: var(--letter-spacing-l);
+  --badge-radius: var(--radius-detail);
+  /* Ground and ink: data-color re-points these. A surface that sets a
+     badge on its own ground re-points them on the badge (.surface .badge),
+     since the badge declares them itself. */
+  --badge-bg: var(--background-darker);
+  --badge-color: var(--text-primary);
+
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--badge-font);
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-bold);
+  text-transform: var(--badge-case);
+  letter-spacing: var(--badge-tracking);
+  padding: var(--space-2xs) var(--space-s);
+  border-radius: var(--badge-radius);
+  background-color: var(--badge-bg);
+  color: var(--badge-color);
+  white-space: nowrap;
+  line-height: var(--line-height-m);
+}
+
+/* Sentence-case variant — customize case via the tokens above or this
+   attribute, never by overriding the class (Layer Rule 3) */
+.badge[data-case="none"] {
+  --badge-case: none;
+  --badge-tracking: normal;
+}
+
+.badge[data-color="success"],
+.badge[data-color="green"] {
+  --badge-bg: var(--status-success-bg);
+  --badge-color: var(--status-success);
+}
+
+.badge[data-color="warning"],
+.badge[data-color="yellow"] {
+  --badge-bg: var(--status-warning-bg);
+  --badge-color: var(--status-warning);
+}
+
+.badge[data-color="danger"],
+.badge[data-color="red"] {
+  --badge-bg: var(--status-danger-bg);
+  --badge-color: var(--status-danger);
+}
+
+.badge[data-color="info"],
+.badge[data-color="blue"] {
+  --badge-bg: var(--status-info-bg);
+  --badge-color: var(--status-info);
+}
+
+
+/* ------ 17. CARD ------ */
+
+.card {
+  border-radius: var(--card-radius);
+  background-color: var(--background-primary);
+  border: var(--border-s) solid var(--border-faded);
+  padding: var(--space-xl);
+  transition: border var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), box-shadow var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
+}
+
+.card--flush {
+  padding: 0;
+}
+
+.card--interactive {
+  display: block;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: border var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), box-shadow var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
+}
+
+.card--interactive:hover {
+  background-color: var(--background-faded);
+  box-shadow: 0 4px 12px var(--black-alpha-10);
+  /* border-color: var(--border-primary); */
+}
+
+.card--interactive:focus-visible {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
+}
+/* -- Card inner elements -- */
+/* One rung below h3: a card grid usually sits under an h2 or h3, and its
+   titles must never outrank the heading that introduces them. */
+.card-title {
+  margin-top: 0;
+  margin-bottom: var(--space-s);
+  font-size: var(--font-xl);
+  line-height: var(--line-height-m);
+}
+
+.card-description {
+  color: var(--text-secondary);
+  font-size: var(--body-size);
+  margin-bottom: 0;
+
+}
+
+.card-image {
+  border-radius: var(--card-radius) var(--card-radius) 0 0;
+}
+
+/* -- Card dark mode -- */
+[data-theme="dark"] .card {
+  background-color: var(--background-secondary);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .card {
+    background-color: var(--background-secondary);
+  }
+}
+
+
+
+/* ------ 23. CODE ------ */
+
+/* -- Inline code -- */
+code {
+  font-family: var(--font-quaternary);
+  font-size: calc(var(--body-size) - .2em);
+  background-color: color-mix(in srgb, var(--text-primary), var(--alpha-5));
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--code-radius);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* -- Code block -- */
+pre {
+  background-color: var(--background-secondary);
+  border: var(--border-s) solid var(--border-faded);
+  padding: var(--space-l);
+  overflow-x: auto;
+  font-family: var(--font-quaternary);
+  font-size: calc(var(--body-size) - 2px);
+  line-height: var(--line-height-xl);
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  word-break: normal;
+}
+
+/* -- Keyboard shortcut -- */
+kbd {
+  display: inline-block;
+  padding: var(--space-xs) var(--space-s);
+  font-family: var(--font-quaternary);
+  font-size: var(--font-2xs);
+  line-height: var(--line-height-m);
+  color: var(--text-secondary);
+  vertical-align: middle;
+  background-color: var(--background-faded);
+  border: var(--border-s) solid var(--border-secondary);
+  border-radius: var(--kbd-radius);
+  box-shadow: 0 1px 0 var(--border-secondary);
+  white-space: nowrap;
+}
+
+/* -- Highlighted text -- */
+/* Both modes come from --mark-background / --mark-color, so a brand moves every
+   highlight from the token block and this rule never needs a theme selector. */
+mark {
+  background-color: var(--mark-background);
+  color: var(--mark-color);
+  padding: 0 var(--space-2xs);
+}
+
+/* -- Figure / Figcaption -- */
+figure {
+  margin: var(--space-xl) 0;
+  padding: 0;
+}
+
+figcaption {
+  font-size: var(--font-xs);
+  color: var(--text-faded);
+  margin-top: var(--space-s);
+  line-height: var(--line-height-xl);
+  font-style: italic;
+}
+
+/* -- Abbreviation -- */
+abbr[title] {
+  text-decoration: underline dotted var(--text-faded);
+  text-underline-offset: 2px;
+  cursor: help;
+}
+
+
+
+
+/* ------ 24. IMAGE ------ */
+
+/* Three axes: how wide the image may grow, what proportions it holds, and
+   whether prose wraps around it. All data attributes, matching button, gallery
+   and page-header.
+
+   Two of the three describe the box rather than the picture, so width, float
+   and align also apply to a <figure>. A captioned image is one box — the
+   caption wraps, floats and is measured with the picture or it is describing
+   something else — while the ratio crops the picture alone and stays on the
+   <img> inside. Authors do not hold that split themselves: the {{image: …}}
+   shortcode in the docs generator puts each attribute on the right element.
+
+   Where the image sits once it is narrower than its column is deliberately
+   NOT here. [data-align] in section 6 already means "place this box in its
+   parent" — the same axis, so it needs no image-specific rule and carries
+   justify-self with it. Section 40 records what overloading that attribute
+   for a different axis cost the last time.
+
+   Widths step with --img-width-*, which is the image's own scale and not the
+   page-shell scale — see the tokens. Three steps and no attribute for full
+   width, which is four sizes; the shells offer five, and the top two of those
+   were unreachable from inside a reading column. --img-width and
+   --img-ratio are read with a fallback and declared nowhere, so an ancestor
+   can re-point either for a one-off without authoring an attribute this
+   component does not define. */
+
+/* -- Base image -- */
+.img {
+  display: block;
+  width: 100%;
+  max-width: var(--img-width, var(--img-width-default, 100%));
+  height: auto;
+  aspect-ratio: var(--img-ratio, auto);
+  object-fit: cover;
+}
+
+/* -- Width. Matches a figure as well, because a captioned image is one box:
+      the caption has to be measured and placed with the picture, not with the
+      column. Scoped to the two rather than a bare [data-width] — the docs
+      shell already carries that attribute on .docs-content-grid. -- */
+:is(.img, figure)[data-width="s"] { --img-width: var(--img-width-s); }
+:is(.img, figure)[data-width="m"] { --img-width: var(--img-width-m); }
+:is(.img, figure)[data-width="l"] { --img-width: var(--img-width-l); }
+
+/* The image reads --img-width through the max-width on .img above. A figure
+   has no such declaration of its own, so it needs this one. The property
+   inherits to the image inside, which costs nothing — that image is already
+   width: 100% of a box this has just capped. */
+figure[data-width] {
+  max-width: var(--img-width, var(--img-width-default, 100%));
+}
+
+/* -- Ratio. object-fit: cover on the base is what crops rather than stretches
+      once a ratio is forced; with no ratio it is inert. -- */
+.img[data-ratio="1x1"]  { --img-ratio: 1 / 1; }
+.img[data-ratio="3x2"]  { --img-ratio: 3 / 2; }
+.img[data-ratio="4x3"]  { --img-ratio: 4 / 3; }
+.img[data-ratio="16x9"] { --img-ratio: 16 / 9; }
+.img[data-ratio="21x9"] { --img-ratio: 21 / 9; }
+
+/* -- Float. Prose wraps around the image, the aligned-image pattern every
+      prose CMS converges on. The image stays in the flow of the text, so the
+      paragraphs after it stay markdown — the alternative, a two-column media
+      block, has to hold the text inside its own markup, and the markdown
+      pipeline does not parse inside raw HTML.
+
+      Three things a float needs that a plain image does not:
+
+      It is clamped to half the column. A float's margin sits outside its
+      width, so width: 100% plus a margin overflows the column and leaves the
+      text nothing — every paragraph silently drops below, which is the one
+      failure this axis exists to prevent. Half is the widest a picture can be
+      and still be beside text rather than above it.
+
+      It gets a width when given none, the smallest step, through a second
+      fallback slot rather than a declaration on the element, so an ancestor
+      re-pointing --img-width still reaches a float the way it reaches any
+      other .img.
+
+      Its sides are logical — inline-start/end for the float, margin-inline
+      for the gap — so under dir="rtl" the gap stays on the text-facing side.
+      The value names stay left/right to match [data-align].
+
+      Containment is the containing layout's job, as it is on every site. A
+      flex item cannot float, so a float inside a .block needs its own plain
+      wrapper — and that wrapper, being a flex item, then contains the float
+      itself. In markdown prose there is no wrapper, so the docs article is
+      flow-root and its headings clear (docs-site .docs-main). -- */
+:is(.img, figure)[data-float="left"],
+:is(.img, figure)[data-float="right"] {
+  max-width: min(var(--img-width, var(--img-width-default, 100%)), 50%);
+}
+
+/* margin-block is declared per element rather than across both, so that each
+   release below can restore that element's own resting value at matching
+   specificity and let source order settle it. The two resting values differ:
+   an .img has none, a figure carries --space-xl. Both need zero at the top
+   while floating, or the picture starts below the first line of the text it
+   is meant to sit beside. */
+.img[data-float="left"],
+.img[data-float="right"] { margin-block: 0 var(--space-s); }
+
+figure[data-float="left"],
+figure[data-float="right"] { margin-block: 0 var(--space-s); }
+
+/* float: left first as a fallback. inline-start is the newest thing in this
+   file — Safari only took it in 17.4, later than :has() and @container, both
+   of which this section already leans on — and an unsupported value drops the
+   whole declaration, which would leave the image in flow at half width with a
+   stray margin. The physical value is right in LTR and wrong only in RTL on a
+   browser too old for the logical one. */
+:is(.img, figure)[data-float="left"]  { float: left;  float: inline-start; margin-inline: 0 var(--space-xl); }
+:is(.img, figure)[data-float="right"] { float: right; float: inline-end;   margin-inline: var(--space-xl) 0; }
+
+:is(.img, figure)[data-float]:not([data-width]) { --img-width-default: var(--img-width-s); }
+
+/* Released on a narrow viewport: a float beside a column of a few hundred
+   pixels leaves nothing to wrap, so the image drops back into flow and the
+   text follows underneath. The half-column clamp goes with it, and a float
+   that was given no width returns to full width — it only ever had a width
+   for the sake of the text beside it. One that was given a width keeps it.
+   The docs shell adds the same release on its content-container width in
+   docs-site.css, where that container exists. */
+@media (max-width: 768px) {
+  :is(.img, figure)[data-float="left"],
+  :is(.img, figure)[data-float="right"] {
+    float: none;
+    margin-inline: 0;
+    max-width: var(--img-width, var(--img-width-default, 100%));
+  }
+
+  /* Back to each element's resting value — see the per-element declarations
+     above. Without this a released figure keeps margin-block: 0 and butts
+     into the paragraph above it. */
+  .img[data-float="left"],
+  .img[data-float="right"] { margin-block: 0; }
+
+  figure[data-float="left"],
+  figure[data-float="right"] { margin-block: var(--space-xl); }
+
+  :is(.img, figure)[data-float]:not([data-width]) { --img-width-default: 100%; }
+}
+
+/* The .img-16x9 family of combo classes was deleted on 2026-09-23 and every
+   usage migrated to data-ratio. They had briefly coexisted, both setting
+   --img-ratio so the attribute would win; two spellings for one axis is the
+   thing this section exists to stop. */
+
+/* NOTE: .bar is section 41, near the end of this file. It sits beside
+   Site Header (section 40) because the two are the same bar shape and were
+   drifting apart while they lived in different files. */
+
+
+/* ------ 25. TABLE ------ */
+
+/* -- Table scroll wrapper -- */
+.table-scroll {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* overflow-x makes this a clip box on both axes, so a copy button in the
+     last row lost the bottom of its focus ring. Room for the ring at the top
+     and bottom, given back by the margin so the table does not move. */
+  padding-block: var(--focus-reach);
+  margin-block: calc(var(--focus-reach) * -1);
+}
+
+/* -- Scroll hint: fade on right edge when overflowing -- */
+.table-scroll.is-overflowing {
+  display: flex;
+}
+
+.table-scroll.is-overflowing::after {
+  content: "";
+  position: sticky;
+  right: 0;
+  flex-shrink: 0;
+  width: var(--space-2xl);
+  margin-left: calc(-1 * var(--space-2xl));
+  background: linear-gradient(to right, transparent, var(--background-primary));
+  pointer-events: none;
+}
+
+.table-scroll.is-scrolled-end::after {
+  display: none;
+}
+
+/* -- Base table -- */
+.table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  width: fit-content;
+  max-width: 100%;
+  /* font-variant: tabular-nums; */
+  font-size: var(--body-size);
+  margin-bottom: var(--space-2xl);
+}
+
+.table th {
+  font-weight: var(--font-weight-bold);
+  text-align: left;
+  min-width: 130px;
+}
+
+.table th,
+.table td {
+  padding: var(--space-m) var(--space-l);
+  border: none;
+}
+
+.table thead {
+  background-color: transparent;
+}
+
+.table thead tr {
+  border-bottom: var(--border-s) solid var(--border-secondary);
+}
+
+.table tbody tr {
+  border-bottom: var(--border-s) solid var(--border-faded);
+}
+
+/* -- Table modifier: full width -- */
+.table-full {
+  width: 100%;
+}
+
+/* -- Table modifier: hoverable rows -- */
+.table-hover tbody tr:hover {
+  background-color: var(--background-faded);
+}
+
+/* -- Table modifier: header background -- */
+.table-header-filled th {
+  background-color: var(--background-faded);
+  font-weight: var(--font-weight-semi-bold);
+  color: var(--text-primary);
+}
+
+/* -- Table footer -- */
+.table tfoot tr {
+  border-top: var(--border-m) solid var(--border-primary);
+}
+
+.table tfoot th {
+  font-weight: var(--font-weight-bold);
+}
+
+.table tfoot td {
+  font-weight: var(--font-weight-semi-bold);
+}
+
+td .svg-icn {
+  display: inline-flex;
+}
+
+/* -- Condensed table on mobile -- */
+@media (max-width: 768px) {
+  .table th,
+  .table td {
+    padding: var(--space-s) var(--space-m);
+  }
+}
+
+
+/* ------ 26. DIVIDER ------ */
+
+.divider {
+  border: none;
+  border-top: var(--divider-thickness) solid var(--divider-color);
+  margin: var(--divider-spacing) 0;
+}
+
+.divider--vertical {
+  border-top: none;
+  border-left: var(--divider-thickness) solid var(--divider-color);
+  height: auto;
+  align-self: stretch;
+  margin: 0 var(--divider-spacing);
+  display: inline-block;
+}
+
+.divider--subtle {
+  --divider-color: var(--black-alpha-10);
+}
+
+.divider--strong {
+  --divider-color: var(--border-primary);
+  border-top-width: var(--border-m);
+}
+
+/* -- Labelled divider --
+   A rule with a word in it ("or"). Not an <hr> — the label is content —
+   so this variant rides a <div>. Lines are pseudo-elements drawn from the
+   same divider tokens. No role="separator": the label should be read. */
+.divider--labelled {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  border-top: none;
+  font-size: var(--font-s);
+  color: var(--text-secondary);
+}
+
+.divider--labelled::before,
+.divider--labelled::after {
+  content: "";
+  flex: 1;
+  border-top: var(--divider-thickness) solid var(--divider-color);
+}
+
+hr {
+  border: none;
+  border-top: var(--divider-thickness) solid var(--divider-color, var(--border-faded));
+  margin: var(--divider-spacing) 0;
+}
+
+hr.xl {
+  border: none;
+  margin: var(--space-2xl) 0;
+}
+
+
+/* ------ 35. RADIO GROUP ------ */
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+.radio-group.is-horizontal {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-m) var(--space-xl);
+}
+
+.radio-group-label {
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+  display: block;
+}
+
+.radio-group-hint {
+  font-size: var(--font-xs);
+  color: var(--text-faded);
+  margin-top: var(--space-2xs);
+  display: block;
+}
+
+
+/* ------ 49. SKELETON ------
+ * .skeleton-line is the base primitive: a pulsing placeholder block sized by
+ * the composer, holding a layout while content loads. .skeleton-label and
+ * .skeleton-input are presets that compose it
+ * (class="skeleton-line skeleton-label") and shape it to the form controls
+ * in section 12. See cms/skeleton.md.
+ */
+
+:root {
+  --skeleton-background: var(--background-faded);
+  --skeleton-radius: var(--radius-detail);
+  --skeleton-duration: var(--duration-2xl);
+}
+
+.skeleton-line {
+  background-color: var(--skeleton-background);
+  border-radius: var(--skeleton-radius);
+  animation: skeleton-pulse var(--skeleton-duration) var(--ease-in-out) infinite;
+}
+
+.skeleton-label {
+  height: 14px;
+  width: 30%;
+  margin-bottom: var(--space-xs);
+}
+
+.skeleton-input {
+  /* Tracks the input's rendered box, not the hit-area floor — a skeleton is
+     not a pointer target, so this stays a literal. */
+  height: 44px;
+  width: 100%;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* A static placeholder still says "loading"; the pulse is decoration. The
+   hard floor here is 2.2.2 (Level A): blinking content lasting longer than
+   five seconds needs a way to stop, which is why skeletons must resolve —
+   to content or to an error — rather than pulse indefinitely. This guard
+   covers the users who asked the platform for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line {
+    animation: none;
+  }
+}
+
+/* The fill flattens to Canvas under forced colours, which would erase the
+   loading shape entirely — keep a drawn boundary, the badge pattern. */
+@media (forced-colors: active) {
+  .skeleton-line {
+    border: 1px solid GrayText;
+  }
+}
+
+/* ------ 56. DENSITY ------
+ * One setting across every control, so it sits after all of them rather than
+ * inside any one. Foundation layer: it declares no component of its own and
+ * ships with the engine (CLAUDE.md §17).
+ *
+ * -- Compact density --
+ * data-density="compact" on a container takes every control inside it to its
+ * Small size: fields, checks and toggles, segmented controls, number inputs
+ * and buttons. On a fine pointer only. A mouse or trackpad does not need the
+ * 44px touch target, and a dock of controls sized for a finger pushes its
+ * last panel below the fold; on touch the attribute does nothing, so the
+ * 44px floor holds with no second rule. The values are the Small rules'
+ * values (the field sizes above, the small checks, .button[data-size=
+ * "small"], and the segmented and number-input Small rules); keep them in
+ * step.
+ *
+ * Only tokens are declared on the container, so a data-size on a control or
+ * a nearer ancestor still wins, by inheritance rather than specificity. The
+ * button declares its tokens on itself (as `.button, button.button`, so at
+ * (0,1,1) on a <button>), so it takes a descendant rule: the container in
+ * :where(), which counts for nothing, and the same :is(.button, button.button)
+ * pair, so the rule sits at (0,1,1), ties with the base and wins by source
+ * order, and loses to every (0,2,0) modifier, data-size, data-icon-only and
+ * the text variant. Without :where() the :not(.bar) would count as a class
+ * and an icon-only button in a compact dock would lose its square.
+ *
+ * Not the bar. A bar carries the same attribute with an older meaning, the
+ * bar's own padding (see 41. BAR), and its controls already sit at the small
+ * height with the bar's own type size; :not(.bar) keeps the two apart. A bar
+ * nested inside a compact container is not excluded: it keeps its height and
+ * takes the small type with everything else, which no page does today. */
+@media (pointer: fine) {
+  [data-density="compact"]:not(.bar) {
+    --field-height: var(--field-height-s);
+    --field-font: var(--font-xs);
+    --field-padding-y: 0;
+    --field-padding-x: var(--space-m);
+    --check-size: var(--space-l);
+    --check-mark-size: 11px;
+    --radio-dot-inset: 3px;
+    --check-gap: var(--space-xs);
+    --check-label-font: var(--font-xs);
+    --toggle-width: 28px;
+    --toggle-height: var(--space-l);
+    --toggle-knob-size: 10px;
+    --segmented-height: var(--field-height-s);
+    --segmented-font: var(--font-xs);
+    --segmented-padding-y: 0;
+    --segmented-padding-x: var(--space-s);
+    --number-input-height: var(--field-height-s);
+    --number-input-padding-y: 0;
+  }
+
+  :where([data-density="compact"]:not(.bar)) :is(.button, button.button) {
+    --button-padding-y: var(--space-m);
+    --button-padding-x: var(--space-l);
+    --button-text-size: var(--font-xs);
+  }
+
+  /* A dropdown trigger has no small size of its own and declares its padding
+     on itself, so, as in the bar, the block padding goes and the small height
+     holds the row; the type stays, a menu label is not a field value. */
+  :where([data-density="compact"]:not(.bar)) .dropdown-trigger {
+    --dropdown-trigger-padding-y: 0;
+    min-height: var(--field-height-s);
+  }
+
+  /* The mono toggle's state word and the extra track length that holds it
+     are matched by data-size selectors above; a small track has no room for
+     the word, so compact drops both the same way. */
+  [data-density="compact"]:not(.bar) .form-toggle[data-variant="mono"] input[type="checkbox"] {
+    --toggle-mono-extra-width: 0px;
+  }
+
+  [data-density="compact"]:not(.bar) .form-toggle[data-variant="mono"] input[type="checkbox"]::before {
+    content: none;
+  }
+}
+

@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v7.1.0 -->
+<!-- @bydefaultstudio/design-system v7.2.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 7.1.0 (package)**
+**Version: 7.2.0 (package)**
 
 ## Getting the System
 
@@ -1753,7 +1753,7 @@ code, pre, kbd { font-family: var(--font-quaternary); }
 | --- | --- | --- | --- |
 | `var(--font-primary)` | Zalando Sans | Self-hosted (variable font) | Body text, UI, labels |
 | `var(--font-secondary)` | ES Face | Self-hosted (otf) | Headings, blockquotes |
-| `var(--font-tertiary)` | Bugrino | Self-hosted (woff2) | Brand display, eyebrows, buttons, badges |
+| `var(--font-tertiary)` | Bugrino | Self-hosted (woff2) | Brand display, eyebrows, buttons |
 | `var(--font-quaternary)` | IBM Plex Mono | Self-hosted (ttf) | Code, pre, kbd |
 
 ---
@@ -3617,7 +3617,7 @@ Under `forced-colors`, `box-shadow` is not painted and every background flattens
 
 # Badge
 
-Badges are small inline labels used to indicate status, category, or metadata. They use the brand display font (`var(--font-tertiary)`) with uppercase styling.
+Badges are small inline labels used to indicate status, category, or metadata. They use the primary font (`var(--font-primary)`, through `--badge-font`) with uppercase styling.
 
 The `.badge` class is required. Colour variants use the `data-color` attribute, the same API as button. Case is customized through `data-case` or the component tokens — never by overriding the class.
 
@@ -3714,6 +3714,7 @@ This section documents how the component is built. For usage, see the sections a
 
 | Token | Default | Purpose |
 |---|---|---|
+| `--badge-font` | `var(--font-primary)` | Font family |
 | `--badge-case` | `uppercase` | Text transform |
 | `--badge-tracking` | `var(--letter-spacing-l)` | Letter spacing |
 | `--badge-radius` | `var(--radius-detail)` | Corners |
@@ -3723,7 +3724,7 @@ This section documents how the component is built. For usage, see the sections a
 
 | Property | Value |
 |---|---|
-| Font family | `var(--font-tertiary)` |
+| Font family | `var(--badge-font)` → `var(--font-primary)` |
 | Font size | `var(--font-2xs)` |
 | Text transform | `var(--badge-case)` |
 | Letter spacing | `var(--badge-tracking)` |

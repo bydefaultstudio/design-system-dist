@@ -1,0 +1,708 @@
+<!-- @bydefaultstudio/design-system v7.2.0 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Styleguide (core) — By Default Design System v7.2.0</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <!-- Framework CSS (same folder). Brand arrives through theme.css below. -->
+  <link rel="stylesheet" href="design-system-core.css" />
+  <!-- Optional: a theme.css beside this file repaints every primitive with
+       your brand. Missing file = neutral engine defaults. -->
+  <link rel="stylesheet" href="theme.css" />
+
+  <style>
+    /* Styleguide scaffold only — demo layout helpers, not part of the
+       framework. Everything visual reads framework tokens. */
+    .sg-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-l); flex-wrap: wrap; }
+    .sg-toc { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-l); padding: 0; margin: 0; list-style: none; }
+    .sg-toc a { color: var(--text-faded); text-decoration: none; font-size: var(--font-xs); }
+    .sg-toc a:hover { color: var(--text-primary); text-decoration: underline; }
+    .sg-row { display: flex; flex-wrap: wrap; gap: var(--space-m); align-items: center; }
+    .sg-stack { display: flex; flex-direction: column; gap: var(--space-l); }
+    .sg-bar { height: var(--space-m); background: var(--text-primary); }
+    .sg-radius-box { width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; background: var(--background-faded); border: var(--border-s) solid var(--border-faded); font-size: var(--font-2xs); color: var(--text-faded); }
+    .sg-swatch { display: flex; align-items: center; gap: var(--space-m); }
+    .sg-swatch-chip { width: 56px; height: 36px; flex-shrink: 0; border: var(--border-s) solid var(--border-faded); }
+    .sg-spec { display: grid; grid-template-columns: minmax(180px, 240px) 1fr; gap: var(--space-m) var(--space-xl); align-items: center; }
+    .sg-spec > code { justify-self: start; }
+    .sg-dropdown-space { position: relative; min-height: 340px; }
+    .sg-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--space-s); }
+    .sg-icon-tile { display: flex; flex-direction: column; align-items: center; gap: var(--space-s); padding: var(--space-m); background: none; border: var(--border-s) solid var(--border-faded); cursor: pointer; color: var(--text-primary); }
+    .sg-icon-tile:hover { background: var(--background-faded); }
+    .sg-icon-tile .svg-icn { width: 24px; height: 24px; }
+    .sg-icon-name { font-family: var(--font-quaternary); font-size: var(--font-2xs); color: var(--text-faded); word-break: break-all; }
+    .sg-visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+    @media (max-width: 720px) { .sg-spec { grid-template-columns: 1fr; gap: var(--space-xs); } .sg-spec > *:nth-child(even) { margin-bottom: var(--space-l); } }
+  </style>
+</head>
+<body>
+
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+<symbol id="add" viewBox="0 0 24 24" fill="none"><path d="M11 15C11 13.8954 10.1046 13 9 13H4V11H9C10.1046 11 11 10.1046 11 9V4H13V9C13 10.1046 13.8954 11 15 11H20V13H15C13.8954 13 13 13.8954 13 15V20H11V15Z" fill="currentColor"/></symbol>
+<symbol id="cog" viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 8C14.2091 8 16 9.79086 16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12C8 9.79086 9.79086 8 12 8ZM12 10C10.8954 10 10 10.8954 10 12C10 13.1046 10.8954 14 12 14C13.1046 14 14 13.1046 14 12C14 10.8954 13.1046 10 12 10Z" fill="currentColor"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M15.1504 5.2002C15.3669 5.28349 15.5712 5.38341 15.7627 5.5C15.9543 5.61664 16.1419 5.74171 16.3252 5.875L19.2998 4.625L22.0498 9.375L19.4746 11.3252C19.4912 11.4417 19.5 11.5539 19.5 11.6621V12.3379C19.5 12.446 19.4834 12.5584 19.4502 12.6748L22.0254 14.625L19.2754 19.375L16.3252 18.125C16.1419 18.2583 15.95 18.3833 15.75 18.5C15.5501 18.6166 15.3502 18.7165 15.1504 18.7998L14.75 22H9.25L8.84961 18.7998C8.63308 18.7165 8.42886 18.6166 8.2373 18.5C8.04568 18.3834 7.8581 18.2583 7.6748 18.125L4.7002 19.375L1.9502 14.625L4.52539 12.6748C4.50876 12.5583 4.50002 12.4461 4.5 12.3379V11.6621C4.50002 11.5539 4.50876 11.4417 4.52539 11.3252L1.9502 9.375L4.7002 4.625L7.6748 5.875C7.85814 5.74167 8.05 5.61667 8.25 5.5C8.44987 5.38341 8.64974 5.28349 8.84961 5.2002L9.25 2H14.75L15.1504 5.2002ZM10.6748 6.65039C10.1582 6.78372 9.67891 6.97901 9.2373 7.2373C8.79577 7.49556 8.39197 7.80828 8.02539 8.1748L5.5498 7.15039L4.5752 8.84961L6.72461 10.4502C6.64133 10.7001 6.58313 10.9503 6.5498 11.2002C6.51649 11.4501 6.5 11.7167 6.5 12C6.5 12.2667 6.51647 12.5254 6.5498 12.7754C6.58315 13.0253 6.64132 13.2755 6.72461 13.5254L4.5752 15.1504L5.5498 16.8496L8.02539 15.7998C8.39202 16.1831 8.79569 16.5044 9.2373 16.7627C9.67891 17.021 10.1582 17.2163 10.6748 17.3496L11 20H12.9746L13.3252 17.3496C13.8417 17.2163 14.3211 17.021 14.7627 16.7627C15.2042 16.5044 15.608 16.1917 15.9746 15.8252L18.4502 16.8496L19.4248 15.1504L17.2754 13.5254C17.3587 13.2921 17.4169 13.0454 17.4502 12.7871C17.4835 12.5289 17.5 12.2665 17.5 12C17.5 11.7335 17.4835 11.4711 17.4502 11.2129C17.4169 10.9546 17.3587 10.7079 17.2754 10.4746L19.4248 8.84961L18.4502 7.15039L15.9746 8.2002C15.608 7.81692 15.2043 7.49561 14.7627 7.2373C14.3211 6.97903 13.8417 6.78372 13.3252 6.65039L13 4H11.0254L10.6748 6.65039Z" fill="currentColor"/></symbol>
+<symbol id="download" viewBox="0 0 24 24" fill="none"><path d="M12 17L5 10L6.4 8.6L9.29482 11.4791C9.92557 12.1064 11 11.6597 11 10.7701V3H13V10.7608C13 11.6517 14.0771 12.0979 14.7071 11.4679L17.6 8.575L19 10L12 17Z" fill="currentColor"/><path d="M3 21V15H5V17C5 18.1046 5.89543 19 7 19H17C18.1046 19 19 18.1046 19 17V15H21V21H3Z" fill="currentColor"/></symbol>
+<symbol id="info" viewBox="0 0 24 24" fill="none"><g clip-path="url(#info-clip0_10237_468)">
+<path d="M13 18H11V10H13V18Z" fill="currentColor"/>
+<path d="M12 6C12.35 6 12.646 6.12064 12.8877 6.3623C13.1294 6.60397 13.25 6.9 13.25 7.25C13.25 7.6 13.1294 7.89603 12.8877 8.1377C12.646 8.37936 12.35 8.5 12 8.5C11.65 8.5 11.354 8.37936 11.1123 8.1377C10.8706 7.89603 10.75 7.6 10.75 7.25C10.75 6.9 10.8706 6.60397 11.1123 6.3623C11.354 6.12064 11.65 6 12 6Z" fill="currentColor"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M12 0C18.6274 0 24 5.37258 24 12C24 18.6274 18.6274 24 12 24C5.37258 24 0 18.6274 0 12C0 5.37258 5.37258 0 12 0ZM12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z" fill="currentColor"/>
+</g>
+<defs>
+<clipPath id="info-clip0_10237_468">
+<rect width="24" height="24"/>
+</clipPath>
+</defs></symbol>
+<symbol id="menu" viewBox="0 0 24 24" fill="none"><path d="M3 18V16H21V18H3ZM3 13V11H21V13H3ZM3 8V6H21V8H3Z" fill="currentColor"/></symbol>
+</svg>
+
+  <!-- ============ HEADER ============ -->
+  <header class="top-large bottom-medium border-bottom border-faded">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <div class="sg-header">
+            <div class="block gap-s">
+              <p class="eyebrow">By Default Design System v7.2.0</p>
+              <h1>Styleguide</h1>
+            </div>
+            <button type="button" class="button" data-variant="outline-faded" data-size="small" id="sg-theme-toggle" aria-pressed="false">Dark mode</button>
+          </div>
+          <p class="text-size-s">Every framework primitive on one page, rendered by the packaged <code>design-system-core.css</code>. The values you see are the neutral engine defaults. To preview a brand, place a <code>theme.css</code> beside this file and reload. Components that need JavaScript at runtime are shown in fixed states and say so.</p>
+          <ul class="sg-toc">
+            <li><a href="#type">Type</a></li>
+            <li><a href="#inline">Inline text</a></li>
+            <li><a href="#lists">Lists</a></li>
+            <li><a href="#buttons">Buttons</a></li>
+            <li><a href="#forms">Forms</a></li>
+            <li><a href="#badge">Badge</a></li>
+            <li><a href="#callout">Callout</a></li>
+            <li><a href="#card">Card</a></li>
+            <li><a href="#skeleton">Skeleton</a></li>
+            <li><a href="#disclosure">Disclosure</a></li>
+            <li><a href="#table">Table</a></li>
+            <li><a href="#divider">Divider</a></li>
+            <li><a href="#image">Image</a></li>
+            <li><a href="#scale">Type scale</a></li>
+            <li><a href="#families">Type families</a></li>
+            <li><a href="#spacing">Spacing</a></li>
+            <li><a href="#radius">Radius</a></li>
+            <li><a href="#colour">Colour</a></li>
+            <li><a href="#borders">Borders</a></li>
+            <li><a href="#grid">Grid</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+  <!-- ============ TYPE ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="type">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Type</h2>
+          <!-- Visual specimens only: role="presentation" keeps them out of
+               the document outline so the page holds a single real h1. -->
+          <h1 role="presentation">Your primary headline, big, bold, and unmissable</h1>
+          <h2 role="presentation">Supporting headline to guide your content</h2>
+          <h3 role="presentation">Type with purpose, design with intent</h3>
+          <h4 role="presentation">Smaller subheading for detailed content organisation</h4>
+          <h5 role="presentation">Clear navigation heading for important information</h5>
+          <h6 role="presentation">Strategic headline for critical content sections</h6>
+          <p class="eyebrow">An eyebrow labels the section above a heading</p>
+          <p>This paragraph demonstrates how body text looks across your layout. <strong>Bold text</strong> adds emphasis, while <em>italics</em> offer a subtle highlight. You can also use <s>strikethrough</s> to show edits, or an <a href="#type">inline link</a> for navigation. A full paragraph like this one is the fastest way to judge readability, measure, and rhythm against a brand's type choices.</p>
+          <div class="sg-spec">
+            <code>.text-size-xl</code><p class="text-size-xl">Lead paragraph text for hero sections and introductions.</p>
+            <code>.text-size-l</code><p class="text-size-l">Introductory text that sits between headings and body.</p>
+            <code>.text-size-m</code><p class="text-size-m">The default body size, stated explicitly.</p>
+            <code>.text-size-s</code><p class="text-size-s">Smaller supporting text for secondary information.</p>
+            <code>.text-size-xs</code><p class="text-size-xs">Captions, metadata, and fine print.</p>
+          </div>
+          <blockquote><p>Words matter, but how those words are presented matters just as much. Typography transforms content from mundane to magical.</p></blockquote>
+          <p><small>Additional fees may apply. Delivery times are approximate. Terms and conditions apply.</small></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INLINE TEXT ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="inline">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Inline text</h2>
+          <div class="sg-spec">
+            <code>&lt;strong&gt;</code><p><strong>Strong emphasis in running text</strong></p>
+            <code>&lt;em&gt;</code><p><em>Italic emphasis in running text</em></p>
+            <code>&lt;code&gt;</code><p>Use <code>--text-primary</code> for main content.</p>
+            <code>&lt;kbd&gt;</code><p>Press <kbd>Cmd</kbd>+<kbd>K</kbd> to open the palette.</p>
+            <code>&lt;mark&gt;</code><p>Use <mark>mark</mark> sparingly to highlight key terms.</p>
+            <code>&lt;abbr&gt;</code><p>The <abbr title="World Wide Web Consortium">W3C</abbr> sets the standards.</p>
+            <code>&lt;s&gt;</code><p><s>Specifications may vary.</s> Updated specifications confirmed.</p>
+            <code>&lt;figcaption&gt;</code><figure><figcaption>A caption belongs to its figure.</figcaption></figure>
+          </div>
+          <pre><code>/* A code block renders in the quaternary (mono) slot */
+.example { color: var(--text-primary); }</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LISTS ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="lists">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Lists</h2>
+          <ul>
+            <li>Unordered lists organise related items without hierarchy</li>
+            <li>Ideal for features, benefits, or options
+              <ul>
+                <li>Nested items indent one level</li>
+                <li>Across light and dark surfaces</li>
+              </ul>
+            </li>
+            <li>Keep items concise and parallel in structure</li>
+          </ul>
+          <ol>
+            <li>Use headings to create a visual hierarchy</li>
+            <li>Structure content with clear lists</li>
+            <li>Guide readers step by step with ordered items</li>
+          </ol>
+          <ul>
+            <li><input type="checkbox" checked disabled> A checklist item, done</li>
+            <li><input type="checkbox" disabled> A checklist item, open</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BUTTONS ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="buttons">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Buttons</h2>
+          <p class="text-size-s">Base class <code>.button</code>, variation via <code>data-*</code> attributes, state via <code>.is-*</code> classes. A bare <code>&lt;button&gt;</code> is a reset only.</p>
+          <h3>Variants</h3>
+          <div class="sg-row">
+            <button type="button" class="button">Primary</button>
+            <button type="button" class="button" data-variant="outline">Outline</button>
+            <button type="button" class="button" data-variant="faded">Faded</button>
+            <button type="button" class="button" data-variant="outline-faded">Outline faded</button>
+            <button type="button" class="button" data-variant="transparent">Transparent</button>
+            <button type="button" class="button" data-variant="text">Text button</button>
+          </div>
+          <h3>Sizes</h3>
+          <div class="sg-row">
+            <button type="button" class="button">Default</button>
+            <button type="button" class="button" data-size="small">Small</button>
+            <button type="button" class="button" data-size="xsmall">Extra small</button>
+          </div>
+          <h3>Colour</h3>
+          <div class="sg-row">
+            <button type="button" class="button" data-color="danger">Danger</button>
+            <button type="button" class="button" data-color="success">Success</button>
+          </div>
+          <h3>Icons and booleans</h3>
+          <div class="sg-row">
+            <button type="button" class="button" data-icon-only aria-label="Settings"><span class="svg-icn" data-icon="cog"><svg fill="none" width="100%" height="100%" aria-hidden="true"><use href="#cog"></use></svg></span></button>
+            <button type="button" class="button" data-variant="faded" data-icon-only aria-label="Menu"><span class="svg-icn" data-icon="menu"><svg fill="none" width="100%" height="100%" aria-hidden="true"><use href="#menu"></use></svg></span></button>
+            <button type="button" class="button"><span class="svg-icn" data-icon="add"><svg fill="none" width="100%" height="100%" aria-hidden="true"><use href="#add"></use></svg></span>New project</button>
+            <button type="button" class="button" data-variant="faded">Download<span class="svg-icn" data-icon="download"><svg fill="none" width="100%" height="100%" aria-hidden="true"><use href="#download"></use></svg></span></button>
+          </div>
+          <button type="button" class="button" data-full-width>Full width</button>
+          <h3>States</h3>
+          <div class="sg-row">
+            <button type="button" class="button" disabled>Disabled</button>
+            <button type="button" class="button is-disabled" aria-disabled="true">Is-disabled</button>
+            <button type="button" class="button is-loading">Saving…</button>
+          </div>
+          <h3>Grouping</h3>
+          <div class="button-group">
+            <button type="button" class="button" data-variant="faded">Cancel</button>
+            <button type="button" class="button">Confirm</button>
+          </div>
+          <p class="text-size-s">A link styled as a button ships as a real <code>&lt;a href&gt;</code>: <a class="button" href="#buttons" data-size="small">Link as button</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FORMS ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="forms">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Forms</h2>
+          <div class="form-group">
+            <label for="sg-name">Name</label>
+            <input type="text" id="sg-name" placeholder="Enter your name">
+          </div>
+          <div class="form-group">
+            <label for="sg-message">Message</label>
+            <textarea id="sg-message" rows="3" placeholder="Enter your message…"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="sg-country">Country</label>
+            <select id="sg-country">
+              <option value="" disabled selected>Choose…</option>
+              <option>United Kingdom</option>
+              <option>Netherlands</option>
+            </select>
+          </div>
+          <div class="form-check">
+            <input type="checkbox" id="sg-check" checked>
+            <label for="sg-check">Accept terms and conditions</label>
+          </div>
+          <div class="radio-group">
+            <span class="radio-group-label">Delivery option</span>
+            <div class="form-check"><input type="radio" name="sg-radio" id="sg-radio-a" checked><label for="sg-radio-a">Standard</label></div>
+            <div class="form-check"><input type="radio" name="sg-radio" id="sg-radio-b"><label for="sg-radio-b">Express</label></div>
+            <span class="radio-group-hint">Express delivery arrives the next working day.</span>
+          </div>
+          <div class="form-toggle">
+            <input type="checkbox" id="sg-toggle" role="switch" checked>
+            <label for="sg-toggle">Enable notifications</label>
+          </div>
+          <div class="form-group">
+            <label for="sg-locked">Disabled field</label>
+            <input type="text" id="sg-locked" value="Cannot edit" disabled>
+          </div>
+          <!-- Static specimen: no role="alert" — a live region present at page
+               load gets announced unprompted by some screen readers. Runtime
+               forms add the role when the error actually appears. -->
+          <span class="form-error">Example error message</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BADGE ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="badge">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Badge</h2>
+          <div class="sg-row">
+            <span class="badge">Default</span>
+            <span class="badge" data-case="none">Sentence case</span>
+            <span class="badge" data-color="success">Success</span>
+            <span class="badge" data-color="warning">Warning</span>
+            <span class="badge" data-color="danger">Danger</span>
+            <span class="badge" data-color="info">Info</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============ CALLOUT ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="callout">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Callout</h2>
+          <div class="callout" data-type="info"><div class="callout-title">Info</div><p class="callout-description">Additional context that helps the reader understand the topic.</p></div>
+          <div class="callout" data-type="success"><div class="callout-title">Success</div><p class="callout-description">A helpful suggestion to improve your workflow.</p></div>
+          <div class="callout" data-type="warning"><div class="callout-title">Warning</div><p class="callout-description">Something to be careful about before proceeding.</p></div>
+          <div class="callout" data-type="danger"><div class="callout-title">Danger</div><p class="callout-description">This action cannot be undone. Proceed with care.</p></div>
+          <div class="callout" data-type="info" data-icon><span class="svg-icn" data-icon="info-circled"><svg fill="none" width="100%" height="100%" aria-hidden="true"><use href="#info"></use></svg></span><div class="callout-title">With icon</div><p class="callout-description">Add <code>data-icon</code> for the grid layout with an icon beside the title.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CARD ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="card">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Card</h2>
+          <div class="grid cols-2 gap-l">
+            <div class="card">
+              <h3 class="card-title">A static card</h3>
+              <p class="card-description">Content container with a hairline border. Composes with the grid.</p>
+            </div>
+            <a href="#card" class="card card--interactive">
+              <h3 class="card-title">An interactive card</h3>
+              <p class="card-description">The whole card is the link. Hover and focus states come from <code>.card--interactive</code>.</p>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+
+  <!-- ============ SKELETON ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="skeleton">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Skeleton</h2>
+          <div class="block gap-s" style="max-width: 24rem;" aria-busy="true">
+            <div class="skeleton-line" style="height: 1em; width: 80%;"></div>
+            <div class="skeleton-line" style="height: 1em; width: 100%;"></div>
+            <div class="skeleton-line" style="height: 1em; width: 60%;"></div>
+          </div>
+          <div style="max-width: 24rem;" aria-busy="true">
+            <div class="skeleton-line skeleton-label"></div>
+            <div class="skeleton-line skeleton-input"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+
+  <!-- ============ DISCLOSURE ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="disclosure">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Disclosure</h2>
+          <p class="text-size-s">Native <code>details</code> and <code>summary</code>. Fully interactive with no JavaScript.</p>
+          <details>
+            <summary>What does the framework ship?</summary>
+            <div class="disclosure-content">
+              <p>One CSS file, an icon sprite, and neutral engine defaults on real token names. Brand values arrive through your project's theme.css.</p>
+            </div>
+          </details>
+          <details open>
+            <summary>Open by default</summary>
+            <div class="disclosure-content">
+              <p>Add the <code>open</code> attribute to render a disclosure expanded.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+
+
+
+
+
+  <!-- ============ TABLE ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="table">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Table</h2>
+          <div class="table-scroll">
+            <table class="table table-full table-hover table-header-filled">
+              <thead>
+                <tr><th>Token</th><th>Value</th><th>Usage</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>--space-m</code></td><td>0.75rem</td><td>Compact gaps</td></tr>
+                <tr><td><code>--space-l</code></td><td>1rem</td><td>Default gaps</td></tr>
+                <tr><td><code>--space-xl</code></td><td>1.5rem</td><td>Section padding</td></tr>
+              </tbody>
+              <tfoot>
+                <tr><th>3 tokens</th><td colspan="2">Modifiers on this table: <code>.table-full</code>, <code>.table-hover</code>, <code>.table-header-filled</code></td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DIVIDER ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="divider">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Divider</h2>
+          <p class="text-size-s">A bare <code>hr</code>, then the composable variants.</p>
+          <hr>
+          <hr class="divider divider--subtle">
+          <hr class="divider divider--strong">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ IMAGE ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="image">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Image</h2>
+          <div class="grid cols-3 gap-l">
+            <figure><img class="img" data-ratio="1x1" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Crect width='10' height='10' fill='%23e5e5e5'/%3E%3C/svg%3E" alt="Square placeholder"><figcaption>.img[data-ratio="1x1"]</figcaption></figure>
+            <figure><img class="img" data-ratio="4x3" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Crect width='10' height='10' fill='%23e5e5e5'/%3E%3C/svg%3E" alt="4 by 3 placeholder"><figcaption>.img[data-ratio="4x3"]</figcaption></figure>
+            <figure><img class="img" data-ratio="16x9" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Crect width='10' height='10' fill='%23e5e5e5'/%3E%3C/svg%3E" alt="16 by 9 placeholder"><figcaption>.img[data-ratio="16x9"]</figcaption></figure>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TYPE SCALE ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="scale">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Type scale</h2>
+          <div class="sg-spec">
+            <code>--font-10xl</code><span style="font-size: var(--font-10xl); line-height: 1;">Aa</span>
+            <code>--font-9xl</code><span style="font-size: var(--font-9xl); line-height: 1;">Aa</span>
+            <code>--font-8xl</code><span style="font-size: var(--font-8xl); line-height: 1.05;">Aa</span>
+            <code>--font-7xl</code><span style="font-size: var(--font-7xl); line-height: 1.05;">Aa</span>
+            <code>--font-6xl</code><span style="font-size: var(--font-6xl);">Aa</span>
+            <code>--font-5xl</code><span style="font-size: var(--font-5xl);">Aa</span>
+            <code>--font-4xl</code><span style="font-size: var(--font-4xl);">Aa</span>
+            <code>--font-3xl</code><span style="font-size: var(--font-3xl);">Aa</span>
+            <code>--font-2xl</code><span style="font-size: var(--font-2xl);">Aa</span>
+            <code>--font-xl</code><span style="font-size: var(--font-xl);">Aa</span>
+            <code>--font-l</code><span style="font-size: var(--font-l);">Aa</span>
+            <code>--font-m</code><span style="font-size: var(--font-m);">Aa (default body)</span>
+            <code>--font-s</code><span style="font-size: var(--font-s);">Aa</span>
+            <code>--font-xs</code><span style="font-size: var(--font-xs);">Aa</span>
+            <code>--font-2xs</code><span style="font-size: var(--font-2xs);">Aa</span>
+            <code>--font-3xs</code><span style="font-size: var(--font-3xs);">Aa</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TYPE FAMILIES ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="families">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Type families</h2>
+          <p class="text-size-s">Family slots, not faces. The engine ships neutral system stacks; your theme.css loads the brand's licensed faces into these slots.</p>
+          <div class="sg-spec">
+            <code>--font-primary</code><span style="font-family: var(--font-primary); font-size: var(--font-3xl);">The interface voice</span>
+            <code>--font-secondary</code><span style="font-family: var(--font-secondary); font-size: var(--font-3xl);">The editorial voice</span>
+            <code>--font-tertiary</code><span style="font-family: var(--font-tertiary); font-size: var(--font-3xl);">The accent voice</span>
+            <code>--font-quaternary</code><span style="font-family: var(--font-quaternary); font-size: var(--font-3xl);">The mono voice</span>
+            <code>--font-display</code><span style="font-family: var(--font-display); font-size: var(--font-3xl);">Display alias</span>
+            <code>--font-editorial</code><span style="font-family: var(--font-editorial); font-size: var(--font-3xl);">Editorial alias</span>
+            <code>--font-playful</code><span style="font-family: var(--font-playful); font-size: var(--font-3xl);">Playful alias</span>
+            <code>--font-script</code><span style="font-family: var(--font-script); font-size: var(--font-3xl);">Script alias</span>
+            <code>--font-code</code><span style="font-family: var(--font-code); font-size: var(--font-3xl);">var(--token)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SPACING ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="spacing">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Spacing</h2>
+          <div class="sg-spec">
+            <code>--space-2xs</code><div class="sg-bar" style="width: var(--space-2xs);"></div>
+            <code>--space-xs</code><div class="sg-bar" style="width: var(--space-xs);"></div>
+            <code>--space-s</code><div class="sg-bar" style="width: var(--space-s);"></div>
+            <code>--space-m</code><div class="sg-bar" style="width: var(--space-m);"></div>
+            <code>--space-l</code><div class="sg-bar" style="width: var(--space-l);"></div>
+            <code>--space-xl</code><div class="sg-bar" style="width: var(--space-xl);"></div>
+            <code>--space-2xl</code><div class="sg-bar" style="width: var(--space-2xl);"></div>
+            <code>--space-3xl</code><div class="sg-bar" style="width: var(--space-3xl);"></div>
+            <code>--space-4xl</code><div class="sg-bar" style="width: var(--space-4xl);"></div>
+            <code>--space-5xl</code><div class="sg-bar" style="width: var(--space-5xl);"></div>
+            <code>--space-6xl</code><div class="sg-bar" style="width: var(--space-6xl);"></div>
+            <code>--space-7xl</code><div class="sg-bar" style="width: var(--space-7xl);"></div>
+            <code>--space-8xl</code><div class="sg-bar" style="width: var(--space-8xl);"></div>
+            <code>--space-9xl</code><div class="sg-bar" style="width: var(--space-9xl);"></div>
+            <code>--space-10xl</code><div class="sg-bar" style="width: var(--space-10xl);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RADIUS ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="radius">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Radius</h2>
+          <div class="sg-row">
+            <div class="sg-radius-box" style="border-radius: var(--radius-xs);">xs</div>
+            <div class="sg-radius-box" style="border-radius: var(--radius-s);">s</div>
+            <div class="sg-radius-box" style="border-radius: var(--radius-m);">m</div>
+            <div class="sg-radius-box" style="border-radius: var(--radius-l);">l</div>
+            <div class="sg-radius-box" style="border-radius: var(--radius-xl);">xl</div>
+            <div class="sg-radius-box" style="border-radius: var(--radius-full);">full</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ COLOUR ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="colour">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Colour (semantic)</h2>
+          <p class="text-size-s">Only the semantic layer is API. Toggle dark mode above to watch every token re-resolve.</p>
+          <div class="grid cols-2 gap-l">
+            <div class="sg-stack">
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--text-primary);"></div><code>--text-primary</code></div>
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--text-secondary);"></div><code>--text-secondary</code></div>
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--text-faded);"></div><code>--text-faded</code></div>
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--text-accent);"></div><code>--text-accent</code></div>
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--background-primary);"></div><code>--background-primary</code></div>
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--background-secondary);"></div><code>--background-secondary</code></div>
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--background-faded);"></div><code>--background-faded</code></div>
+            </div>
+            <div class="sg-stack">
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--border-primary);"></div><code>--border-primary</code></div>
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--border-secondary);"></div><code>--border-secondary</code></div>
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--border-faded);"></div><code>--border-faded</code></div>
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--status-info);"></div><code>--status-info</code></div>
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--status-success);"></div><code>--status-success</code></div>
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--status-warning);"></div><code>--status-warning</code></div>
+              <div class="sg-swatch"><div class="sg-swatch-chip" style="background: var(--status-danger);"></div><code>--status-danger</code></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BORDERS ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="borders">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Borders</h2>
+          <p class="text-size-s">Composable: position class + width + style + colour.</p>
+          <div class="grid cols-2 gap-l">
+            <p class="border border-faded" style="padding: var(--space-l);"><code>.border .border-faded</code></p>
+            <p class="border border-m border-secondary" style="padding: var(--space-l);"><code>.border .border-m .border-secondary</code></p>
+            <p class="border-top border-primary" style="padding: var(--space-l) 0;"><code>.border-top .border-primary</code></p>
+            <p class="border border-dashed border-secondary" style="padding: var(--space-l);"><code>.border .border-dashed .border-secondary</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GRID ============ -->
+  <section class="top-medium bottom-medium border-bottom border-faded" id="grid">
+    <div class="padding-global">
+      <div class="container-m">
+        <div class="block gap-l">
+          <h2>Grid</h2>
+          <div class="grid cols-3 gap-l">
+            <div class="card"><p class="card-description">.cols-3</p></div>
+            <div class="card"><p class="card-description">.cols-3</p></div>
+            <div class="card"><p class="card-description">.cols-3</p></div>
+          </div>
+          <div class="grid cols-2 gap-l">
+            <div class="card"><p class="card-description">.cols-2</p></div>
+            <div class="card"><p class="card-description">.cols-2</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  </main>
+
+  <!-- Shared status region: copy feedback for the icon tiles is announced
+       here — the visual "copied" swap inside a labelled button is silent
+       for assistive tech. -->
+  <div class="sg-visually-hidden" aria-live="polite" id="sg-live"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* Dark mode toggle — sets data-theme on <html>, same contract as
+         production: "light"/"dark" are explicit choices, no attribute means
+         follow the OS. Never remove the attribute — absence re-arms the
+         prefers-color-scheme fallback and an OS-dark visitor could never
+         reach light. The label stays fixed; aria-pressed carries the state. */
+      var toggle = document.getElementById('sg-theme-toggle');
+      function isDarkNow() {
+        var choice = document.documentElement.getAttribute('data-theme');
+        if (choice) return choice === 'dark';
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      toggle.setAttribute('aria-pressed', String(isDarkNow()));
+      toggle.addEventListener('click', function () {
+        var next = isDarkNow() ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        toggle.setAttribute('aria-pressed', String(next === 'dark'));
+      });
+      /* A held Enter re-fires click on native buttons — suppress the
+         repeats so the page can't strobe between themes (WCAG 2.3.1) */
+      toggle.addEventListener('keydown', function (event) {
+        if (event.repeat) event.preventDefault();
+      });
+      /* With no explicit choice the OS drives the theme — keep the
+         reported state in sync when it changes mid-session */
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+        if (!document.documentElement.hasAttribute('data-theme')) {
+          toggle.setAttribute('aria-pressed', String(isDarkNow()));
+        }
+      });
+
+      /* Icon tiles — copy the icon name on click. The execCommand path
+         covers browsers that withhold the async clipboard on file://. */
+      function fallbackCopy(text) {
+        var area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (err) {}
+        document.body.removeChild(area);
+        return ok;
+      }
+
+      var live = document.getElementById('sg-live');
+      document.addEventListener('click', function (e) {
+        var tile = e.target.closest('.sg-icon-tile');
+        if (!tile) return;
+        var name = tile.getAttribute('data-copy');
+        function announce(ok) {
+          live.textContent = ok ? 'Copied ' + name : 'Copying is unavailable in this browser';
+          if (!ok) return;
+          var label = tile.querySelector('.sg-icon-name');
+          var original = label.textContent;
+          label.textContent = 'copied';
+          setTimeout(function () { label.textContent = original; }, 900);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(name).then(
+            function () { announce(true); },
+            function () { announce(fallbackCopy(name)); }
+          );
+        } else {
+          announce(fallbackCopy(name));
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>
