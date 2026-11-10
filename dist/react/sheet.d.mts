@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.0 */
+/* @bydefaultstudio/design-system v7.5.1 */
 import * as React from 'react';
 
 /** `detail.source` on a guarded close. Drawers add "drag". */

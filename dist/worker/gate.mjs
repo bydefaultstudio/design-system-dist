@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.0 */
+/* @bydefaultstudio/design-system v7.5.1 */
 /**
  * gate.mjs — the pure half of the access gate: route lists and predicates.
  *

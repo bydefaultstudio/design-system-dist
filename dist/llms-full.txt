@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v7.5.0 -->
+<!-- @bydefaultstudio/design-system v7.5.1 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 7.5.0 (package)**
+**Version: 7.5.1 (package)**
 
 ## Getting the System
 
@@ -5738,7 +5738,7 @@ No background, no border. The button is invisible until hovered. Use `data-varia
 
 Unstyled text-only button with no padding. Adds underline on hover. Use `data-variant="text"` for inline actions that should look like a text link but semantically remain a button.
 
-A text button with a `data-size` keeps that size's padding: `[data-size]` is declared after `[data-variant="text"]` and the two tie on specificity, so the size wins. That is the intended reading — a smaller text action gets the padding back as hit area, which a 14px line box on its own would not clear — and the sign-in screen's "Request access" relies on it.
+A text button with a `data-size` keeps that size's padding: `[data-size]` is declared after `[data-variant="text"]` and the two tie on specificity, so the size wins. That is the intended reading — a smaller text action gets the padding back as hit area, which a 14px line box on its own would not clear — and a demoted secondary action such as a "Request access" link on a sign-in screen relies on it.
 
 ```html
 <button class="button" data-variant="text">Learn more</button>
@@ -6421,7 +6421,7 @@ The component owns `--cell-input-*` geometry and colour tokens; override those r
 </div>
 ```
 
-Typing fills the cells left to right. While the input has focus, the next empty cell carries a 2px accent border — it is both the caret and the focus indicator, the same pattern platform code inputs use. Paste works and keeps every legal character: pasting `20-41-53` into a sort code drops the hyphens and lands six digits. On a 6-digit code, `autocomplete="one-time-code"` lets iOS offer the SMS code above the keyboard — a single real input makes that work; one input per cell breaks it.
+Typing fills the cells left to right. While the input has focus, the next empty cell carries a 2px accent border — it is both the caret and the focus indicator, the same pattern platform code inputs use. Paste works on a phone (long-press the row) as well as a desktop, keeps every legal character and replaces the whole value: pasting `20-41-53` into a sort code drops the hyphens and lands six digits, and a fresh code pasted over a full row replaces it. A tap puts the caret after the last character; arrow keys move it, and the caret cell follows. On a 6-digit code, `autocomplete="one-time-code"` lets iOS offer the SMS code above the keyboard — a single real input makes that work; one input per cell breaks it.
 
 ## Format
 
@@ -6514,7 +6514,7 @@ This variant is HTML and CSS only — it works without `cell-input.js`.
 
 Include `assets/js/cell-input.js`. It binds every `.cell-input[data-format]` that contains an input and a `.cell-input-cells` element, on page load and again after every Barba navigation; a `data-cell-input-bound` guard makes re-runs harmless. No GSAP, no dependencies.
 
-The script builds the cells, enforces `aria-hidden` on the cells row, filters and clamps the value on every input event (accents folded, illegal characters dropped, pasted separators skipped), and dispatches two bubbling events on the block:
+The script builds the cells, enforces `aria-hidden` on the cells row, filters and clamps the value on every input event (accents folded, illegal characters dropped, pasted separators skipped), makes a paste replace the value, keeps the caret cell on the real caret, and dispatches two bubbling events on the block:
 
 | Event | detail | When |
 |---|---|---|
@@ -6598,7 +6598,7 @@ This section documents how the component is built. For usage, see the sections a
 
 ### Key rules
 
-Overlay: the input is `position: absolute; inset: 0; opacity: 0; pointer-events: none` — the OS caret geometry lands on the cells, and the label forwards taps to the input.
+Overlay: the input is `position: absolute; inset: 0; opacity: 0` over the cells, and it takes touches: a phone offers Paste only on a long-press that lands on an editable element, and the cells row is only a label. The script keeps the caret at the end, so a tap mid-row never inserts mid-code, and a paste replaces the whole value.
 Focus: the caret cell is the focus indicator — `border-color: var(--input-focus)` plus a 1px inset shadow for 2px of visual weight, gated on `:focus-within`. No ring on the group: the caret says "focused, and here". A `forced-colors` block outlines the row instead, since high-contrast mode erases the caret's colour.
 Wrapping: row and word are both `flex-wrap: wrap` — words wrap as units, an over-long word wraps within itself.
 Motion: cell border and background transition on `--duration-xs` / `--ease-out`, removed under `prefers-reduced-motion: reduce`.

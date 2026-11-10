@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.0 */
+/* @bydefaultstudio/design-system v7.5.1 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -10981,14 +10981,20 @@ section[id] {
 
 /* The real input is stretched invisibly over the block, not hidden offscreen:
    the OS caret and soft-keyboard geometry then sit exactly where the user is
-   looking (iOS scrolls and zooms to the input's rect), and the cells row is a
-   label for it, so tapping a cell focuses the input. */
+   looking (iOS scrolls and zooms to the input's rect), and a tap anywhere on
+   the row lands on the input itself. */
 .cell-input {
   position: relative;
   width: fit-content;
   max-width: 100%;
 }
 
+/* The real input lies over the cells, touchable and drawn in nothing: a
+   long-press has to land on an editable element for a phone to offer Paste,
+   and the cells are only a label. Transparent paint rather than opacity: 0,
+   because iOS WebKit can withhold the caret and the edit menu from a fully
+   transparent element. The cells draw the value; cell-input.js puts the
+   caret cell where the real caret is. */
 .cell-input input {
   position: absolute;
   inset: 0;
@@ -10996,9 +11002,26 @@ section[id] {
   min-height: 0;
   padding: 0;
   border: 0;
-  opacity: 0;
-  pointer-events: none;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: transparent;
+  background: transparent;
+  cursor: text;
   transition: none;
+}
+
+.cell-input input::selection {
+  background: transparent;
+}
+
+/* Autofill paints its own ground over the input; once a code is filled in,
+   the input goes fully invisible so that ground never covers the cells. */
+.cell-input input:-webkit-autofill {
+  opacity: 0;
+}
+
+.cell-input input:disabled {
+  cursor: not-allowed;
 }
 
 /* Invisible, so the caret cell below is the focus indicator — reset the
@@ -11073,6 +11096,12 @@ section[id] {
    and the focused element itself is invisible — high-contrast mode gets a
    real outline around the row instead */
 @media (forced-colors: active) {
+  /* Forced colours repaint transparent text in CanvasText, which would draw
+     the value twice over the cells; here the input stays fully invisible. */
+  .cell-input input {
+    opacity: 0;
+  }
+
   .cell-input:focus-within .cell-input-cells {
     outline: var(--focus-width) solid Highlight;
     outline-offset: var(--focus-offset);

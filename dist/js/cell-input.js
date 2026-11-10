@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.0 */
+/* @bydefaultstudio/design-system v7.5.1 */
 /**
  * Cell Input component — fixed-shape text entry rendered as per-character cells
  * Initialises all .cell-input elements that have a data-format and an <input>.
@@ -13,7 +13,7 @@
  * replacing the input afterwards requires clearing data-cell-input-bound
  * and re-running initCellInput on the block.
  *
- * @version 1.1.0
+ * @version 1.2.0
  */
 (function () {
   var MASK_CHAR = '•';
@@ -103,7 +103,6 @@
       var mode = block.getAttribute('data-mode') || 'any';
       var masked = block.hasAttribute('data-mask');
       var filter = makeFilter(mode);
-      var wasComplete = false;
 
       cellsEl.innerHTML = buildCells(pattern);
       // The cells are decoration mirroring the input — enforce their removal
@@ -121,12 +120,19 @@
 
       function paint() {
         var value = filter(input.value);
+        // The caret cell follows the real caret while the input has focus,
+        // so arrow keys and a screen reader's character reading move a
+        // visible caret; otherwise it sits after the last character
+        var caret = value.length;
+        if (document.activeElement === input && typeof input.selectionStart === 'number' && input.selectionStart === input.selectionEnd) {
+          caret = Math.min(input.selectionStart, value.length);
+        }
         letterCells.forEach(function (cell, i) {
           cell.textContent = value[i] ? (masked ? MASK_CHAR : value[i]) : '';
           cell.classList.toggle('is-filled', Boolean(value[i]));
           // The caret cell doubles as the focus indicator, so a full row
           // keeps it on the last cell instead of losing it
-          cell.classList.toggle('is-active', i === Math.min(value.length, letterCells.length - 1));
+          cell.classList.toggle('is-active', i === Math.min(caret, letterCells.length - 1));
         });
       }
 
@@ -148,15 +154,51 @@
         block.dispatchEvent(new CustomEvent('cell-input:change', {
           detail: { value: clean, complete: complete }, bubbles: true
         }));
-        if (complete && !wasComplete) {
+        // On every complete value, not only the first: a code pasted over a
+        // full row is a new code
+        if (complete) {
           block.dispatchEvent(new CustomEvent('cell-input:complete', {
             detail: { value: clean }, bubbles: true
           }));
         }
-        wasComplete = complete;
+      }
+
+      // A paste is a whole code: it replaces what is there instead of adding
+      // to it, so pasting a fresh code over a full row works. Text with
+      // nothing the mode keeps is left to the browser, which drops it.
+      function handlePaste(event) {
+        var data = event.clipboardData || window.clipboardData;
+        var clean = data ? filter(data.getData('text')).slice(0, pattern.length) : '';
+        if (!clean) return;
+        event.preventDefault();
+        input.value = clean;
+        handleInput();
+        keepCaretAtEnd();
+      }
+
+      // The input takes taps (so a long-press offers Paste); a tap or a
+      // focus lands the caret after the last character, where a code is
+      // typed. Arrow keys still move it, and the caret cell follows (paint).
+      // A real selection (select-all, a long-press) is left alone, so typing
+      // or pasting over it still replaces it.
+      function keepCaretAtEnd() {
+        var end = input.value.length;
+        if (input.selectionStart !== input.selectionEnd) return;
+        if (input.selectionStart !== end) {
+          try { input.setSelectionRange(end, end); } catch (err) { /* not a text input */ }
+        }
+        paint();
       }
 
       input.addEventListener('input', handleInput);
+      input.addEventListener('paste', handlePaste);
+      input.addEventListener('click', keepCaretAtEnd);
+      input.addEventListener('focus', keepCaretAtEnd);
+      input.addEventListener('blur', paint);
+      // The caret cell follows caret moves that change no value: arrow keys,
+      // a cursor swipe, a screen reader's character reading
+      input.addEventListener('keyup', paint);
+      input.addEventListener('selectionchange', paint);
       // 'change' catches value setters that announce themselves (a bare
       // input.value = x fires nothing — dispatch input or change after it)
       input.addEventListener('change', handleInput);
@@ -166,11 +208,10 @@
       input.value = filter(input.value).slice(0, pattern.length);
       lastValue = input.value;
       paint();
-      wasComplete = input.value.length === pattern.length;
     });
 
     // Only when something was actually wired — most pages have no cell input.
-    if (bound) console.log('[cell-input] v1.1.0 — init (' + bound + ')');
+    if (bound) console.log('[cell-input] v1.2.0 — init (' + bound + ')');
   }
 
   // Exposed for parity with the other components; the after-nav listener below

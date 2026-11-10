@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v7.5.0 */
+/* @bydefaultstudio/design-system v7.5.1 */
 /**
  * <Sheet> — React adapter over the Drawer markup contract (cms/drawer.md).
  *

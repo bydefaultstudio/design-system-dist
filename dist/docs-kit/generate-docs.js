@@ -3630,6 +3630,23 @@ function generateNavJs(filesBySection) {
   // Contact link (config: contactHref / contactLabel) — omitted when unset.
   // Icon-only at every width, like every action in the end slot since the
   // 2026-09-30 header; the accessible name is the aria-label.
+  // The People page (cms/apps/people.*, admin only), wherever the site's
+  // config files it: the account menu links it for admins and owners, so
+  // managing who can sign in is one click from every page on every site.
+  // Omitted when the site has no People page.
+  // Same folder rule as the app pages and linkLevels: the pair's section,
+  // Tools by default. A draft pair has no page, so no link.
+  const peopleSource = path.join(DOCS_DIR, 'apps', 'people.md');
+  let peopleHref = '';
+  if (CONFIG.accessGate && fs.existsSync(peopleSource)) {
+    const { frontmatter: peopleApp } = parseFrontmatter(fs.readFileSync(peopleSource, 'utf8'));
+    if (peopleApp.status !== 'draft') {
+      const peopleSection = peopleApp.section || 'Tools';
+      const peopleFolder = SECTION_FOLDERS[peopleSection] || peopleSection.toLowerCase();
+      peopleHref = siteHref('/' + peopleFolder + '/people.html');
+    }
+  }
+
   const contactNavJs = CONFIG.contactHref ? `
     + '<a href="${siteHref(CONFIG.contactHref)}" class="button header-action header-contact-link" data-icon-only aria-label="${CONFIG.contactLabel}" data-tooltip="${CONFIG.contactLabel}" data-tooltip-position="bottom">'
     + '<span class="svg-icn">' + ICON_MAIL + '</span>'
@@ -3663,6 +3680,7 @@ function generateNavJs(filesBySection) {
   var ICON_CLOCK = '${esc(getRawIcon('clock'))}';
   var ICON_RETURN = '${esc(getRawIcon('return-arrow'))}';
   var ICON_LOGOUT = '${esc(getRawIcon('logout'))}';
+  var ICON_USERS = '${peopleHref ? esc(getRawIcon('users')) : ''}';
   var NAV_LOCK = '${esc(lockIcon('sidebar-nav-lock'))}';
 
   // ── Build site header HTML ──
@@ -3747,7 +3765,12 @@ function generateNavJs(filesBySection) {
     + '<div class="dropdown-desc header-account-email"></div></div>'
     + '</div>'
     + '<div class="dropdown-divider" role="separator"></div>'
-    + '<div class="dropdown-group" role="menu">'
+    + '<div class="dropdown-group" role="menu">'${peopleHref ? `
+    // Hidden until header-account.js reads an admin or owner session; the
+    // Worker refuses the page to anyone else whatever this menu shows.
+    + '<a class="dropdown-item" role="menuitem" href="${peopleHref}" data-account-people hidden>'
+    + '<span class="svg-icn">' + ICON_USERS + '</span><span>People</span>'
+    + '</a>'` : ''}
     + '<button type="button" class="dropdown-item dropdown-item--danger" role="menuitem" data-account-sign-out>'
     + '<span class="svg-icn">' + ICON_LOGOUT + '</span><span>Sign out</span>'
     + '</button>'
@@ -4622,6 +4645,11 @@ function buildNavSectionsHtml(filesBySection) {
   // for a build and is always off inside a brand instance. Without it the
   // sidebar kept a Search entry pointing at a page the instance does not
   // have — the off switch produced a broken route rather than no route.
+  // A link with `after: '<Section>'` renders straight after that section
+  // instead of above the list (the Glossary after Tools, 2026-11-10); a site
+  // without that section shows it at the top as before.
+  const linksAfter = {};
+  const presentSections = new Set(Object.keys(filesBySection));
   for (const link of CONFIG.rootLinks || []) {
     // Fail loudly on a bad entry — a silent skip here would ship a nav with a
     // missing or dead root link and nothing in the build output to say why.
@@ -4639,7 +4667,9 @@ function buildNavSectionsHtml(filesBySection) {
     // gated in the emitted script rather than here.
     const engineOnly = link.requires === 'search' ? ' data-engine-only' : '';
     const rootIconHtml = link.icon ? `<span class="svg-icn">${getRawIcon(link.icon)}</span>` : '';
-    html += `<a href="${siteHref(link.href)}" class="sidebar-nav-link sidebar-nav-root-link" data-access="${escapeAttr(link.access || 'team')}"${engineOnly}${MOTION.sidebarItem} aria-label="${escapeAttr(link.title)}" data-tooltip="${escapeAttr(link.title)}" data-tooltip-position="right">${rootIconHtml}<span>${escapeAttr(link.title)}</span>${navLock}</a>`;
+    const linkHtml = `<a href="${siteHref(link.href)}" class="sidebar-nav-link sidebar-nav-root-link" data-access="${escapeAttr(link.access || 'team')}"${engineOnly}${MOTION.sidebarItem} aria-label="${escapeAttr(link.title)}" data-tooltip="${escapeAttr(link.title)}" data-tooltip-position="right">${rootIconHtml}<span>${escapeAttr(link.title)}</span>${navLock}</a>`;
+    if (link.after && presentSections.has(link.after)) (linksAfter[link.after] = linksAfter[link.after] || []).push(linkHtml);
+    else html += linkHtml;
   }
 
   // Read ordering from _defaults.md (configurable per directory)
@@ -4778,6 +4808,7 @@ function buildNavSectionsHtml(filesBySection) {
 
     html += `</ul></details>`;
     html = html.slice(0, sectionStart) + html.slice(sectionStart).replace('__ACCESS_ANY__', accessAnyAttr(sectionEntries));
+    if (linksAfter[section]) html += linksAfter[section].join('');
   }
 
   return html;

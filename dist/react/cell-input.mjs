@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v7.5.0 */
+/* @bydefaultstudio/design-system v7.5.1 */
 /**
  * <CellInput> — React adapter over the Cell Input markup contract
  * (cms/cell-input.md).
