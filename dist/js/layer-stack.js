@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.4.0 */
+/* @bydefaultstudio/design-system v7.5.0 */
 /**
  * layer-stack.js — the engine behind Layout Spec: a canvas, the specimen on
  * it, and an ordered stack of rules drawn over (or under) it.
@@ -49,6 +49,18 @@
  *                                   visible, so they come back as they were
  *     type         'group'
  *     layers       [ layer ]        bottom to top, as above
+ *     crop         optional { form: 'rect' | 'circle', x, y, w, h, r } in
+ *                  reference px: what one place shows of the file (a grid
+ *                  tile, a phone's screen, a profile circle). While the
+ *                  group shows, everything outside it is masked in
+ *                  --overlay-crop-mask, the ground's colour, straight above
+ *                  the group (4.2.0). r: a rectangle's four corner radii,
+ *                  top left first and clockwise (4.2.1)
+ *     view         optional name: groups sharing one are views of the same
+ *                  file, so turning one on turns the others off (4.2.0)
+ *     disables     optional [ id ]: switches this group turns off while it
+ *                  shows, and the tool greys out; their own visible is kept,
+ *                  so they come back as they were (4.2.0)
  *
  *   layer          one structure for every type (§0.8)
  *     envelope     id (unique), type, preset (a name, not a contract),
@@ -149,12 +161,12 @@
  * or start, its top-left corner on the point. Nothing an older spec holds
  * reads differently.
  *
- * @version 4.1.0
+ * @version 4.2.1
  */
 (function () {
   'use strict';
 
-  var VERSION = '4.1.0';
+  var VERSION = '4.2.1';
   console.log('[layer-stack] v' + VERSION + ' loaded');
 
   var SVG_NS = 'http://www.w3.org/2000/svg';
@@ -595,30 +607,60 @@
 
   /* Each layer with whether it shows: its own eye and its group's. */
   function drawList(spec) {
+    var off = disabledIds(spec);
     var out = [];
     (spec.layers || []).forEach(function (entry) {
+      var blocked = Boolean(entry && off[entry.id]);
       if (isGroup(entry)) {
-        (entry.layers || []).forEach(function (layer) { out.push({ layer: layer, shown: entry.visible !== false && layer.visible }); });
+        (entry.layers || []).forEach(function (layer) { out.push({ layer: layer, shown: !blocked && entry.visible !== false && layer.visible }); });
       } else if (entry) {
-        out.push({ layer: entry, shown: entry.visible });
+        out.push({ layer: entry, shown: !blocked && entry.visible });
       }
     });
     return out;
   }
 
+  /* The switches a showing group turns off (its disables), as a set. */
+  function disabledIds(spec) {
+    function pass(skip) {
+      var off = {};
+      (spec.layers || []).forEach(function (entry) {
+        if (isGroup(entry) && entry.visible !== false && !skip[entry.id] && Array.isArray(entry.disables)) {
+          entry.disables.forEach(function (id) { off[id] = true; });
+        }
+      });
+      return off;
+    }
+    // A group switched off by another switches nothing off itself: the
+    // second pass ignores the blockers the first one blocked.
+    return pass(pass({}));
+  }
+
   /* What a tool offers as switches: each group and each layer outside one,
      top first as a list reads. Never the specimen — the tools draw their own. */
   function toggles(spec) {
+    var off = disabledIds(spec);
     return (spec.layers || []).filter(function (entry) { return entry && entry.type !== 'specimen'; }).map(function (entry) {
-      return { id: entry.id, label: entry.label, visible: entry.visible !== false, group: isGroup(entry) };
+      return { id: entry.id, label: entry.label, visible: entry.visible !== false, group: isGroup(entry),
+        view: (isGroup(entry) && entry.view) || '', disabled: Boolean(off[entry.id]) };
     }).reverse();
   }
 
-  /* Show or hide a group or a layer by id, wherever it sits. */
+  /* Show or hide a group or a layer by id, wherever it sits. Turning a view
+     on turns the other views of its name off. */
   function setVisible(spec, id, visible) {
+    var turnedOn = null;
     (spec.layers || []).concat(flatLayers(spec)).forEach(function (entry) {
-      if (entry && entry.id === id) { entry.visible = Boolean(visible); }
+      if (entry && entry.id === id) {
+        entry.visible = Boolean(visible);
+        if (visible && isGroup(entry) && entry.view) { turnedOn = entry; }
+      }
     });
+    if (turnedOn) {
+      (spec.layers || []).forEach(function (entry) {
+        if (isGroup(entry) && entry !== turnedOn && entry.view === turnedOn.view) { entry.visible = false; }
+      });
+    }
   }
 
   /* Parse and repair a stored spec. Anything unusable throws with a message
@@ -683,6 +725,13 @@
         visible: entry.visible !== false,
         layers: children.filter(function (layer) { return layer.type !== 'specimen'; }).map(cleanLayer)
       };
+      var crop = cleanCrop(entry.crop, spec.reference || spec.canvas);
+      if (crop) { group.crop = crop; }
+      if (typeof entry.view === 'string' && /^[\w-]{1,64}$/.test(entry.view)) { group.view = entry.view; }
+      if (Array.isArray(entry.disables)) {
+        var disables = entry.disables.filter(function (id) { return typeof id === 'string' && /^[\w-]{1,64}$/.test(id) && id !== group.id; });
+        if (disables.length) { group.disables = disables; }
+      }
       top.push(group);
       // The specimen is never in a group: lifted out, just above it.
       children.filter(function (layer) { return layer.type === 'specimen'; }).forEach(function (layer) { top.push(cleanLayer(layer)); });
@@ -1294,6 +1343,56 @@
     var attrs = { x: box.x, y: box.y, width: box.w, height: box.h };
     Object.keys(extra || {}).forEach(function (key) { attrs[key] = extra[key]; });
     return stroked(el('rect', attrs));
+  }
+
+  /* A group's crop, kept only when it is a real box inside the canvas. */
+  function cleanCrop(crop, canvas) {
+    if (!crop || typeof crop !== 'object') { return null; }
+    var box = { x: Number(crop.x), y: Number(crop.y), w: Number(crop.w), h: Number(crop.h) };
+    if (![box.x, box.y, box.w, box.h].every(isFinite) || box.w <= 0 || box.h <= 0 || box.x < 0 || box.y < 0) { return null; }
+    if (canvas && (box.x + box.w > canvas.w + 0.01 || box.y + box.h > canvas.h + 0.01)) { return null; }
+    var out = { form: crop.form === 'circle' ? 'circle' : 'rect', x: box.x, y: box.y, w: box.w, h: box.h };
+    // Corner radii, top left first and clockwise, on a rectangle only.
+    if (out.form === 'rect' && Array.isArray(crop.r) && crop.r.length === 4 && crop.r.every(function (v) { return isFinite(v) && v >= 0; }) && crop.r.some(function (v) { return v > 0; })) {
+      out.r = crop.r.map(Number);
+    }
+    return out;
+  }
+
+  /* Each showing view's crop mask, by its group's id. Two paints, so a
+     ground that is a tint over a surface (a card's preview) matches: the
+     surface under, the tint over it. */
+  function cropMasks(spec, ctx) {
+    var out = {};
+    var off = disabledIds(spec);
+    (spec.layers || []).forEach(function (entry) {
+      if (!isGroup(entry) || !entry.crop || entry.visible === false || off[entry.id]) { return; }
+      // In reference px, as every px length is: one scale for both axes,
+      // so a circle stays a circle.
+      var k = ctx.scale;
+      var c = entry.crop;
+      var box = { x: ctx.canvas.x + c.x * k, y: ctx.canvas.y + c.y * k, w: c.w * k, h: c.h * k };
+      var hole = c.form === 'circle' ? ellipsePath(box)
+        : c.r ? roundedBoxPath(box, c.r.map(function (r) { return r * k; })) : boxPath(box);
+      var mask = el('g', { class: 'layer-stack-crop', 'data-group-id': entry.id });
+      mask.appendChild(part(el('path', { d: boxPath(ctx.canvas) + hole, 'fill-rule': 'evenodd', class: 'layer-stack-crop-under' }), 'Crop mask surface'));
+      mask.appendChild(part(el('path', { d: boxPath(ctx.canvas) + hole, 'fill-rule': 'evenodd', class: 'layer-stack-crop-mask' }), 'Crop mask'));
+      out[entry.id] = part(mask, (entry.label || 'View') + ' crop');
+    });
+    return out;
+  }
+
+  /* A box with its own radius at each corner: top left, top right, bottom
+     right, bottom left, each held to half the shorter side. */
+  function roundedBoxPath(box, radii) {
+    var most = Math.min(box.w, box.h) / 2;
+    var r = radii.map(function (v) { return Math.max(0, Math.min(Number(v) || 0, most)); });
+    var x = box.x, y = box.y, w = box.w, h = box.h;
+    return 'M' + (x + r[0]) + ' ' + y +
+      'H' + (x + w - r[1]) + (r[1] ? 'A' + r[1] + ' ' + r[1] + ' 0 0 1 ' + (x + w) + ' ' + (y + r[1]) : '') +
+      'V' + (y + h - r[2]) + (r[2] ? 'A' + r[2] + ' ' + r[2] + ' 0 0 1 ' + (x + w - r[2]) + ' ' + (y + h) : '') +
+      'H' + (x + r[3]) + (r[3] ? 'A' + r[3] + ' ' + r[3] + ' 0 0 1 ' + x + ' ' + (y + h - r[3]) : '') +
+      'V' + (y + r[0]) + (r[0] ? 'A' + r[0] + ' ' + r[0] + ' 0 0 1 ' + (x + r[0]) + ' ' + y : '') + 'Z';
   }
 
   function boxPath(box) {
@@ -2009,6 +2108,16 @@
     // A layer shows when its own eye and its group's are both on.
     var drawn = drawList(spec);
 
+    // A showing view's crop: what that place cuts away, masked in the
+    // ground's colour. Each mask draws straight above its own group, so it
+    // hides what lies under the view (the artwork, the safe area) and never
+    // what is drawn above it (Measurements).
+    var masks = cropMasks(spec, ctx);
+    var maskAfter = {};
+    (spec.layers || []).forEach(function (entry) {
+      if (masks[entry.id] && (entry.layers || []).length) { maskAfter[entry.layers[entry.layers.length - 1].id] = entry.id; }
+    });
+
     // The canvas shape: one clip for the reference (the background, the
     // specimen, any image under the specimen), never for the rules.
     var shapeD = canvasShapePath(spec, ctx.canvas);
@@ -2082,7 +2191,14 @@
         });
       }
       svgRoot.appendChild(g);
+      if (maskAfter[layer.id]) {
+        svgRoot.appendChild(masks[maskAfter[layer.id]]);
+        delete masks[maskAfter[layer.id]];
+      }
     });
+
+    // Any mask whose group drew no layer at all still masks, last.
+    Object.keys(masks).forEach(function (id) { svgRoot.appendChild(masks[id]); });
 
     var edge = part(rect(ctx.canvas, { class: 'layer-stack-canvas-edge' }), 'Edge');
     svgRoot.appendChild(edge);

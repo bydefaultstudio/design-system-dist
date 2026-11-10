@@ -782,6 +782,10 @@
   justify-content: center;
   height: var(--format-card-preview-height);
   padding: var(--space-xl) var(--space-3xl);
+  /* A view's crop masks in the preview's own ground, so it reads as gone:
+     the card's surface, with the preview's tint over it. */
+  --overlay-crop-mask-under: var(--background-plain);
+  --overlay-crop-mask: var(--background-faded);
   background-color: var(--background-faded);
   overflow: hidden;
 }

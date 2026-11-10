@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v7.4.0 -->
+<!-- @bydefaultstudio/design-system v7.5.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 7.4.0 (package)**
+**Version: 7.5.0 (package)**
 
 ## Getting the System
 
@@ -1022,6 +1022,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | **Check tokens: checkbox, radio, toggle** | | |
 | `--check-size` | `var(--space-xl)` |  |
 | `--check-mark-size` | `14px` |  |
+| `--check-mark-image` | `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E")` |  |
 | `--radio-dot-inset` | `5px` |  |
 | `--check-gap` | `var(--space-s)` |  |
 | `--check-label-font` | `var(--font-s)` |  |
@@ -1353,6 +1354,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--overlay-grid-opacity` | `0.35` |  |
 | `--overlay-safe` | `var(--green-vivid)` |  |
 | `--overlay-safe-opacity` | `0.3` |  |
+| `--overlay-crop-mask` | `var(--background-primary)` |  |
 | `--overlay-line-weight` | `1px` |  |
 | `--overlay-line-dash` | `4 3` |  |
 | **The finer dash: the canvas edge and an approximate rule.** | | |
@@ -1428,6 +1430,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--checkbox-selected` | `var(--warm-100)` |  |
 | `--checkbox-border` | `var(--neutral-650)` |  |
 | `--checkbox-checkmark` | `var(--neutral-925)` |  |
+| `--check-mark-image` | `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E")` |  |
 | **Highlight** | | |
 | `--mark-background` | `var(--yellow)` |  |
 | `--mark-color` | `var(--brown-dark)` |  |
@@ -9858,6 +9861,7 @@ This section documents how the component is built. For usage, see the sections a
 | `--form-label-width` | `10rem` | The side-label column |
 | `--check-size` | `var(--space-xl)` | Checkbox and radio box; small is `var(--space-l)` |
 | `--check-mark-size` | `14px` | The checkbox's tick; small is `11px`, so the stroke stays above 1.25px |
+| `--check-mark-image` | a white tick (a dark one in the dark themes, §2b and §2c) | The checkbox's tick image. Dark mode swaps this token rather than re-styling the checkbox, so a switch's `background-image: none` wins in every theme |
 | `--radio-dot-inset` | `5px` | Inset of the radio's checked dot; small is `3px` |
 | `--check-gap` | `var(--space-s)` | Box-to-label gap in `.form-check` and `.form-toggle`; small is `var(--space-xs)` |
 | `--check-label-font` | `var(--font-s)` | Label size in `.form-check` and `.form-toggle`; small is `var(--font-xs)` |

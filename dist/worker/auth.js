@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.4.0 */
+/* @bydefaultstudio/design-system v7.5.0 */
 /**
  * auth.js — Better Auth in the Worker: the sign-in endpoints (access-plan.md §4).
  *

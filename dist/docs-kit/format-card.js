@@ -82,6 +82,10 @@ function resolveLayers(format, showList, onList) {
     for (const id of onList) {
       if (!show.includes(id)) return { error: `on="${id}" names a switch that show leaves out.` };
     }
+    // Views show one at a time, so on can start one of them, not two.
+    const views = (format.spec.layers || []).filter((g) => g.type === 'group' && g.view && onList.includes(g.id));
+    const clash = views.find((g, i) => views.some((o, j) => j < i && o.view === g.view));
+    if (clash) return { error: `on names two views (${views.map((g) => g.id).join(', ')}); they show one at a time, so start one.` };
   }
   show = has.filter((id) => show.includes(id));
   return { show, on: onList };

@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^7.4.0"
+npm install "github:bydefaultstudio/design-system-dist#semver:^7.5.0"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -120,13 +120,14 @@ automatically — external URLs pass through untouched.
 | `logoHtml` | site name as text | raw HTML for the site-header logo |
 | `contactHref` / `contactLabel` | none | site-header contact link |
 | `sectionIcons` | `{}` | map of section label → icon key for the sidebar |
-| `uiScripts` | kit-bundled copy-button, swatch + dropdown | script list for docs UI behaviours |
+| `uiScripts` | the kit set: the docs chrome (`bar`, `dropdown`, `breadcrumb`, `copy-button`, `swatch`, `docs-copy-chrome`) and every core component (`number-input`, `toast`, `dialog`, `accordion`, `tabs`, `rating`, `cell-input`, `chip`, `scroller`, `date-picker`, `password-toggle`, `field`), copied to `assets/docs-kit/`. A file your `extraScripts` already lists by the same name is left out, so nothing loads twice | script list for docs UI behaviours. Setting it replaces the whole kit set |
 | `markdownSourceBase` | none | serve path of the .md sources; enables "view as markdown" menu items |
 | `search` | `false` | the header search button and dialog. The kit ships no `search.js` or indexer, so leave it off unless the project supplies both |
 | `validateLayers` | `false` | require a valid `layer:` field in every file's frontmatter |
 | `pageTransitions` | `false` | animated Barba.js page transitions — **opt-in only**; read the "Page transitions" section before enabling |
 | `feedback` | `false` | the feedback form: "Was this helpful?" at the foot of every page, Share feedback and Report a problem in the bar's menu, and one shared dialog. **Opt-in only**: it needs your Worker's `/api/submit-form`; read the "Feedback" section first |
 | `feedbackScript` | kit copy | where the site serves `feedback.js`, when it keeps its own copy; unset, the kit ships it to `assets/docs-kit/feedback.js` |
+| `glossaryDrawer` | `true` | the glossary reading drawer, shipped whenever `cms/glossary/` exists; set `false` when the site loads and starts `glossary.js` itself. Read the "Glossary" section |
 | `showcase` | `false` | By Default OS's Showcase: public `/showcase/` pages from `cms/showcase/`, `worker/showcase-assets.mjs`, and two cursor drawings under `assets/images/svg-cursors/` |
 | `siteMap` | `false` | writes `experiments/site-map-data.js`, every page as data for the site-map experiment |
 | `accessGate` | `false` | writes `worker/page-access.mjs` and draws a `lock` icon on the rows `nav.js` locks; the project's icon set must hold `lock` |
@@ -288,6 +289,14 @@ Any script that touches page content must:
    `bd:before-nav` (dispatched before the leave animation, with the
    departing container in `event.detail.container`).
 
+The router also does three things of its own around a swap. Before leaving
+it closes any open dialog or drawer (`dialog.js`, in the default `uiScripts`),
+after `bd:before-nav` and before your `onBeforeLeave`, so `onBeforeLeave`
+always sees dialogs closed; a dialog in the arriving page's markup that is
+`open` arrives closed too. On arrival, before the enter animation, it prunes
+empty card sections under `accessNav: 'hidden'` and locks the arriving page's
+links, and it refuses a click on a locked link once the session is known.
+
 Scripts placed *inside* the container are re-executed on every arrival
 automatically; scripts matching the library patterns (`/vendor/`, common
 CDNs) load once and are skipped after.
@@ -347,25 +356,74 @@ What the generator adds:
 - **`feedback.js`**, shipped to `assets/docs-kit/feedback.js` unless
   `feedbackScript` names your own copy.
 
-What your site must already have: the design system's CSS and `dialog.js`
-(the dialog, chips and switches are engine components), `toast.js` for the
-bar's thank-you (without it the dialog still closes, silently), and the
-kit's `docs.css` or your own copy of its feedback rules.
+What your site must already have: the design system's CSS, `dialog.js`
+(the dialog, chips and switches are engine components) and `toast.js` for the
+bar's thank-you (both in the kit's default `uiScripts`; without `toast.js` the
+dialog still closes, silently), and the kit's `docs.css` or your own copy of
+its feedback rules.
 
 **The server is yours to provide.** The form POSTs to `/api/submit-form` with
 `{ formType: "feedback", data, hp }` and expects the sign-in session cookie.
-Copy `worker/submit-form.js` and `worker/notion-config.js` from the design
+**Today this copy does not work:** `submit-form.js` imports `gate.mjs` and
+`session.js`, which the package does not export, so leave `feedback` off until
+the engine ships the forms route. The steps, for reference: copy
+`worker/submit-form.js` and `worker/notion-config.js` from the design
 system repo into your Worker, route `/api/submit-form` to
 `handleSubmitForm`, add your hub's host to `ALLOWED_APEXES`, and set:
 
 | Name | Kind | Value |
 | --- | --- | --- |
-| `FEEDBACK_HUB` | var (`wrangler.jsonc`) | the name entries are filed under, e.g. `BlackDoctor`. No commas, 100 characters at most |
+| `FEEDBACK_HUB` | var (`wrangler.jsonc`) | the name entries are filed under, e.g. `Acme`. No commas, 100 characters at most |
 | `NOTION_API_KEY` | secret | the Notion integration token |
 | `NOTION_DATABASE_ID_FEEDBACK` | secret | the Feedback database's ID |
 
 The hub, the reader's email (only when they turn follow-up on), the type and
 the status are written by the server, never taken from the browser.
+
+## Glossary
+
+A `cms/glossary/` folder, one markdown file per term plus `_tags.json`,
+builds the glossary: the `{{glossary-terms}}`, `{{glossary-topics}}` and
+`{{glossary-count}}` placeholders on your glossary page, one page per
+published term at `/glossary/<slug>.html`, and the feed at
+`/glossary/index.json`.
+
+**The reading drawer comes with it.** When the folder exists, the generator
+ships two scripts to `assets/docs-kit/` and loads them after every other
+script:
+
+- **`glossary.js`** filters the cards by search and topic, and opens a term
+  in a drawer instead of leaving the page. The term's own page stays the
+  link, so sharing, search engines and readers without JavaScript still get
+  it, and `?term=` and `?topic=` in the address open a term or a topic
+  straight away.
+- **`glossary-init.js`** starts it on load and after every page transition
+  (`bd:after-nav`), since a docs-kit site has no `bd-site-init.js`.
+
+The drawer's styles are in the kit's `docs.css`.
+
+What your site should already load, before the kit's scripts:
+
+- **The design system's CSS.** The drawer is the engine's `.drawer`.
+- **`dialog.js`**, in the kit's default `uiScripts` (or from the package's
+  `dist/js/` if you set your own list). It gives the drawer its
+  opening and closing motion, and its drag to close. Without it the drawer
+  still opens as a plain modal and closes on Escape.
+- **`scroller.js`**, also in the default `uiScripts`. It fades the edges of the
+  drawer's one-line topic row and turns the mouse wheel into sideways
+  scrolling. It's optional: the row scrolls without it.
+
+The A to Z rail beside the list needs `az-index.js`, which the kit does not
+ship. A rail written into your glossary page stays hidden without it, and
+the list works as before.
+
+When a term's page answers 401 (a site behind a sign-in whose session has
+ended), the drawer offers "Sign in again" linking to `/auth/login.html`,
+which is the access gate's login page. A site whose sign-in lives elsewhere
+should redirect that path.
+
+Set `glossaryDrawer: false` if your site loads `glossary.js` itself and calls
+`window.initGlossary`. Otherwise the kit's copy loads it a second time.
 
 ## Versioning
 

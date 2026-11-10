@@ -44,6 +44,10 @@ const TEMPLATE_FILE = path.join(__dirname, 'template.html');
 // Bundled fallback assets (docs.css, ui scripts, chrome icons) — present only
 // in the shipped docs-kit package, not when running from repo source.
 const KIT_ASSETS = path.join(__dirname, 'assets');
+// The kit's default uiScripts, in load order: the docs chrome, then the core
+// components. One list in component-modules.json, which build-package.js
+// reads to ship exactly these files into dist/docs-kit/assets/js/.
+const KIT_UI_SCRIPTS = require('./component-modules.json').kitUiScripts;
 
 const userConfig = require(PROJECT.configPath);
 
@@ -94,6 +98,12 @@ const CONFIG = {
   // A site that serves feedback.js from its own tree names it here; unset,
   // the kit's copy is shipped into assets/docs-kit/.
   feedbackScript: userConfig.feedbackScript || null,
+  // The glossary reading drawer: on whenever cms/glossary/ exists, so a site
+  // that builds a glossary gets glossary.js and its starter in
+  // assets/docs-kit/. A site that loads and starts glossary.js itself (By
+  // Default OS, through bd-site-init.js) sets false. See the docs-kit README,
+  // "Glossary".
+  glossaryDrawer: userConfig.glossaryDrawer !== false,
   // By Default OS features. Each writes files a docs-kit project does not own
   // (worker/*.mjs, experiments/, a public /showcase/), and a project with its
   // own Worker has a worker/ folder for other reasons, so each is opt-in.
@@ -108,7 +118,7 @@ const CONFIG = {
   // rewrite: without it every reader sees every title, as with 'locked'.
   accessNav: userConfig.accessNav === 'hidden' ? 'hidden' : 'locked',
   assetLibrary: userConfig.assetLibrary === true,
-  uiScripts: userConfig.uiScripts || null, // null = kit-bundled copy-button + dropdown
+  uiScripts: userConfig.uiScripts || null, // null = the kit set, component-modules.json kitUiScripts
   // Extension surface (all off by default)
   extraHeadHtml: userConfig.extraHeadHtml || '',
   // Markup first in <body>, before the layout (a curtain, a banner: anything
@@ -145,6 +155,11 @@ if (userConfig.pageTransitions !== undefined && typeof userConfig.pageTransition
 
 if (userConfig.feedback !== undefined && typeof userConfig.feedback !== 'boolean') {
   console.error(`❌ Invalid feedback: expected true or false, got ${JSON.stringify(userConfig.feedback)}. The feedback form is opt-in — read the "Feedback" section of the docs-kit README before enabling it.`);
+  process.exit(1);
+}
+
+if (userConfig.glossaryDrawer !== undefined && typeof userConfig.glossaryDrawer !== 'boolean') {
+  console.error(`❌ Invalid glossaryDrawer: expected true or false, got ${JSON.stringify(userConfig.glossaryDrawer)}. Leave it unset for the glossary reading drawer, or set false when the site loads glossary.js itself — see the "Glossary" section of the docs-kit README.`);
   process.exit(1);
 }
 
@@ -3924,7 +3939,8 @@ ${CONFIG.accessNav === 'hidden' ? `
   }
 
   // An index heading whose cards the Worker removed is a heading over
-  // nothing. barba-init.js calls this on every arriving container.
+  // nothing. Both routers (barba-init.js, barba-docs.js) call this on every
+  // arriving container.
   function pruneEmptyCardSections(scope) {
     if (!scope || !scope.querySelectorAll) return;
     var groups = scope.querySelectorAll('.docs-section');
@@ -3936,7 +3952,7 @@ ${CONFIG.accessNav === 'hidden' ? `
   window.bdPruneEmptyCardSections = pruneEmptyCardSections;
 ` : `
   // Under 'locked' the Worker cuts nothing, so there is nothing to prune;
-  // barba-init.js calls this on every swap whichever mode the site is in.
+  // both routers call this on every swap whichever mode the site is in.
   window.bdPruneEmptyCardSections = function pruneEmptyCardSections() {};
 `}
   // The sidebar's entrances are played by bd-animate's chrome pass, which
@@ -6613,16 +6629,30 @@ function applyTemplateChrome(rawTemplate) {
     copyKitAsset('docs.css', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'docs.css'));
   }
 
-  // Docs UI scripts (copy buttons, dropdowns): project-provided list, or the
-  // kit-bundled pair copied into the output
+  // Docs UI scripts: project-provided list, or the kit-bundled set copied
+  // into the output. The kit set is the docs chrome plus every core
+  // component the generated pages can draw (D1, engine-parity-plan.md: a
+  // zero-config site behaves like By Default's), so the mobile menu and
+  // search dialog work without a hand-built list. A script whose file name
+  // the site already lists in extraScripts is left out: most components
+  // bind document-level listeners with no double-load guard, so loading
+  // dialog.js twice would open and close a dialog on the same click. A copy
+  // under another file name (dialog.min.js) is the site's to drop.
   let uiScripts = CONFIG.uiScripts;
   if (uiScripts === null) {
-    uiScripts = ['assets/docs-kit/copy-button.js', 'assets/docs-kit/swatch.js', 'assets/docs-kit/docs-copy-chrome.js', 'assets/docs-kit/dropdown.js', 'assets/docs-kit/breadcrumb.js'];
-    copyKitAsset('js/copy-button.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'copy-button.js'));
-    copyKitAsset('js/swatch.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'swatch.js'));
-    copyKitAsset('js/docs-copy-chrome.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'docs-copy-chrome.js'));
-    copyKitAsset('js/dropdown.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'dropdown.js'));
-    copyKitAsset('js/breadcrumb.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'breadcrumb.js'));
+    // Every script the site names itself: extraScripts, plus raw <script src>
+    // tags in the head and body-end HTML. Compared by lower-case file name,
+    // either slash, query and fragment dropped.
+    const scriptName = (src) => String(src).split(/[?#]/)[0].split(/[\\/]/).pop().toLowerCase();
+    const rawHtml = `${CONFIG.extraHeadHtml || ''}\n${CONFIG.extraBodyEndHtml || ''}`;
+    const rawSrcs = [...rawHtml.matchAll(/<script\b[^>]*\bsrc\s*=\s*["']?([^"'\s>]+)/gi)].map(m => m[1]);
+    const siteScripts = new Set([...CONFIG.extraScripts, ...rawSrcs].map(scriptName));
+    uiScripts = [];
+    for (const f of KIT_UI_SCRIPTS) {
+      if (siteScripts.has(f)) continue;
+      uiScripts.push(`assets/docs-kit/${f}`);
+      copyKitAsset(`js/${f}`, path.join(OUTPUT_DIR, 'assets', 'docs-kit', f));
+    }
   }
 
   // All configured paths are site-root-relative; the {{NAV_BASE}} prefix
@@ -6697,6 +6727,33 @@ function applyTemplateChrome(rawTemplate) {
     extraScriptTags = extraScriptTags ? `${extraScriptTags}\n    ${feedbackTag}` : feedbackTag;
     const dialog = readFeedbackPartial('dialog.html', 'feedback-dialog.html').trimEnd();
     extraBodyEndHtml = extraBodyEndHtml ? `${extraBodyEndHtml}\n${dialog}` : dialog;
+  }
+
+  // Glossary reading drawer: whenever the site has a cms/glossary/ (the same
+  // test loadGlossary makes), ship glossary.js and the kit's starter, and
+  // load them after every other script so dialog.js, scroller.js and
+  // az-index.js, when a site loads them, are defined first. Each is optional
+  // to glossary.js, which falls back to a plain modal. A missing file fails
+  // the build: cards that never open the drawer fail silently in the browser.
+  if (CONFIG.glossaryDrawer && fs.existsSync(path.join(DOCS_DIR, 'glossary'))) {
+    const glossaryFiles = [
+      ['glossary.js', path.join(__dirname, '..', '..', 'assets', 'js', 'glossary.js')],
+      ['glossary-init.js', null],
+    ];
+    const glossaryTags = [];
+    for (const [name, sourceFallback] of glossaryFiles) {
+      const kitJs = path.join(KIT_ASSETS, 'js', name);
+      const src = fs.existsSync(kitJs) ? kitJs : sourceFallback;
+      if (!src || !fs.existsSync(src)) {
+        console.error(`❌ cms/glossary/ exists but ${name} is missing: ${[kitJs, sourceFallback].filter(Boolean).join(' or ')} — reinstall the docs-kit package, or set glossaryDrawer: false if the site loads glossary.js itself.`);
+        process.exit(1);
+      }
+      const dest = path.join(OUTPUT_DIR, 'assets', 'docs-kit', name);
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.copyFileSync(src, dest);
+      glossaryTags.push(`<script src="${nav(`assets/docs-kit/${name}`)}" defer></script>`);
+    }
+    extraScriptTags = [extraScriptTags, ...glossaryTags].filter(Boolean).join('\n    ');
   }
 
   return rawTemplate

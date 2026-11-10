@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.4.0 */
+/* @bydefaultstudio/design-system v7.5.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK: CORE
    The foundation, type, buttons, basic forms and simple components.
@@ -544,6 +544,11 @@
      fieldset — reaches every control inside it, as the field tokens do. */
   --check-size: var(--space-xl);
   --check-mark-size: 14px;
+  /* The checkmark, a white tick on the dark light-mode fill. The dark themes
+     (§2b, §2c) swap the image through this token, never by re-styling the
+     checkbox, so the tick rule stays at (0,3,1): .form-toggle's
+     background-image: none ties it and wins by coming later in the file. */
+  --check-mark-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
   --radio-dot-inset: 5px;
   --check-gap: var(--space-s);
   --check-label-font: var(--font-s);
@@ -672,6 +677,7 @@
   --checkbox-selected: var(--warm-100);
   --checkbox-border: var(--neutral-650);
   --checkbox-checkmark: var(--neutral-925);
+  --check-mark-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
 
   /* -- Highlight -- */
   /* The full-strength step, not the pale one: --yellow-light is a wash built for
@@ -744,6 +750,7 @@
     --checkbox-selected: var(--warm-100);
     --checkbox-border: var(--neutral-650);
     --checkbox-checkmark: var(--neutral-925);
+    --check-mark-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
 
     /* -- Highlight -- */
     --mark-background: var(--yellow);
@@ -2978,7 +2985,7 @@ input[type="radio"] {
 input[type="checkbox"]:checked:not(:indeterminate, .is-mixed) {
   background-color: var(--checkbox-selected);
   border-color: var(--checkbox-selected);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
+  background-image: var(--check-mark-image);
   background-size: var(--check-mark-size) var(--check-mark-size);
   background-position: center;
   background-repeat: no-repeat;
@@ -3039,19 +3046,6 @@ input[type="checkbox"]:disabled.is-mixed {
 input[type="radio"]:disabled:checked {
   background-color: var(--input-disabled-text);
   border-color: var(--input-disabled-text);
-}
-
-/* Dark mode checkmark */
-[data-theme="dark"] input[type="checkbox"]:checked:not(:indeterminate, .is-mixed) {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
-}
-
-
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) input[type="checkbox"]:checked:not(:indeterminate, .is-mixed) {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
-  }
 }
 
 /* Forced colours (Windows High Contrast) replace the fill with Canvas but
@@ -3224,8 +3218,8 @@ fieldset[data-size="small"],
   background-color: var(--toggle-mono-ink);
 }
 
-/* Matches the system-dark checkmark rule's specificity and comes after it,
-   so the checkmark image is cleared in every theme. */
+/* Clears the checkmark in every theme: the dark themes swap the tick through
+   --check-mark-image (§2b, §2c), so no checkbox rule outweighs this one. */
 .form-toggle[data-variant="mono"] input[type="checkbox"]:checked {
   background-color: var(--toggle-mono-ink);
   background-image: none;
@@ -3318,6 +3312,22 @@ fieldset[data-size="small"],
   .form-toggle[data-variant="mono"] input[type="checkbox"]:checked::after {
     background-color: HighlightText;
   }
+
+  /* A disabled switch reads as one: the faded label and half opacity are
+     both lost here, so the system's disabled colour carries it. */
+  .form-toggle:has(> input:disabled) label {
+    color: GrayText;
+  }
+
+  .form-toggle input[type="checkbox"]:disabled,
+  .form-toggle[data-variant="mono"] input[type="checkbox"]:disabled {
+    border-color: GrayText;
+  }
+
+  .form-toggle input[type="checkbox"]:disabled::after,
+  .form-toggle[data-variant="mono"] input[type="checkbox"]:disabled::after {
+    background-color: GrayText;
+  }
 }
 
 
@@ -3358,11 +3368,8 @@ fieldset[data-size="small"],
     background-color: #888;
   }
 
-  /* background-image: the system-dark checkbox checkmark outranks the base
-     toggle's `none`, so it has to be cleared again at this specificity. */
   :root:not([data-theme]) .form-toggle:not([data-variant="mono"]) input[type="checkbox"]:checked {
     background-color: #e8e6e3;
-    background-image: none;
   }
 
   :root:not([data-theme]) .form-toggle:not([data-variant="mono"]) input[type="checkbox"]:checked::after {

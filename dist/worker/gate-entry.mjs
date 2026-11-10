@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.4.0 */
+/* @bydefaultstudio/design-system v7.5.0 */
 /**
  * gate-entry.mjs - createGate(), the access gate as one factory
  * (levels-groups-plan.md Phase 3, D21). Shipped as
@@ -12,8 +12,9 @@
  *     routes: { public: [...], gated: [...] } });
  *
  * The engine owns sign-in (/api/auth/*), the session, the page check, the
- * locked page, hidden navigation and the People API (/api/people/*). The
- * site owns everything else, as routes:
+ * locked page, hidden navigation, the People API (/api/people/*) and the
+ * Content-Security-Policy report endpoint (POST /api/csp-report, public; turn
+ * it off with cspReport: false). The site owns everything else, as routes:
  *
  *   routes.public  [{ match(pathname), handle(request, env, ctx, url) }]
  *                  asked before the gate, open to everyone (a form endpoint,
@@ -31,6 +32,7 @@ import { AUTH_BASE_PATH, guestScopes, handleAuth } from './auth.js';
 import { PEOPLE_BASE_PATH, handlePeople } from './people.js';
 import { embeddableHeaders, hasSessionCookie, isConflictCopyPath, isEmbeddablePath, isPublicPath, privateHeaders, servesLanding } from './gate.mjs';
 import { requireSession } from './session.js';
+import { CSP_REPORT_PATH, handleCspReport } from './csp-report.js';
 import { hideForReader, isHtml } from './hidden-nav.mjs';
 import { SITE, configureSite } from './site.mjs';
 
@@ -118,6 +120,9 @@ export function createGate(options = {}) {
   const publicRoutes = checkRoutes(routes.public, 'public');
   const gatedRoutes = checkRoutes(routes.gated, 'gated');
   const movedTo = typeof options.movedTo === 'function' ? options.movedTo : () => null;
+  // On unless a site says no. It only ever writes a log line (csp-report.js),
+  // so a site with no policy pointing at it loses nothing by having it.
+  const cspReport = options.cspReport !== false;
 
   return {
     async fetch(request, env, ctx) {
@@ -143,6 +148,11 @@ export function createGate(options = {}) {
       for (const route of publicRoutes) {
         if (route.match(pathname)) return route.handle(request, env, ctx, url);
       }
+
+      // Where browsers post Content-Security-Policy violations: public, so a
+      // signed-out visitor on the login page reports too. After the site's
+      // own public routes, so a site that handles the path itself keeps it.
+      if (cspReport && pathname === CSP_REPORT_PATH) return handleCspReport(request);
 
       // ── Pages that moved (the site's movedTo) ──
       //

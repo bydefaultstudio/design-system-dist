@@ -33,12 +33,13 @@ const SCHEMA_FILE = path.join('assets', 'data', 'format.schema.json');
 const SPEC_SCHEMA_FILE = path.join('assets', 'data', 'layout-spec.schema.json');
 
 /** The layer switches, in the order the tool lists them, and which start on. */
-const SWITCHES = ['artwork', 'safe-area', 'cropped-area', 'app-screen', 'profile-grid', 'measurements'];
+const SWITCHES = ['artwork', 'safe-area', 'app-screen', 'profile-grid', 'profile', 'measurements'];
 const ON_BY_DEFAULT = ['artwork', 'app-screen'];
 
-/** Layer ids before 2 November, kept working in old {{format:}} tags and
-    embed URLs (decision 24). null: the layer is gone, and the id is dropped. */
-const RENAMED = { 'cut-off': 'cropped-area', 'app-interface': 'app-screen', guides: null };
+/** Layer ids no longer drawn, kept working in old {{format:}} tags and embed
+    URLs (decision 24). null: the layer is gone, and the id is dropped. Cropped
+    area went on 10 November: each view now carries its own crop (decision 37). */
+const RENAMED = { 'cut-off': null, 'cropped-area': null, 'app-interface': 'app-screen', guides: null };
 
 /** The Type filter's values, as the schema's enum, with their labels. */
 const TYPE_LABELS = { post: 'Post', story: 'Story', video: 'Video', banner: 'Banner', profile: 'Profile', ad: 'Ad' };

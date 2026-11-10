@@ -167,14 +167,19 @@
     var el = opts && opts.el;
     if (el) {
       if (el.hasAttribute && el.hasAttribute('data-barba-prevent')) return true;
-      // A locked link (see nav.js applySessionLock) neither navigates nor
-      // prefetches once the session is confirmed signed out. nav.js stops the
-      // native follow; this stops the router, which does not look at
-      // defaultPrevented. [data-gated], not .is-locked: the pager is marked
-      // on bd:after-nav, after the new container is already clickable.
-      if (el.closest && document.body.classList.contains('is-signed-out')
-          && window.bdSession && window.bdSession.signedIn === false
-          && el.closest('.site-sidebar, .page-nav-link[data-gated]')) return true;
+      // A locked link (see nav.js applyAccess) neither navigates nor
+      // prefetches once a session answer has landed - signed out, a guest
+      // beyond their grants, a team member beside an admin page. nav.js
+      // stops the native follow; this stops the router, which does not look
+      // at defaultPrevented. aria-disabled is the mark on every locked
+      // element, sidebar item, card or pager link alike; the generator no
+      // longer emits data-gated. Same test as the site router (barba-init.js).
+      // The nearest lockable item decides, as nav.js guardLockedClick does: an
+      // open section-index link inside a locked section summary is not
+      // locked, so an ancestor's mark must not refuse it.
+      var lockItem = window.bdSession && el.closest
+        && el.closest('.site-sidebar a[href], .page-nav-link, .book-contents-item, .book-cover');
+      if (lockItem && lockItem.getAttribute('aria-disabled') === 'true') return true;
       if (el.hasAttribute && el.hasAttribute('download')) return true;
       if (el.target === '_blank') return true;
       if (isSamePageLink(el)) return true;
@@ -289,7 +294,7 @@
       mount.removeAttribute('data-sidebar-default');
     }
 
-    // A locked sidebar (signed out, see nav.js applySessionLock) keeps the
+    // A locked sidebar (signed out, see nav.js applyAccess) keeps the
     // state it has: it painted collapsed, and anything since is the reader's
     // own toggling. This hook also runs on the first load, so without the
     // guard it would open the rail a signed-out reader is meant to start on.
@@ -785,6 +790,11 @@
       document.dispatchEvent(new CustomEvent('bd:before-nav', {
         detail: { container: data && data.current ? data.current.container : null }
       }));
+      // A modal open across the swap would keep the entire next page inert
+      // (showModal top-layer), or strand focus if its dialog is destroyed.
+      // dialog.js defines it; a site that does not load dialog.js has no
+      // modal to close.
+      if (typeof window.bdCloseOpenDialogs === 'function') window.bdCloseOpenDialogs();
 
       if (onBeforeLeave) {
         try {
@@ -793,6 +803,19 @@
           console.warn('[barba-docs] onBeforeLeave error:', e);
         }
       }
+    });
+
+    // The arriving container is marked for the reader before it animates in
+    // (nav.js applyAccess): under accessNav 'hidden' the index headings whose
+    // cards the Worker cut go, and the pager and cards the reader cannot open
+    // are locked from the first frame, not after the enter animation. Both
+    // come from the generated nav.js; each is a no-op until there is a
+    // session answer or nothing to prune.
+    barba.hooks.beforeEnter(function (data) {
+      var next = data && data.next ? data.next.container : null;
+      if (!next) return;
+      if (typeof window.bdPruneEmptyCardSections === 'function') window.bdPruneEmptyCardSections(next);
+      if (typeof window.bdRelockSwapped === 'function') window.bdRelockSwapped(next);
     });
 
     var onNextDocument = optionFn('onNextDocument');

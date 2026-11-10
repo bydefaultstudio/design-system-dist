@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.4.0 */
+/* @bydefaultstudio/design-system v7.5.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -542,6 +542,11 @@
      fieldset — reaches every control inside it, as the field tokens do. */
   --check-size: var(--space-xl);
   --check-mark-size: 14px;
+  /* The checkmark, a white tick on the dark light-mode fill. The dark themes
+     (§2b, §2c) swap the image through this token, never by re-styling the
+     checkbox, so the tick rule stays at (0,3,1): .form-toggle's
+     background-image: none ties it and wins by coming later in the file. */
+  --check-mark-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
   --radio-dot-inset: 5px;
   --check-gap: var(--space-s);
   --check-label-font: var(--font-s);
@@ -670,6 +675,7 @@
   --checkbox-selected: var(--warm-100);
   --checkbox-border: var(--neutral-650);
   --checkbox-checkmark: var(--neutral-925);
+  --check-mark-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
 
   /* -- Highlight -- */
   /* The full-strength step, not the pale one: --yellow-light is a wash built for
@@ -742,6 +748,7 @@
     --checkbox-selected: var(--warm-100);
     --checkbox-border: var(--neutral-650);
     --checkbox-checkmark: var(--neutral-925);
+    --check-mark-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
 
     /* -- Highlight -- */
     --mark-background: var(--yellow);
@@ -3463,7 +3470,7 @@ input[type="radio"] {
 input[type="checkbox"]:checked:not(:indeterminate, .is-mixed) {
   background-color: var(--checkbox-selected);
   border-color: var(--checkbox-selected);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
+  background-image: var(--check-mark-image);
   background-size: var(--check-mark-size) var(--check-mark-size);
   background-position: center;
   background-repeat: no-repeat;
@@ -3524,19 +3531,6 @@ input[type="checkbox"]:disabled.is-mixed {
 input[type="radio"]:disabled:checked {
   background-color: var(--input-disabled-text);
   border-color: var(--input-disabled-text);
-}
-
-/* Dark mode checkmark */
-[data-theme="dark"] input[type="checkbox"]:checked:not(:indeterminate, .is-mixed) {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
-}
-
-
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) input[type="checkbox"]:checked:not(:indeterminate, .is-mixed) {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a1a1a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 12 10 18 20 6'/%3E%3C/svg%3E");
-  }
 }
 
 /* Forced colours (Windows High Contrast) replace the fill with Canvas but
@@ -4114,8 +4108,8 @@ fieldset[data-size="small"],
   background-color: var(--toggle-mono-ink);
 }
 
-/* Matches the system-dark checkmark rule's specificity and comes after it,
-   so the checkmark image is cleared in every theme. */
+/* Clears the checkmark in every theme: the dark themes swap the tick through
+   --check-mark-image (§2b, §2c), so no checkbox rule outweighs this one. */
 .form-toggle[data-variant="mono"] input[type="checkbox"]:checked {
   background-color: var(--toggle-mono-ink);
   background-image: none;
@@ -4208,6 +4202,22 @@ fieldset[data-size="small"],
   .form-toggle[data-variant="mono"] input[type="checkbox"]:checked::after {
     background-color: HighlightText;
   }
+
+  /* A disabled switch reads as one: the faded label and half opacity are
+     both lost here, so the system's disabled colour carries it. */
+  .form-toggle:has(> input:disabled) label {
+    color: GrayText;
+  }
+
+  .form-toggle input[type="checkbox"]:disabled,
+  .form-toggle[data-variant="mono"] input[type="checkbox"]:disabled {
+    border-color: GrayText;
+  }
+
+  .form-toggle input[type="checkbox"]:disabled::after,
+  .form-toggle[data-variant="mono"] input[type="checkbox"]:disabled::after {
+    background-color: GrayText;
+  }
 }
 
 
@@ -4248,11 +4258,8 @@ fieldset[data-size="small"],
     background-color: #888;
   }
 
-  /* background-image: the system-dark checkbox checkmark outranks the base
-     toggle's `none`, so it has to be cleared again at this specificity. */
   :root:not([data-theme]) .form-toggle:not([data-variant="mono"]) input[type="checkbox"]:checked {
     background-color: #e8e6e3;
-    background-image: none;
   }
 
   :root:not([data-theme]) .form-toggle:not([data-variant="mono"]) input[type="checkbox"]:checked::after {
@@ -12530,6 +12537,10 @@ section[id] {
      templates' bright green at 30%, and the area outlined in it. */
   --overlay-safe: var(--green-vivid);
   --overlay-safe-opacity: 0.3;
+  /* What a view's crop cuts away, masked in the ground's colour so only
+     what that place shows is seen (owner, 2026-11-09, Experiment D). A
+     tool whose drawing sits on another ground re-points it. */
+  --overlay-crop-mask: var(--background-primary);
   /* Every line's weight and a dashed line's dash and gap, in screen px
      (the strokes do not scale). A layer's own weight overrides the first. */
   --overlay-line-weight: 1px;
@@ -12672,7 +12683,26 @@ section[id] {
   stroke-dasharray: var(--overlay-line-dash);
 }
 
+/* A showing view's crop: what that place cuts away, masked in the host's
+   ground (--overlay-crop-mask, which a host re-points to its own). A ground
+   that is a tint over a surface sets the surface as --overlay-crop-mask-under
+   and the tint as --overlay-crop-mask; an opaque ground needs only the one. */
+.layer-stack-crop-under,
+.layer-stack-crop-mask {
+  stroke: none;
+  pointer-events: none;
+}
+
+.layer-stack-crop-under {
+  fill: var(--overlay-crop-mask-under, transparent);
+}
+
+.layer-stack-crop-mask {
+  fill: var(--overlay-crop-mask);
+}
+
 /* The canvas edge, when layers reach past it (a clear space). */
+
 .layer-stack-canvas-edge {
   fill: none;
   stroke: currentColor;
@@ -12796,6 +12826,13 @@ section[id] {
 
   .layer-stack-marker {
     --layer-stack-marker-colour: CanvasText;
+  }
+
+  /* A crop still hides what its place cuts away, in the system's own
+     background. */
+  .layer-stack-crop-under,
+  .layer-stack-crop-mask {
+    fill: Canvas;
   }
 }
 

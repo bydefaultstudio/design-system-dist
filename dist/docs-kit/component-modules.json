@@ -25,6 +25,11 @@
     "tabs.js",
     "toast.js"
   ],
+  "kitUiScripts": [
+    "bar.js", "dropdown.js", "breadcrumb.js", "copy-button.js", "swatch.js", "docs-copy-chrome.js",
+    "number-input.js", "toast.js", "dialog.js", "accordion.js", "tabs.js", "rating.js",
+    "cell-input.js", "chip.js", "scroller.js", "date-picker.js", "password-toggle.js", "field.js"
+  ],
   "componentCss": [
     "bd-animate.css",
     "bd-cursor.css",
