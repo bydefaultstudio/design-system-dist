@@ -30,7 +30,7 @@ Every page declares one in its frontmatter, as `access:`. The build compiles the
 | `admin` | Admins and owners. This page and People |
 | `owner` | Owners only. Setup, Brand Setup and Folder Structure: the pages that run the engine and the deployment, closed to a client's own admin |
 
-A missing field takes its section's default, when the deployment sets one (`sectionAccess` in `docs.config.js`, keyed by output folder, for example `{ social: 'admin' }`), and is `team` otherwise. A page's own field always wins. A value that is not one of the four fails the build, and every level that came from a section default is listed at the end of the build, so a default that opens a section is never silent.
+A missing field takes its section's default, when the deployment sets one (`sectionAccess` in `docs.config.js`, keyed by output folder, for example `{ social: 'admin' }`), and is `team` otherwise. A page's own field always wins. A value that is not one of the four fails the build, and every level that came from a section default is listed at the end of the build, so a default that opens a section is never silent. The section's contents page takes the same default, so an admin section's index is closed to the team like its pages; a public section's index still needs a sign-in. Search never carries a page above team, nor the card for one on a page it does carry, such as a team index listing an admin page.
 
 ---
 
@@ -93,7 +93,7 @@ Everything a row carries is in its **Edit** dialog: role, groups, end date, demo
 
 **Locked out** on a row means the address had ten wrong sign-in codes in the last day, and sign-in is refused for it until the day moves on; sessions it already holds stand. **Lift lockout** in its Edit dialog clears the count and any code it was sent, so the person can ask for a new one at once. An admin cannot lift an owner.
 
-**Remove** takes the person off the list and ends every session they hold, in one step. They can be added again later. The last owner cannot be removed or demoted, nor can the last person who manages the list; the owner named in the deployment's config cannot be removed at all. An admin cannot edit, remove or resend for an owner.
+**Remove** takes the person off the list and ends every session they hold. A browser they are already signed in on keeps working for up to five minutes, until the session cookie is next re-read, the same tail as a promotion; after that every page sends them to sign in. They can be added again later. The last owner cannot be removed or demoted, nor can the last person who manages the list; the owner named in the deployment's config cannot be removed at all. An admin cannot edit, remove or resend for an owner.
 
 ---
 

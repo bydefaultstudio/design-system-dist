@@ -3,12 +3,16 @@
  * Call window.showToast(message, type, duration) to display a notification.
  * Types: 'default', 'success', 'warning', 'danger', 'info'
  *
- * @version 1.1.1
+ * @version 1.4.0
  */
 (function () {
   'use strict';
 
   var FALLBACK_EXIT_MS = 300;
+
+  // The toasts showToast made and has not yet removed. A page's own static
+  // toast markup (a demo) is not in here, and a page transition leaves it be.
+  var live = new Set();
 
   function getContainer() {
     var c = document.querySelector('.toast-container');
@@ -27,17 +31,33 @@
     // pruned from the accessibility tree. Reparent into the open modal.
     var modal = document.querySelector('dialog:modal');
     var home = modal || document.body;
-    if (c.parentNode !== home) home.appendChild(c);
+    if (c.parentNode !== home) moveContainer(c, home);
     return c;
   }
 
-  // The fade length lives in CSS (--toast-exit-duration, shortened under
-  // prefers-reduced-motion); read the computed value so the removal delay
-  // can never drift from it.
+  // Moving the container re-inserts the toasts already in it, and a
+  // re-inserted toast would play its entrance again from @starting-style.
+  // .is-moving holds every transition off for one forced style pass, which
+  // gives the moved toasts their resting style; taken off at once, so an
+  // exit or entrance that follows in the same task still plays.
+  function moveContainer(container, home) {
+    container.classList.add('is-moving');
+    home.appendChild(container);
+    void container.offsetWidth;
+    container.classList.remove('is-moving');
+  }
+
+  // The exit length lives in CSS (--toast-exit-duration, on .is-closing);
+  // read the computed value once the class is on, so the removal delay can
+  // never drift from it. Several properties transition, so the list is
+  // read and the longest wins.
   function exitDuration(toast) {
-    var raw = getComputedStyle(toast).transitionDuration;
-    var ms = parseFloat(raw) * (raw.indexOf('ms') > -1 ? 1 : 1000);
-    return isNaN(ms) ? FALLBACK_EXIT_MS : ms;
+    var raw = getComputedStyle(toast).transitionDuration.split(',');
+    var longest = raw.reduce(function toMs(max, part) {
+      var value = parseFloat(part) * (part.indexOf('ms') > -1 ? 1 : 1000);
+      return isNaN(value) ? max : Math.max(max, value);
+    }, -1);
+    return longest < 0 ? FALLBACK_EXIT_MS : longest;
   }
 
   function dismiss(toast) {
@@ -49,8 +69,9 @@
     if (toast.contains(document.activeElement) && document.activeElement.blur) {
       document.activeElement.blur();
     }
-    toast.style.opacity = '0';
+    toast.classList.add('is-closing');
     setTimeout(function () {
+      live.delete(toast);
       if (toast.parentNode) toast.parentNode.removeChild(toast);
     }, exitDuration(toast));
   }
@@ -71,6 +92,7 @@
       '<button class="button close-btn" type="button" data-icon-only data-size="small" aria-label="Dismiss"><span class="svg-icn" data-icon="close"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7.4 18L6 16.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L6 7.4L7.4 6L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L16.6 6L18 7.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L18 16.6L16.6 18L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L7.4 18Z" fill="currentColor"/></svg></span></button>';
 
     container.appendChild(toast);
+    live.add(toast);
 
     toast.querySelector('.close-btn').addEventListener('click', function () {
       dismiss(toast);
@@ -102,17 +124,30 @@
     return div.innerHTML;
   }
 
+  // A toast is about the page it came from: a page transition sends every
+  // one still showing out through its own exit as the leave begins. The
+  // container stays, since it is the live region.
+  function dismissAllOnLeave() {
+    // Home first: a container inside a modal on the leaving page would go
+    // with the page, and the next page's first toast would land in a live
+    // region nobody had registered.
+    var container = document.querySelector('.toast-container[aria-live]');
+    if (container && live.size && container.parentNode !== document.body) moveContainer(container, document.body);
+    live.forEach(dismiss);
+  }
+
   // Create the live region at init: assistive tech must register the region
   // before its first mutation, or the first toast is announced by nobody.
   function initToast() {
     if (!document.body) return;
     getContainer();
   }
+  document.addEventListener('bd:before-nav', dismissAllOnLeave);
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initToast);
   } else {
     initToast();
   }
 
-  console.log('[toast] v1.1.0 — init');
+  console.log('[toast] v1.4.0 — init');
 })();

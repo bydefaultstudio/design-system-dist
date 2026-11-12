@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /**
  * Bar overflow
  * The bar (design-system.css §41) is always one row: items that do not fit
@@ -120,7 +120,9 @@
     // nothing is lost.
     if (wasOpen && (overflow.hidden || hadFocus)) {
       overflow.classList.remove('is-open');
-      overflow.removeAttribute('data-resolved-placement');
+      // Placement is left for the fade; dropdown.js clears it on the next open.
+      var overflowMenu = overflow.querySelector(':scope > .dropdown-menu');
+      if (overflowMenu) overflowMenu.inert = true;
       var trigger = overflow.querySelector('.dropdown-trigger');
       if (trigger) {
         trigger.setAttribute('aria-expanded', 'false');

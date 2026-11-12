@@ -405,6 +405,9 @@
 /* .button with the class, so it outranks .button[data-size="xsmall"]. */
 [data-tool="layout-specs"] .button.tool-info {
   --button-padding-y: 0;
+  /* The label's height holds it, so a brand's button floor would stretch
+     the icon-only square into a pill. */
+  --button-min-size: auto;
   height: 1.5rem;
   min-height: 0;
   color: var(--text-secondary);

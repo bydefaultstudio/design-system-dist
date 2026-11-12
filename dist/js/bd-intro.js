@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /**
  * BD Intro
  * The first-load curtain. Plays on every real document load and never on a
@@ -41,12 +41,12 @@
  * and fires the bd:ready this waits on; without it the curtain lifts as
  * soon as the drop lands.
  *
- * @version 1.0.2
+ * @version 1.1.0
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.0.2';
+  var VERSION = '1.1.0';
 
   var DEFAULTS = {
     size: 0.42,          // mark width as a fraction of the viewport
@@ -270,12 +270,57 @@
     });
   }
 
-  // The fall is the intro easing token; the settle after it is a spring
-  // sampled into linear keyframes, which no bezier describes.
+  // The settle's spring as a CSS linear() easing: the same samples, as
+  // progress from the overshoot (0) to the rest position (1), so the browser
+  // eases one segment instead of the script stepping thirty keyframes.
+  // Progress runs past 1 and back as the piece bounces; linear() allows it.
+  function springEasing(oscillations) {
+    var stops = ['0'];
+    for (var i = 1; i < SPRING_SAMPLES; i++) {
+      var t = i / SPRING_SAMPLES;
+      var progress = 1 - Math.cos(2 * Math.PI * oscillations * t) * Math.exp(-cfg.friction * t);
+      stops.push(progress.toFixed(4) + ' ' + (t * 100).toFixed(2) + '%');
+    }
+    stops.push('1');
+    return 'linear(' + stops.join(', ') + ')';
+  }
+
+  var supportsLinearEasing = typeof CSS !== 'undefined' && CSS.supports && CSS.supports('transition-timing-function', 'linear(0, 1)');
+
+  // The fall is the intro easing token; the settle after it is a spring,
+  // which no bezier describes: a linear() easing where the browser has one,
+  // otherwise sampled into linear keyframes.
+  // Built once per drop: it depends on the config alone. A config that
+  // yields no finite curve takes the sampled keyframes instead.
+  var springCache = { key: null, easing: null };
+  function cachedSpring(oscillations) {
+    var key = oscillations + '|' + cfg.friction;
+    if (springCache.key !== key) {
+      springCache.key = key;
+      springCache.easing = isFinite(oscillations) && isFinite(cfg.friction) ? springEasing(oscillations) : null;
+    }
+    return springCache.easing;
+  }
+
   function keyframesFor(p, fallEasing) {
     var rotStart = p.rotation * cfg.rotation;
     var amp = cfg.overshoot * p.damping;
     var oscillations = ((1 - FALL_RATIO) / FALL_RATIO) * REF_OSCILLATIONS * cfg.bounce;
+    var spring = supportsLinearEasing ? cachedSpring(oscillations) : null;
+    if (spring) {
+      return [{
+        offset: 0,
+        transform: 'translate(' + p.finalX + 'px, ' + p.startY + 'px) rotate(' + rotStart + 'deg)',
+        easing: fallEasing
+      }, {
+        offset: FALL_RATIO,
+        transform: 'translate(' + p.finalX + 'px, ' + (p.finalY + amp) + 'px) rotate(0deg)',
+        easing: spring
+      }, {
+        offset: 1,
+        transform: 'translate(' + p.finalX + 'px, ' + p.finalY + 'px) rotate(0deg)'
+      }];
+    }
     var frames = [{
       offset: 0,
       transform: 'translate(' + p.finalX + 'px, ' + p.startY + 'px) rotate(' + rotStart + 'deg)',

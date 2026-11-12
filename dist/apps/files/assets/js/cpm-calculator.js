@@ -1462,10 +1462,9 @@
   //------- Copy table -------//
   //
 
+  // copy-button.js owns the copied state and how long it stays.
   function flashCopied(btn) {
-    btn.classList.add('is-copied');
-    clearTimeout(btn.cpmCopyRevertTimer);
-    btn.cpmCopyRevertTimer = setTimeout(function revert() { btn.classList.remove('is-copied'); }, 2000);
+    if (window.bdCopyButton) window.bdCopyButton.flash(btn);
   }
 
   function writeClipboard(tsv, html) {

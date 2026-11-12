@@ -793,9 +793,25 @@
     return currentUrl;
   }
 
+  // The band shows it is waiting (tools.css, Busy preview) from the reload
+  // until the framed clock has loaded. An iframe fires load on an error page
+  // too, so the state always clears. aria-busy goes on the frame, not the
+  // band, which holds the status region every change speaks through.
+  function setPreviewBusy(busy) {
+    if (previewStage) previewStage.toggleAttribute('data-loading', busy);
+    if (busy) previewIframe.setAttribute('aria-busy', 'true');
+    else previewIframe.removeAttribute('aria-busy');
+  }
+
   function reloadPreview() {
     previewTimer = null;
-    if (previewIframe && currentUrl) previewIframe.src = currentUrl;
+    if (!previewIframe || !currentUrl) return;
+    setPreviewBusy(true);
+    previewIframe.src = currentUrl;
+  }
+
+  function handlePreviewLoad() {
+    setPreviewBusy(false);
   }
 
   function scheduleUpdate() {
@@ -860,6 +876,7 @@
     suppressGripClick = false;
 
     /* Search. Named handlers, so a second init on the same nodes adds nothing. */
+    if (previewIframe) previewIframe.addEventListener('load', handlePreviewLoad);
     searchInput.addEventListener('input', renderSearchResults);
     searchInput.addEventListener('keydown', handleSearchKeydown);
     searchWrapper.addEventListener('focusout', handleSearchFocusout);

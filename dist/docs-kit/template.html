@@ -280,8 +280,11 @@
         window.addEventListener('scroll', function() {
           btn.classList.toggle('is-visible', window.scrollY > 300);
         });
+        // No behavior here: html's scroll-behavior decides, and it is smooth
+        // only under prefers-reduced-motion: no-preference (docs-site.css).
+        // 'smooth' would override that guard.
         btn.querySelector('button').addEventListener('click', function() {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          window.scrollTo({ top: 0 });
         });
       })();
     </script>

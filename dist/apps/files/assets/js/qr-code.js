@@ -54,7 +54,6 @@
   var SIZE_DEFAULT = 512;
   var SIZE_STEP = 64;
 
-  var COPY_FEEDBACK_MS = 2000;  // copy-button.js's own feedback window
 
   /* What each section's reset puts back. The content and its mode are the
      reader's work, not settings, so only Reset all clears them. */
@@ -589,9 +588,27 @@
       setText(el.scanHint, '');
       return;
     }
+    var changed = el.scanBadge.getAttribute('data-color') !== s.color;
     el.scanBadge.setAttribute('data-color', s.color);
     setText(el.scanBadge, s.label);
     setText(el.scanHint, s.hint);
+    if (changed) popBadge(el.scanBadge);
+  }
+
+  // A verdict that changes settles in with the badge's pop (.is-changed,
+  // design-system.css section 16). Removed and re-added across a reflow so
+  // a second change mid-pop restarts it; cleared on animationend so the
+  // class never outlives the moment. Reduced motion drops the animation in
+  // CSS, so animationend never fires there and the class is cleared on the
+  // next change instead, which is harmless.
+  function popBadge(badge) {
+    badge.classList.remove('is-changed');
+    void badge.offsetWidth;
+    badge.classList.add('is-changed');
+  }
+
+  function clearBadgePop(event) {
+    if (event.animationName === 'badge-pop') event.currentTarget.classList.remove('is-changed');
   }
 
   /* Reads the code back the way a scanner would, from a fresh render of the
@@ -743,7 +760,21 @@
     });
   }
 
+  // A PNG at 2048px takes a moment to encode: the button shows the ring
+  // (design-system.css, Busy) while it does, and a second press waits for
+  // the first. Not disabled: that would drop a keyboard reader's focus.
+  function setBusy(button, busy) {
+    button.classList.toggle('is-loading', busy);
+    if (busy) button.setAttribute('aria-busy', 'true');
+    else button.removeAttribute('aria-busy');
+  }
+
+  function isBusy(button) {
+    return button.classList.contains('is-loading');
+  }
+
   function handleDownload() {
+    if (isBusy(el.download)) return;
     flushPending();
     showExportError('');
     if (!getPayload() || !currentMatrix) return;
@@ -753,9 +784,11 @@
       downloadBlob(new Blob([generateSVGString(currentMatrix, currentModuleCount, getOptions())], { type: 'image/svg+xml' }), filename);
       return;
     }
+    var button = el.download;
+    setBusy(button, true);
     canvasToPng()
-      .then(function (blob) { downloadBlob(blob, filename); })
-      .catch(function () { showExportError('Couldn’t build that PNG. Try a smaller size or SVG.'); });
+      .then(function (blob) { setBusy(button, false); downloadBlob(blob, filename); })
+      .catch(function () { setBusy(button, false); showExportError('Couldn’t build that PNG. Try a smaller size or SVG.'); });
   }
 
   /* Copy: SVG is copy-button.js's job through data-copy, so only PNG lands
@@ -770,6 +803,7 @@
      a click — at 2048px it is a megabyte. For PNG it stays empty, the shared
      handler bails, and the image goes on the clipboard below. */
   function handleCopy() {
+    if (isBusy(el.copy)) return;
     showExportError('');
     flushPending();
     var ready = !!(getPayload() && currentMatrix);
@@ -786,6 +820,7 @@
 
     var button = el.copy;
     var session = renderSession;
+    setBusy(button, true);
     var png = canvasToPng();
     var write;
     try {
@@ -796,21 +831,18 @@
 
     write
       .then(function () {
+        setBusy(button, false);
         // "Copied!" describes the code as it was at the click; if a render
         // has landed since, the clipboard keeps the copy and the button
         // keeps quiet.
         if (session !== renderSession) return;
-        button.classList.add('is-copied');
+        // The module's feedback and its one revert timer, so the two copy
+        // paths cannot strip each other's "Copied!" early.
+        if (window.bdCopyButton) window.bdCopyButton.flash(button);
         announceImageCopied();
-        // The shared handle, not a private timer: copy-button.js clears this
-        // one on its own copies, so the two paths cannot strip each other's
-        // "Copied!" early.
-        window.clearTimeout(button.bdCopyRevertTimer);
-        button.bdCopyRevertTimer = window.setTimeout(function () {
-          button.classList.remove('is-copied');
-        }, COPY_FEEDBACK_MS);
       })
       .catch(function () {
+        setBusy(button, false);
         showExportError('Couldn’t copy that image in this browser. Download it instead.');
       });
   }
@@ -1160,6 +1192,7 @@
     }
 
     el.mode.addEventListener('change', handleModeChange);
+    el.scanBadge.addEventListener('animationend', clearBadgePop);
     el.input.addEventListener('input', scheduleUpdate);
     el.logo.addEventListener('change', handleLogoChange);
     el.ec.addEventListener('change', scheduleSettingsUpdate);

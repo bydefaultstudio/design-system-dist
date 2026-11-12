@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /**
  * Scroller component
  * One line of chips or tags that scrolls sideways (.scroller, design-system.css
@@ -18,15 +18,19 @@
  * (bd:after-nav), once per element. The observers of rows inside the leaving
  * container are released on bd:before-nav.
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
 
   // Rows bound in this document, each with its observer, for release.
   var bound = [];
+
+  // Where CSS fades the edges from the scroll position itself
+  // (design-system.css, Scroller), the script keeps only the wheel.
+  var cssEdges = typeof CSS !== 'undefined' && CSS.supports && CSS.supports('animation-timeline: scroll()');
 
   // Sync Edges
   function syncEdges(scroller) {
@@ -68,8 +72,13 @@
     }
 
     scroller.dataset.scrollerBound = 'true';
-    scroller.addEventListener('scroll', handleScroll, { passive: true });
     scroller.addEventListener('wheel', handleWheel, { passive: false });
+
+    if (cssEdges) {
+      return;
+    }
+
+    scroller.addEventListener('scroll', handleScroll, { passive: true });
 
     var observer = null;
 

@@ -262,9 +262,9 @@
                      two rows when they do not (tools.css, Size). -->
                 <div class="tool-size">
                 <div class="number-input" role="group">
-                  <button class="number-input-btn" data-number-decrement type="button" aria-label="Decrease size">&minus;</button>
+                  <button class="number-input-btn" data-number-decrement type="button" aria-label="Decrease size"><span aria-hidden="true">&minus;</span></button>
                   <input type="number" id="lt-width" value="300" min="120" max="4096" step="10" inputmode="numeric" aria-describedby="lt-width-hint">
-                  <button class="number-input-btn" data-number-increment type="button" aria-label="Increase size">+</button>
+                  <button class="number-input-btn" data-number-increment type="button" aria-label="Increase size"><span aria-hidden="true">+</span></button>
                 </div>
                 <div class="segmented-control" data-variant="faded" id="lt-widths" role="radiogroup" aria-label="Size presets">
                   <label class="segmented-control-option"><input type="radio" name="lt-width-preset" value="150"><span>150</span></label>

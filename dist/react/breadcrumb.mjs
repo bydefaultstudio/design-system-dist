@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /**
  * <Breadcrumb> — React adapter over the Breadcrumb markup contract
  * (cms/breadcrumb.md).

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /**
  * Shared internals for the React adapters — class joining, one-shot
  * warnings, and the inline icon markup the components reproduce from
@@ -136,4 +136,48 @@ export function closeButton(closeAttr) {
   };
   props[closeAttr] = '';
   return h('button', props, closeIcon());
+}
+
+/**
+ * Make a <dialog> follow its `open` prop, for <Dialog> and <Sheet>.
+ *
+ * Closing plays the surface's exit through dialog.js (window.bdCloseSurface)
+ * and closes when it ends, as every other close does; without dialog.js it
+ * closes at once. Reopened while that exit plays, the exit is called off
+ * (window.bdOpenSurface) and the surface carries on from where it got to;
+ * no close event comes then, so the self-close flag is dropped with it.
+ * showModal() throws on an open dialog and close() on a closed one is a
+ * no-op, so both sides are guarded. `selfClosing` is the adapter's ref, set
+ * before any close it performs so its close listener can tell them apart.
+ */
+export function syncModal(el, open, selfClosing) {
+  var hasModule = typeof window.bdOpenSurface === 'function';
+  if (open) {
+    if (!el.isConnected) return;
+    var wasOpen = el.open;
+    if (hasModule) {
+      // dialog.js knows an exit from its own state, not from a class React
+      // may rewrite, and handles the gap between an exit's close() and its
+      // close event. Open, only an exit can be running: it is called off and
+      // no close event will come, so the flag goes with it. Closed, a late
+      // close event may still be due, and the flag stays to swallow it.
+      if (wasOpen) selfClosing.current = false;
+      window.bdOpenSurface(el);
+    } else if (!wasOpen) {
+      el.showModal();
+    }
+    if (wasOpen) return;
+    // React's autoFocus cannot do this: it fires at mount, before the
+    // dialog opens, and React never writes the attribute client-side.
+    // data-autofocus is the adapter's hook — without it the browser takes
+    // the first focusable, which on a destructive dialog is the
+    // destructive action.
+    var target = el.querySelector('[data-autofocus]');
+    if (target) target.focus();
+    return;
+  }
+  if (!el.open || el.classList.contains('is-closing')) return;
+  selfClosing.current = true;
+  if (typeof window.bdCloseSurface === 'function') window.bdCloseSurface(el);
+  else el.close();
 }

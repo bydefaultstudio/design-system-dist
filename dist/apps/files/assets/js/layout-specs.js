@@ -487,9 +487,12 @@
         return;
       }
       if (/^data:/i.test(src)) { state.images[src] = { failed: true }; return; }
-      state.images[src] = { pending: true };
+      var entry = { pending: true };
+      state.images[src] = entry;
       var isSvg = /\.svg(\?|#|$)/i.test(src);
-      window.fetch(src, { credentials: 'same-origin' }).then(function loaded(response) {
+      // Kept on the entry, so an export can wait for it (handleDownload).
+      // It never rejects: a failure is stored, not thrown.
+      entry.settled = window.fetch(src, { credentials: 'same-origin' }).then(function loaded(response) {
         var type = response.headers.get('content-type') || '';
         // A redirect or a page in place of a picture is the sign-in screen
         // or an error page, never the image.
@@ -3725,6 +3728,8 @@
   //
 
   var EXPORT_FAILED = 'The SVG could not be made. Export as Spec (JSON) instead: it keeps everything.';
+  // How long a download waits for linked pictures still on their way in.
+  var IMAGE_WAIT_MS = 6000;
 
   var FORMATS = {
     svg: { word: 'SVG', extension: '.layout-spec.svg', type: 'image/svg+xml' },
@@ -3770,7 +3775,40 @@
     });
   }
 
+  /* The pictures still on their way into the file. */
+  function pendingImageLoads() {
+    return Object.keys(state.images).map(function entry(src) { return state.images[src]; })
+      .filter(function waiting(entry) { return entry.pending && entry.settled; })
+      .map(function settled(entry) { return entry.settled; });
+  }
+
+  /* A download asked for while linked pictures are still loading waits for
+     them, so the file carries them rather than links to them. The button
+     shows it is working meanwhile (design-system.css, Busy), and a second
+     press waits with the first. */
   function handleDownload() {
+    var button = el.download;
+    if (button.classList.contains('is-loading')) { return; }
+    var waits = pendingImageLoads();
+    if (waits.length) {
+      var owner = state;
+      button.classList.add('is-loading');
+      button.setAttribute('aria-busy', 'true');
+      // A host that stalls must not hold the file: after the limit it saves
+      // with whatever has arrived, and noteLinkedImages says what stayed a
+      // link.
+      var limit = new Promise(function wait(resolve) { window.setTimeout(resolve, IMAGE_WAIT_MS); });
+      Promise.race([Promise.all(waits), limit]).then(function ready() {
+        button.classList.remove('is-loading');
+        button.removeAttribute('aria-busy');
+        if (state === owner && button.isConnected) { saveExport(); }
+      });
+      return;
+    }
+    saveExport();
+  }
+
+  function saveExport() {
     hideError();
     var text;
     try {

@@ -87,6 +87,10 @@ const CONFIG = {
   docsCss: userConfig.docsCss || null,
   highlightJs: userConfig.highlightJs || 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js',
   sectionFolders: userConfig.sectionFolders || {},
+  // Section labels the site has renamed, old -> new. A page still naming the
+  // old one, from a branch cut before the rename, fails the build rather than
+  // landing in a section nobody maps.
+  retiredSections: userConfig.retiredSections || {},
   filenameOverrides: userConfig.filenameOverrides || {},
   indexCards: userConfig.indexCards || null,
   logoHtml: userConfig.logoHtml || null,
@@ -277,6 +281,8 @@ const sourcePages = new Map();
 // grants reach the path, which is the gate's own default for the page.
 const linkLevels = new Map();
 function levelOf(pathname) {
+  // A folder link (/website/) is its index, as the gate and stampBodyLinks read it.
+  if (pathname.endsWith('/')) pathname += 'index.html';
   const known = pageAccess.get(pathname);
   return (known && known.level) || linkLevels.get(pathname) || 'team';
 }
@@ -286,7 +292,8 @@ const LEVEL_RANK = { public: 0, team: 1, admin: 2, owner: 3 };
 // build: under 'hidden' they fail it, since a reader who may open the page
 // could never open the link, and the sentence would still name the page. A
 // link to the home or a section index is never one: the gate opens those to
-// every signed-in reader and their titles are the section labels.
+// every signed-in reader and their titles are the section labels - unless the
+// section sets a level above team (indexLevel), when it counts like any page.
 const bodyLinkViolations = [];
 function isIndexPagePath(pathname) {
   return pathname === '/index.html' || /^\/[a-z0-9-]+\/index\.html$/.test(pathname);
@@ -320,7 +327,7 @@ function stampBodyLinks(html, pagePath, pageLevel, { mark = true } = {}) {
     if (target.endsWith('/')) target += 'index.html';
     if (!target.endsWith('.html')) return match;
     const level = levelOf(target);
-    if (LEVEL_RANK[level] > LEVEL_RANK[pageLevel] && !isIndexPagePath(target)) bodyLinkViolations.push(`  ${pagePath} (${pageLevel}) links to ${target} (${level})`);
+    if (LEVEL_RANK[level] > LEVEL_RANK[pageLevel] && !(isIndexPagePath(target) && LEVEL_RANK[level] <= LEVEL_RANK.team)) bodyLinkViolations.push(`  ${pagePath} (${pageLevel}) links to ${target} (${level})`);
     return mark ? `<a${before} href="${href}"${after} data-access="${level}">` : match;
   });
 }
@@ -352,6 +359,21 @@ function isValidAccess(value) {
 function sectionLevel(folder) {
   const map = CONFIG.sectionAccess;
   return folder && Object.prototype.hasOwnProperty.call(map, folder) ? map[folder] : undefined;
+}
+
+/**
+ * A section index's level: its section's default, else team. An index used
+ * to be team whatever its section said, so an admin or owner section's
+ * contents page went into the search index with every card's title and
+ * description on it, and a team reader found them by searching. Every place
+ * that names the index reads this: the page map, the page's own data-access
+ * (which decides search), the sidebar's Overview link and the link levels.
+ */
+function indexLevel(folder) {
+  const level = sectionLevel(folder);
+  // Never below team: a public section's index stays behind the sign-in, as
+  // it always was, since it lists that section's team and admin pages too.
+  return level && LEVEL_RANK[level] > LEVEL_RANK.team ? level : 'team';
 }
 
 // Pages whose level came from a section default, listed at the end of a full
@@ -1186,6 +1208,18 @@ function renderFormatManifest() {
 }
 
 /**
+ * A card's access attributes: its level, and, above team, out of search. The
+ * search index is one file every team reader fetches, so an admin or owner
+ * card on a searched page (a team section index, the home shelf) would hand
+ * its title and description to a team reader who searched for them, whatever
+ * the gate does with the page itself.
+ */
+function cardAccessAttrs(access) {
+  if (!access) return '';
+  return LEVEL_RANK[access] > LEVEL_RANK.team ? ` data-access="${access}" data-pagefind-ignore` : ` data-access="${access}"`;
+}
+
+/**
  * Render a .book-cover anchor with the standard header/content/footer layout.
  *
  *   header  → full-screen icon (top right)
@@ -1209,7 +1243,7 @@ function renderBookCover(opts) {
   // list passes 2, so the page does not jump from h1 straight to h3.
   const level = opts.headingLevel || 3;
   const author = opts.author || 'Studio';
-  const accessAttr = opts.access ? ` data-access="${opts.access}"` : '';
+  const accessAttr = cardAccessAttrs(opts.access);
   const description = opts.subtitle
     ? `<p class="book-cover-description" data-text-wrap="pretty">${opts.subtitle}</p>`
     : '';
@@ -1249,7 +1283,7 @@ function renderBookContentsItem(opts) {
   // Cards render h3 by default. A caller with no group heading above the
   // list passes 2, so the page does not jump from h1 straight to h3.
   const level = opts.headingLevel || 3;
-  const accessAttr = opts.access ? ` data-access="${opts.access}"` : '';
+  const accessAttr = cardAccessAttrs(opts.access);
   const description = opts.subtitle
     ? `<p class="book-contents-item-description" data-text-wrap="pretty">${opts.subtitle}</p>`
     : '';
@@ -1643,7 +1677,7 @@ function escapeAttr(text) {
 //------- Image shortcode -------//
 
 /**
- * {{image: src="…" alt="…" caption="…" width="s" ratio="16x9" float="left"}}
+ * {{image: src="…" alt="…" caption="…" width="s" ratio="16x9" float="left" frame="none"}}
  *
  * Markdown's ![alt](src) emits a bare <img> — no class, no attributes — so
  * any image that is sized, cropped, placed or floated has to be written as
@@ -1683,6 +1717,7 @@ const IMAGE_SHORTCODE_VALUES = {
   ratio: ['1x1', '3x2', '4x3', '16x9', '21x9'],
   align: ['left', 'center', 'right'],
   float: ['left', 'right'],
+  frame: ['none', 'ground'],
 };
 
 // Where the picture sits and how wide it may grow describe the box, so they
@@ -1690,7 +1725,9 @@ const IMAGE_SHORTCODE_VALUES = {
 // and has to be measured, placed and floated with it. The ratio is a property
 // of the picture itself, so it stays on the <img> either way.
 const IMAGE_BOX_PARAMS = ['width', 'align', 'float'];
-const IMAGE_PARAMS = ['src', 'alt', 'caption', 'ratio', ...IMAGE_BOX_PARAMS];
+// The frame is drawn on the picture, like the ratio, so it stays on the
+// <img> too: a caption sits outside the frame (design-system.css §24).
+const IMAGE_PARAMS = ['src', 'alt', 'caption', 'ratio', 'frame', ...IMAGE_BOX_PARAMS];
 
 /**
  * Build the markup for one {{image: …}} line.
@@ -1740,7 +1777,8 @@ function renderImageShortcode(params, line) {
     .filter((key) => attrs[key])
     .map((key) => ` data-${key}="${attrs[key]}"`)
     .join('');
-  const ratio = attrs.ratio ? ` data-ratio="${attrs.ratio}"` : '';
+  const ratio = (attrs.ratio ? ` data-ratio="${attrs.ratio}"` : '')
+    + (attrs.frame ? ` data-frame="${attrs.frame}"` : '');
   const src = escapeAttr(attrs.src);
   const alt = escapeAttr(attrs.alt);
 
@@ -1761,6 +1799,144 @@ function renderImageShortcode(params, line) {
     `<figcaption>${caption}</figcaption>`,
     '</figure>',
   ].join('\n');
+}
+
+//------- Asset and video shortcodes -------//
+
+/**
+ * Parse the key="value" pairs of one media shortcode, strictly, the way
+ * {{image:}} does: a duplicate, an unknown key, a value outside its set or
+ * anything left unparsed fails the build naming the line.
+ * @param {string} name - the shortcode, for messages ("asset", "video")
+ * @param {string} params - everything between `{{name:` and `}}`
+ * @param {string} line - the whole line, quoted back in any error
+ * @param {string[]} allowed - the keys this shortcode takes
+ * @param {Object<string, string[]>} values - closed value sets by key
+ * @returns {{attrs: Object<string, string>, fail: function(string): never}}
+ *   the parsed attributes, and the function that fails the build on this line
+ */
+function parseMediaShortcode(name, params, line, allowed, values) {
+  const fail = (reason) => {
+    throw new Error(`{{${name}}}: ${reason}\n  ${line}\n  (grep cms/ for that line)`);
+  };
+  const attrs = Object.create(null);
+  const pair = /([a-z]+)="([^"]*)"/g;
+  let match;
+  while ((match = pair.exec(params))) {
+    if (attrs[match[1]] !== undefined) fail(`duplicate parameter "${match[1]}"`);
+    attrs[match[1]] = match[2];
+  }
+  const leftover = params.replace(/([a-z]+)="([^"]*)"/g, '').trim();
+  if (leftover) fail(`could not parse "${leftover}" — every value needs straight double quotes`);
+  for (const key of Object.keys(attrs)) {
+    if (!allowed.includes(key)) fail(`unknown parameter "${key}" — expected ${allowed.join(', ')}`);
+    if (values[key] && !values[key].includes(attrs[key])) {
+      fail(`${key}="${attrs[key]}" is not one of ${values[key].join(', ')}`);
+    }
+  }
+  return { attrs, fail };
+}
+
+// Mirrors docs-site.css section 5 (Asset Card).
+const ASSET_SHORTCODE_VALUES = {
+  ground: ['faded', 'plain', 'dark', 'none'],
+  footer: ['bar', 'ground', 'none'],
+};
+const ASSET_PARAMS = ['src', 'alt', 'ground', 'title', 'footer', 'download'];
+
+/**
+ * {{asset: src="…" alt="…" ground="faded" title="Primary logo" footer="ground" download="…"}}
+ *
+ * One asset card holding one picture or file. The footer appears when there
+ * is a title and footer is not "none"; download="<path>" adds a Download
+ * button for that file (download="" downloads src). A picture that fills the
+ * card edge to edge is ground="none", which keeps the bar footer: a ground
+ * footer would sit on the photo. Copy buttons, specimens and light and dark
+ * pairs are raw HTML (cms/asset-card.md).
+ */
+function renderAssetShortcode(params, line) {
+  const { attrs, fail } = parseMediaShortcode('asset', params, line, ASSET_PARAMS, ASSET_SHORTCODE_VALUES);
+  if (!attrs.src) fail('src is required');
+  if (attrs.alt === undefined) fail('alt is required — use alt="" for a decorative image');
+  if (attrs.footer && attrs.footer !== 'none' && !attrs.title) fail('a footer needs a title');
+  if (attrs.download !== undefined && !attrs.title) fail('download needs a title, which names the button');
+  // alt="" is right when the footer's title names the asset; with no title
+  // to show, the card would say nothing to a screen reader.
+  if (attrs.alt === '' && (!attrs.title || attrs.footer === 'none')) fail('alt="" needs a title in the footer to name the asset — give the image alt text');
+
+  const ground = attrs.ground || 'faded';
+  const footerStyle = attrs.footer || 'bar';
+  const groundFooter = footerStyle === 'ground' && ground !== 'none';
+  const cardAttrs = (ground !== 'faded' ? ` data-ground="${ground}"` : '')
+    + (groundFooter ? ' data-footer="ground"' : '');
+  const preview = `<div class="asset-card-preview"><img src="${escapeAttr(attrs.src)}" alt="${escapeAttr(attrs.alt)}" loading="lazy"></div>`;
+
+  let footer = '';
+  if (attrs.title && footerStyle !== 'none') {
+    const title = escapeAttr(attrs.title);
+    const file = attrs.download === '' ? attrs.src : attrs.download;
+    const actions = file === undefined ? '' : '<div class="asset-card-actions">'
+      + `<a class="button" data-size="small" data-icon-only href="${escapeAttr(file)}" download data-tooltip="Download" aria-label="Download ${escapeAttr(attrs.title)}">{{icon:download}}</a>`
+      + '</div>';
+    // A dark ground under a ground footer: the footer takes dark-mode
+    // colours from the system's own tokens (docs-site.css section 5).
+    const theme = groundFooter && ground === 'dark' ? ' data-theme="dark"' : '';
+    footer = `<div class="asset-card-footer"${theme}><p class="asset-card-title">${title}</p>${actions}</div>`;
+  }
+  // One line, no blank lines: marked keeps an HTML block whole only until
+  // the first blank line.
+  return `<div class="asset-card"${cardAttrs}>${preview}${footer}</div>`;
+}
+
+const VIDEO_SHORTCODE_VALUES = { controls: ['play', 'full'] };
+const VIDEO_PARAMS = ['src', 'poster', 'label', 'controls', 'captions'];
+
+/**
+ * {{video: src="…" poster="…" label="Campaign film" controls="full"}}
+ *
+ * One BD Video player (cms/bd-video.md). label names the region and the
+ * video for a screen reader, so it is required, as alt is on {{image:}}.
+ * controls="play" (the default) is the centre button alone; "full" adds the
+ * scrubber, mute and fullscreen. captions="<file.vtt>" adds an English
+ * captions track, shown by default: a video with speech needs one (WCAG
+ * 1.2.2). Anything else (cues, an unmute prompt) is raw HTML.
+ */
+function renderVideoShortcode(params, line) {
+  const { attrs, fail } = parseMediaShortcode('video', params, line, VIDEO_PARAMS, VIDEO_SHORTCODE_VALUES);
+  if (!attrs.src) fail('src is required');
+  if (!attrs.label) fail('label is required — it names the video for a screen reader');
+  const label = escapeAttr(attrs.label);
+  const controls = attrs.controls === 'full' ? ' data-bd-scrubber data-bd-mute data-bd-fullscreen' : '';
+  const poster = attrs.poster ? ` poster="${escapeAttr(attrs.poster)}"` : '';
+  // The label names the region; the <video> inside takes its context from
+  // it rather than repeating the same name.
+  const track = attrs.captions
+    ? `<track kind="captions" src="${escapeAttr(attrs.captions)}" srclang="en" label="English" default>`
+    : '';
+  return `<div class="bd-video" role="region" aria-label="${label}"${controls}>`
+    + `<video class="bd-video-player" src="${escapeAttr(attrs.src)}"${poster} playsinline preload="metadata">${track}</video>`
+    + '</div>';
+}
+
+/**
+ * Expand every {{asset: …}} and {{video: …}} line outside a fenced code
+ * block. Same rules as {{image:}}: the whole line, from column 0.
+ */
+function expandMediaShortcodes(markdown) {
+  if (!markdown.includes('{{asset:') && !markdown.includes('{{video:')) return markdown;
+  const renderers = { asset: renderAssetShortcode, video: renderVideoShortcode };
+  return mapLinesOutsideFences(markdown, (line) => {
+    const name = line.startsWith('{{asset:') ? 'asset' : line.startsWith('{{video:') ? 'video' : null;
+    if (!name) return line;
+    const match = new RegExp(`^\\{\\{${name}:\\s*(.*?)\\s*\\}\\}[^\\S\\n]*$`).exec(line);
+    if (!match) {
+      throw new Error(
+        `{{${name}}}: the shortcode has to be the whole line — it must close with }} and carry nothing after it`
+        + `\n  ${line}\n  (grep cms/ for that line)`
+      );
+    }
+    return renderers[name](match[1], line);
+  });
 }
 
 /**
@@ -1899,6 +2075,10 @@ function markdownToHtml(markdown, source = 'a cms/*.md page') {
   // caption. Before marked(), like the registry above and unlike {{icon:}} —
   // see expandImageShortcodes for why that is the only order that works.
   markdown = expandImageShortcodes(markdown);
+
+  // {{asset: …}} and {{video: …}}: an asset card and a BD Video player,
+  // before marked for the same reason as {{image:}}.
+  markdown = expandMediaShortcodes(markdown);
 
   // {{format: <id>}} becomes a format card shell, before marked for the
   // same reason as {{image:}}; its {{icon:}} shorthand is expanded by the
@@ -2060,12 +2240,14 @@ const STYLEGUIDE_SOURCE = 'styleguide.md';
  * Basenames are unique across the pages this gate sees today, but nothing in
  * the code guarantees it: deriveOutputPath honours CONFIG.filenameOverrides,
  * which can send any page anywhere (styleguide.md and glossary.md are already
- * pulled to the output root that way). Two Foundations or Web pages overridden into
+ * pulled to the output root that way). Two Foundations or Components pages overridden into
  * different folders with the same basename would collide here. Hence
  * assertUniqueSlugs below — the invariant is asserted rather than assumed.
  */
 // Output folders whose foundation and core pages must appear on the styleguide.
-const STYLEGUIDE_FOLDERS = new Set(['foundations', 'web']);
+// `web` is the folder Components had before 2026-11-12, kept for a site that
+// still builds one.
+const STYLEGUIDE_FOLDERS = new Set(['foundations', 'components', 'web']);
 // Output folders whose core pages are this brand's content, never the engine's.
 const BRAND_CONTENT_FOLDERS = new Set(['brand', 'formats']);
 
@@ -2223,7 +2405,10 @@ const MOTION = {
   toolPreview: ' data-bd-enter="scale"',
   toolDockEnd: ' data-bd-enter="slide-left"',
   toolDockBottom: ' data-bd-enter="slide-up"',
-  toolActions: ' data-bd-enter="slide-up"',
+  // Fades, never slides: the actions ride inside the dock, which already
+  // travels in, and a slide inside a slide moved them twice (Phase 5 of
+  // the micro-interactions track, handovers/HANDOVER-micro-interactions.md).
+  toolActions: ' data-bd-enter="fade"',
   toolPanel: ' data-bd-replay="open"',
   toolPanelBody: ' data-bd-stagger',
   toolPanelChild: ' data-bd-enter="slide-up"',
@@ -2997,9 +3182,13 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
   const homeCard = homeCardForSection(sectionFolder) || {};
 
   // A contents page is an index: open to every signed-in reader, cards
-  // locked by what they may open (permissions-plan.md §3.2).
+  // locked by what they may open (permissions-plan.md §3.2) - at its
+  // section's level when the section sets one (indexLevel). Generated pages
+  // have no frontmatter, and _defaults.md cannot open a page.
+  const level = indexLevel(sectionFolder);
+  if (level !== 'team') levelsFromSection.push(`${sectionFolder}/index.html -> ${level} (sectionAccess.${sectionFolder})`);
   pageAccess.set(`/${sectionFolder}/index.html`, {
-    level: 'team', // fixed: generated pages have no frontmatter, and _defaults.md cannot open a page
+    level,
     section: sectionFolder,
     type: 'contents',
     title: section,
@@ -3036,7 +3225,8 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
         })
       : '',
     content: cards,
-    access: deriveDataAccess(loadDefaults(DOCS_DIR)),
+    // The page's level, which also keeps an index above team out of search.
+    access: level,
     sectionSlug: `${slugifySection(section)}-overview`,
     pageSection: slugifySection(section),
     order: sectionOrderValue,
@@ -5299,7 +5489,7 @@ function buildNavSectionsHtml(filesBySection) {
     // Slug used by Phase 3 directional transitions to detect same/different section
     const sectionSlug = slugifySection(section);
     const iconHtml = sectionIcon
-      ? `<a href="${sectionIndexHref}" class="sidebar-nav-section-icon" data-section="${sectionSlug}" aria-label="${escapeAttr(sectionLabel)}"><span class="svg-icn">${sectionIcon.icon}</span></a>`
+      ? `<a href="${sectionIndexHref}" class="sidebar-nav-section-icon" data-section="${sectionSlug}" data-access="${indexLevel(sectionFolder)}" aria-label="${escapeAttr(sectionLabel)}"><span class="svg-icn">${sectionIcon.icon}</span></a>`
       : '';
 
     const sectionStart = html.length;
@@ -5315,7 +5505,7 @@ function buildNavSectionsHtml(filesBySection) {
     // folder and therefore an index page). data-order="0" so direction
     // detection always treats it as the lowest-order page in the section.
     if (sectionIndexHref) {
-      html += `<li><a href="${sectionIndexHref}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="0" data-access="team"><span>Overview</span>${navLock}</a></li>`;
+      html += `<li><a href="${sectionIndexHref}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="0" data-access="${indexLevel(sectionFolder)}"><span>Overview</span>${navLock}</a></li>`;
     }
 
     // Sequential counter mirrors buildSidebarOrderMap — same walk order, so the
@@ -5635,7 +5825,9 @@ function writePageAccess() {
  * permissions-plan.md §3.1; levels-groups-plan.md D23). _defaults.md cannot
  * set a level; a missing field takes its section's default (sectionAccess in
  * docs.config.js), else team. The home shelf and the section indexes carry the index types,
- * which the gate opens to every signed-in reader. The site's worker passes it
+ * which the gate opens to every signed-in reader; a section index takes its
+ * section's default level too, so an admin or owner section's index is closed
+ * like its pages. The site's worker passes it
  * to createGate() (worker/site-config.mjs here) as the pages half of the gate;
  * the infrastructure half is the engine's and the site's own public lists. To change a page's level, set the field and re-run a FULL docgen:
  * cd cms/generator && npm run docgen. A single-file run leaves this file alone.
@@ -7127,7 +7319,7 @@ async function generateDocs() {
   const VALID_SIDEBAR = new Set(['collapsed', 'expanded']);
   const layerErrors = [];
   const typeErrors = [];
-  // Every portable Foundations or Web page owes the styleguide an entry (see the gate below).
+  // Every portable Foundations or Components page owes the styleguide an entry (see the gate below).
   const styleguideExpected = [];
   const brandLeaks = [];
   // Every page the build actually produces, by output slug. The gate's stale
@@ -7179,6 +7371,13 @@ async function generateDocs() {
       }
     }
 
+    // A section the site has renamed (config: retiredSections). Without this,
+    // a page from a branch cut before the rename lands wherever an unmapped
+    // section goes, silently.
+    if (Object.prototype.hasOwnProperty.call(CONFIG.retiredSections, frontmatter.section)) {
+      typeErrors.push(`  ${filename} - section "${frontmatter.section}" is now "${CONFIG.retiredSections[frontmatter.section]}" (retiredSections in docs.config.js): rename it in the frontmatter, with the new section's subsection`);
+    }
+
     // Validate the level. Absent is team; present and unknown fails the
     // build, the way a bad layer does - the gate reads this field.
     if (!isValidAccess(parsed.frontmatter.access)) {
@@ -7190,7 +7389,7 @@ async function generateDocs() {
     // present and unrecognised fails, because that is a typo silently getting
     // doc chrome rather than the chrome the author asked for.
     // The styleguide shows the system in one scroll, so every portable
-    // Foundations or Web page has to appear on it. Collected here, checked after the
+    // Foundations or Components page has to appear on it. Collected here, checked after the
     // loop — `styleguide-exempt` opts out a page with nothing to specimen.
     // Keyed on the output folder, not the section label: renaming the section
     // in config would silently empty this set and disable the gate forever,
@@ -7199,7 +7398,7 @@ async function generateDocs() {
     const outPath = out.folder ? `${out.folder}/${out.htmlName}` : out.htmlName;
     styleguideKnown.add(styleguideSlug(outPath));
 
-    // Foundations and Web hold the engine's pages since the 2026-10-08
+    // Foundations and Components (Web until 2026-11-12) hold the engine's pages since the 2026-10-08
     // restructure; brand pages that moved into Foundations are this brand's
     // content, not a specimen, so they stay out.
     if (STYLEGUIDE_FOLDERS.has(out.folder)
@@ -7315,14 +7514,14 @@ async function generateDocs() {
 
   // Every page's level by URL, before anything is rendered, for the links and
   // covers stampBodyLinks() and the index builders mark (levelOf). The cms
-  // pages from the list just read; the indexes, which the gate opens to every
+  // pages from the list just read; the indexes, at their section's level (indexLevel), which the gate opens to every
   // signed-in reader; the tool pairs under cms/apps/, which are written after
   // the pages that link to them, read the way generateSourceDirPages reads
   // them, own level else the section default.
   for (const file of allFiles) linkLevels.set('/' + file.htmlPath, normaliseLevel(file.ownAccess));
   linkLevels.set('/index.html', 'team');
   for (const section of Object.keys(filesBySection)) {
-    if (SECTION_FOLDERS[section]) linkLevels.set(`/${SECTION_FOLDERS[section]}/index.html`, 'team');
+    if (SECTION_FOLDERS[section]) linkLevels.set(`/${SECTION_FOLDERS[section]}/index.html`, indexLevel(SECTION_FOLDERS[section]));
   }
   // Only apps that get a page: installed, and not drafts
   for (const slug of INSTALL.installed) {
@@ -7367,7 +7566,7 @@ async function generateDocs() {
   // docs kit.
   if (fs.existsSync(path.join(DOCS_DIR, STYLEGUIDE_SOURCE)) && styleguideExpected.length === 0) {
     console.error('\n❌ The styleguide gate matched no pages at all.');
-    console.error('   Nothing maps to the "foundations" or "web" output folder, so the gate is inert.');
+    console.error('   Nothing maps to the "foundations" or "components" output folder, so the gate is inert.');
     console.error('   Check sectionFolders in docs.config.js.\n');
     process.exit(1);
   }
@@ -7615,4 +7814,7 @@ module.exports = {
   siteTextHtml,
   buildPageChrome,
   escapeBrandText,
+  // For scripts/verify-media-shortcodes.js
+  expandImageShortcodes,
+  expandMediaShortcodes,
 };

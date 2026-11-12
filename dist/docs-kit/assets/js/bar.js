@@ -119,7 +119,9 @@
     // nothing is lost.
     if (wasOpen && (overflow.hidden || hadFocus)) {
       overflow.classList.remove('is-open');
-      overflow.removeAttribute('data-resolved-placement');
+      // Placement is left for the fade; dropdown.js clears it on the next open.
+      var overflowMenu = overflow.querySelector(':scope > .dropdown-menu');
+      if (overflowMenu) overflowMenu.inert = true;
       var trigger = overflow.querySelector('.dropdown-trigger');
       if (trigger) {
         trigger.setAttribute('aria-expanded', 'false');

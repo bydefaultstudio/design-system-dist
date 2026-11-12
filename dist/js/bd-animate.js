@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /**
  * BD Animate
  * Entrances, scroll reveals and split-text staggers, driven by data-bd-*
@@ -70,12 +70,12 @@
  *   window.bdAnimateConfig = { stagger: { chars, words, lines, list, group },
  *                              spreadSteps, manual, reducedMotion }
  *
- * @version 1.3.0
+ * @version 1.4.0
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.3.0';
+  var VERSION = '1.4.0';
 
   var ATTR = {
     enter: 'data-bd-enter',
@@ -194,6 +194,7 @@
   var held = [];               // paused tweens waiting for the curtain
   var refreshTimer = null;     // data-bd-refresh debounce, cleared with its observer
   var observers = [];          // ResizeObserver / MutationObserver instances
+  var landings = [];           // replay panels waiting on their dock: { el, settle }
   var pending = new WeakMap(); // element → { tween, trigger } not yet revealed
   var outTimeline = null;      // the last exit, for bfcache recovery
   var lastWidth = window.innerWidth;
@@ -937,6 +938,7 @@
   function stopObservers() {
     observers.forEach(function stop(o) { o.disconnect(); });
     observers = [];
+    landings = [];
     clearTimeout(refreshTimer);
     refreshTimer = null;
   }
@@ -976,6 +978,14 @@
       }
 
       var played = false;
+      var landing = null;
+      // The entrance the panel arrives inside (a tool's dock). Its contents
+      // wait for it to land: on a hard load this pass runs before the page's
+      // entrances start, and on a Barba arrival the dock can still be
+      // sliding when the page lands, so playing at once moved them twice.
+      var host = el.parentElement ? el.parentElement.closest('[' + ATTR.enter + ']:not([' + ATTR.revealed + '])') : null;
+      // Bounded to the scope: a panel never waits on chrome around the page.
+      if (host && host !== scope && !scope.contains(host)) host = null;
       function isOn() {
         var has = el.classList.contains(stateClass);
         return inverted ? !has : has;
@@ -983,6 +993,31 @@
       function fire() {
         if (played) {
           showElements(children);
+          return;
+        }
+        if (host && !host.hasAttribute(ATTR.revealed)) {
+          // One wait per panel: a close and reopen in flight reuses it.
+          if (landing) return;
+          var target = host;
+          landing = new MutationObserver(function onLanded() {
+            if (!target.hasAttribute(ATTR.revealed)) return;
+            landing.disconnect();
+            landing = null;
+            host = null;
+            if (isOn()) fire();
+          });
+          landing.observe(target, { attributes: true, attributeFilter: [ATTR.revealed] });
+          observers.push(landing);
+          // A freeze completes the dock and drops the observer's queued
+          // record, so the freeze settles the panel itself (bdAnimateFreeze).
+          landings.push({
+            el: el,
+            settle: function settle() {
+              host = null;
+              landing = null;
+              if (isOn()) showElements(children);
+            }
+          });
           return;
         }
         played = true;
@@ -1146,6 +1181,16 @@
         if (st.trigger && container.contains(st.trigger)) st.disable(false);
       });
     }
+    // A panel on the leaving page still waiting for its dock is shown now:
+    // the dock was just completed, and the observer that would have played
+    // the panel is about to be dropped with its record unread.
+    landings = landings.filter(function settleLeaving(entry) {
+      if (container && container.contains(entry.el)) {
+        entry.settle();
+        return false;
+      }
+      return true;
+    });
     stopObservers();
   };
 

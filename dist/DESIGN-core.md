@@ -78,7 +78,7 @@ rounded:
   surface: '0px'
   detail: '0px'
 ---
-<!-- @bydefaultstudio/design-system v8.0.0 -->
+<!-- @bydefaultstudio/design-system v8.1.0 -->
 
 # By Default Design System
 
@@ -197,7 +197,7 @@ Button variation accepts only these values, generated from the CSS; omitting an 
 
 The semantic motion token set:
 
-`--motion-page-open-duration`, `--motion-page-open-easing`, `--motion-page-close-duration`, `--motion-page-close-easing`, `--motion-page-swap-duration`, `--motion-page-swap-easing`, `--motion-page-fade-duration`, `--motion-page-fade-easing`, `--motion-page-reduced-duration`, `--motion-page-reduced-easing`, `--motion-page-content-offset`, `--motion-page-intro-duration`, `--motion-page-intro-easing`, `--motion-element-enter-duration`, `--motion-element-enter-easing`, `--motion-element-reveal-start`, `--motion-element-enter-distance`, `--motion-element-text-distance`, `--motion-element-scale-from`, `--motion-element-blur-from`, `--motion-element-exit-duration`, `--motion-element-exit-easing`, `--motion-element-fade-easing`, `--motion-element-stagger-duration`, `--motion-feedback-hover-duration`, `--motion-feedback-hover-easing`, `--motion-feedback-press-duration`, `--motion-feedback-press-easing`, `--motion-surface-toggle-duration`, `--motion-surface-toggle-easing`, `--motion-surface-open-duration`, `--motion-surface-open-easing`, `--motion-surface-close-duration`, `--motion-surface-close-easing`, `--motion-surface-reduced-duration`
+`--motion-page-open-duration`, `--motion-page-open-easing`, `--motion-page-close-duration`, `--motion-page-close-easing`, `--motion-page-swap-duration`, `--motion-page-swap-easing`, `--motion-page-fade-duration`, `--motion-page-fade-easing`, `--motion-page-reduced-duration`, `--motion-page-reduced-easing`, `--motion-page-content-offset`, `--motion-page-intro-duration`, `--motion-page-intro-easing`, `--motion-element-enter-duration`, `--motion-element-enter-easing`, `--motion-element-reveal-start`, `--motion-element-enter-distance`, `--motion-element-text-distance`, `--motion-element-scale-from`, `--motion-element-blur-from`, `--motion-element-exit-duration`, `--motion-element-exit-easing`, `--motion-element-fade-easing`, `--motion-element-stagger-duration`, `--motion-feedback-hover-duration`, `--motion-feedback-hover-easing`, `--motion-feedback-press-duration`, `--motion-feedback-press-easing`, `--motion-feedback-change-duration`, `--motion-feedback-change-easing`, `--motion-feedback-travel-duration`, `--motion-feedback-travel-easing`, `--motion-surface-toggle-duration`, `--motion-surface-toggle-easing`, `--motion-surface-open-duration`, `--motion-surface-open-easing`, `--motion-surface-close-duration`, `--motion-surface-close-easing`, `--motion-surface-reduced-duration`, `--motion-loading-delay`, `--motion-loading-pulse-duration`, `--motion-loading-spin-duration`, `--motion-loading-spin-easing`
 
 ## Do's and Don'ts
 

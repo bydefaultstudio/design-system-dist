@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /* ============================================================
    BD Video player — component-scoped CSS
    ============================================================
@@ -87,11 +87,24 @@
   --bd-video-radius-s: var(--radius-control, 8px);
   --bd-video-radius-m: var(--radius-surface, 12px);
 
+  /* CONTROLS — light on any footage, so fixed colours like the cue card's,
+     never semantic tokens that flip in dark mode while the video does not.
+     Corners follow the system's control role, like every button. */
+  --bd-video-control-bg: var(--white, #ffffff);
+  --bd-video-control-bg-hover: var(--neutral-100, #e5e5e5);
+  --bd-video-control-ink: var(--neutral-900, #1f1f1f);
+  --bd-video-control-radius: var(--radius-control, 8px);
+
   position: relative;
   width: 100%;
   /* padding moved to consumer wrapper (e.g. .home-hero) so the player itself
      can carry rounded corners + border without padding visually leaking. */
   overflow: hidden;
+  /* The shared media frame (cms/media-frame.md). A hero that wants a bare
+     player sets --media-border-width: 0 on its wrapper. */
+  box-sizing: border-box;
+  border: var(--media-border-width, 0) solid var(--media-border-color, transparent);
+  border-radius: var(--media-radius, 0);
 }
 
 /* Local .svg-icn — scoped to .bd-video so the component doesn't depend on
@@ -145,10 +158,10 @@
   width: 56px;
   height: 56px;
   padding: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--bd-video-control-bg);
   border: none;
-  border-radius: var(--radius-full, 999px);
-  color: #fff;
+  border-radius: var(--bd-video-control-radius);
+  color: var(--bd-video-control-ink);
   cursor: pointer;
   z-index: 2;
   transition: opacity var(--bd-video-duration-transition) var(--bd-video-ease),
@@ -156,12 +169,15 @@
 }
 
 .bd-video-center-play:hover {
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--bd-video-control-bg-hover);
 }
 
 .bd-video-center-play:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
+  /* A dark ring against the button, then a light halo outside it: one of
+     the two always stands out from the footage, light or dark. */
+  outline: 2px solid var(--bd-video-control-ink);
+  outline-offset: 0;
+  box-shadow: 0 0 0 4px var(--bd-video-control-bg);
 }
 
 .bd-video-center-play .svg-icn {
@@ -227,8 +243,9 @@
 }
 
 .bd-video-unmute-prompt:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
+  outline: 2px solid var(--bd-video-control-ink);
+  outline-offset: 0;
+  box-shadow: 0 0 0 4px var(--bd-video-control-bg);
 }
 
 .bd-video-unmute-prompt .svg-icn {
@@ -277,8 +294,9 @@
 }
 
 .bd-video-scrubber:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
+  outline: 2px solid var(--bd-video-control-ink);
+  outline-offset: 0;
+  box-shadow: 0 0 0 4px var(--bd-video-control-bg);
 }
 
 .bd-video-scrubber-fill {
@@ -297,7 +315,6 @@
 }
 
 .bd-video.is-preview .bd-video-center-play {
-  background: rgba(0, 0, 0, 0.6);
   width: 68px;
   height: 68px;
 }
@@ -368,24 +385,28 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  /* The house touch target (design-system.css --target-min). */
+  width: var(--target-min, 44px);
+  height: var(--target-min, 44px);
   padding: 0;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.5);
+  color: var(--bd-video-control-ink);
+  background: var(--bd-video-control-bg);
   border: none;
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--bd-video-control-radius);
   cursor: pointer;
   transition: background-color var(--bd-video-duration-fast) var(--bd-video-ease);
 }
 
 .bd-video-btn:hover {
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--bd-video-control-bg-hover);
 }
 
 .bd-video-btn:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
+  /* A dark ring against the button, then a light halo outside it: one of
+     the two always stands out from the footage, light or dark. */
+  outline: 2px solid var(--bd-video-control-ink);
+  outline-offset: 0;
+  box-shadow: 0 0 0 4px var(--bd-video-control-bg);
 }
 
 .bd-video-btn .svg-icn {
@@ -551,8 +572,9 @@
 }
 
 .bd-video-cue-slot:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
+  outline: 2px solid var(--bd-video-control-ink);
+  outline-offset: 0;
+  box-shadow: 0 0 0 4px var(--bd-video-control-bg);
 }
 
 /* Mobile — text only + arrow, no thumbnail or excerpt; card hugs top-left */

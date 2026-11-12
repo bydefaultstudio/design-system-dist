@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /**
  * Dropdown — React adapters over the Dropdown markup contract
  * (cms/dropdown.md), as a composition: the contract is rich (icons,

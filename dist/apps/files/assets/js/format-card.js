@@ -32,7 +32,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.2.0';
+  var VERSION = '1.3.0';
   console.log('[format-card] v' + VERSION + ' loaded');
 
   var SELECTOR = '[data-format-card]';
@@ -249,8 +249,24 @@
     return node;
   }
 
+  /* The tile's ratio, in the picture's corner. The card shows it as a spec
+     row instead. */
   function ratioBadge(format) {
     return textNode('span', 'badge format-card-ratio', format.canvas.ratio);
+  }
+
+  /* The facts as label and value rows: a dl of div rows, as the Format
+     Library's Spec reads. */
+  function specList(rows) {
+    var list = document.createElement('dl');
+    list.className = 'format-card-specs';
+    rows.forEach(function addRow(row) {
+      var item = document.createElement('div');
+      item.appendChild(textNode('dt', '', row[0]));
+      item.appendChild(textNode('dd', '', row[1]));
+      list.appendChild(item);
+    });
+    return list;
   }
 
   //
@@ -293,6 +309,7 @@
     var glyph = icon(card, opts.icon);
     if (glyph) a.appendChild(glyph);
     a.appendChild(textNode('span', '', opts.label));
+    if (opts.hidden) a.appendChild(textNode('span', 'visually-hidden', opts.hidden));
     if (opts.target) a.appendChild(textNode('span', 'visually-hidden', ' (opens in a new tab)'));
     return a;
   }
@@ -358,12 +375,15 @@
     stage.appendChild(svg);
     stage.appendChild(labels);
     preview.appendChild(stage);
-    preview.appendChild(ratioBadge(format));
 
     var body = document.createElement('div');
     body.className = 'format-card-body';
     body.appendChild(textNode('p', 'format-card-title', format.name));
-    body.appendChild(textNode('p', 'format-card-meta', data.platform + ' · ' + sizeText(format.canvas) + ' · ' + format.canvas.ratio));
+    body.appendChild(specList([
+      ['Platform', data.platform],
+      ['Size', sizeText(format.canvas) + ' px'],
+      ['Ratio', format.canvas.ratio]
+    ]));
 
     if (resolved.show.length) {
       var fieldset = document.createElement('fieldset');
@@ -408,7 +428,10 @@
     if (format.artwork.download) {
       var ext = (format.artwork.src.match(/\.(\w+)$/) || [])[1] || 'png';
       actions.appendChild(linkButton(card, {
-        href: format.artwork.src, icon: 'download', label: 'Download ' + ext.toUpperCase(),
+        href: format.artwork.src, icon: 'download', label: 'Download',
+        // Named in full for a screen reader's links list, where several
+        // cards would otherwise read as several identical "Download"s.
+        hidden: ' ' + format.name + ', ' + ext.toUpperCase(),
         download: format.id.replace('/', '-') + '-' + format.canvas.w + 'x' + format.canvas.h + '.' + ext
       }));
     }
@@ -420,8 +443,15 @@
 
     // The shell's fallback picture goes; the drawing takes its place.
     Array.prototype.forEach.call(card.querySelectorAll('.format-card-fallback'), function drop(node) { node.remove(); });
-    card.appendChild(preview);
-    card.appendChild(body);
+    // One wrapper for the two, so the card can lay them side by side from
+    // its own width: a container query styles a container's descendants,
+    // never the container (docs-site.css, Format Card).
+    var layout = document.createElement('div');
+    layout.className = 'format-card-layout';
+    layout.appendChild(preview);
+    layout.appendChild(body);
+    card.appendChild(layout);
+    card.setAttribute('data-shape', format.canvas.h > format.canvas.w ? 'tall' : format.canvas.h < format.canvas.w ? 'wide' : 'square');
     card.setAttribute('aria-label', format.name + ', ' + data.platform);
     card.setAttribute('role', 'group');
 

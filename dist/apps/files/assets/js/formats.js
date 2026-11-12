@@ -949,6 +949,20 @@
     initFormats();
   }
 
+  // Leaving: the tool is taken down as the leave begins. Narrow, an open
+  // viewer is fixed to the window inside the container, and the transformed
+  // container would carry it across the slide, so it closes, visually only:
+  // closeFormat writes the URL, and Barba has already written the next one.
+  // release() then stops the observers and timers, so a resize during the
+  // leave (the sidebar opening) or a pending search cannot close the format
+  // the long way and write this page's params onto the next one's URL.
+  function handleBeforeNav() {
+    if (!el) return;
+    if (el.viewer && el.viewer.open) el.viewer.close();
+    release();
+  }
+
   document.addEventListener('bd:after-nav', handleAfterNav);
+  document.addEventListener('bd:before-nav', handleBeforeNav);
   document.addEventListener('keydown', handleDocumentKeydown);
 })();

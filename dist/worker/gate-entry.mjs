@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /**
  * gate-entry.mjs - createGate(), the access gate as one factory
  * (levels-groups-plan.md Phase 3, D21). Shipped as
@@ -274,6 +274,26 @@ export function createGate(options = {}) {
         return privateHeaders(Response.redirect(target.toString(), 301), gate.setCookies);
       }
 
+      // ── A section folder asked for without its slash ──
+      //
+      // assets.html_handling is "none" (below), so /components would reach the
+      // asset layer as a file of that name and 404, though /components/ is the
+      // section index. A path whose folder index is on the page map gets the
+      // slash. A public index gets it straight away, so a signed-out prospect
+      // on /showcase reaches the public page. Any other is asked like a moved
+      // page, with the session question only: signed out still gets the
+      // login, so it leaks nothing the gate would not.
+      const folderIndex = (request.method === 'GET' || request.method === 'HEAD') && pathname.length > 1 && !pathname.endsWith('/')
+        ? `${pathname}/index.html` : null;
+      if (folderIndex && SITE.pages.has(folderIndex)) {
+        const target = new URL(url);
+        target.pathname = `${pathname}/`;
+        if (isPublicPath(folderIndex)) return Response.redirect(target.toString(), 301);
+        const gate = await requireSession(request, env, url, null);
+        if (gate.deny) return gate.deny;
+        return privateHeaders(Response.redirect(target.toString(), 301), gate.setCookies);
+      }
+
       // ── An app this site doesn't install (PB-4) ──
       //
       // Its address is on no page map, so the page gate would call it an
@@ -343,8 +363,8 @@ export function createGate(options = {}) {
 
       // Directory-index resolution.
       //
-      // assets.html_handling is "none" so that /web/button.html is served at
-      // exactly that URL rather than 307'd to /web/button - the site's pages
+      // assets.html_handling is "none" so that /components/button.html is served at
+      // exactly that URL rather than 307'd to /components/button - the site's pages
       // and every redirect target are explicit .html paths. The trade-off is
       // that "none" also switches off automatic index.html lookup, so `/` and
       // the directory-style links (/brand/, /tools/, …) would 404 without this.

@@ -92,7 +92,7 @@
   }
 
   // Where to send someone who has opened search with nothing in mind: the
-  // Website for the team, the Brand Book for partners and prospects, the
+  // Components for the team, the Brand Book for partners and prospects, the
   // glossary for the vocabulary they share. Resolved against the symbol index
   // so a renamed or removed page drops out rather than shipping a dead link.
   // `n` overrides the index title where that title carries its own numbering
@@ -103,7 +103,7 @@
     { u: '/foundations/color.html' },
     { u: '/foundations/spacing.html' },
     { u: '/foundations/typography.html' },
-    { u: '/web/components.html', n: 'Components' },
+    { u: '/components/about.html', n: 'Components' },
     { u: '/brand/', n: 'Brand Book' },
     { u: '/glossary.html' }
   ];

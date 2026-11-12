@@ -1,5 +1,5 @@
 /**
- * locked.js - the locked page's one action (cms/locked.md). v1.2.1
+ * locked.js - the locked page's one action (cms/locked.md). v1.2.3
  *
  * "Ask for access" posts the Ask for access form, the one on the engine's
  * support page, with the reader's address and the page's URL filled in, so
@@ -20,14 +20,13 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.2.2';
+  var VERSION = '1.2.3';
   var SUBMIT_URL = '/api/submit-form';
 
   var COPY = {
     sent: function (email) { return 'Request sent. The answer comes to ' + email + '.'; },
     failed: 'The request did not send. ',
     askElsewhere: 'Ask through the contact form',
-    busy: 'Sending\u2026',
     done: 'Request sent'
   };
 
@@ -56,10 +55,10 @@
       return;
     }
     busy = true;
-    var label = button.textContent;
+    // The label stays while it sends: the busy button's ring replaces it
+    // (design-system.css, Busy), and changing the words would resize it.
     button.classList.add('is-loading');
     button.setAttribute('aria-busy', 'true');
-    button.textContent = COPY.busy;
     status.textContent = '';
 
     fetch(SUBMIT_URL, {
@@ -92,7 +91,6 @@
         link.href = supportHref();
         link.textContent = COPY.askElsewhere;
         status.appendChild(link);
-        button.textContent = label;
       })
       .then(function () {
         busy = false;

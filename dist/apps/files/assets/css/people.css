@@ -74,3 +74,10 @@
 .people-edit-side {
   margin-inline-end: auto;
 }
+
+/* -- Loading --
+   An empty list is only its header row, too short to hold the ring
+   (tools.css, Busy preview); the list holds room for it while it loads. */
+[data-tool="people"] .table-scroll[data-loading] {
+  min-height: var(--space-6xl);
+}

@@ -24,6 +24,7 @@
   var STATUS_COLOURS = { invited: 'info', active: 'success', expiring: 'warning', expired: 'danger' };
 
   var COPY = {
+    loading: 'Loading the people who can sign in.',
     loadFailed: 'The list could not be loaded. Reload the page to try again.',
     forbidden: 'This page is for admins.',
     readOnly: 'Only an owner edits this row',
@@ -366,11 +367,33 @@
 
   /* ------ Load ------ */
 
+  // Both lists say they are waiting while the people load (tools.css, Busy
+  // preview): the ring over each, aria-busy on each, and the words in the
+  // status region, since aria-busy alone is not reliably announced. Only the
+  // first load speaks; a reload after a change has the busy button already.
+  function setListsBusy(busy) {
+    var lists = state.root.querySelectorAll('.table-scroll');
+    for (var i = 0; i < lists.length; i++) {
+      lists[i].toggleAttribute('data-loading', busy);
+      if (busy) lists[i].setAttribute('aria-busy', 'true');
+      else lists[i].removeAttribute('aria-busy');
+    }
+  }
+
   function load() {
     var loadError = byId('people-load-error');
+    var status = byId('people-status');
+    var first = !state.data;
     loadError.textContent = '';
+    setListsBusy(true);
+    if (first && status) status.textContent = COPY.loading;
+    var settle = function () {
+      setListsBusy(false);
+      if (status) status.textContent = '';
+    };
     return request('')
       .then(function (result) {
+        settle();
         if (!result.ok || !result.data) {
           loadError.textContent = result.status === 403 ? COPY.forbidden : COPY.loadFailed;
           return;
@@ -380,6 +403,7 @@
         render();
       })
       .catch(function () {
+        settle();
         loadError.textContent = COPY.offline;
       });
   }

@@ -120,6 +120,53 @@
   --tool-preview-height: clamp(16rem, 40vh, 26rem);
 }
 
+/* -- Busy preview --
+   A preview waiting on what it shows (a server-drawn image, a framed page,
+   a third-party ad) carries data-loading, and the spinner's ring
+   (design-system.css, Spinner) turns over it in the ground's ink, after
+   --motion-loading-delay, so a fast answer never shows it. The old picture
+   stays under it, dimmed, so the reader sees what is being replaced.
+   data-loading, not aria-busy: a preview band holds the tool's status
+   region, and aria-busy on an ancestor holds that region's updates back.
+   The script puts aria-busy on the picture or frame itself, and clears
+   both on load and on error alike. Any area in a tool takes it: the lists
+   in People too. */
+:where([data-tool] [data-loading]) {
+  position: relative;
+}
+
+[data-tool] [data-loading]::after {
+  content: "";
+  display: block;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: var(--space-2xl);
+  height: var(--space-2xl);
+  border: var(--spinner-width) solid var(--ground-ink, var(--text-faded));
+  border-right-color: transparent;
+  border-radius: var(--radius-full);
+  background: none;
+  pointer-events: none;
+  animation:
+    spinner-turn var(--motion-loading-spin-duration) var(--motion-loading-spin-easing) infinite,
+    spinner-appear var(--motion-feedback-hover-duration) var(--ease-out) var(--motion-loading-delay) both;
+}
+
+/* Forced colours would repaint the open quarter, leaving a still circle. */
+@media (forced-colors: active) {
+  [data-tool] [data-loading]::after {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    border-right-color: transparent;
+  }
+}
+
+[data-tool] [data-loading] > :is(img, iframe) {
+  opacity: 0.4;
+  transition: opacity var(--motion-feedback-change-duration) var(--motion-feedback-change-easing) var(--motion-loading-delay);
+}
+
 /* A panel title takes focus when a keyboard selection sends the reader to
    it (the Icon Library's and the Asset Library's Details); without this the
    ring is the UA's, drawn or not by browser. */

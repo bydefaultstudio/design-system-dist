@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^8.0.0"
+npm install "github:bydefaultstudio/design-system-dist#semver:^8.1.0"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -115,6 +115,7 @@ automatically — external URLs pass through untouched.
 | `iconsDir` | kit-bundled icons | folder of SVG icons for `{{icon:...}}` and chrome |
 | `highlightJs` | cdnjs highlight.js | syntax-highlighting script source |
 | `sectionFolders` | `{}` (flat output) | map of section label → output subfolder; mapped sections get overview index pages |
+| `retiredSections` | `{}` | map of renamed section label → its new label; docgen fails on a page that still names the old one |
 | `filenameOverrides` | `{}` | per-file output folder/name overrides |
 | `indexCards` | derived from pages | curated home page card list (`{ title, href, subtitle }`) |
 | `logoHtml` | site name as text | raw HTML for the site-header logo |
@@ -265,7 +266,7 @@ install: {
 | `brand` | Asset Library, Colour Pairing, Colour Palette, Icon Library, Layout Specs, Logo Tool, QR Code |
 | `formats` (needs `brand`) | Format Library |
 | `utilities` | CPM Calculator, Email Signature, Image Placeholder, SVG Cleaner, World Clock |
-| `web` | the Web section (`web/`) |
+| `web` | the Components section (`components/`, or `web/` on a site that kept the old folder) |
 
 An installed app gets its page in `tools/`, and its scripts and styles, with the
 libraries they need, load on every page, in dependency order, so a page
@@ -309,7 +310,8 @@ gate already needs). A site's own `cms/not-installed.md` replaces the
 engine's.
 
 Three sections come with a package, by their folder: `brand/` (the Brand
-Book) with `brand`, `web/` with `web` and `formats/` with `formats`. With its
+Book) with `brand`, `components/` (and `web/`, its old folder) with
+`web` and `formats/` with `formats`. With its
 package off, a section builds no pages, no index and no home card, and its
 addresses answer like an uninstalled app's. Every other section is the
 site's own and always builds. A link from the site's own pages to an app or

@@ -268,13 +268,10 @@
     return ok ? Promise.resolve() : Promise.reject(new Error('copy failed'));
   }
 
-  // A second click inside the two seconds re-arms the revert rather than
-  // letting the first one cut the second flash short (copy-button.js does
-  // the same).
+  // copy-button.js owns the copied state, how long it stays, and the
+  // re-arm when a second copy lands inside it.
   function flashCopied(btn) {
-    btn.classList.add('is-copied');
-    clearTimeout(btn.esCopyRevertTimer);
-    btn.esCopyRevertTimer = setTimeout(function () { btn.classList.remove('is-copied'); }, 2000);
+    if (window.bdCopyButton) window.bdCopyButton.flash(btn);
   }
 
   // Cleared first and written on the next frame, so the same sentence twice

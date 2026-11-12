@@ -42,8 +42,10 @@ const PACKAGES = {
 const STATUSES = ['stable', 'beta', 'draft'];
 // The sections a package brings, by output folder (D14). A section whose
 // package is off generates no pages, no index and no home card; any other
-// section is the site's own and always builds.
-const SECTION_PACKAGES = { brand: 'brand', web: 'web', formats: 'formats' };
+// section is the site's own and always builds. The web package's section
+// is Components since 2026-11-12 (mediasystem.md decision 44); `web` stays
+// so a site that still builds a Web section keeps it package-gated.
+const SECTION_PACKAGES = { brand: 'brand', components: 'web', web: 'web', formats: 'formats' };
 
 /**
  * The engine's fixed addresses (worker/engine-paths.mjs, PD-2), the one

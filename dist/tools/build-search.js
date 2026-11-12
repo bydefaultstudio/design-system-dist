@@ -382,9 +382,10 @@ function componentPage(name, pages) {
   const parts = name.replace(/^--|^\./, '').split('-');
   for (const len of [2, 1]) {
     if (parts.length < len) continue;
-    // A name's page is a component (web/) or, since the 2026-10-08
-    // restructure, a foundation (foundations/): border, motion, spacing.
-    for (const folder of ['web', 'foundations']) {
+    // A name's page is a component (components/, web/ before 2026-11-12) or,
+    // since the 2026-10-08 restructure, a foundation (foundations/): border,
+    // motion, spacing.
+    for (const folder of ['components', 'web', 'foundations']) {
       const url = `/${folder}/${parts.slice(0, len).join('-')}.html`;
       if (pages.has(url)) return url;
     }

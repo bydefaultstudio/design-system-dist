@@ -88,12 +88,12 @@
  *   "bd:after-nav"   { detail: { container } }  the arriving page, in `after`:
  *                    the old page is gone, is-animating is off, layout is final
  *
- * @version 5.1.0
+ * @version 5.2.0
  */
 (function () {
   'use strict';
 
-  var VERSION = '5.1.0';
+  var VERSION = '5.2.0';
 
   if (typeof barba === 'undefined') {
     console.warn('[barba-docs] Barba core not loaded — page transitions disabled');
@@ -627,6 +627,14 @@
   // Barba invokes first (their order is positional in the vendor; a global
   // leave or enter hook registered later would swap it).
   var pendingScenario = 'fade';
+  // The incoming page, parsed once in beforeEnter, read by enter's arrive()
+  // for the sidebar's page default and by afterEnter for the head. The
+  // default is applied in arrive(), after the exit has held the sticky
+  // elements, so its 400ms toggle plays under the page's own slide and has
+  // settled by the time the landed page measures its reveals; applied in
+  // afterEnter it moved as a second motion of its own, and applied in
+  // beforeEnter the leaving page rewrapped under its own slide.
+  var arrivingDoc = null;
   var exitDone = null;
   var resolveExit = null;
 
@@ -1193,6 +1201,10 @@
       // frame can come before that.
       var arriving = !(data.next.url && data.next.url.hash);
       return (exitDone || Promise.resolve()).then(function arrive() {
+        // The sidebar's page default, once the exit has run and the sticky
+        // elements are held: the column moves under the page's slide, and
+        // has settled before the landed page measures (see beforeEnter).
+        if (arrivingDoc) applySidebarDefault(arrivingDoc);
         motionIn(next, arriving, transitionFor(scenario).motion.duration * CONTENT_OFFSET);
         return runEnter(next, scenario);
       });
@@ -1233,6 +1245,7 @@
     var onBeforeLeave = optionFn('onBeforeLeave');
 
     barba.hooks.beforeLeave(function (data) {
+      arrivingDoc = null;
       var current = data && data.current ? data.current.container : null;
       var next = data && data.next ? data.next.container : null;
       pendingScenario = current && next ? resolveScenario(current, next) : 'fade';
@@ -1264,11 +1277,15 @@
     // are locked from the first frame, not after the enter animation. Both
     // come from the generated nav.js; each is a no-op until there is a
     // session answer or nothing to prune.
+
     barba.hooks.beforeEnter(function (data) {
       var next = data && data.next ? data.next.container : null;
       if (!next) return;
       if (typeof window.bdPruneEmptyCardSections === 'function') window.bdPruneEmptyCardSections(next);
       if (typeof window.bdRelockSwapped === 'function') window.bdRelockSwapped(next);
+      // Not on the first load, which has no leaving page (see afterEnter).
+      if (!data.current || !data.current.container) return;
+      arrivingDoc = parseNextDocument(data.next.html);
     });
 
     var onNextDocument = optionFn('onNextDocument');
@@ -1279,9 +1296,9 @@
       // site's onNextDocument must not fire with the page's own document.
       if (!data || !data.current || !data.current.container) return;
 
-      var nextDoc = parseNextDocument(data.next.html);
+      var nextDoc = arrivingDoc || parseNextDocument(data.next.html);
+      arrivingDoc = null;
       updateHeadMeta(nextDoc);
-      applySidebarDefault(nextDoc);
       if (onNextDocument && nextDoc) {
         try {
           onNextDocument(nextDoc);

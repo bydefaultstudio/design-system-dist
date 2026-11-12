@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v8.0.0 -->
+<!-- @bydefaultstudio/design-system v8.1.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 8.0.0 (package)**
+**Version: 8.1.0 (package)**
 
 ## Getting the System
 
@@ -662,7 +662,7 @@ on a wrapping figure — the ratio crops the picture, not the box around it.
 | `data-ratio="21x9"` | 21:9 | Cinematic |
 
 Width, alignment and float are the image's other three axes. See the
-[image component](/web/image.html) for all four and for the
+[image component](/components/image.html) for all four and for the
 `{{image: …}}` shortcode that writes them.
 
 ---
@@ -1008,6 +1008,9 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--select-picker-max-height` | `18rem` |  |
 | **Date picker tokens** | | |
 | `--date-picker-cell-size` | `var(--target-min)` |  |
+| `--button-min-height` | `auto` |  |
+| `--button-min-height-small` | `auto` |  |
+| `--button-min-height-xsmall` | `auto` |  |
 | **Field tokens** | | |
 | `--field-height` | `var(--target-min)` |  |
 | `--field-height-s` | `2.25rem` |  |
@@ -1164,7 +1167,6 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--accordion-padding-x` | `var(--space-l)` |  |
 | `--accordion-padding-y` | `var(--space-l)` |  |
 | `--opacity-disabled` | `0.4` |  |
-| `--opacity-loading` | `0.75` |  |
 | `--focus-width` | `2px` |  |
 | `--focus-offset` | `2px` |  |
 | `--focus-reach` | `calc(var(--focus-width) + var(--focus-offset) + var(--border-s))` |  |
@@ -1192,6 +1194,13 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--code-radius` | `var(--radius-detail)` |  |
 | `--kbd-radius` | `var(--radius-detail)` |  |
 | `--number-input-radius` | `var(--field-radius)` |  |
+| `--media-radius` | `var(--radius-surface)` | follows --radius-scale |
+| `--media-border-width` | `var(--border-s)` | 0 removes every frame |
+| `--media-border-color` | `var(--border-faded)` |  |
+| `--media-ground` | `var(--background-faded)` | behind an asset that is not a picture |
+| `--media-padding` | `var(--space-3xl)` | clear space round a centred asset |
+| `--media-ground-dark` | `var(--neutral-950)` |  |
+| `--media-ink-dark` | `var(--off-white)` |  |
 | **Interaction sizing** | | |
 | `--target-min` | `44px` |  |
 | **Safe-area insets** | | |
@@ -1260,22 +1269,29 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--motion-element-fade-easing` | `var(--ease-in-out)` |  |
 | `--motion-element-stagger-duration` | `var(--duration-stagger)` |  |
 | **30ms** | | |
-| `--motion-feedback-hover-duration` | `var(--duration-xs)` |  |
-| **200ms** | | |
+| `--motion-feedback-hover-duration` | `150ms` |  |
 | `--motion-feedback-hover-easing` | `var(--ease-out)` |  |
-| `--motion-feedback-press-duration` | `var(--duration-2xs)` |  |
-| **100ms** | | |
+| `--motion-feedback-press-duration` | `160ms` |  |
 | `--motion-feedback-press-easing` | `var(--ease-out)` |  |
+| `--motion-feedback-change-duration` | `var(--duration-xs)` |  |
+| **200ms** | | |
+| `--motion-feedback-change-easing` | `var(--ease-out)` |  |
+| `--motion-feedback-travel-duration` | `300ms` |  |
+| `--motion-feedback-travel-easing` | `var(--ease-out)` |  |
 | `--motion-surface-toggle-duration` | `var(--duration-s)` |  |
 | **400ms** | | |
 | `--motion-surface-toggle-easing` | `var(--ease-emphasized)` |  |
-| `--motion-surface-open-duration` | `var(--duration-m)` |  |
-| **600ms** | | |
+| `--motion-surface-open-duration` | `300ms` |  |
 | `--motion-surface-open-easing` | `var(--ease-out)` |  |
-| `--motion-surface-close-duration` | `var(--duration-s)` |  |
-| **400ms** | | |
+| `--motion-surface-close-duration` | `var(--duration-xs)` |  |
+| **200ms** | | |
 | `--motion-surface-close-easing` | `var(--ease-in)` |  |
 | `--motion-surface-reduced-duration` | `var(--duration-xs)` |  |
+| `--motion-loading-delay` | `150ms` |  |
+| `--motion-loading-pulse-duration` | `var(--duration-l)` |  |
+| **1000ms** | | |
+| `--motion-loading-spin-duration` | `800ms` |  |
+| `--motion-loading-spin-easing` | `linear` |  |
 
 ### 5. LAYOUT PRIMITIVES
 
@@ -1293,7 +1309,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--segmented-selected-text` | `var(--selected-text)` |  |
 | `--segmented-thumb-border` | `transparent` |  |
 | `--segmented-thumb-radius` | `max(0px, calc(var(--segmented-track-radius) - var(--segmented-track-padding)))` |  |
-| `--segmented-thumb-duration` | `var(--duration-xs)` |  |
+| `--segmented-thumb-duration` | `var(--motion-feedback-travel-duration)` |  |
 | **Underline variant: the same 2px mark and faded baseline the tabs draw.** | | |
 | `--segmented-underline-width` | `2px` |  |
 | `--segmented-underline-color` | `var(--selected-background)` |  |
@@ -1453,6 +1469,9 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--mark-color` | `var(--brown-dark)` |  |
 | **Dropdown** | | |
 | `--dropdown-background` | `var(--background-plain)` |  |
+| **Restated so a nested dark scope resolves the media frame in dark.** | | |
+| `--media-border-color` | `var(--border-faded)` |  |
+| `--media-ground` | `var(--background-faded)` |  |
 
 
 ---
@@ -1508,7 +1527,7 @@ Solid colour blocks for hero sections, callouts, ad units, and any marketing sur
 
 ### Button
 
-Button colours are now component-scoped tokens on `.button`, not root-level variables. See [Button documentation](/web/button.html) for the full token reference (`--button-color`, `--button-bg`, `--button-text-color`, etc.) and the `data-color` attribute for semantic colour variants.
+Button colours are now component-scoped tokens on `.button`, not root-level variables. See [Button documentation](/components/button.html) for the full token reference (`--button-color`, `--button-bg`, `--button-text-color`, etc.) and the `data-color` attribute for semantic colour variants.
 
 ### Status
 
@@ -2291,15 +2310,54 @@ By Default moves **calmly and with intent**: a short, soft lead-in, then a long 
 | Element entrance | 1000ms, rising 40px |
 | Page transition | 1200ms on the symmetric `--ease-in-out`, one sweep |
 | Page and content | Content starts **halfway** into the page transition, so the page has visibly moved before its header and on-screen cards rise into it, and both land together |
-| Feedback | 200ms for hover and focus, 100ms for a press, on the same curve |
+| Feedback | 150ms for hover and focus, 160ms for a press, 200ms for a state change, 300ms for a part travelling to its new place, all on the same curve |
 | Exits | 400ms on `--ease-in`, accelerating away |
-| Dialogs, drawers, sheets | Open in 600ms on the house curve, close in 400ms accelerating away, one timing for all of them |
+| Dialogs, drawers, sheets | Open in 300ms on the house curve and close accelerating away: 200ms for a dialog, 300ms for a drawer, which travels the full sheet |
 | The expressive moment | The first-load curtain: the wordmark drops and settles. Illustrations echo it at a smaller scale |
 | Travel | Vertical for opening and closing, horizontal between siblings. Never diagonal |
 
 ```css
 transition-timing-function: var(--ease-out);
 ```
+
+---
+
+## How components answer
+
+Every control answers the reader in product time: inside a fifth of a second for a hover or a press, a little longer for a change worth noticing, longer still for a part the eye follows to its new place. The values were picked one control at a time on the micro-interaction experiment pages, side by side and slowed down, then checked on a phone against the built components (2026-11-12).
+
+| Moment | What happens | Timing |
+| --- | --- | --- |
+| Hover and focus | Colour, fill, border or shadow change | `--motion-feedback-hover`, 150ms |
+| Press | A [button](/components/button.html) or [chip](/components/chip.html) scales to 0.97; the icon inside a [field](/components/field.html)'s control to 0.88; a [number input](/components/number-input.html)'s sign to 0.8. The text button never scales. A dropdown trigger or item steps to `--background-darker` | `--motion-feedback-press`, 160ms |
+| Checking a box | The tick grows in with the fill | `--motion-feedback-hover` |
+| A part travelling | A chevron turns, a segmented thumb or toggle knob slides, an accordion or tool panel opens to its height | `--motion-feedback-travel`, 300ms |
+| A [dropdown menu](/components/dropdown.html) | Fades and drops 4px from its trigger; a menu placed above rises | In 200ms on `--ease-out`, out 150ms on `--ease-in` |
+| A [tooltip](/components/tooltip.html) | Fades and rises 4px out of its trigger, no delay | 150ms |
+| A [toast](/components/toast.html) | Slides 16px in from the right, leaves the same way | In 240ms, out 160ms |
+| A [copy button](/components/copy-button.html) | Copy rolls up and out as Copied! rolls in from below; the button holds one width. Copied! stays 2000ms. Inside a field the icons crossfade and the tick grows from 0.6 | `--motion-feedback-change`, 200ms |
+| A message under a field | Fades in; leaves at once | `--motion-feedback-change` |
+| A [badge](/components/badge.html) changing status | Its colour crossfades, and `.is-changed` settles it with a 0.92 to 1 pop | `--motion-feedback-change` |
+
+Menus, tooltips and toasts are not dialogs: they open over the page without taking it over, so they keep to feedback timings rather than the 300ms of `--motion-surface-open`.
+
+**Across a page transition**, nothing from the leaving page follows the reader: on `bd:before-nav` open menus close, toasts leave through their own exit, and the tool viewers close. On arrival, a tool's actions fade in rather than sliding inside a dock that already travels, and a panel open at load plays its contents once its dock has landed.
+
+---
+
+## Loading
+
+Most work answers inside 150ms, and an indicator that flashes for a frame reads as a glitch, not as work. So every indicator waits `--motion-loading-delay` (150ms) before it shows, and a fast answer shows nothing at all.
+
+| Waiting on | What shows |
+| --- | --- |
+| Content with a known shape | A [skeleton](/components/skeleton.html) holding the layout, pulsing once a second (`--motion-loading-pulse`) |
+| Work with no known shape or end | A [spinner](/components/spinner.html): a ring in the ink of what it sits in, 800ms a turn at a constant speed (`--motion-loading-spin`) |
+| A button doing its own work | `.button.is-loading`: the ring replaces the label, centred, and the button holds its width. The label goes transparent, not hidden, so it stays the button's name |
+| A tool's preview being redrawn or fetched | The picture dims and the ring turns over it until the new one lands (`data-loading` on the preview, `aria-busy` on the picture) |
+| Content arriving | It fades in over 200ms, 30ms apart, four steps at most (`.is-arriving`), so a long list does not trickle |
+
+Every loading state resolves: to the content, or to an error that says what happened. Nothing turns or pulses forever. The area waiting carries `aria-busy="true"` and words a reader can hear, since `aria-busy` alone is not reliably announced.
 
 ---
 
@@ -2319,7 +2377,7 @@ transition-timing-function: var(--ease-out);
 
 | Requirement | How the system meets it |
 | --- | --- |
-| Reduced motion (`prefers-reduced-motion`) | Replacement, not removal. Every page transition becomes a 200ms fade (`--motion-page-reduced`): the arriving page fades in over the leaving one, which holds still, so the reader sees the page change with no travel. Dialogs and drawers fade in and out over the same 200ms (`--motion-surface-reduced`); a drawer can still be dragged, since following a finger is direct manipulation. BD Animate shows content in place with no rise |
+| Reduced motion (`prefers-reduced-motion`) | Replacement, not removal. Every page transition becomes a 200ms fade (`--motion-page-reduced`): the arriving page fades in over the leaving one, which holds still, so the reader sees the page change with no travel. Dialogs and drawers fade in and out over the same 200ms (`--motion-surface-reduced`); a drawer can still be dragged, since following a finger is direct manipulation. A chevron, a panel height or the sidebar reaches its new place at once (`--motion-feedback-travel` and `--motion-surface-toggle` go to 0ms); a segmented thumb or toggle knob shortens to a 100ms slide, so the change still reads; a hover scale applies without growing; colour feedback keeps its fade. Every press scale, the checkbox tick's growth and the badge pop are dropped; a menu, tooltip or toast fades where it sits; a copy label crossfades instead of rolling; an Asset Library thumbnail fades with no blur. A spinner keeps turning, since it is the only sign the work is still going. BD Animate shows content in place with no rise |
 | Pause, stop, hide (WCAG 2.2.2) | An illustration that loops past five seconds carries a pause button, remembered for the session. Motion that starts by itself ends within five seconds: split-text staggers are capped at a two-second spread |
 | Three flashes (WCAG 2.3.1) | Nothing flashes more than three times a second, illustrations included |
 | Vestibular safety | No large zooms, no parallax on text, no diagonal travel. Page transitions move on one axis |
@@ -2359,14 +2417,14 @@ Named after the standard CSS easing keywords, with refined values, plus one emph
 
 ## Duration primitives
 
-On the same t-shirt scale as `--space-*` and `--font-*`, from a press's 100ms to a 6000ms ambient loop, plus the stagger step.
+On the same t-shirt scale as `--space-*` and `--font-*`, from 100ms to a 6000ms ambient loop, plus the stagger step. Product UI feedback sits off this scale (see Semantic tokens).
 
 | Token | Value | Use for |
 | --- | --- | --- |
-| `var(--duration-2xs)` | `100ms` | Presses |
-| `var(--duration-xs)` | `200ms` | Hover, focus, small state changes |
-| `var(--duration-s)` | `400ms` | Exits, panel toggles, dropdowns |
-| `var(--duration-m)` | `600ms` | Page crossfade, surfaces |
+| `var(--duration-2xs)` | `100ms` | Reduced-motion stand-ins for a slide |
+| `var(--duration-xs)` | `200ms` | State changes, surfaces closing |
+| `var(--duration-s)` | `400ms` | Exits, panel toggles |
+| `var(--duration-m)` | `600ms` | Page crossfade |
 | `var(--duration-l)` | `1000ms` | Element entrances and scroll reveals |
 | `var(--duration-xl)` | `1200ms` | Page transitions, hero motion |
 | `var(--duration-2xl)` | `1500ms` | The first-load intro, extended reveals |
@@ -2396,7 +2454,7 @@ Named by intent; these compose primitives. Components and product code read this
 | `--motion-page-close` | `--duration-xl` + `--ease-in-out` | A page falling away (slide-down), the index scaling back up beneath it over the same beat. |
 | `--motion-page-swap` | `--duration-xl` + `--ease-in-out` | Sibling pages (the conveyor). |
 | `--motion-page-fade` | `--duration-m` + `--ease-in-out` | Crossfade when no direction is known. 600ms. |
-| `--motion-page-intro` | `--duration-2xl` + `--ease-in` | The first-load curtain's drop ([BD Intro](/web/bd-intro.html)), then a sampled spring settle. |
+| `--motion-page-intro` | `--duration-2xl` + `--ease-in` | The first-load curtain's drop ([BD Intro](/components/bd-intro.html)), then a sampled spring settle. |
 | `--motion-page-reduced` | `--duration-xs` + `--ease-in-out` | What every page transition becomes under reduced motion: a 200ms crossfade, no travel. |
 | `--motion-page-content-offset` | `0.5` | How far into a page transition the arriving content starts, as a share of its duration. Halfway. |
 
@@ -2416,14 +2474,21 @@ Named by intent; these compose primitives. Components and product code read this
 
 ### Feedback and surface
 
-| Semantic token | Composes | Used for |
+| Semantic token | Value or composes | Used for |
 | --- | --- | --- |
-| `--motion-feedback-hover` | `--duration-xs` + `--ease-out` | Hover, focus, a chevron turning, a colour or border changing. 200ms. |
-| `--motion-feedback-press` | `--duration-2xs` + `--ease-out` | A press or tap confirming. 100ms. |
-| `--motion-surface-toggle` | `--duration-s` + `--ease-emphasized` | A panel changing the layout around it (the sidebar collapsing). 400ms. |
-| `--motion-surface-open` | `--duration-m` + `--ease-out` | Anything opening over the page: a dialog, a drawer, a sheet. 600ms; the glide does the work, so it answers at once. |
-| `--motion-surface-close` | `--duration-s` + `--ease-in` | The same surfaces closing, accelerating away. 400ms. They animate out in every browser: `dialog.js` plays the exit before it closes. |
+| `--motion-feedback-hover` | `150ms` + `--ease-out` | A colour, fill, border or shadow changing under the pointer or focus. Every control, one speed. |
+| `--motion-feedback-press` | `160ms` + `--ease-out` | A press or tap confirming: a scale down and back. |
+| `--motion-feedback-change` | `--duration-xs` + `--ease-out` | A state answering the reader: a Copied! label rolling in, a message appearing under a field, a status badge settling. 200ms. |
+| `--motion-feedback-travel` | `300ms` + `--ease-out` | A part moving to its new place: a chevron turning, a segmented thumb or toggle knob sliding, an accordion or tool panel opening to its height. Instant under reduced motion. |
+| `--motion-surface-toggle` | `--duration-s` + `--ease-emphasized` | A panel changing the layout around it (the sidebar collapsing). 400ms. Instant under reduced motion. |
+| `--motion-surface-open` | `300ms` + `--ease-out` | Anything opening over the page: a dialog, a drawer, a sheet. The glide does the work, so it answers at once. |
+| `--motion-surface-close` | `--duration-xs` + `--ease-in` | The same surfaces closing, accelerating away. 200ms. They animate out in every browser: `dialog.js` plays the exit before it closes. |
 | `--motion-surface-reduced` | `--duration-xs` | What a surface's open and close become under reduced motion: a 200ms fade, no travel, the same as a page. Duration only. |
+| `--motion-loading-delay` | `150ms` | How long a loading indicator waits before it shows, so a fast response never flashes one. Every indicator, one value. Duration only. |
+| `--motion-loading-pulse` | `--duration-l` | One breath of a skeleton holding a layout. 1000ms. Duration only. |
+| `--motion-loading-spin` | `800ms` + `linear` | One turn of the [spinner](/components/spinner.html)'s ring, at a constant speed: a ring that eases reads as stopping and starting. |
+
+Feedback, product surfaces and loading are **product UI** timings, chosen on the micro-interaction experiment pages (2026-11-12). They sit off the brand duration scale on purpose: a control has to answer inside a fifth of a second, where an entrance has room to glide. That is why `150ms`, `160ms` and `300ms` are written into the semantic token rather than composed from a primitive.
 
 Each two-part token is stored as two variables, `-duration` and `-easing`, so it plugs into a CSS `transition` or a JS animation API without parsing.
 
@@ -2437,9 +2502,9 @@ Each two-part token is stored as two variables, `-duration` and `-easing`, so it
 
 | Slot | Allowed values |
 | --- | --- |
-| `scope` | `page` · `surface` · `element` · `feedback` |
-| `event` (or variant) | `open` · `close` · `swap` · `enter` · `exit` · `fade` · `intro` · `stagger` · `hover` · `press` · `toggle` · `content` · `text` · `scale` · `blur` · `reduced` · `reveal` |
-| `property` | `duration` · `easing` · `offset` · `distance` · `from` · `start` |
+| `scope` | `page` · `surface` · `element` · `feedback` · `loading` |
+| `event` (or variant) | `open` · `close` · `swap` · `enter` · `exit` · `fade` · `intro` · `stagger` · `hover` · `press` · `change` · `travel` · `toggle` · `spin` · `pulse` · `content` · `text` · `scale` · `blur` · `reduced` · `reveal` |
+| `property` | `duration` · `easing` · `offset` · `distance` · `from` · `start` · `delay` |
 
 The middle slot names the motion event (`enter`, `hover`) or, where a scope has one setting that is not an event, the variant it tunes (`content`, `text`, `reduced`). A token that only ever has one property keeps the grammar and drops the other. Name the kind of motion event, never the component: `--motion-feedback-hover`, not `--motion-button-hover`.
 
@@ -2523,7 +2588,7 @@ const enter = {
 gsap.to(el, { opacity: 1, y: 0, ...enter });
 ```
 
-`assets/js/bd-animate.js` does this once at its first init; every tween it plays reads the element tokens and nothing below them. See [BD Animate](/web/bd-animate.html).
+`assets/js/bd-animate.js` does this once at its first init; every tween it plays reads the element tokens and nothing below them. See [BD Animate](/components/bd-animate.html).
 
 ---
 
@@ -2548,8 +2613,8 @@ Every `cms/*.md` doc declares its layer in frontmatter:
 ```yaml
 ---
 title: "Button"
-section: "Web"
-subsection: "Components"
+section: "Components"
+subsection: "Actions"
 layer: "core"
 ---
 ```
@@ -2607,7 +2672,7 @@ Example (button component):
 
 ## Slot layout rule
 
-Components that lay content out in slots — [Site Header](/web/site-header.html) and [Bar](/web/bar.html) today — separate an outer element from an inner one and push the trailing slot over with an auto margin:
+Components that lay content out in slots — [Site Header](/components/site-header.html) and [Bar](/components/bar.html) today — separate an outer element from an inner one and push the trailing slot over with an auto margin:
 
 ```css
 .component        { /* sticky, background, border — full bleed */ }
@@ -2628,7 +2693,7 @@ The outer/inner split exists so a full-bleed background and border can run edge 
 | Component CSS | `assets/css/design-system.css` under a numbered section heading |
 | Component JS (if needed) | `assets/js/component-name.js` |
 | Documentation source | `cms/component-name.md` |
-| Generated docs page | `web/component-name.html` |
+| Generated docs page | `components/component-name.html` |
 
 Section headings in `design-system.css` follow the format:
 ```css
@@ -2752,7 +2817,7 @@ The website is also a channel — one of the places the brand meets an audience 
 | X card image | 1200×628 | JPG/PNG | 1 MB | `summary_large_image`; usually the OG image reused |
 | Favicon | SVG source + 32×32 PNG + ICO | SVG/PNG/ICO | – | avatar logo variant; lives in `assets/icons/` |
 | Apple touch icon | 180×180 | PNG | – | `assets/icons/apple-touch-icon.png` |
-| Page imagery | ratio set at render | – | – | `.img` + `data-ratio="1x1 / 3x2 / 4x3 / 16x9 / 21x9"`, crop with the [image component](/web/image.html), not in the export |
+| Page imagery | ratio set at render | – | – | `.img` + `data-ratio="1x1 / 3x2 / 4x3 / 16x9 / 21x9"`, crop with the [image component](/components/image.html), not in the export |
 
 _Specs verified against platform documentation: 2026-07-05._
 
@@ -3148,7 +3213,7 @@ apps:
 ```
 
 Toasts share the bottom edge with the bar. An app shell running one
-re-points the [Toast](/web/toast.html) offset so notifications stack
+re-points the [Toast](/components/toast.html) offset so notifications stack
 above the tab bar instead of covering it:
 
 ```css
@@ -3191,7 +3256,7 @@ counts to two digits; show `99+` beyond that.
   accessible state and the visible style, so the two cannot drift. Update it
   on navigation.
 - Labels are always visible. Icon-only navigation trades a word of space for
-  a guess, and the system's [Tooltip](/web/tooltip.html) is not a
+  a guess, and the system's [Tooltip](/components/tooltip.html) is not a
   substitute here.
 - Every destination clears `--target-min` (44px) in both axes; the bar's
   56px height leaves room around it.
@@ -3207,10 +3272,10 @@ counts to two digits; show `99+` beyond that.
 - Keep the set to three to five destinations. The bar splits its width
   evenly, so a sixth shrinks every label past reading and squeezes targets
   toward the floor. Beyond five, reach for a
-  [Drawer](/web/drawer.html) or a menu page.
+  [Drawer](/components/drawer.html) or a menu page.
 - Run one `.app-nav` per page. It is the primary navigation, not a toolbar —
   a control strip that acts on the content below it is a
-  [Bar](/web/bar.html).
+  [Bar](/components/bar.html).
 - Give it links. A destination navigates; an action (open a dialog, start a
   capture) is a `<button>` and belongs on the screen it acts on.
 - Re-skin through the `--app-nav-*` tokens — an override of the selectors
@@ -3488,7 +3553,7 @@ The avatar is the trigger, inside the button that carries the name, and it heads
 </div>
 ```
 
-The full pattern is the [Dropdown](/web/dropdown.html)'s avatar item; the [Site Header](/web/site-header.html) shows it in a header.
+The full pattern is the [Dropdown](/components/dropdown.html)'s avatar item; the [Site Header](/components/site-header.html) shows it in a header.
 
 ---
 
@@ -3712,6 +3777,7 @@ For a contextual override across a whole surface, set the component tokens inste
 - Badges are presentational, they do not require ARIA roles
 - Ensure the badge text provides sufficient context (avoid colour-only meaning)
 - If a badge conveys critical status, pair it with descriptive text nearby
+- A badge whose status changes crossfades to its new colour on `--motion-feedback-change` (200ms). The script that changes it adds `.is-changed` to settle it with a 0.92 to 1 pop, re-adding it across a reflow for a second change, and clears it on `animationend`. A badge that renders with its status never pops, and none pops under `prefers-reduced-motion`
 
 ---
 
@@ -3923,14 +3989,14 @@ The identity configuration: breadcrumb in the content region, actions and close 
     <div class="bar-content">
       <nav class="breadcrumb" aria-label="Breadcrumb">
         <ol class="breadcrumb-list">
-          <li class="breadcrumb-item"><a href="/web/">Design System</a><span class="breadcrumb-separator" aria-hidden="true">/</span></li>
+          <li class="breadcrumb-item"><a href="/components/">Components</a><span class="breadcrumb-separator" aria-hidden="true">/</span></li>
           <li class="breadcrumb-item"><span aria-current="page">Button</span></li>
         </ol>
       </nav>
     </div>
     <div class="bar-actions">
       <div class="dropdown">…</div>
-      <a href="/web/" class="bar-close" data-page-close aria-label="Back to Design System">…</a>
+      <a href="/components/" class="bar-close" data-page-close aria-label="Back to Components">…</a>
     </div>
   </div>
 </div>
@@ -4364,7 +4430,7 @@ A `ScrollTrigger.refresh()` is only ever run when triggers exist: with none ther
 | Event | When |
 |---|---|
 | `bd:ready` on `document` | After the first init, once per document; latched as `html[data-bd-ready]` |
-| `bd:intro-leaving` on `document` | Listened for. While an element with `id="bd-intro-curtain"` (a first-load curtain) is in the document and has not dispatched this, every reveal that would play now is created paused and plays on it; `bd:intro-complete` then triggers one more measurement, because the first ran under the curtain's scroll lock. [BD Intro](/web/bd-intro.html) is that curtain; any other that keeps the contract works |
+| `bd:intro-leaving` on `document` | Listened for. While an element with `id="bd-intro-curtain"` (a first-load curtain) is in the document and has not dispatched this, every reveal that would play now is created paused and plays on it; `bd:intro-complete` then triggers one more measurement, because the first ran under the curtain's scroll lock. [BD Intro](/components/bd-intro.html) is that curtain; any other that keeps the contract works |
 
 The engine stamps `data-bd-revealed` on every element that has played. The guard is `:not([data-bd-revealed])`, so a resize rebuild or a later revert can never hide something the reader has already seen.
 
@@ -4612,7 +4678,7 @@ Structure classes the JS writes: `.bd-cursor-ready` and `.bd-cursor-replacing` o
 
 BD Intro covers the page with an inverted surface on every real document load, drops the wordmark's pieces into place one after another, holds until the page says it is ready, then fades. It plays once per load and never on a page swap, because a swap never re-runs a page's scripts. The engine is `assets/js/bd-intro.js` with companion styles in `bd-intro.css`. The wordmark is not the script's: the page carries one `svg.bd-intro-piece` per piece inside the curtain, and the script reads each piece's bounds from its `viewBox`. The markup is the opt-in; leave it out and nothing happens.
 
-It pairs with [BD Animate](/web/bd-animate.html): while the curtain is in the document the engine holds every reveal that would otherwise play at once, entrances and what is above the fold, plays them the moment the curtain says it is leaving, and fires the `bd:ready` the curtain waits on. Without the engine the drop alone decides when the curtain lifts.
+It pairs with [BD Animate](/components/bd-animate.html): while the curtain is in the document the engine holds every reveal that would otherwise play at once, entrances and what is above the fold, plays them the moment the curtain says it is leaving, and fires the `bd:ready` the curtain waits on. Without the engine the drop alone decides when the curtain lifts.
 
 ---
 
@@ -4927,6 +4993,24 @@ Two more things the player would have handled and this does not:
 - **Size it yourself.** `bd-video.css` is what gives `.bd-video-player` its `width: 100%`; a bare `<video>` renders at its intrinsic pixel width until the layout it sits in says otherwise. Size it from the consuming layout's own class — the demo above carries an inline `width` only because a docs demo has no layout to inherit from.
 - **Reduced motion is yours to honour, and only JavaScript can do it.** CSS cannot suppress `autoplay` or pause a video, and `<source media="…">` is honoured by Safari alone. The player does it with `matchMedia("(prefers-reduced-motion: reduce)")` — remove `autoplay`, call `pause()`. A bare `<video>` needs the same from you; the demo above gets it from `demo-loop-guard.js`.
 
+## Video in markdown
+
+`{{video: …}}` writes one player, the same way `{{image: …}}` writes an image. It must be the whole line.
+
+```markdown
+{{video: src="/assets/video/showreel.mp4" poster="/assets/images/showreel-poster.jpg" label="Studio showreel" controls="full"}}
+```
+
+| Parameter | Required | Values |
+|---|---|---|
+| `src` | Yes | The video file |
+| `label` | Yes | Names the player and the video for a screen reader |
+| `poster` | No | The still shown before it plays |
+| `controls` | No | `play` (default, the centre button) or `full` (scrubber, mute and fullscreen) |
+| `captions` | No | A WebVTT file: an English captions track, on by default. A video with speech needs one (WCAG 1.2.2) |
+
+A mistake fails the build, naming the line. Cues, an unmute prompt and the other attributes are raw HTML, as above.
+
 ## JavaScript
 
 Include `assets/js/bd-video.js` once per page. It self-initialises on `DOMContentLoaded` and exits early when the page has no `.bd-video-player`.
@@ -4996,7 +5080,7 @@ Known gaps beyond captions — treat these as constraints when placing a player,
 - <kbd>Space</kbd> is handled at the player root, so it toggles playback rather than activating the focused button (**2.1.1**), and the arrow shortcuts have no modifier guard, so <kbd>Alt</kbd> + <kbd>←</kbd> seeks instead of going back (**2.1.4**).
 - Below 768px a preview player hides the centre button; with no `data-bd-mute` or `data-bd-fullscreen` that configuration leaves no keyboard-operable play control at all (**2.1.1**). Ship at least one control button on mobile preview players.
 - Fullscreen uses the unprefixed API only, so the button and <kbd>F</kbd> are a silent no-op on iOS Safari, and fullscreen neither traps focus nor makes the rest of the page `inert` (**2.4.3**).
-- The focus ring is white on whatever video frame sits behind it, so 3:1 against adjacent colour is not guaranteed (**1.4.11**), and `data-tooltip` tooltips are hover-only (**1.4.13** — mitigated by their labels duplicating the accessible name).
+- The centre button and the control buttons are light (white, dark icon) on any footage, and their focus ring is a dark ring outside a white gap, so one of the two always stands out from the frame behind (**1.4.11**). `data-tooltip` tooltips are hover-only (**1.4.13** — mitigated by their labels duplicating the accessible name).
 
 Author requirements:
 
@@ -5049,8 +5133,11 @@ Every token is scoped under `.bd-video` and resolves through a design-system var
 | `--bd-video-font-family` | `var(--font-primary, system-ui, …)` | All player text |
 | `--bd-video-font-2xs` / `-xs` / `-m` | `var(--font-*, …)` | Cue excerpt / time + tooltips / unmute prompt |
 | `--bd-video-radius-s` | `var(--radius-s, 8px)` | Tooltips and cue card |
+| `--bd-video-control-bg` / `-bg-hover` / `-ink` | `var(--white, #ffffff)` / `var(--neutral-100, #e5e5e5)` / `var(--neutral-900, #1f1f1f)` | The centre and control buttons. Fixed, like the cue colours |
+| `--bd-video-control-radius` | `var(--radius-control, 999px)` | The buttons' corners: square or rounded with the brand |
+| `--media-border-width`, `--media-border-color`, `--media-radius` | from the [media frame](/foundations/media-frame.html) | The player's frame. A hero that wants a bare player sets `--media-border-width: 0` on its wrapper |
 
-Cue colours deliberately never inherit semantic tokens like `--text-primary`: those flip in dark mode, the video behind them does not.
+Cue colours and the control colours deliberately never inherit semantic tokens like `--text-primary`: those flip in dark mode, the video behind them does not. This is the one place the player reads primitives (`--white`, `--neutral-*`), always behind its own `--bd-video-*` token. The buttons are light; the time readout, tooltips and the unmute prompt stay dark translucent with light text, because they are labels over the footage rather than controls. Every focus ring is the same two-tone ring: dark against the element, a light halo outside it.
 
 Three tokens are declared for completeness but currently unreferenced: `--bd-video-duration-mobile-scrubber`, `--bd-video-space-2xl`, `--bd-video-radius-m`.
 
@@ -5098,7 +5185,7 @@ A documentation space is a set of books. The top level is a **shelf** of covers;
 
 The row in a contents list is a contents *item*, not a page — in a book, the thing you click in the contents is an entry and the thing you land on is the page. Naming them apart is what keeps the model legible.
 
-Two components complete the model and live in their own docs: moving sideways between pages is [Page Navigation](/web/page-nav.html); moving back up is [Breadcrumb](/web/breadcrumb.html).
+Two components complete the model and live in their own docs: moving sideways between pages is [Page Navigation](/components/page-nav.html); moving back up is [Breadcrumb](/components/breadcrumb.html).
 
 ---
 
@@ -5211,7 +5298,7 @@ A leading icon that only repeats the title needs `aria-hidden="true"`. One that 
 
 ## Using the footer slots
 
-Same shape at the bottom: `.book-cover-byline` on the left, `.book-cover-meta` on the right. Meta is a status slot — a count, a date, an access level — and [Tag](/web/tag.html) or [Badge](/web/badge.html) sit in it directly.
+Same shape at the bottom: `.book-cover-byline` on the left, `.book-cover-meta` on the right. Meta is a status slot — a count, a date, an access level — and [Tag](/components/tag.html) or [Badge](/components/badge.html) sit in it directly.
 
 ```html
 <footer class="book-cover-footer">
@@ -5541,7 +5628,7 @@ Breadcrumbs show the user's location within a site hierarchy: an ordered list in
 <nav class="breadcrumb" aria-label="Breadcrumb">
   <ol class="breadcrumb-list">
     <li class="breadcrumb-item"><a href="/">Home</a><span class="breadcrumb-separator" aria-hidden="true">/</span></li>
-    <li class="breadcrumb-item"><a href="/web/">Website</a><span class="breadcrumb-separator" aria-hidden="true">/</span></li>
+    <li class="breadcrumb-item"><a href="/components/">Components</a><span class="breadcrumb-separator" aria-hidden="true">/</span></li>
     <li class="breadcrumb-item"><span aria-current="page">Breadcrumb</span></li>
   </ol>
 </nav>
@@ -5571,8 +5658,8 @@ Breadcrumbs support any depth. The last item uses `aria-current="page"` and is r
 <nav class="breadcrumb" aria-label="Breadcrumb">
   <ol class="breadcrumb-list">
     <li class="breadcrumb-item"><a href="/">Home</a><span class="breadcrumb-separator" aria-hidden="true">/</span></li>
-    <li class="breadcrumb-item"><a href="/web/">Website</a><span class="breadcrumb-separator" aria-hidden="true">/</span></li>
-    <li class="breadcrumb-item"><a href="/web/#components">Components</a><span class="breadcrumb-separator" aria-hidden="true">/</span></li>
+    <li class="breadcrumb-item"><a href="/components/">Components</a><span class="breadcrumb-separator" aria-hidden="true">/</span></li>
+    <li class="breadcrumb-item"><a href="/components/#navigation">Navigation</a><span class="breadcrumb-separator" aria-hidden="true">/</span></li>
     <li class="breadcrumb-item"><span aria-current="page">Breadcrumb</span></li>
   </ol>
 </nav>
@@ -5778,6 +5865,27 @@ A text button with a `data-size` keeps that size's padding: `[data-size]` is dec
 
 Sizes compose with variants:
 
+### Minimum height
+
+A button is as tall as its padding and type make it: about 48px at the default size, 37px small and 27px extra small. A brand that holds every button to a target sets a floor per size in its `theme.css`, on `:root`:
+
+```css
+:root {
+  --button-min-height: 56px;
+  --button-min-height-small: 48px;
+  --button-min-height-xsmall: var(--target-min); /* 44px */
+}
+```
+
+All three default to `auto`, so a brand that sets nothing keeps the heights above. The floor is a `min-height`: a label that wraps still grows the button, and the label stays vertically centred in the taller box. An icon-only button takes the floor on both axes, so it stays square.
+
+Where the floor does not reach:
+
+- **Text variant.** It has no box, so no floor. A text button with a `data-size` takes that size's floor, as it takes that size's padding (see [Text](#text)), so a standalone text action that needs the target takes a `data-size`.
+- **The bar, the header action and the Layout Specs info button.** Each holds a fixed height of its own, so a button there ignores the floor.
+- **The close on a dialog or drawer.** It takes the small floor whatever `data-size` the markup carries, as it takes one padding.
+- **Compact density.** A default button in a `data-density="compact"` container takes the small floor, as it takes the small padding.
+
 ---
 
 ## Icon-only
@@ -5882,7 +5990,7 @@ The **text** variant adds an underline on hover but does not gain a background f
 
 ## Press (active)
 
-When a button is pressed (`:active`), it scales down to 97% to simulate a physical press. The transform transitions at `--duration-2xs` (100ms) with `--ease-out` for a snappy feel.
+When a button is pressed (`:active`), it scales down to 97% to simulate a physical press. The transform transitions on `--motion-feedback-press` (160ms, `--ease-out`).
 
 ```css
 .button:active {
@@ -5901,12 +6009,12 @@ States are transient: runtime-toggled, not permanent properties. They use `.is-*
 | Class | Purpose |
 |---|---|
 | `.is-disabled`, `disabled` or `aria-disabled="true"` | `--opacity-disabled` (0.4), pointer events disabled |
-| `.is-loading` | Pointer disabled, `--opacity-loading` (0.75) |
+| `.is-loading` | Busy: a ring replaces the label after `--motion-loading-delay` (150ms), the width holds, pointer disabled |
 | `.is-active` with `aria-pressed="true"` | A toggle that is on: unfilled variants invert to `--selected-background` and `--selected-text` |
 
 ```html
 <button class="button" disabled>Disabled</button>
-<button class="button is-loading" aria-busy="true">Saving...</button>
+<button class="button is-loading" aria-busy="true">Save</button>
 <button class="button is-active" data-variant="faded" aria-pressed="true">Labels</button>
 ```
 
@@ -6008,7 +6116,7 @@ Pair it with `data-color="danger"` when the dismiss genuinely destroys work. Neu
 
 - Icon-only buttons (`data-icon-only`) **must** include `aria-label` describing the action, or for a toggle, the thing it turns on (the label never changes with state)
 - `disabled` or `aria-disabled="true"` is announced by screen readers; `.is-disabled` paints only and announces nothing
-- Loading buttons (`.is-loading`) must set `aria-busy="true"`, and remove it when the work ends. The class is paint only: it stops the pointer and dims the button, but tells a screen reader nothing. The dim stops at 0.75 because a loading button is still enabled, so its label keeps the 4.5:1 text floor
+- Loading buttons (`.is-loading`) must set `aria-busy="true"`, and remove it when the work ends. The class is paint only: it stops the pointer and swaps the label for a ring, but tells a screen reader nothing. Keep the label as it was ("Save", not "Saving..."): it goes transparent, not hidden, so it is still the button's name, and the width it holds is the width the button keeps. Nothing changes for the first 150ms, so a fast answer never flashes the ring. Under forced colours the ring is dropped and the label shows
 - Toggle buttons set `aria-pressed` and keep it in step with `.is-active`; the class alone tells a screen reader nothing
 - Focus ring appears automatically on `:focus-visible`
 - Disabled links require `aria-disabled="true"`, which also paints them
@@ -6054,7 +6162,16 @@ This section documents how the component is built. For usage, see the sections a
 | `--button-padding-y` | `var(--space-m)` | Vertical padding |
 | `--button-padding-x` | `var(--space-xl)` | Horizontal padding |
 | `--button-radius` | `var(--radius-control)` | Corner radius — the control role, so it follows `--radius-scale` |
-| `--button-gap` | `var(--space-s)` | Icon-to-text gap |
+| `--button-gap` | `var(--space-m)` | Icon-to-text gap |
+| `--button-min-size` | `var(--button-min-height)` | The floor for this button's size: `min-height`, and `min-width` on an icon-only button. Small and extra small re-point it to their own token; the text variant, the bar and the header action set it to `auto` |
+
+These three are declared on `:root`, not on `.button`, so a brand's `theme.css` can set them ([Minimum height](#minimum-height)):
+
+| Token | Default | What it controls |
+|---|---|---|
+| `--button-min-height` | `auto` | Minimum height of a default-size button |
+| `--button-min-height-small` | `auto` | Minimum height of `data-size="small"`, and of a button in compact density |
+| `--button-min-height-xsmall` | `auto` | Minimum height of `data-size="xsmall"` |
 
 ### Selectors
 
@@ -6067,18 +6184,18 @@ This section documents how the component is built. For usage, see the sections a
 | `.button[data-variant="faded"]` | 15% alpha bg, no border, text inherits `--button-color` |
 | `.button[data-variant="outline-faded"]` | Transparent bg, faded border, text inherits `--button-color` |
 | `.button[data-variant="transparent"]` | No bg, no border, text inherits `--button-color` |
-| `.button[data-variant="text"]` | No bg, no border, zero padding (untrimmed), underline on hover |
+| `.button[data-variant="text"]` | No bg, no border, zero padding (untrimmed), no minimum height (`--button-min-size: auto`), underline on hover |
 | `.button[data-variant="outline"]:hover`, etc. | Unfilled hover, `color-mix(in srgb, var(--button-color), var(--alpha-10))` fill |
-| `.button[data-size="small"]` | Reduced padding and font size |
-| `.button[data-size="xsmall"]` | Further reduced padding and font size |
-| `.button[data-icon-only]` | Equal padding (square/circle shape), untrimmed: no label, so no leading to take back |
+| `.button[data-size="small"]` | Reduced padding and font size; `--button-min-size` re-pointed to `--button-min-height-small` |
+| `.button[data-size="xsmall"]` | Further reduced padding and font size; `--button-min-size` re-pointed to `--button-min-height-xsmall` |
+| `.button[data-icon-only]` | Equal padding (square/circle shape), untrimmed: no label, so no leading to take back. `min-width: var(--button-min-size)`, so a brand's floor keeps it square |
 | `.button[data-full-width]` | `width: 100%` |
 | `.button[data-color="danger"]` / `[data-color="red"]` | Sets `--button-color` to `var(--status-danger)` |
 | `.button[data-color="success"]` / `[data-color="green"]` | Sets `--button-color` to `var(--status-success)` |
 | `.button[data-color="warning"]` / `[data-color="yellow"]` | Sets `--button-color` to `var(--status-warning)` |
 | `.button[data-color="info"]` / `[data-color="blue"]` | Sets `--button-color` to `var(--status-info)` |
 | `.button:disabled`, `.button.is-disabled`, `.button[aria-disabled="true"]` | `--opacity-disabled`, pointer events disabled |
-| `.button.is-loading` | Pointer disabled, `--opacity-loading` |
+| `.button.is-loading` | Pointer disabled; after `--motion-loading-delay` the label fades to transparent and `::after` draws the [spinner](spinner.html) ring in `--button-text-color` |
 | `.button-group` | Flex container for grouping buttons with `var(--space-m)` gap |
 
 ### Key rules
@@ -6090,7 +6207,7 @@ This section documents how the component is built. For usage, see the sections a
 - **Press effect:** `transform: scale(0.97)` on `.button:active`, excluded for text variant, disabled under `prefers-reduced-motion`.
 - **Focus ring:** inherits the global `:focus-visible` outline from the design system reset, no component-specific focus rule.
 - **Dark mode faded adjustment:** `--button-faded` changes from `var(--alpha-15)` to `var(--alpha-80)` in dark mode so the 15% tint remains visible on dark backgrounds.
-- **Transition:** `background-color`, `color`, `border-color`, and `opacity` all use `var(--duration-2xs) var(--ease-out)`.
+- **Transition:** `background-color`, `color`, `border-color`, and `opacity` all use `--motion-feedback-hover` (150ms); `transform` uses `--motion-feedback-press` (160ms).
 
 ### Callout
 
@@ -6619,7 +6736,7 @@ This section documents how the component is built. For usage, see the sections a
 Overlay: the input is `position: absolute; inset: 0; opacity: 0` over the cells, and it takes touches: a phone offers Paste only on a long-press that lands on an editable element, and the cells row is only a label. The script keeps the caret at the end, so a tap mid-row never inserts mid-code, and a paste replaces the whole value.
 Focus: the caret cell is the focus indicator — `border-color: var(--input-focus)` plus a 1px inset shadow for 2px of visual weight, gated on `:focus-within`. No ring on the group: the caret says "focused, and here". A `forced-colors` block outlines the row instead, since high-contrast mode erases the caret's colour.
 Wrapping: row and word are both `flex-wrap: wrap` — words wrap as units, an over-long word wraps within itself.
-Motion: cell border and background transition on `--duration-xs` / `--ease-out`, removed under `prefers-reduced-motion: reduce`.
+Motion: cell border and background transition on `--motion-feedback-hover` (150ms), removed under `prefers-reduced-motion: reduce`.
 
 ### Chip
 
@@ -6835,7 +6952,7 @@ Clearing is a DOM change, and assistive technology does not listen to DOM events
 - A chip meets `--target-min` (44px) in the block axis. There is no `min-width` — a chip is as wide as its label, so a one- or two-character label lands near 35px. That clears the 24px of WCAG 2.2's 2.5.8 but not 44; size labels accordingly.
 - The rest border reads `--border-control`, not `--border-faded`. A chip's surface is transparent, so the border is the only thing saying it is pressable, and a control boundary needs 3:1. `--border-faded` is decorative at 1.4:1.
 - `Delete` and `Backspace` clear a `data-clearable` answer from the keyboard, so clearing is never pointer-only.
-- No `prefers-reduced-motion` guard, deliberately: a chip transitions colour and nothing else. There is no motion to reduce. The colour variant's paint does change size between rest, hover and selected, but that is applied instantly — `border-width` is kept out of the transition so no geometry animates.
+- A press scales the chip to 0.97 on `--motion-feedback-press` (160ms), the button's answer; a disabled chip does not press. Under `prefers-reduced-motion` the scale goes and the colour stays, since a colour change moves nothing. The colour variant's paint does change size between rest, hover and selected, but that is applied instantly — `border-width` is kept out of the transition so no geometry animates.
 - A colour chip is 48px square, so it clears `--target-min` on **both** axes — the text chip's inline-padding caveat does not apply. That holds at the default `--chip-colour-size`. A consumer that re-points the token smaller owns the target: 24px is the 2.5.8 floor, and Colour Pairing's grids stop shrinking at 32px for that reason.
 - A colour chip's name comes from a `.visually-hidden` span. Without it the control is unnamed, because the swatch is `aria-hidden`.
 - The selected ring is the swatch's own colour and is **not** contrast-corrected. On a pale swatch it reads near 1.05:1 and carries nothing; the mark is what satisfies 1.4.11, which is why its ink flips. This was chosen deliberately — do not "fix" the ring to a neutral.
@@ -6880,7 +6997,7 @@ Clearing is a DOM change, and assistive technology does not listen to DOM events
 | `--chip-padding-x` | `var(--space-l)` | Inline padding, the same as a pressable tag |
 | `--chip-gap` | `var(--space-xs)` | Gap between chips |
 | `--chip-scale-min` | `7rem` | Narrowest scale stop before the row wraps |
-| `--chip-duration` | `var(--duration-2xs)` | Colour transition |
+| `--chip-duration` | `var(--motion-feedback-hover-duration)` | Colour transition, 150ms |
 | `--chip-colour-size` | `3rem` | Colour chip's square size. Clears `--target-min` only at this default |
 | `--chip-colour-gap` | `0.125rem` | Ground ring between the paint and the edge |
 | `--chip-colour-ground` | `var(--background-primary)` | That ring's colour. Must stay **opaque**, so the selected ring reads as separate from the paint |
@@ -7104,6 +7221,17 @@ Use `data-copy` for static values (tokens, URLs). Use `data-clipboard-target` fo
 
 Include `assets/js/copy-button.js` on any page using copy buttons. The script handles all `.copy-btn` elements via event delegation. No per-button initialisation needed.
 
+Code that writes to the clipboard itself (a tool copying an image) shows the same feedback through the module, so every copy reads the same and lasts the same:
+
+```js
+navigator.clipboard.write(items).then(function () {
+  window.bdCopyButton.flash(button); // .is-copied, the tooltip swap, one revert
+  announce('Copied PNG');            // say what was copied: flash does not
+});
+
+window.bdCopyButton.reset(button);   // the output changed: take "Copied!" back now
+```
+
 Optional config: sites that serve an icon sprite can render the feedback icons as `<use>` refs instead of the default inline path data. The config is read at render time, so ordering is forgiving — but declare it before the module for clarity:
 
 ```html
@@ -7121,6 +7249,8 @@ The sprite must be same-origin and contain a `#check` symbol. Without config the
 
 - Always include `aria-label="Copy"` on icon-only and transparent variants
 - The copied state provides visual feedback via the check icon and green colour
+- The two labels share one grid cell, so the button holds the wider one's width and never jumps. Copy rolls up and out as Copied! rolls in from below, on `--motion-feedback-change` (200ms), and Copied! stays 2000ms. `visibility` moves with the fade, so only the label on show names the button. Under `prefers-reduced-motion` the roll becomes a plain crossfade. Inside a field (`.field-action.copy-btn`) the icons crossfade where they sit and the tick grows in from 0.6
+- A button with no tooltip clips the rolling label to its box. One with `data-tooltip` does not, because its bubble is the button's own `::before` and the clip would cut it off
 
 ---
 
@@ -7420,7 +7550,7 @@ Include `assets/js/dialog.js` on any page using dialogs.
 <script src="/assets/js/dialog.js"></script>
 ```
 
-One script serves both Dialog and [Drawer](/web/drawer.html) — they are the same machinery, a modal `<dialog>` with native focus trapping, differing only in where the panel sits.
+One script serves both Dialog and [Drawer](/components/drawer.html) — they are the same machinery, a modal `<dialog>` with native focus trapping, differing only in where the panel sits.
 
 | API | Purpose |
 |---|---|
@@ -7430,6 +7560,7 @@ One script serves both Dialog and [Drawer](/web/drawer.html) — they are the sa
 | `dialog-hide` | Cancellable event fired before closing, with `detail.source` |
 | `window.bdRequestClose(el, source)` | Closes through the guard, playing the exit first |
 | `window.bdOpenSurface(el)` | Opens as a trigger does; calls off an exit still playing |
+| `window.bdCloseSurface(el)` | Closes with the exit but without the guard, for a close the code has decided on (the React adapters use it) |
 | `window.bdCloseOpenDialogs()` | Force-closes every open dialog and drawer, skipping guards and the exit |
 
 Clicking the backdrop closes the dialog unless it carries `data-static`.
@@ -7463,7 +7594,7 @@ Where the `<dialog>` sits in the document matters more than it looks.
 
 ## Motion
 
-The dialog rises into place and drops away: it enters from `--dialog-offset` below, settling upward as it fades in, and exits back down. The entrance is the slower half — `--motion-surface-open` (600ms on `--ease-out`, which has a long graceful tail) — while the exit clears on `--motion-surface-close` (400ms on `--ease-in`). Drawers share the same pair, so every surface that opens over the page moves alike. Opening should feel considered; closing should get out of the way.
+The dialog rises into place and drops away: it enters from `--dialog-offset` below, settling upward as it fades in, and exits back down. The entrance is the slower half — `--motion-surface-open` (300ms on `--ease-out`, which has a long graceful tail) — while the exit clears on `--motion-surface-close` (200ms on `--ease-in`). Drawers open on the same token but close in 300ms (`--drawer-exit-duration`), because a drawer travels the full sheet and 200ms over that distance reads as a snap. Opening should feel considered; closing should get out of the way.
 
 The backdrop fades on the same timing.
 
@@ -7539,9 +7670,9 @@ Re-point these to re-skin the dialog for a brand. Never override the `.dialog` r
 | `--dialog-max-width` | `560px` | – | Maximum width |
 | `--dialog-backdrop` | `var(--background-modal)` | – | Backdrop overlay |
 | `--dialog-offset` | `var(--space-l)` | – | Distance travelled on enter and exit |
-| `--dialog-enter-duration` | `var(--motion-surface-open-duration)` | – | Entrance duration, 600ms |
+| `--dialog-enter-duration` | `var(--motion-surface-open-duration)` | – | Entrance duration, 300ms |
 | `--dialog-enter-easing` | `var(--motion-surface-open-easing)` | – | Entrance easing |
-| `--dialog-exit-duration` | `var(--motion-surface-close-duration)` | – | Exit duration, 400ms |
+| `--dialog-exit-duration` | `var(--motion-surface-close-duration)` | – | Exit duration, 200ms |
 | `--dialog-exit-easing` | `var(--motion-surface-close-easing)` | – | Exit easing |
 
 `--dialog-max-width` is declared in `:root`; the rest sit on `.dialog`, so a scoped `[data-theme]` region themes its own dialogs. `--dialog-backdrop` falls back to `--background-modal` for engines that predate `::backdrop` inheriting from its originating element.
@@ -7567,7 +7698,7 @@ Re-point these to re-skin the dialog for a brand. Never override the `.dialog` r
 
 The dialog has no fixed height. It is as tall as its content, up to `85dvh`. So the body's flex basis has to be `auto`, never `0%`. `flex: 1` sets a 0% basis, and iOS Safari resolves that to zero inside a content-sized column, which collapses the body and leaves only the header and footer showing. Chrome happens to recover, so the bug is invisible on desktop. With `flex: 1 1 auto` a short body takes its own height and a long one grows until `max-height` stops the dialog, then shrinks (`min-height: 0`) and scrolls (`overflow-y: auto`) with the footer still in view.
 
-The close button is the shared `.close-btn` role class, documented in [Button](/web/button.html). It is not a dialog-specific component. In a dialog or drawer header it takes a stronger form whatever `data-size` the markup carries: a faded button, at least the 44px target, the cross at `--icon-size-l`, pulled toward the corner so it sits `--space-m` from the top and end edges while the title keeps the full padding.
+The close button is the shared `.close-btn` role class, documented in [Button](/components/button.html). It is not a dialog-specific component. In a dialog or drawer header it takes a stronger form whatever `data-size` the markup carries: a faded button, at least the 44px target, the cross at `--icon-size-l`, pulled toward the corner so it sits `--space-m` from the top and end edges while the title keeps the full padding.
 
 ### Disclosure
 
@@ -7818,7 +7949,7 @@ It inherits all three divider tokens; `--divider-spacing` still supplies the blo
 
 ### Drawer
 
-Drawers are modal panels docked to an edge of the viewport, built on the native `<dialog>` element. They share their machinery with [Dialog](/web/dialog.html) — the same focus trapping, the same Escape handling, the same script. A drawer is the right choice when the content sits *beside* the page rather than interrupting it: navigation, filters, a detail view, a settings panel. The `.drawer` class is required, and `data-placement` chooses the edge.
+Drawers are modal panels docked to an edge of the viewport, built on the native `<dialog>` element. They share their machinery with [Dialog](/components/dialog.html) — the same focus trapping, the same Escape handling, the same script. A drawer is the right choice when the content sits *beside* the page rather than interrupting it: navigation, filters, a detail view, a settings panel. The `.drawer` class is required, and `data-placement` chooses the edge.
 
 ---
 
@@ -8025,6 +8156,7 @@ Every listener is delegated from `document`, so drawers rendered after load work
 | `.drawer-handle` | Markup that enables drag to dismiss — no attribute, no init |
 | `window.bdRequestClose(el, source)` | Closes through the guard, playing the exit first |
 | `window.bdOpenSurface(el)` | Opens as a trigger does; calls off an exit still playing |
+| `window.bdCloseSurface(el)` | Closes with the exit but without the guard, for a close the code has decided on (the React adapters use it) |
 | `window.bdCloseOpenDialogs()` | Force-closes every open dialog and drawer, skipping guards and the exit |
 
 A client-side router must call `bdCloseOpenDialogs()` before swapping page content. A modal that survives the swap keeps the new page inert; one destroyed while open strands focus with no announcement.
@@ -8055,7 +8187,7 @@ A client-side router must call `bdCloseOpenDialogs()` before swapping page conte
 - Add a handle when the drawer is a mobile sheet — the gesture is what people reach for first there
 
 **Don't:**
-- Don't use a drawer for a confirmation or a short message — that is a [Dialog](/web/dialog.html)
+- Don't use a drawer for a confirmation or a short message — that is a [Dialog](/components/dialog.html)
 - Don't open a drawer from inside another drawer; two stacked modals leave no clear way back
 - Don't remove the close button when light dismiss is off
 - Don't set both `.dialog` and `.drawer` on one element — they are alternative treatments of the same base, not composable
@@ -8080,9 +8212,9 @@ This section documents how the component is built. For usage, see the sections a
 | `--drawer-size` | `25rem` | Width on inline edges, height on block edges |
 | `--drawer-travel` | `100%` | How far the drawer travels when closed |
 | `--drawer-offset` | Set per placement | Closed-state translate — direction only, magnitude comes from `--drawer-travel` |
-| `--drawer-enter-duration` | `var(--motion-surface-open-duration)` | Entrance duration, 600ms, shared with Dialog |
+| `--drawer-enter-duration` | `var(--motion-surface-open-duration)` | Entrance duration, 300ms, shared with Dialog |
 | `--drawer-enter-easing` | `var(--motion-surface-open-easing)` | Entrance easing |
-| `--drawer-exit-duration` | `var(--motion-surface-close-duration)` | Exit duration, 400ms, shared with Dialog |
+| `--drawer-exit-duration` | `300ms` | Exit duration. Longer than the dialog's 200ms close, because the drawer travels the full sheet |
 | `--drawer-exit-easing` | `var(--motion-surface-close-easing)` | Exit easing |
 | `--drawer-handle-color` | `var(--text-faded)` | Grip fill. A control, so it answers to non-text contrast (WCAG 1.4.11) — it clears 3:1 in both themes (5.7:1 light, 5.0:1 dark against the dark panel's `--background-secondary`), where both `--border-secondary` steps fail |
 | `--drawer-handle-length` | `2.25rem` | Pill length along the free edge |
@@ -8347,11 +8479,11 @@ For user menus showing the logged-in user's identity.
 
 The identity row is not a menu item, and `role="menu"` may only own menu items, groups and separators. So the panel keeps the identity row and the divider, and `role="menu"` moves inward onto a `.dropdown-group` wrapping only the real items.
 
-Both circles are the [avatar](/web/avatar.html) component — `.avatar`, sized with `data-size` rather than a one-off width. Both are `aria-hidden`: the name follows in the markup, so an announced stray "E" adds nothing.
+Both circles are the [avatar](/components/avatar.html) component — `.avatar`, sized with `data-size` rather than a one-off width. Both are `aria-hidden`: the name follows in the markup, so an announced stray "E" adds nothing.
 
 The menu opens left-aligned here, which is the default. In a real header the trigger sits at the far right, and the menu should be anchored to match — put `data-placement="bottom-end"` on the `.dropdown`, not on the menu. That is genuine intent rather than overflow avoidance, so it is one of the few places the attribute is worth reaching for.
 
-The trigger can also be the avatar alone — no name, no chevron — when the header has no room for a label. The button then carries the person in its `aria-label` ("Account, Erlen Masson"); the [Site Header](/web/site-header.html) does exactly this. The action is **Sign out**, the word the login and account pages use.
+The trigger can also be the avatar alone — no name, no chevron — when the header has no room for a label. The button then carries the person in its `aria-label` ("Account, Erlen Masson"); the [Site Header](/components/site-header.html) does exactly this. The action is **Sign out**, the word the login and account pages use.
 
 ```html
 <div class="dropdown-menu">
@@ -8483,7 +8615,9 @@ Include `assets/js/dropdown.js` on any page. It auto-initialises all `.dropdown`
 <script src="/assets/js/dropdown.js"></script>
 ```
 
-Clicking a `.dropdown-trigger` toggles `.is-open` on the parent `.dropdown`. Clicking outside, moving focus away, or pressing Escape closes it.
+Clicking a `.dropdown-trigger` toggles `.is-open` on the parent `.dropdown`. Clicking outside, moving focus away, or pressing Escape closes it. A page transition (`bd:before-nav`) closes every open menu as the leave begins, the header's included, so Back and Forward never carry an open menu across.
+
+The menu fades and drops 4px from its trigger as it opens (200ms on `--ease-out`) and fades back faster as it closes (150ms on `--ease-in`); a menu that opens above its trigger, asked for or flipped there for room, rises instead. CSS does it all, with `@starting-style` and a `display` transition, so a closing menu stays painted for its fade, where it was, and takes no pointer while it goes; `dropdown.js` makes it `inert` for that time, so it takes no focus either. Under `prefers-reduced-motion` it fades and never travels. A press on the trigger or an item steps to `--background-darker` on `--motion-feedback-press`.
 
 The script also wires the ARIA relationships you would otherwise repeat on every instance: `aria-controls` on the trigger, `aria-labelledby` on the menu, and `tabindex="-1"` on each item while the menu is open. You author the roles; the plumbing is applied for you.
 
@@ -8596,6 +8730,10 @@ This section documents how the component is built. For usage, see the sections a
 | `.dropdown-chevron` | Rotating arrow indicator, transitions `transform` |
 | `.dropdown.is-open > .dropdown-trigger .dropdown-chevron` | Chevron rotated 180deg when open (child-combined so an outer open never rotates a nested one) |
 | `.dropdown-menu` | Absolutely positioned menu panel, hidden by default |
+| `.dropdown > .dropdown-menu` | Closed: transparent, 4px towards the trigger, no pointer. Its transition is the close: `--dropdown-close-duration` (150ms) on `--ease-in` |
+| `.dropdown.is-open > .dropdown-menu` | Open: shown, opaque, in place. Its transition is the open: `--dropdown-open-duration` (200ms) on `--ease-out` |
+| `--dropdown-travel` | How far the menu travels, set on `.dropdown`: `-4px` by default, `4px` once `data-resolved-placement` is `top-…`, `0` under reduced motion |
+| `.dropdown-trigger:active`, `.dropdown-item:active` | Press: `--background-darker` on `--motion-feedback-press` |
 | `.dropdown-menu.is-right` | Legacy right-alignment, read as `bottom-end` |
 | `.dropdown-menu[data-variant="panel"]` | Content panel: pads itself, `max-content` up to the cap and the viewport with no 250px floor, `--space-m` gap, stated ink |
 | `.dropdown-menu[data-variant="panel"] > *` | Zeroes children's block margins, as `.block` does, so the gap is the only spacing |
@@ -8702,6 +8840,8 @@ The [password toggle](password-toggle.html) is a `.field-toggle` in the same pos
 ## Action
 
 A `.field-action` is any other button that acts on the value — most often a [copy button](copy-button.html) beside a read-only value the reader takes somewhere else: a file name, a share link, a key. It is the same square as the clear and the toggle and, unlike the clear, always shown. Read-only rather than disabled, so the value stays in the tab order and can be selected from the keyboard. Icon only, so its name comes from hidden text inside it.
+
+Every control in the box answers a press the same way: the icon scales to 0.88 on `--motion-feedback-press` (160ms) while the square stays put, and holds still under `prefers-reduced-motion`.
 
 ```html
 <div class="field">
@@ -8900,7 +9040,7 @@ Chrome fixes a colour input at about 27px, and a stretched flex item loses its h
 
 The footer is the block at the bottom of a page. It has two regions: an optional top carrying identity and link columns, and a bottom carrying the copyright and the legal links. On most sites the bottom region is the whole component — a single centred line — and the top only appears once a site has enough to say to need it.
 
-It is the counterpart to the [Site Header](/web/site-header.html) and shares its construction: a full-bleed outer element owning background and border, an inner element owning width and padding. Placement is the consumer's job. The footer knows nothing about the page above it.
+It is the counterpart to the [Site Header](/components/site-header.html) and shares its construction: a full-bleed outer element owning background and border, an inner element owning width and padding. Placement is the consumer's job. The footer knows nothing about the page above it.
 
 ---
 
@@ -8924,7 +9064,7 @@ Two things about this shape are deliberate.
 
 **The top region is three fixed slots, not a variable column count.** The logo is the middle one and both sides are optional, so the arrangement has to hold with one side, the other, or neither. Every slot is placed by explicit grid line rather than left to auto-placement — a footer carrying only an end slot would otherwise be auto-placed into the first track and render on the left, and an absent slot has to keep holding its track open or the logo stops being centred the moment one side is dropped.
 
-**Links are `.footer-link`, not `.nav-link`.** A [Nav](/web/nav.html) link carries the padding a header bar needs to turn each link into a full-height hit area. A footer column has no bar to fill, so the padding would only push the links apart. Owning the link also means the footer wraps its rows freely, without asking Nav to soften its rule that a header nav needing to wrap is a nav needing a drawer.
+**Links are `.footer-link`, not `.nav-link`.** A [Nav](/components/nav.html) link carries the padding a header bar needs to turn each link into a full-height hit area. A footer column has no bar to fill, so the padding would only push the links apart. Owning the link also means the footer wraps its rows freely, without asking Nav to soften its rule that a header nav needing to wrap is a nav needing a drawer.
 
 ---
 
@@ -9104,7 +9244,7 @@ Logical properties throughout (`margin-inline`, `padding-block`, `min-block-size
 
 ### Related
 
-[`.label`](/foundations/classes.html) is the foundation utility the column headings borrow their shape from. [Nav](/web/nav.html) is the link set for a header or a drawer; the footer deliberately does not use it. [Site Header](/web/site-header.html) is the same construction at the other end of the page.
+[`.label`](/foundations/classes.html) is the foundation utility the column headings borrow their shape from. [Nav](/components/nav.html) is the link set for a header or a drawer; the footer deliberately does not use it. [Site Header](/components/site-header.html) is the same construction at the other end of the page.
 
 ### Form
 
@@ -9253,7 +9393,7 @@ Use `disabled` on the placeholder only when an empty value is genuinely not a st
 
 The option list is styled too, using CSS customizable select. Setting `appearance: base-select` on both the `select` and its `::picker(select)` takes the popup out of the operating system and into a CSS box, so the list matches the input: dropdown surface tokens, `.dropdown-item` row metrics, and a leading checkmark on the selected row via `::checkmark`.
 
-The mark sits on the left, where [`.dropdown-checkmark`](/web/dropdown.html) sits, so an option row and a checkable dropdown row line up on the same two columns rather than being mirror images of each other. Its column is reserved on every row, selected or not, so choosing an option cannot shunt the labels sideways.
+The mark sits on the left, where [`.dropdown-checkmark`](/components/dropdown.html) sits, so an option row and a checkable dropdown row line up on the same two columns rather than being mirror images of each other. Its column is reserved on every row, selected or not, so choosing an option cannot shunt the labels sideways.
 
 No JavaScript and no wrapper markup — the plain `<select>` above is all that is needed. Write options as normal.
 
@@ -9397,7 +9537,7 @@ A checkbox uses `appearance: none` with custom styling. Wrap each in `.form-chec
 </div>
 ```
 
-**Properties:** `24px` size (`--check-size`), `var(--checkbox-background)` fill, `var(--border-m)` border with `var(--radius-xs)` corners. Checked state uses `var(--checkbox-selected)` fill with a white checkmark SVG. Disabled, the box dims and its label fades to `--text-faded`; the same holds for a radio or a toggle.
+**Properties:** `24px` size (`--check-size`), `var(--checkbox-background)` fill, `var(--border-m)` border with `var(--radius-xs)` corners. Checked state uses `var(--checkbox-selected)` fill with a white checkmark SVG; the tick grows in with the fill on `--motion-feedback-hover` (150ms), and arrives whole under `prefers-reduced-motion`. Disabled, the box dims and its label fades to `--text-faded`; the same holds for a radio or a toggle.
 
 ### Small checkbox
 
@@ -9539,7 +9679,7 @@ Re-point these to re-skin the toggle; never override the rules themselves. The s
 | `--toggle-height` | `var(--space-xl)` | Track height |
 | `--toggle-knob-size` | `18px` | Knob diameter |
 | `--toggle-knob-offset` | `var(--space-2xs)` | Inset between knob and track, measured inside the 1px border. Keep it at (height − knob) ÷ 2 − border so the knob sits evenly in the track. The mono variant derives its own from its heavier border |
-| `--toggle-transition-duration` | `var(--duration-xs)` | Knob slide and track colour fade |
+| `--toggle-transition-duration` | `var(--motion-feedback-travel-duration)` | Knob slide and track colour fade, 300ms on `--motion-feedback-travel-easing` |
 | `--toggle-mono-extra-width` | `6px` | Mono: how much longer the track is than a plain one, to give the word room. `0px` at the small size |
 | `--toggle-mono-ink` | `var(--selected-background)` | Mono: knob, border and word when off; track and border when on |
 | `--toggle-mono-paper` | `var(--selected-text)` | Mono: track when off; knob and word when on |
@@ -9814,9 +9954,9 @@ A slider picks a value from a range, with its label and value always in view. Se
 
 ```html
 <div class="number-input" role="group" aria-label="Quantity">
-  <button class="number-input-btn" data-number-decrement type="button" aria-label="Decrease">&minus;</button>
+  <button class="number-input-btn" data-number-decrement type="button" aria-label="Decrease"><span aria-hidden="true">&minus;</span></button>
   <input type="number" value="1" min="0" max="99" aria-label="Quantity">
-  <button class="number-input-btn" data-number-increment type="button" aria-label="Increase">+</button>
+  <button class="number-input-btn" data-number-increment type="button" aria-label="Increase"><span aria-hidden="true">+</span></button>
 </div>
 ```
 
@@ -9902,7 +10042,7 @@ This section documents how the component is built. For usage, see the sections a
 | `--segmented-selected-text` | `var(--background-primary)` | Text on the selected surface, both forms |
 | `--segmented-thumb-border` | `transparent` | Optional thumb border — aesthetic only; the contrast pass lives in the surface |
 | `--segmented-thumb-radius` | `max(0px, track radius − track padding)` | Thumb corner radius, concentric with the track; floored so a square track gives a square thumb |
-| `--segmented-thumb-duration` | `var(--duration-xs)` | Thumb travel duration |
+| `--segmented-thumb-duration` | `var(--motion-feedback-travel-duration)` | Thumb travel duration, 300ms |
 | `--segmented-underline-width` | `2px` | Underline variant: the selected mark's thickness, matching the tabs |
 | `--segmented-underline-color` | `var(--selected-background)` | Underline variant: the selected mark |
 | `--segmented-underline-baseline` | `var(--border-faded)` | Underline variant: the 1px baseline under the group |
@@ -9950,6 +10090,7 @@ The customizable select picker reuses `--dropdown-background`, `--dropdown-borde
 | `.form-group` | Label + input wrapper, bottom margin spacing |
 | `.form-hint` | Helper text below input |
 | `.form-error` | Error message: `--status-danger` at `--font-s`, a flex row with `--space-xs` gap so a leading `.svg-icn` (`--icon-size: 1.25em`) sits beside the words — use a `<span class="svg-icn">` inside the `<p>`, since a paragraph cannot hold a `<div>` |
+| `.form-error` appearing | Fades in on `--motion-feedback-change` (200ms) through `@starting-style`, whether inserted or shown from hidden; it leaves at once |
 | `.form-error[hidden]` | Restates `display: none`, because the flex row above is an author rule and would otherwise beat the attribute — so a message toggled with `hidden` takes no room while it is empty |
 | `.segmented-control` | Button group: inline flex row, no track |
 | `.segmented-control-btn` | Segment button: padding, transitions; an inline-flex row so an icon sits before its label |
@@ -10085,6 +10226,27 @@ A float has to be contained by the layout it sits in, not by itself.
 
 ---
 
+## Frame
+
+Every image is framed: the same corners and border as an asset card, a format card and a video, from the media frame tokens ([Media frame](/foundations/media-frame.html)). The frame is drawn on the picture, so a caption sits outside it.
+
+Two values of `data-frame` change it for one image:
+
+| Value | Does |
+|---|---|
+| `none` | No border and no corners, for a picture that sits flush in prose |
+| `ground` | The picture on the media ground with clear space round it, the logo-page layout. It is shown whole (`object-fit: contain`), never cropped |
+
+```html
+<img class="img" src="photo.jpg" alt="…">
+<img class="img" data-frame="none" src="photo.jpg" alt="…">
+<img class="img" data-frame="ground" src="logo.png" alt="…">
+```
+
+On `ground`, the ground is translucent, so it follows the page into dark mode: a dark logo on a transparent background needs its own light version there, or use an [Asset Card](/components/asset-card.html) on its fixed dark ground. To take the frame off every image on a site, set `--media-border-width: 0` in `theme.css`. An image inside a component that draws its own frame (a card) has none of its own.
+
+---
+
 ## Caption
 
 A caption makes the image a `<figure>`. The box attributes move to the figure, because the caption has to be measured, placed and floated with the picture or it is describing something else. `data-ratio` stays on the `<img>`.
@@ -10117,6 +10279,7 @@ Markdown's `![alt](src)` emits a bare `<img>`: no class, no attributes, no figur
 | `ratio` | No | `1x1` `3x2` `4x3` `16x9` `21x9` |
 | `align` | No | `left` `center` `right` |
 | `float` | No | `left` `right` |
+| `frame` | No | `none` `ground` |
 
 Rules worth knowing before you write one:
 
@@ -10170,6 +10333,8 @@ This section documents how the component is built. For usage, see the sections a
 | `--img-width-s` | `200px` | The small step |
 | `--img-width-m` | `480px` | The medium step |
 | `--img-width-l` | `640px` | The large step |
+| `--media-border-width`, `--media-border-color`, `--media-radius` | `--border-s`, `--border-faded`, `--radius-surface` | The frame, shared with every embed |
+| `--media-ground`, `--media-padding` | `--background-faded`, `--space-3xl` | `data-frame="ground"` |
 
 `--img-width` and `--img-ratio` are the resolved slots the attributes write to, not tokens to set directly — though an ancestor can re-point either for a one-off.
 
@@ -10182,6 +10347,8 @@ This section documents how the component is built. For usage, see the sections a
 | Max width | `var(--img-width, var(--img-width-default, 100%))` |
 | Aspect ratio | `var(--img-ratio, auto)` |
 | Object fit | `cover` |
+| Border | `var(--media-border-width) solid var(--media-border-color)` |
+| Border radius | `var(--media-radius)` |
 | Float gap | `var(--space-xl)` on the text-facing side |
 
 ### Selectors
@@ -10192,6 +10359,7 @@ This section documents how the component is built. For usage, see the sections a
 | `:is(.img, figure)[data-width]` | Sets `--img-width` to an `--img-width-*` step |
 | `figure[data-width]` | Applies that measure, which `.img` gets from its own base rule |
 | `.img[data-ratio]` | Sets `--img-ratio` |
+| `.img[data-frame]` | `none` removes the frame; `ground` adds the media ground and padding |
 | `:is(.img, figure)[data-float]` | `float: inline-start / inline-end`, clamped to `min(width, 50%)` |
 | `[data-align]` | Foundation utility, section 6 — `margin-inline` plus `justify-self` |
 | `.docs-main:has(:is(.img, figure)[data-float])` | Docs-site only: contains a float loose in markdown prose |
@@ -10208,7 +10376,7 @@ The five aspect-ratio combo classes that used to set these ratios were removed o
 
 ### Login
 
-A login is the authentication stack: a header with logo and title, one or more form panes, and trailing text actions. The `.login` class is thin by design — it composes [Card](/web/card.html), the [form primitives](/web/form.html), [Password Toggle](/web/password-toggle.html) and [Button](/web/button.html) rather than restyling them. It ships no JavaScript of its own: switching between panes (sign in, reset, one-time code) is consumer JS toggling `.is-hidden`, and password reveal is `password-toggle.js`.
+A login is the authentication stack: a header with logo and title, one or more form panes, and trailing text actions. The `.login` class is thin by design — it composes [Card](/components/card.html), the [form primitives](/components/form.html), [Password Toggle](/components/password-toggle.html) and [Button](/components/button.html) rather than restyling them. It ships no JavaScript of its own: switching between panes (sign in, reset, one-time code) is consumer JS toggling `.is-hidden`, and password reveal is `password-toggle.js`.
 
 Centering on the page belongs to the consuming layout, not the component. `.login` caps its own width and stacks its children; where it sits is the page's decision.
 
@@ -10346,7 +10514,7 @@ Passwordless entry: one email field, one action. Pair it with the one-time code 
 
 ## One-time code
 
-The code field is a [Cell Input](/web/cell-input.html) — one cell per digit, so the reader sees the shape of what they are copying before they type a character. `data-format="6"` declares that shape and `data-mode="digits"` filters the entry and raises the number pad.
+The code field is a [Cell Input](/components/cell-input.html) — one cell per digit, so the reader sees the shape of what they are copying before they type a character. `data-format="6"` declares that shape and `data-mode="digits"` filters the entry and raises the number pad.
 
 It is **one real input** behind the cells, never one input per cell: that is what keeps the caret, the soft keyboard and `autocomplete="one-time-code"` working, so iOS can offer the code straight from the message that delivered it. The cells are decoration and stay `aria-hidden`; the input carries the accessible name, and that name begins with the visible label's words — `aria-label` wins over `<label for>`, so a name that says something else fails Label in Name and speech input cannot address the field by what it sees. On a wrong code, put `.is-error` on the **block** — the cells take the colour, and the input takes `aria-invalid`.
 
@@ -10373,7 +10541,7 @@ The block takes `data-full-width` so the field is the same width as the email fi
 
 ## Social sign-in
 
-Provider buttons are plain buttons: `data-variant="outline"` with `data-full-width`, a brand mark in the standard `.svg-icn` wrapper, stacked below a labelled [Divider](/web/divider.html). No role class, no token overrides.
+Provider buttons are plain buttons: `data-variant="outline"` with `data-full-width`, a brand mark in the standard `.svg-icn` wrapper, stacked below a labelled [Divider](/components/divider.html). No role class, no token overrides.
 
 ```html
 <div class="divider divider--labelled">or</div>
@@ -10395,7 +10563,7 @@ The Google and Apple marks are **site-local icons** — they live at `assets/ico
 
 The component ships no script of its own. Wiring a login page in a new product takes the stylesheet install (see the appendix below), one shipped module, and three small pieces of your own JavaScript — in the order they come up.
 
-**1. Include the password reveal module** once per page. The toggle markup carries both state icons; the contract is in [Password Toggle](/web/password-toggle.html).
+**1. Include the password reveal module** once per page. The toggle markup carries both state icons; the contract is in [Password Toggle](/components/password-toggle.html).
 
 ```html
 <script src="/assets/js/password-toggle.js" defer></script>
@@ -10459,12 +10627,12 @@ The social sign-in buttons and their brand marks are in [Social sign-in](#social
 
 On sign-up the email is the future identifier, so it takes `username` — that is what lets password managers pair it with the adjacent `new-password` field and save the credential.
 
-- Set `.is-error` and `aria-invalid="true"` together, always — the class paints, the attribute tells assistive technology. One without the other is a half-reported error. **The class goes wherever the component paints from, which is not always the field:** a plain input takes it on itself, a [Cell Input](/web/cell-input.html) takes it on the *block*, because the input there is invisible and the cells carry the colour. `aria-invalid` always rides the input.
+- Set `.is-error` and `aria-invalid="true"` together, always — the class paints, the attribute tells assistive technology. One without the other is a half-reported error. **The class goes wherever the component paints from, which is not always the field:** a plain input takes it on itself, a [Cell Input](/components/cell-input.html) takes it on the *block*, because the input there is invisible and the cells carry the colour. `aria-invalid` always rides the input.
 - Per-field messages use `.form-error` with an `id`, wired to the input through `aria-describedby`.
 - **Where a message lives is decided by what it is about.** An error about one field — its validity, or the outcome of submitting it when the pane has only that field, as the one-time code pane does — goes under that field in its `.form-error` line: the input points at it with `aria-describedby` **and** the line is the live region (`role="alert"`), so the sentence is in one place and is both announced and read back with the field. An error about the pane as a whole — two fields that must match each other, or a pane with no field to hang it on — goes in the pane's `.login-status` (`role="alert"`, `aria-live="assertive"`), and fields do **not** point at it: it describes none of them. Confirmations go in a `role="status"` `.login-status`, polite, at the top of the card. A pane that needs both keeps two elements.
 - Whichever element carries it: keep it in the DOM and rendered from first render, and fill it with text — a region inserted or revealed from `display: none` at announce time is not reliably announced, which is why the empty state collapses by height rather than by `display`. Truly empty, too: no whitespace between the tags, or `:empty` stops matching and the gap it cancels reopens. Put the icon in only alongside a message.
-- The one-time code field is a [Cell Input](/web/cell-input.html) — one cell per digit — and still pairs `inputmode="numeric"` in the markup with a visible label; never replace the label with a placeholder. Keep `inputmode` declared even though `data-mode="digits"` sets it too: the markup is the contract, the script is the convenience.
-- Labels are always visible `<label for>` elements. The password toggle keeps its `aria-label`/`aria-pressed` contract from [Password Toggle](/web/password-toggle.html).
+- The one-time code field is a [Cell Input](/components/cell-input.html) — one cell per digit — and still pairs `inputmode="numeric"` in the markup with a visible label; never replace the label with a placeholder. Keep `inputmode` declared even though `data-mode="digits"` sets it too: the markup is the contract, the script is the convenience.
+- Labels are always visible `<label for>` elements. The password toggle keeps its `aria-label`/`aria-pressed` contract from [Password Toggle](/components/password-toggle.html).
 - Identifier fields (email as username, one-time code) carry `autocapitalize="none"` and `spellcheck="false"` — mobile keyboards otherwise capitalise the first letter and spellcheck marks the address, both of which cause failed sign-ins that look like wrong passwords.
 - Password fields carry the same pair. The reveal toggle flips them to plain text inputs, and at that moment autocapitalize can mangle further typing while browser spellcheck can send the revealed value to a spellcheck service.
 - A pane that sets a password without showing the email — the set-new-password flow — includes a hidden `autocomplete="username"` input, filled by consumer JS, so password managers know which account the new credential belongs to.
@@ -10566,7 +10734,7 @@ The `<abbr>` element indicates an abbreviation or acronym. It renders with a dot
 
 The `<figure>` element wraps media content (images, code blocks, diagrams) with an optional `<figcaption>` for descriptive text.
 
-For a captioned **image** specifically, see [Image](/web/image.html): the figure carries the width, alignment and float, the image inside carries the ratio, and `{{image: …}}` writes both from one line of markdown.
+For a captioned **image** specifically, see [Image](/components/image.html): the figure carries the width, alignment and float, the image inside carries the ratio, and `{{image: …}}` writes both from one line of markdown.
 
 ```html
 <figure>
@@ -10662,7 +10830,7 @@ Both clear WCAG AA. **A brand re-pointing the yellow scale owns that result** �
 
 ### Nav
 
-Nav is a flat set of links. It appears in a [Site Header](/web/site-header.html), inside a nav [Drawer](/web/drawer.html) on small screens, and in a footer — the same markup in all three, with orientation as the only difference.
+Nav is a flat set of links. It appears in a [Site Header](/components/site-header.html), inside a nav [Drawer](/components/drawer.html) on small screens, and in a footer — the same markup in all three, with orientation as the only difference.
 
 It is deliberately **not** the docs sidebar's tree nav. That one has collapsible sections, sublists and an active trail, and is a different component that happens to also be navigation; its classes are `.sidebar-nav-*` and it belongs to the docs site rather than the design system. If you need a hierarchy, you do not need this.
 
@@ -10826,9 +10994,9 @@ The number input wraps a native `<input type="number">` with decrement and incre
 
 ```html
 <div class="number-input" role="group" aria-label="Quantity">
-  <button class="number-input-btn" data-number-decrement type="button" aria-label="Decrease">&minus;</button>
+  <button class="number-input-btn" data-number-decrement type="button" aria-label="Decrease"><span aria-hidden="true">&minus;</span></button>
   <input type="number" value="1" min="0" max="99" aria-label="Quantity">
-  <button class="number-input-btn" data-number-increment type="button" aria-label="Increase">+</button>
+  <button class="number-input-btn" data-number-increment type="button" aria-label="Increase"><span aria-hidden="true">+</span></button>
 </div>
 ```
 
@@ -10875,6 +11043,7 @@ Include `assets/js/number-input.js` on any page. The script handles all `[data-n
 
 - Wrap in `role="group"` with `aria-label` describing the input
 - Each button needs `aria-label` ("Increase" / "Decrease")
+- The sign sits in `<span aria-hidden="true">`: the label names the button, and the span is what presses in. A press scales it to 0.8 on `--motion-feedback-press` (160ms); a bare text sign still works but cannot scale. No scale under `prefers-reduced-motion`
 - The native `<input type="number">` handles value announcements
 - `min`, `max`, `step` are respected by the JS and exposed to assistive technology
 
@@ -10926,6 +11095,7 @@ This section documents how the component is built. For usage, see the sections a
 | `.number-input:has(input[readonly]:not(:disabled))` | Read-only: the faded surface, as a `.field` takes |
 | `.number-input input[type="number"]` | The value: no border or shadow of its own, centred, tabular figures, native spinner hidden |
 | `.number-input-btn` | A stepper: 2rem wide, transparent until hovered, focus ring inset |
+| `.number-input-btn:active > *` | Press: the sign scales to 0.8 on `--motion-feedback-press` |
 | `.number-input-btn:disabled` | At the limit: faded, not-allowed cursor |
 | `.number-input[data-size="small"]`, `.form-group[data-size="small"]`, `fieldset[data-size="small"]` | Small: re-points the height, padding and type tokens, inherited by every number input inside |
 | `.bar .number-input` | In a bar: the bar's control height and a fixed `--bar-number-input-width` |
@@ -11182,9 +11352,9 @@ Getting there took deleting two overrides that had stopped matching anything wit
 
 ### Page Navigation
 
-Page navigation is the pager at the foot of a page: previous on the left, next on the right. It works across any ordered sequence and knows nothing about what the sequence is — pair it with [Book](/web/book.html) for a documentation space, or with anything else that has an order. The `.page-nav` class is required, and `data-direction` chooses the side.
+Page navigation is the pager at the foot of a page: previous on the left, next on the right. It works across any ordered sequence and knows nothing about what the sequence is — pair it with [Book](/components/book.html) for a documentation space, or with anything else that has an order. The `.page-nav` class is required, and `data-direction` chooses the side.
 
-It is the sideways move in a three-part model. Down is [Book](/web/book.html) — shelf to cover to contents. Up is [Breadcrumb](/web/breadcrumb.html). Sideways is this.
+It is the sideways move in a three-part model. Down is [Book](/components/book.html) — shelf to cover to contents. Up is [Breadcrumb](/components/breadcrumb.html). Sideways is this.
 
 ---
 
@@ -11796,7 +11966,7 @@ document.querySelector('.rating').addEventListener('rating-change', function (e)
 
 When does a row of options stay on one line? When it is a filter row above a list, where wrapping three deep on a phone pushes the list off the first screen. The scroller keeps a [chip group](chip.html) or a [tag group](tag.html#tag-group) on one line that scrolls sideways instead of wrapping. The scrollbar is hidden, an edge fades while there is more past it, and a vertical mouse wheel moves the row along.
 
-The `.scroller` class is required, as a wrapper around exactly one `.chip-group` or `.tag-group`. It has no `data-*` axes. The edge fade comes from two state classes, `.is-overflow-start` and `.is-overflow-end`, which `scroller.js` sets.
+The `.scroller` class is required, as a wrapper around exactly one `.chip-group` or `.tag-group`. It has no `data-*` axes. The edge fade runs from the row's own scroll position in CSS where the browser supports scroll-driven animation; elsewhere it comes from two state classes, `.is-overflow-start` and `.is-overflow-end`, which `scroller.js` sets.
 
 ---
 
@@ -11845,7 +12015,7 @@ A scroll box clips whatever sits past its edge, including a focus ring drawn out
 
 **The row works without a script.** It scrolls by touch, trackpad and keyboard, since focus moving along the row scrolls it. Load `assets/js/scroller.js` for the two things the browser does not supply:
 
-- **The edge fade.** The script sets `.is-overflow-start` while content lies before the visible area and `.is-overflow-end` while it lies after, so the fade tells a reader there is more. It re-reads on scroll and whenever the row or its content changes size: the panel resizing, a font loading, chips written in later by a page's own script.
+- **The edge fade, where CSS cannot.** In a browser with scroll-driven animation the stylesheet fades each edge over one fade's width of scroll, and the script leaves it alone. Elsewhere the script sets `.is-overflow-start` while content lies before the visible area and `.is-overflow-end` while it lies after, re-reading on scroll and whenever the row or its content changes size: the panel resizing, a font loading, chips written in later by a page's own script.
 - **The mouse wheel.** With the scrollbar hidden, a vertical wheel would otherwise do nothing over the row. The script turns vertical wheel movement into sideways scroll while the row has somewhere to go. A trackpad's own sideways gesture and a pinch pass through untouched.
 
 The script self-registers: it binds every `.scroller` on `DOMContentLoaded` and again after each page transition (`bd:after-nav`), once per element. On `bd:before-nav` it releases the observers of rows inside the leaving container.
@@ -11885,6 +12055,7 @@ initScroller(panel);
 - Don't put buttons, links or text other than chips and tags in a scroller
 - Don't add a visible scrollbar or arrow buttons. The fade and the wheel carry it
 - Don't set padding or margin on the scroller from a consuming stylesheet. It is what keeps the focus ring whole
+- Don't put an `animation` on the scroller itself. The shorthand resets the scroll timeline its edge fade runs on; animate a wrapper instead
 
 ---
 
@@ -11919,7 +12090,7 @@ The fade is a `mask-image` gradient (with the `-webkit-` prefix) whose stops rea
 
 A section header opens a region of content. It draws a top border, pads itself above and below, and holds a heading on the left — with room for an action on the right, most often a learn-more link. The header owns the seam between one region and the next, so the content below it starts flush. The `.section-header` class is required; `.section-header-title` and the optional `.section-header-actions` are its two slots.
 
-It is not a [Page Header](/web/page-header.html), which names the whole page once, and not a [Bar](/web/bar.html), which is persistent chrome. A section header is content: it repeats down a page, one per region.
+It is not a [Page Header](/components/page-header.html), which names the whole page once, and not a [Bar](/components/bar.html), which is persistent chrome. A section header is content: it repeats down a page, one per region.
 
 ---
 
@@ -11983,7 +12154,7 @@ The right-hand slot takes any component. A learn-more link is the common case; a
 </header>
 ```
 
-On narrow viewports a long title and its actions wrap, keeping `--section-header-gap` between them; wrapped actions stay right-aligned on their own line, which is intended — the slot holds trailing controls. Keep actions compact — one or two controls. A row that needs more chrome than that is a [Bar](/web/bar.html).
+On narrow viewports a long title and its actions wrap, keeping `--section-header-gap` between them; wrapped actions stay right-aligned on their own line, which is intended — the slot holds trailing controls. Keep actions compact — one or two controls. A row that needs more chrome than that is a [Bar](/components/bar.html).
 
 ---
 
@@ -12004,9 +12175,9 @@ On narrow viewports a long title and its actions wrap, keeping `--section-header
 - Keep the actions slot to one or two compact controls
 
 **Don't:**
-- Don't use a section header as the page's own title — that is the [Page Header](/web/page-header.html)
+- Don't use a section header as the page's own title — that is the [Page Header](/components/page-header.html)
 - Don't add margins to the title or actions — the row's padding and gap own the spacing
-- Don't fill the actions slot with dense chrome (filters, search, toggles) — that is a [Bar](/web/bar.html)
+- Don't fill the actions slot with dense chrome (filters, search, toggles) — that is a [Bar](/components/bar.html)
 
 ---
 
@@ -12040,9 +12211,9 @@ This section documents how the component is built. For usage, see the sections a
 
 ### Site Header
 
-The site header is the bar at the top of a page: identity on one side, controls on the other, and an optional [Nav](/web/nav.html) between them. It is sticky by default and knows nothing about the page beneath it — placement is the consumer's job, so the same component works in a CSS grid shell, a marketing page, or a tool app.
+The site header is the bar at the top of a page: identity on one side, controls on the other, and an optional [Nav](/components/nav.html) between them. It is sticky by default and knows nothing about the page beneath it — placement is the consumer's job, so the same component works in a CSS grid shell, a marketing page, or a tool app.
 
-It is not the [Bar](/web/bar.html). The two share a shape, but a header carries site identity and global navigation while a bar carries what belongs to the page you are on — and the bar sits *below* the header rather than beside it.
+It is not the [Bar](/components/bar.html). The two share a shape, but a header carries site identity and global navigation while a bar carries what belongs to the page you are on — and the bar sits *below* the header rather than beside it.
 
 ---
 
@@ -12125,7 +12296,7 @@ On the docs site the end slot is four equal squares — contact, search, theme, 
 
 ### Account dropdown
 
-The [Dropdown](/web/dropdown.html)'s avatar-item pattern: the trigger is the [avatar](/web/avatar.html) alone, wrapped in the button that carries the name; the panel opens with an identity row, a divider, and the one action. `data-placement="bottom-end"` because the trigger is the last thing on the right. With no name on the account the email is the label and the second line is dropped, so one person never reads as two.
+The [Dropdown](/components/dropdown.html)'s avatar-item pattern: the trigger is the [avatar](/components/avatar.html) alone, wrapped in the button that carries the name; the panel opens with an identity row, a divider, and the one action. `data-placement="bottom-end"` because the trigger is the last thing on the right. With no name on the account the email is the label and the second line is dropped, so one person never reads as two.
 
 ### Mode switch
 
@@ -12146,7 +12317,7 @@ A one-of-N set uses `role="menuitemradio"` with `aria-checked`, so the chosen mo
 
 ### Menu button opening a drawer
 
-The header's menu button carries `data-drawer-open`. [Dialog](/web/dialog.html)'s script supplies opening, Escape, the focus trap, focus return and scroll lock — there is no bespoke open/close code behind it.
+The header's menu button carries `data-drawer-open`. [Dialog](/components/dialog.html)'s script supplies opening, Escape, the focus trap, focus return and scroll lock — there is no bespoke open/close code behind it.
 
 ```html
 <button type="button" class="button header-action" data-icon-only
@@ -12160,7 +12331,7 @@ The header's menu button carries `data-drawer-open`. [Dialog](/web/dialog.html)'
 
 ### With a bar beneath
 
-A page sub-header docks below the header at `top: var(--top-nav-height)`, and the header's `z-index: 100` sits above the bar's `40`. See [Bar](/web/bar.html).
+A page sub-header docks below the header at `top: var(--top-nav-height)`, and the header's `z-index: 100` sits above the bar's `40`. See [Bar](/components/bar.html).
 
 ---
 
@@ -12342,7 +12513,7 @@ This section documents how the component is built. For usage, see the sections a
 |-------|---------|---------|
 | `var(--skeleton-background)` | `var(--background-faded)` | Placeholder fill |
 | `var(--skeleton-radius)` | `var(--radius-detail)` | Placeholder corner radius |
-| `var(--skeleton-duration)` | `var(--duration-2xl)` | One pulse cycle |
+| `var(--skeleton-duration)` | `var(--motion-loading-pulse-duration)` | One pulse cycle, 1000ms |
 
 ### Selectors
 
@@ -12594,6 +12765,100 @@ Worked out on `.slider` and not for setting: `--slider-thumb-width`, `--slider-t
 - One thumb rule draws all three styles: the thumb's colour is painted inside a border of the two insets. On a pill that border is the fill's colour, and the fill stops at the thumb's centre, so the fill ends in a round cap.
 - Compact text uses `background-clip: text` with a gradient that turns at the same edges as the fill and the thumb, limited to the track's height.
 - A bare `input[type="range"]` keeps its own simpler styling, and its rules never reach `.slider-input`.
+
+### Spinner
+
+A spinner says the work is going on and gives no shape to what is coming. That is less than a [skeleton](skeleton.html) says, so it is for work whose result has no known layout: a file being built, an image being drawn, a check being run. Work with a known percentage is [progress](progress.html).
+
+Every spinner waits 150ms (`--motion-loading-delay`) before it fades in. Most work answers inside that, and a ring that flashes for a frame reads as a glitch, not as work.
+
+---
+
+## Basic usage
+
+`.spinner` is a ring in `currentColor` with one quarter open, so it takes the ink of whatever it sits in. It is decoration: the area it stands in for carries `aria-busy="true"` and words a reader can hear.
+
+```html
+<div class="tool-preview" aria-busy="true">
+  <span class="spinner" data-size="large" aria-hidden="true"></span>
+  <span class="visually-hidden">Drawing the preview</span>
+</div>
+```
+
+The default is 1em, so it sits beside text at the text's size. `data-size="large"` is `--space-2xl` (32px), for an area.
+
+---
+
+## Busy button
+
+A button doing its own work takes `.is-loading` and `aria-busy="true"`. It needs no spinner markup: the button draws the ring itself, centred, in its label's ink. The label goes transparent rather than hidden, so it stays the button's name and the button keeps its width.
+
+```html
+<button class="button is-loading" type="button" aria-busy="true">Download PNG</button>
+```
+
+Keep the label as it was. "Download PNG" is what the button is while it works; "Downloading…" would change its name and its width, and nobody would see the words.
+
+---
+
+## Content arriving
+
+Content that lands where a spinner or a skeleton held its place fades in on `--motion-feedback-change` (200ms), a child at a time, 30ms apart, four steps at most so a long list does not trickle. Set `.is-arriving` on the container as the content goes in.
+
+```html
+<ul class="tool-results is-arriving">…</ul>
+```
+
+Only children created or shown while the class is on animate, so the class can stay. Take it off before re-rendering on every keystroke: a live filter that fades its results in each time reads as flicker.
+
+---
+
+## Accessibility
+
+- The ring carries `aria-hidden="true"`; it has nothing to say. The area it sits in carries `aria-busy="true"`, and a visually-hidden line or a polite live region says what is happening, because `aria-busy` alone is not announced reliably
+- Remove `aria-busy` and the words when the work ends, and say how it ended: the result, or an error that says what happened
+- Under `prefers-reduced-motion` the ring keeps turning. It is the only sign the work is still going, and it stops when the work does. Arrivals drop their stagger and keep the fade
+- Under forced colours the ring is drawn in the system text colour. A busy button drops its ring there, because forced colours paint the label back in over it, and the label carries the state
+
+---
+
+## Usage rules
+
+**Do:**
+- Use a spinner for work with no known shape or length
+- Put it where the result will appear, or on the button that started the work
+- Keep the label of a busy button as it was
+
+**Don't:**
+- Don't add a delay of your own: the 150ms is in the component
+- Don't use a spinner where the layout of the result is known; a [skeleton](skeleton.html) says more
+- Don't leave a spinner turning on failure. Resolve it to an error that says what happened
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | Purpose |
+|-------|---------|---------|
+| `var(--spinner-size)` | `1em` | The ring's diameter; `data-size="large"` is `var(--space-2xl)` |
+| `var(--spinner-width)` | `var(--border-m)` | The ring's stroke |
+| `var(--motion-loading-delay)` | `150ms` | How long it waits before it fades in |
+| `var(--motion-loading-spin-duration)` | `800ms` | One turn, on `--motion-loading-spin-easing` (linear) |
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `.spinner` | The ring: currentColor border, one side open, turning, fading in after the delay |
+| `.spinner[data-size="large"]` | The area size, 32px |
+| `.button.is-loading` | Busy button: the label fades to transparent after the delay and `::after` draws the ring in `--button-text-color` |
+| `.is-arriving > *` | Children fade in on the change step, 30ms apart, four steps at most |
+| `@keyframes spinner-turn` | One turn |
+| `@keyframes spinner-appear` | The fade in, shared by the ring and arrivals |
 
 ### Swatch
 
@@ -13436,6 +13701,8 @@ The container is injected once at the end of `<body>`. Individual toasts are app
 - Each toast has `role="alert"`
 - The dismiss button has `aria-label="Dismiss"`
 - Toasts auto-dismiss after the specified duration, users can also dismiss manually
+- A toast slides 16px in from the right as it arrives (`--toast-enter-duration`, 240ms on `--ease-out`) and leaves the same way, faster (`--toast-exit-duration`, 160ms on `--ease-in`). Leaving is a class, `.is-closing`, which `toast.js` sets and then removes the node once the computed exit has run. Under `prefers-reduced-motion` it fades in and out where it sits
+- A toast is about the page it came from: on a page transition (`bd:before-nav`) every toast `showToast` made leaves through its own exit as the leave begins. The container stays, since it is the live region, and toast markup a page wrote itself is left alone
 
 ---
 
@@ -13533,6 +13800,7 @@ By default, tooltips appear above the element. Use `data-tooltip-position` to ch
 - For critical information, do not rely on tooltips alone, add `aria-label` or visible text
 - Tooltips use `pointer-events: none` so they do not interfere with interaction
 - A tooltip hides while its trigger has `aria-expanded="true"` — an open menu or panel is not covered by the name of the button that opened it
+- The bubble fades in and rises 4px out of its trigger on `--motion-feedback-hover` (150ms), with no delay; each position moves away from the trigger. It moves on `translate`, so the position rules keep `transform` for the centring. Under `prefers-reduced-motion` it fades where it sits
 
 ---
 
@@ -13712,7 +13980,7 @@ For icon-only buttons, add the `data-icon-only` attribute and `.svg-icn` as the 
 </button>
 ```
 
-See the [Button documentation](/web/button.html) for full button modifier details.
+See the [Button documentation](/components/button.html) for full button modifier details.
 
 ---
 
@@ -13794,7 +14062,7 @@ The `local` key points at directories of icons the project owns but the design s
 
 Both checks are fail-fast by design: a build that quietly resolved the conflict would ship the wrong icon with nothing to chase.
 
-**Third-party brand marks are the canonical site-local case.** The Google and Apple sign-in marks live at `assets/icons/local/` in this repo — deliberately outside the shared registry, because a brand mark is a per-product licensing decision, not a system asset. They follow the same authoring rules as registry icons (24×24, monochrome `currentColor` paths, cleaned with `npx svg-cleaner`) and are inlined where used; the `{{icon:name}}` shorthand reads the shared registry only and will not resolve them. See [Login → Social sign-in](/web/login.html#social-sign-in) for usage.
+**Third-party brand marks are the canonical site-local case.** The Google and Apple sign-in marks live at `assets/icons/local/` in this repo — deliberately outside the shared registry, because a brand mark is a per-product licensing decision, not a system asset. They follow the same authoring rules as registry icons (24×24, monochrome `currentColor` paths, cleaned with `npx svg-cleaner`) and are inlined where used; the `{{icon:name}}` shorthand reads the shared registry only and will not resolve them. See [Login → Social sign-in](/components/login.html#social-sign-in) for usage.
 
 ### Renamed Icons
 

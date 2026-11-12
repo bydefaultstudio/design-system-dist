@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -517,6 +517,18 @@
      targets wide and never narrower than a finger. */
   --date-picker-cell-size: var(--target-min);
 
+  /* -- Button tokens --
+     One per size, read by .button as min-height (and as min-width on an
+     icon-only button, so it stays square). Declared here, on :root, so a
+     brand that holds every button to a target re-points them in theme.css:
+     the button's other tokens live on .button and a theme cannot reach them.
+     auto, not 0: a button is often a flex item, and auto is what stops it
+     shrinking below its content, so the defaults leave every button exactly
+     as its padding builds it. See cms/button.md, Minimum height. */
+  --button-min-height: auto;
+  --button-min-height-small: auto;
+  --button-min-height-xsmall: auto;
+
   /* -- Field tokens -- */
   /* The metrics every text control reads, bare or wrapped in .field. A size,
      a bar or a wrapper re-points these; nothing sets height or font-size on
@@ -715,6 +727,9 @@
 
   /* -- Dropdown -- */
   --dropdown-background: var(--background-plain);
+  /* Restated so a nested dark scope resolves the media frame in dark. */
+  --media-border-color: var(--border-faded);
+  --media-ground: var(--background-faded);
 
   color-scheme: dark;
 }
@@ -785,6 +800,8 @@
 
     /* -- Dropdown -- */
     --dropdown-background: var(--background-plain);
+    --media-border-color: var(--border-faded);
+    --media-ground: var(--background-faded);
 
     color-scheme: dark;
   }
@@ -1148,11 +1165,9 @@
 
   /* -- State opacity tokens --
      Disabled: a control that cannot be used, faded whole (button, field
-     action, slider, stepper, chip). Loading: a control still enabled and
-     busy, so its label keeps the 4.5:1 text floor; at 0.6 the primary
-     button's white-on-accent fell to 4.27:1. */
+     action, slider, stepper, chip). A busy button is not faded: its ring
+     replaces the label at full strength (section 11). */
   --opacity-disabled: 0.4;
-  --opacity-loading: 0.75;
 
   /* -- Focus ring tokens --
      The ring every focusable control draws on :focus-visible: its width,
@@ -1208,6 +1223,25 @@
   --code-radius: var(--radius-detail);
   --kbd-radius: var(--radius-detail);
   --number-input-radius: var(--field-radius);
+
+  /* -- Media frame --
+     One frame for everything a page embeds that is not text: Image, Asset
+     Card, Format Card, BD Video and Gallery tiles all read these, so a brand
+     sets the look once here in theme.css and every embed follows. A
+     component that sits inside another one's frame (an image in a card)
+     zeroes the width and radius on itself rather than drawing a second
+     frame. See cms/media-frame.md. */
+  --media-radius: var(--radius-surface);         /* follows --radius-scale */
+  --media-border-width: var(--border-s);         /* 0 removes every frame */
+  --media-border-color: var(--border-faded);
+  --media-ground: var(--background-faded);       /* behind an asset that is not a picture */
+  --media-padding: var(--space-3xl);             /* clear space round a centred asset */
+  /* A dark ground that stays dark in dark mode, for a light asset (a white
+     logo) to be shown on. Fixed on purpose and left out of both dark blocks,
+     like the video player's cue colours: a semantic token would flip and
+     put a white logo on near-white. */
+  --media-ground-dark: var(--neutral-950);
+  --media-ink-dark: var(--off-white);
 
   /* -- Interaction sizing -- */
   /* Minimum hit area for standalone pointer targets: WCAG 2.5.5 Target Size
@@ -1365,16 +1399,29 @@
   --motion-element-stagger-duration: var(--duration-stagger);
   /* 30ms */
 
-  /* -- Feedback -- an element answering the reader: hover, focus, a chevron
-     turning, a fill changing. Short, on the same curve as every entrance,
-     so a hover and a reveal feel like one system. Press is the shorter
-     confirmation of a tap or click. -- */
-  --motion-feedback-hover-duration: var(--duration-xs);
-  /* 200ms */
+  /* -- Feedback -- an element answering the reader. Product UI timings,
+     off the brand scale above on purpose: a control has to answer inside
+     a fifth of a second, where an entrance has room to glide. All four on
+     the house curve, so a hover and a reveal still feel like one system.
+     Chosen on the micro-interaction experiment pages, 2026-11-12.
+       hover   a colour, fill, border or shadow changing under the pointer
+               or focus. Every control, one speed.
+       press   the confirmation of a tap or click: a scale down and back.
+       change  a state answering the reader: a Copied! label rolling in,
+               a message appearing under a field, a status badge settling.
+       travel  a part moving to its new place: a chevron turning, a
+               segmented thumb or toggle knob sliding, an accordion or
+               tool panel opening to its height. Longer than hover, because
+               the eye follows it. -- */
+  --motion-feedback-hover-duration: 150ms;
   --motion-feedback-hover-easing: var(--ease-out);
-  --motion-feedback-press-duration: var(--duration-2xs);
-  /* 100ms */
+  --motion-feedback-press-duration: 160ms;
   --motion-feedback-press-easing: var(--ease-out);
+  --motion-feedback-change-duration: var(--duration-xs);
+  /* 200ms */
+  --motion-feedback-change-easing: var(--ease-out);
+  --motion-feedback-travel-duration: 300ms;
+  --motion-feedback-travel-easing: var(--ease-out);
 
   /* -- Surface -- a panel or rail that changes the layout around it (a
      navigation rail collapsing). Decisive, on the emphasised curve. -- */
@@ -1387,15 +1434,40 @@
      a drawer feel like the same system. Opens on the house curve, the glide
      doing the work so it answers at once; closes accelerating away, on the
      exit step (cms/motion.md). Under reduced motion, a 200ms fade, the same
-     as a page. -- */
-  --motion-surface-open-duration: var(--duration-m);
-  /* 600ms */
+     as a page. Product UI, so it answers inside a third of a second. -- */
+  --motion-surface-open-duration: 300ms;
   --motion-surface-open-easing: var(--ease-out);
-  --motion-surface-close-duration: var(--duration-s);
-  /* 400ms */
+  --motion-surface-close-duration: var(--duration-xs);
+  /* 200ms */
   --motion-surface-close-easing: var(--ease-in);
   --motion-surface-reduced-duration: var(--duration-xs);
   /* 200ms */
+
+  /* -- Loading -- work the reader is waiting on.
+       delay  how long an indicator waits before it shows, so a fast
+              response never flashes one. Every indicator, one value.
+       pulse  one breath of a skeleton holding a layout.
+       spin   one turn of the loading ring, at a constant speed: a ring
+              that eases reads as stopping and starting. -- */
+  --motion-loading-delay: 150ms;
+  --motion-loading-pulse-duration: var(--duration-l);
+  /* 1000ms */
+  --motion-loading-spin-duration: 800ms;
+  --motion-loading-spin-easing: linear;
+}
+
+/* Under reduced motion a chevron or a panel height reaches its new place at
+   once, and a rail changes width at once: nothing travels. Colour feedback
+   keeps its timing, since a fade is not motion. The segmented thumb and
+   toggle knob re-point their own token to a 100ms slide instead (sections
+   12 and 13), so the state change still reads as a change.
+   html:root, not :root: a brand's theme.css loads later and sets these on
+   :root, and the guard has to outrank it, not tie with it. */
+@media (prefers-reduced-motion: reduce) {
+  html:root {
+    --motion-feedback-travel-duration: 0ms;
+    --motion-surface-toggle-duration: 0ms;
+  }
 }
 
 /* ------ 5. LAYOUT PRIMITIVES ------ */
@@ -1986,11 +2058,12 @@ button {
   display: inline-flex;
   align-items: center;
   gap: var(--space-s);
-  transition: transform var(--duration-2xs) var(--ease-out);
+  transition: transform var(--motion-feedback-press-duration) var(--motion-feedback-press-easing);
 }
 
 /* -- Button component (CUBE pattern) -- */
-/* All tokens live at component level. data-* exceptions override them. */
+/* Tokens live at component level, except the size floors, which sit on :root
+   so a theme can reach them. data-* exceptions override them. */
 
 .button,
 button.button {
@@ -2013,6 +2086,9 @@ button.button {
   --button-padding-x: var(--space-xl);
   --button-gap: var(--space-m);
   --button-radius: var(--radius-control);
+  /* The floor for this button's size: a size exception re-points it to its
+     own :root token, and a context with a fixed height sets it to auto. */
+  --button-min-size: var(--button-min-height);
 
   /* -- Layout -- */
   display: inline-flex;
@@ -2031,6 +2107,7 @@ button.button {
      than the 0.7em line it used to sit beside (a dropdown chevron) no longer
      adds height; the label's 1.2em line box covers it. */
   padding-block: max(0px, calc(var(--button-padding-y) - (var(--button-leading) - var(--line-height-xs)) * 0.5em));
+  min-height: var(--button-min-size);
 
   /* -- Visual -- */
   background-color: var(--button-bg);
@@ -2054,7 +2131,7 @@ button.button {
 
   /* -- Other -- */
   cursor: pointer;
-  transition: background-color var(--duration-m) var(--ease-out), color var(--duration-2xs) var(--ease-out), border-color var(--duration-2xs) var(--ease-out), opacity var(--duration-2xs) var(--ease-out), transform var(--duration-2xs) var(--ease-out);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), opacity var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), transform var(--motion-feedback-press-duration) var(--motion-feedback-press-easing);
 }
 
 /* -- Hover --
@@ -2067,9 +2144,12 @@ button.button {
   --button-color: color-mix(in srgb, var(--text-primary), var(--background-primary) 10%)
 }
 
-/* -- Active (press) -- */
+/* -- Active (press) --
+   The press answers in --motion-feedback-press-duration, already on the
+   transition above. The text variant has no box to press, so it never
+   scales (below). */
 .button:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 /* -- Variant exceptions -- */
@@ -2103,6 +2183,8 @@ button.button {
   --button-text-color: var(--button-color);
   --button-padding-x: 0;
   --button-padding-y: 0;
+  /* No box, so no floor. A data-size re-points it, as it restores padding. */
+  --button-min-size: auto;
   /* No padding to build the box, so the line box IS the box: at 0.7 an
      18px label sat in 12.6px and stacked text buttons collided. */
   --button-leading: var(--line-height-l);
@@ -2172,12 +2254,14 @@ button.button {
   --button-padding-y: var(--space-m);
   --button-padding-x: var(--space-l);
   --button-text-size: var(--font-xs);
+  --button-min-size: var(--button-min-height-small);
 }
 
 .button[data-size="xsmall"] {
   --button-padding-y: var(--space-s);
   --button-padding-x: var(--space-s);
   --button-text-size: var(--font-2xs);
+  --button-min-size: var(--button-min-height-xsmall);
 }
 
 /* -- Boolean modifiers -- */
@@ -2187,6 +2271,7 @@ button.button {
   --icon-size: 1.3rem;
   /* No text, so no leading to take back: the trim above would shrink it. */
   padding-block: var(--button-padding-y);
+  min-width: var(--button-min-size);
 }
 
 .button[data-full-width] {
@@ -2311,6 +2396,8 @@ button.button {
   --button-padding-y: var(--space-s);
   --button-padding-x: var(--space-s);
   --icon-size: var(--icon-size-l);
+  /* Pinned like the padding, so a brand's floor does not follow data-size. */
+  --button-min-size: var(--button-min-height-small);
 }
 
 /* The header's end control (the close, or the actions group that ends in
@@ -2339,9 +2426,63 @@ button.button {
   cursor: not-allowed;
 }
 
+/* -- Busy --
+   The ring replaces the label, centred, and the button keeps its width: the
+   label is still there, only transparent, so it stays the button's name
+   (aria-busy="true" says the rest). Nothing changes for the first
+   --motion-loading-delay, so a fast answer never flashes the ring; then the
+   label fades out as the ring fades in. The ring is the spinner's (section
+   57), drawn in the label's ink. pointer-events stops a second click. */
 .button.is-loading {
   pointer-events: none;
-  opacity: var(--opacity-loading);
+  animation: button-busy-label var(--motion-feedback-hover-duration) var(--ease-out) var(--motion-loading-delay) both;
+}
+
+.button.is-loading > * {
+  animation: button-busy-content var(--motion-feedback-hover-duration) var(--ease-out) var(--motion-loading-delay) both;
+}
+
+.button.is-loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: var(--spinner-size);
+  height: var(--spinner-size);
+  border: var(--spinner-width) solid var(--button-text-color);
+  border-right-color: transparent;
+  border-radius: var(--radius-full);
+  animation:
+    spinner-turn var(--motion-loading-spin-duration) var(--motion-loading-spin-easing) infinite,
+    spinner-appear var(--motion-feedback-hover-duration) var(--ease-out) var(--motion-loading-delay) both;
+}
+
+/* The ring needs a positioned button to centre in. At no weight, so a
+   button another rule positions (a code block's copy, a dialog's close)
+   keeps its own position and the ring centres in that. */
+:where(.button.is-loading) {
+  position: relative;
+}
+
+/* Forced colours paint the label back in, over the ring: the label carries
+   the state there instead. */
+@media (forced-colors: active) {
+  .button.is-loading::after {
+    content: none;
+  }
+
+  .button.is-loading,
+  .button.is-loading > * {
+    animation: none;
+  }
+}
+
+@keyframes button-busy-label {
+  to { color: transparent; }
+}
+
+@keyframes button-busy-content {
+  to { opacity: 0; }
 }
 
 /* -- Reduced motion -- */
@@ -2360,13 +2501,13 @@ button.button {
   height: var(--icon-size);
   display: flex;
   aspect-ratio: 1 / 1;
-  transition: color var(--duration-m) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   margin: var(--icon-trim);
 }
 
 .svg-icn svg,
 .svg-icn path {
-  transition: fill var(--duration-m) var(--ease-out);
+  transition: fill var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .svg-icn.is-preview {
@@ -2380,12 +2521,12 @@ button.button {
 }
 
 .svg-logo {
-  transition: color var(--duration-m) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .svg-logo svg,
 .svg-logo path {
-  transition: fill var(--duration-m) var(--ease-out);
+  transition: fill var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .button-group {
@@ -2580,9 +2721,9 @@ a {
   -webkit-text-decoration-color: var(--text-link);
   text-decoration-color: var(--text-link);
   text-decoration-thickness: 0.06em;
-  transition: color var(--duration-m) var(--ease-out),
-              text-decoration-color var(--duration-m) var(--ease-out),
-              text-underline-offset var(--duration-m) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing),
+              text-decoration-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing),
+              text-underline-offset var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 a:not(.button):hover {
@@ -3228,7 +3369,7 @@ select[size]:not([size="1"]) {
     mask-repeat: no-repeat;
     mask-position: center;
     mask-size: contain;
-    transition: transform var(--duration-xs) var(--ease-out);
+    transition: transform var(--motion-feedback-travel-duration) var(--motion-feedback-travel-easing);
   }
 
   select:open::picker-icon {
@@ -3282,7 +3423,7 @@ select[size]:not([size="1"]) {
     color: var(--text-primary);
     background-color: transparent;
     cursor: pointer;
-    transition: background-color var(--duration-2xs) var(--ease-out);
+    transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   }
 
   select:not([multiple]):not([size]) option:hover {
@@ -3486,9 +3627,31 @@ input[type="radio"] {
   cursor: pointer;
   background-color: var(--checkbox-background);
   border: var(--border-s) solid var(--checkbox-border);
-  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), background-size var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   flex-shrink: 0;
   position: relative;
+}
+
+/* The tick grows in with the fill: it sits on every checkbox at no size, so
+   checking it has a size to grow from (auto does not interpolate). The mixed
+   state's dash is a second layer, there in every state too, so moving
+   between ticked, mixed and clear shrinks one mark as the other grows,
+   rather than stretching the tick out of the dash's shape. Every state
+   below names both layers, or the sizes would stop interpolating. A switch
+   paints its own knob and is left out; it clears the image when on. */
+input[type="checkbox"]:not([role="switch"], .form-toggle input) {
+  background-image: var(--check-mark-image), linear-gradient(var(--checkbox-checkmark), var(--checkbox-checkmark));
+  background-size: 0 0, 0 0;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Under reduced motion the tick arrives whole with the fill: growing is
+   scale, and scale is motion. */
+@media (prefers-reduced-motion: reduce) {
+  input[type="checkbox"]:not([role="switch"], .form-toggle input) {
+    transition-property: background-color, border-color;
+  }
 }
 
 input[type="radio"] {
@@ -3498,8 +3661,8 @@ input[type="radio"] {
 input[type="checkbox"]:checked:not(:indeterminate, .is-mixed) {
   background-color: var(--checkbox-selected);
   border-color: var(--checkbox-selected);
-  background-image: var(--check-mark-image);
-  background-size: var(--check-mark-size) var(--check-mark-size);
+  background-image: var(--check-mark-image), linear-gradient(var(--checkbox-checkmark), var(--checkbox-checkmark));
+  background-size: var(--check-mark-size) var(--check-mark-size), 0 0;
   background-position: center;
   background-repeat: no-repeat;
 }
@@ -3520,8 +3683,8 @@ input[type="checkbox"]:not([role="switch"]):indeterminate,
 input[type="checkbox"]:not([role="switch"]).is-mixed {
   background-color: var(--checkbox-selected);
   border-color: var(--checkbox-selected);
-  background-image: linear-gradient(var(--checkbox-checkmark), var(--checkbox-checkmark));
-  background-size: calc(var(--check-mark-size) * 0.6) max(2px, calc(var(--check-mark-size) / 7));
+  background-image: var(--check-mark-image), linear-gradient(var(--checkbox-checkmark), var(--checkbox-checkmark));
+  background-size: 0 0, calc(var(--check-mark-size) * 0.6) max(2px, calc(var(--check-mark-size) / 7));
   background-position: center;
   background-repeat: no-repeat;
 }
@@ -3644,8 +3807,8 @@ input[type="radio"]:disabled:checked {
   background: transparent;
   color: var(--text-faded);
   cursor: pointer;
-  transition: background-color var(--duration-2xs) var(--ease-out),
-              color var(--duration-2xs) var(--ease-out);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing),
+              color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   white-space: nowrap;
   font-family: inherit;
 }
@@ -3821,7 +3984,7 @@ fieldset[data-size="small"] {
      track radius. Floored at 0: border-radius would clamp a negative result
      itself, but the token is a length other rules may read. */
   --segmented-thumb-radius: max(0px, calc(var(--segmented-track-radius) - var(--segmented-track-padding)));
-  --segmented-thumb-duration: var(--duration-xs);
+  --segmented-thumb-duration: var(--motion-feedback-travel-duration);
   /* Underline variant: the same 2px mark and faded baseline the tabs draw. */
   --segmented-underline-width: 2px;
   --segmented-underline-color: var(--selected-background);
@@ -3863,7 +4026,7 @@ fieldset[data-size="small"] {
   border-radius: var(--segmented-thumb-radius);
   cursor: pointer;
   white-space: nowrap;
-  transition: color var(--duration-2xs) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 /* Hover previews engagement on unselected segments only — a hover rule that
@@ -3935,7 +4098,7 @@ fieldset[data-size="small"] {
   border: var(--border-s) solid var(--segmented-thumb-border);
   border-radius: var(--segmented-thumb-radius);
   translate: calc(var(--segmented-index) * 100% * var(--segmented-direction)) 0;
-  transition: translate var(--segmented-thumb-duration) var(--ease-out);
+  transition: translate var(--segmented-thumb-duration) var(--motion-feedback-travel-easing);
 }
 
 /* Nothing checked yet: no thumb. The flat form's "nothing is drawn until
@@ -4012,7 +4175,7 @@ fieldset[data-size="small"] {
 
 /* -- Toggle / switch -- */
 .form-toggle {
-  --toggle-transition-duration: var(--duration-xs);
+  --toggle-transition-duration: var(--motion-feedback-travel-duration);
 
   display: flex;
   align-items: center;
@@ -4070,7 +4233,7 @@ fieldset[data-size="small"],
   border: var(--border-s) solid var(--border-faded);
   border-radius: var(--radius-full);
   position: relative;
-  transition: background-color var(--toggle-transition-duration) ease;
+  transition: background-color var(--toggle-transition-duration) var(--motion-feedback-travel-easing);
 }
 
 .form-toggle input[type="checkbox"]::after {
@@ -4084,8 +4247,8 @@ fieldset[data-size="small"],
   border-radius: 50%;
   background-color: var(--neutral-500);
   transition:
-    transform var(--toggle-transition-duration) ease,
-    background-color var(--toggle-transition-duration) ease;
+    transform var(--toggle-transition-duration) var(--motion-feedback-travel-easing),
+    background-color var(--toggle-transition-duration) var(--motion-feedback-travel-easing);
 }
 
 .form-toggle input[type="checkbox"]:checked {
@@ -4367,6 +4530,16 @@ fieldset[data-size="small"],
   color: var(--status-danger);
   margin-top: var(--space-xs);
   --icon-size: 1.25em;
+  /* Fades in on the change step as it appears, whether it is inserted or
+     shown from hidden; it leaves at once, since a fixed problem should stop
+     being reported the moment it is fixed. Opacity only, so no guard. */
+  transition: opacity var(--motion-feedback-change-duration) var(--motion-feedback-change-easing);
+}
+
+@starting-style {
+  .form-error {
+    opacity: 0;
+  }
 }
 
 /* display: flex above is an author rule and beats the UA's [hidden], so a
@@ -4433,7 +4606,7 @@ fieldset[data-size="small"],
   background-color: var(--input-background);
   overflow: hidden;
   --icon-size: var(--field-icon-size);
-  transition: border-color var(--duration-2xs) var(--ease-out);
+  transition: border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 /* The text input's own ring, moved to the box because the input no longer
@@ -4647,7 +4820,7 @@ fieldset[data-size="small"],
   background: none;
   color: var(--text-faded);
   cursor: pointer;
-  transition: color var(--duration-xs) var(--ease-out), background-color var(--duration-xs) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 /* Hover: the ink darkens and the square takes the faded wash, the same
@@ -4659,6 +4832,26 @@ fieldset[data-size="small"],
 .password-toggle:hover {
   color: var(--text-primary);
   background-color: var(--background-faded);
+}
+
+/* Press: the icon inside presses in, the square stays put, so the control
+   answers without the box jumping against the input. */
+:is(.field-clear, .field-toggle, .field-action, .password-toggle) .svg-icn {
+  transition: transform var(--motion-feedback-press-duration) var(--motion-feedback-press-easing);
+}
+
+/* A copy button's icons sit one level down, inside its two labels. The
+   guard repeats the press selectors exactly: a media query adds no weight. */
+:is(.field-clear, .field-toggle, .field-action, .password-toggle):active:not(:disabled) > .svg-icn,
+:is(.field-clear, .field-toggle, .field-action, .password-toggle):active:not(:disabled) > :is(.copy-btn-default, .copy-btn-copied) > .svg-icn {
+  transform: scale(0.88);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.field-clear, .field-toggle, .field-action, .password-toggle):active:not(:disabled) > .svg-icn,
+  :is(.field-clear, .field-toggle, .field-action, .password-toggle):active:not(:disabled) > :is(.copy-btn-default, .copy-btn-copied) > .svg-icn {
+    transform: none;
+  }
 }
 
 /* The clear exists only while there is something to clear. field.js sets
@@ -4680,6 +4873,28 @@ fieldset[data-size="small"],
 
 .field > .field-action.is-copied:not(:disabled):hover {
   background-color: var(--background-faded);
+}
+
+/* In the box the icons crossfade where they sit rather than rolling, and
+   the tick grows in from 0.6, on the change step: a square this small has
+   no room for a label to travel through. No growth under reduced motion. */
+.field > .field-action.copy-btn > :is(.copy-btn-default, .copy-btn-copied) {
+  --copy-btn-roll: 0%;
+}
+
+.field > .field-action.copy-btn > .copy-btn-copied .svg-icn {
+  scale: 0.6;
+  transition: scale var(--motion-feedback-change-duration) var(--motion-feedback-change-easing);
+}
+
+.field > .field-action.copy-btn.is-copied > .copy-btn-copied .svg-icn {
+  scale: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field > .field-action.copy-btn > .copy-btn-copied .svg-icn {
+    scale: none;
+  }
 }
 
 /* No wash on a control whose input is disabled: nothing there answers. */
@@ -4747,7 +4962,7 @@ summary::before {
   border-right: 2px solid currentColor;
   border-bottom: 2px solid currentColor;
   transform: rotate(-45deg);
-  transition: transform var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
+  transition: transform var(--motion-feedback-travel-duration) var(--motion-feedback-travel-easing);
   flex-shrink: 0;
 }
 
@@ -4810,7 +5025,7 @@ details .disclosure-content {
   align-items: center;
   font-family: var(--badge-font);
   font-size: var(--font-2xs);
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-weight-semi-bold);
   text-transform: var(--badge-case);
   letter-spacing: var(--badge-tracking);
   padding: var(--space-2xs) var(--space-s);
@@ -4819,6 +5034,30 @@ details .disclosure-content {
   color: var(--badge-color);
   white-space: nowrap;
   line-height: var(--line-height-m);
+  /* A badge whose status changes (a scan check passing) crossfades to its
+     new colour on the change step. */
+  transition:
+    background-color var(--motion-feedback-change-duration) var(--motion-feedback-change-easing),
+    color var(--motion-feedback-change-duration) var(--motion-feedback-change-easing);
+}
+
+/* -- Changed -- a status that has just changed settles in with a small pop,
+   0.92 to 1 on the change step. Script sets .is-changed when it re-points
+   data-color and clears it on animationend; a badge that renders with its
+   status never pops. No pop under reduced motion: it is scale. */
+.badge.is-changed {
+  animation: badge-pop var(--motion-feedback-change-duration) var(--motion-feedback-change-easing);
+}
+
+@keyframes badge-pop {
+  from { scale: 0.92; }
+  to { scale: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge.is-changed {
+    animation: none;
+  }
 }
 
 /* Sentence-case variant — customize case via the tokens above or this
@@ -4906,6 +5145,13 @@ details .disclosure-content {
   border-radius: var(--card-radius) var(--card-radius) 0 0;
 }
 
+/* Inside the card's own frame, so no media frame of its own. Two classes,
+   because .img (section 24, later in the file) draws the frame. */
+.card .card-image {
+  border: 0;
+  border-radius: var(--card-radius) var(--card-radius) 0 0;
+}
+
 /* -- Card dark mode -- */
 [data-theme="dark"] .card {
   background-color: var(--background-secondary);
@@ -4975,7 +5221,7 @@ details .disclosure-content {
 .breadcrumb-item > a {
   color: var(--text-faded);
   text-decoration: none;
-  transition: color var(--duration-xs) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .breadcrumb-item > a:hover {
@@ -5073,7 +5319,7 @@ details .disclosure-content {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
-  transition: transform var(--duration-m) var(--ease-out);
+  transition: transform var(--motion-feedback-travel-duration) var(--motion-feedback-travel-easing);
 }
 
 /* The second selector reads the button's own state, so the icon still turns
@@ -5089,7 +5335,7 @@ details .disclosure-content {
 .accordion-content {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows var(--duration-m) var(--ease-out);
+  transition: grid-template-rows var(--motion-feedback-travel-duration) var(--motion-feedback-travel-easing);
   z-index: 5;
   position: relative;
 }
@@ -5159,7 +5405,7 @@ details .disclosure-content {
   font-weight: var(--font-weight-medium);
   font-size: var(--font-s);
   cursor: pointer;
-  transition: color var(--duration-2xs) var(--ease-in-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .tab:hover,
@@ -5389,7 +5635,15 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  transition: opacity var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
+  /* The bubble rises 4px out of its trigger as it fades in, in the hover
+     step, and sinks back as it fades out. translate, not transform: the
+     position rules below own transform for the centring. --tooltip-from is
+     where it starts, pointing back at the trigger for each position. */
+  --tooltip-from: 0 var(--space-xs);
+  translate: var(--tooltip-from);
+  transition:
+    opacity var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing),
+    translate var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   z-index: 800;
 }
 
@@ -5412,6 +5666,7 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
 [data-tooltip]:hover::before,
 [data-tooltip]:focus-visible::before {
   opacity: 1;
+  translate: none;
 }
 
 /* A tooltip on a wrapper whose focus lands on a control inside it — a
@@ -5421,6 +5676,7 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
    so a browser without :has() drops this line alone. */
 [data-tooltip]:has(:focus-visible)::before {
   opacity: 1;
+  translate: none;
 }
 
 /* A trigger whose menu or panel is open has said what it is: the bubble
@@ -5434,6 +5690,7 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
 [data-tooltip-position="bottom"]::before {
   bottom: auto;
   top: calc(100% + var(--space-xs));
+  --tooltip-from: 0 calc(var(--space-xs) * -1);
 }
 
 [data-tooltip-position="left"]::before {
@@ -5442,6 +5699,7 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
   left: auto;
   right: calc(100% + var(--space-xs));
   transform: translateY(-50%);
+  --tooltip-from: var(--space-xs) 0;
 }
 
 [data-tooltip-position="right"]::before {
@@ -5449,6 +5707,14 @@ progress.progress-bar--danger::-moz-progress-bar { background: var(--status-dang
   top: 50%;
   left: calc(100% + var(--space-xs));
   transform: translateY(-50%);
+  --tooltip-from: calc(var(--space-xs) * -1) 0;
+}
+
+/* Under reduced motion the bubble fades where it sits. */
+@media (prefers-reduced-motion: reduce) {
+  [data-tooltip]::before {
+    --tooltip-from: 0 0;
+  }
 }
 
 /* -- Interactive elements override cursor -- */
@@ -5481,7 +5747,13 @@ a[data-tooltip],
 }
 
 .toast {
-  --toast-exit-duration: var(--duration-xs);
+  /* Arrives sliding 16px in from the right, leaves the same way and faster:
+     in on --ease-out, out on --ease-in, the surface steps' curves at a
+     toast's smaller size. Product UI timings, off the brand scale on
+     purpose (cms/motion.md). */
+  --toast-enter-duration: 240ms;
+  --toast-exit-duration: 160ms;
+  --toast-travel: var(--space-l);
   pointer-events: all;
   background-color: var(--background-inverted);
   color: var(--text-inverted);
@@ -5492,9 +5764,34 @@ a[data-tooltip],
   gap: var(--space-m);
   max-width: 360px;
   font-size: var(--font-s);
-  /* toast.js reads the computed duration before removing the node, so the
-     fade length lives here only. */
-  transition: opacity var(--toast-exit-duration) var(--ease-in-out);
+  transition:
+    opacity var(--toast-enter-duration) var(--ease-out),
+    translate var(--toast-enter-duration) var(--ease-out);
+}
+
+@starting-style {
+  .toast {
+    opacity: 0;
+    translate: var(--toast-travel) 0;
+  }
+}
+
+/* toast.js moving the container into an opening dialog, or home again:
+   the toasts already showing hold still rather than arriving twice. */
+.toast-container.is-moving .toast {
+  transition: none;
+}
+
+/* -- Leaving -- toast.js sets .is-closing, then reads the computed duration
+   before it removes the node, so the exit length lives here only. A
+   leaving toast takes no pointer: it is going, and a pause would strand it. */
+.toast.is-closing {
+  opacity: 0;
+  translate: var(--toast-travel) 0;
+  pointer-events: none;
+  transition:
+    opacity var(--toast-exit-duration) var(--ease-in),
+    translate var(--toast-exit-duration) var(--ease-in);
 }
 
 .toast[data-type="success"],
@@ -5532,7 +5829,7 @@ a[data-tooltip],
   color: inherit;
   line-height: 1;
   opacity: 0.7;
-  transition: opacity var(--duration-2xs) var(--ease-out);
+  transition: opacity var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .toast-close:focus-visible {
@@ -5544,10 +5841,10 @@ a[data-tooltip],
 }
 
 /* -- Reduced motion -- */
-/* Re-points the exit token so dismissal is effectively immediate. */
+/* The toast fades in and out where it sits: no travel, the same fade. */
 @media (prefers-reduced-motion: reduce) {
   .toast {
-    --toast-exit-duration: var(--duration-2xs);
+    --toast-travel: 0px;
   }
 }
 
@@ -5675,6 +5972,28 @@ abbr[title] {
   height: auto;
   aspect-ratio: var(--img-ratio, auto);
   object-fit: cover;
+  /* The shared media frame (section 2, Media frame). On the picture, not on
+     a captioned figure: the caption sits outside the frame, as it does under
+     a gallery tile. border-box keeps a framed image the width it was given. */
+  box-sizing: border-box;
+  border: var(--media-border-width) solid var(--media-border-color);
+  border-radius: var(--media-radius);
+}
+
+/* -- Frame. On by default; data-frame="none" takes it off one image (the
+      brand switch is --media-border-width: 0 in theme.css). "ground" sets the
+      picture on the media ground with clear space round it, the way a logo
+      page shows a mark: the padding is inside the border, and contain keeps
+      the whole picture in view instead of cropping it to fill. -- */
+.img[data-frame="none"] {
+  border: 0;
+  border-radius: 0;
+}
+
+.img[data-frame="ground"] {
+  padding: var(--media-padding);
+  background-color: var(--media-ground);
+  object-fit: contain;
 }
 
 /* -- Width. Matches a figure as well, because a captioned image is one box:
@@ -6002,14 +6321,20 @@ hr.xl {
   font-size: var(--font-s);
   line-height: var(--line-height-m);
   text-decoration: none;
-  transition: color var(--duration-2xs) var(--ease-out),
-              background-color var(--duration-2xs) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing),
+              background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .dropdown-trigger:hover,
 .dropdown-trigger.is-hover {
   background-color: var(--dropdown-item-hover);
   color: var(--text-plain);
+}
+
+/* Press: a step past hover, on the press token, so a tap reads as a tap. */
+.dropdown-trigger:active {
+  background-color: var(--background-darker);
+  transition-duration: var(--motion-feedback-press-duration);
 }
 
 .dropdown-trigger .svg-icn {
@@ -6027,7 +6352,7 @@ hr.xl {
   width: 1rem;
   height: 1rem;
   color: var(--text-faded);
-  transition: transform var(--duration-xs) var(--ease-out);
+  transition: transform var(--motion-feedback-travel-duration) var(--motion-feedback-travel-easing);
   flex-shrink: 0;
 }
 
@@ -6111,8 +6436,64 @@ hr.xl {
   right: auto;
 }
 
+/* -- Opening and closing --
+   The menu fades and drops 4px from its trigger as it opens, and fades back
+   faster as it closes, on the surface steps' curves: in on --ease-out, out
+   on --ease-in. display is transitioned with allow-discrete, so a closing
+   menu stays painted for its fade, and @starting-style gives an opening one
+   somewhere to come from. A menu opening upward rises instead. Only opacity
+   and transform move, so the placement rules above keep anchoring it, and an
+   open menu at rest carries no transform. Under reduced motion it fades and
+   never travels (guard below). A closing menu takes no pointer, so its fade
+   cannot catch a click meant for the page. */
+.dropdown {
+  --dropdown-open-duration: var(--duration-xs);
+  /* 200ms */
+  --dropdown-close-duration: var(--motion-feedback-hover-duration);
+  /* 150ms */
+  --dropdown-travel: calc(var(--space-xs) * -1);
+}
+
+/* Keyed on the placement dropdown.js resolved. The resolve runs once the
+   menu is shown, so for a menu that ends up above its trigger the script
+   restarts the entrance from the right side (restartEntrance). */
+.dropdown[data-resolved-placement^="top"] {
+  --dropdown-travel: var(--space-xs);
+}
+
+.dropdown > .dropdown-menu {
+  opacity: 0;
+  transform: translateY(var(--dropdown-travel));
+  pointer-events: none;
+  transition:
+    opacity var(--dropdown-close-duration) var(--ease-in),
+    transform var(--dropdown-close-duration) var(--ease-in),
+    display var(--dropdown-close-duration) allow-discrete;
+}
+
 .dropdown.is-open > .dropdown-menu {
   display: flex;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  transition:
+    opacity var(--dropdown-open-duration) var(--ease-out),
+    transform var(--dropdown-open-duration) var(--ease-out),
+    display var(--dropdown-open-duration) allow-discrete;
+}
+
+@starting-style {
+  .dropdown.is-open > .dropdown-menu {
+    opacity: 0;
+    transform: translateY(var(--dropdown-travel));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropdown,
+  .dropdown[data-resolved-placement^="top"] {
+    --dropdown-travel: 0px;
+  }
 }
 
 /* A panel still crossing a viewport edge after the flip is shifted back by
@@ -6138,7 +6519,7 @@ hr.xl {
   border: none;
   width: 100%;
   cursor: pointer;
-  transition: background-color var(--duration-2xs) var(--ease-out);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   font-family: var(--font-primary);
   line-height: var(--line-height-m);
   text-align: left;
@@ -6155,6 +6536,13 @@ hr.xl {
 .dropdown-item.is-hover {
   background-color: var(--dropdown-item-hover);
   color: var(--text-plain);
+}
+
+/* Press: a step past hover. A disabled item refuses the activation, so it
+   does not answer the press either. */
+.dropdown-item:active:not(.is-disabled, [aria-disabled="true"]) {
+  background-color: var(--background-darker);
+  transition-duration: var(--motion-feedback-press-duration);
 }
 
 /* Only the row tint belongs here. The ring itself comes from the global
@@ -6431,7 +6819,7 @@ hr.xl {
   color: inherit;
   opacity: var(--tag-remove-opacity, 0.75);
   padding: var(--space-2xs);
-  transition: opacity var(--duration-2xs) var(--ease-out), background-color var(--duration-2xs) var(--ease-out);
+  transition: opacity var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   flex-shrink: 0;
   border-radius: var(--radius-full);
 }
@@ -6475,7 +6863,7 @@ hr.xl {
    data-color tag keeps its hue on hover. Hover leaves a pressed tag alone,
    or a tag turned off under the pointer would still look on. */
 button.tag {
-  transition: background-color var(--duration-2xs) var(--ease-out), color var(--duration-2xs) var(--ease-out);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 button.tag:hover:not([aria-pressed="true"]) {
@@ -6525,7 +6913,7 @@ button.tag[aria-pressed="true"]:focus-visible {
 a.tag {
   text-decoration: none;
   cursor: pointer;
-  transition: background-color var(--duration-2xs) var(--ease-out), color var(--duration-2xs) var(--ease-out);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 /* color is re-declared from the token because the global
@@ -6577,8 +6965,9 @@ a.tag:focus-visible {
    filter row that would otherwise stack three deep on a phone (the glossary's
    topics, the Icon Library's categories, the Asset Library's options). The
    scrollbar is hidden; an edge fades while there is more past it, and a
-   vertical mouse wheel moves it along (scroller.js, which sets
-   .is-overflow-start / -end). The row keeps --focus-reach of room on every
+   vertical mouse wheel moves it along (scroller.js). The fade runs from the
+   scroll position in CSS where the browser can, and from .is-overflow-start
+   / -end, which scroller.js sets, where it cannot. The row keeps --focus-reach of room on every
    side inside its clip edge, pulled back by the margin, so a chip's focus
    ring is never cut and the chips sit on the same line as before. Lives with
    Tag because it holds tags and chips and nothing else. */
@@ -6597,6 +6986,13 @@ a.tag:focus-visible {
   mask-image: linear-gradient(to right, transparent, black var(--scroller-fade-start), black calc(100% - var(--scroller-fade-end)), transparent);
 }
 
+/* Right to left, the row starts at its right edge: the mask runs the same
+   way, so each fade sits on the edge its timeline or class names. */
+.scroller:dir(rtl) {
+  -webkit-mask-image: linear-gradient(to left, transparent, black var(--scroller-fade-start), black calc(100% - var(--scroller-fade-end)), transparent);
+  mask-image: linear-gradient(to left, transparent, black var(--scroller-fade-start), black calc(100% - var(--scroller-fade-end)), transparent);
+}
+
 .scroller::-webkit-scrollbar {
   display: none;
 }
@@ -6607,6 +7003,43 @@ a.tag:focus-visible {
 
 .scroller.is-overflow-end {
   --scroller-fade-end: var(--scroller-fade);
+}
+
+/* Where the browser runs scroll-driven animation, the row fades its own
+   edges from its scroll position, and scroller.js stops listening to every
+   scroll and setting the classes; elsewhere the classes above carry it. Each
+   edge fades over one fade's width of scroll, so a row a little too wide and
+   one far too wide answer alike. The two lengths are registered so the
+   animation can interpolate them. A row with nothing to scroll has no active
+   timeline, so it keeps both edges hard, as it should. */
+@property --scroller-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --scroller-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@supports (animation-timeline: scroll()) {
+  .scroller {
+    animation: scroller-fade-start linear both, scroller-fade-end linear both;
+    animation-timeline: scroll(self inline), scroll(self inline);
+    animation-range: 0px var(--scroller-fade), calc(100% - var(--scroller-fade)) 100%;
+  }
+
+  @keyframes scroller-fade-start {
+    from { --scroller-fade-start: 0px; }
+    to { --scroller-fade-start: var(--scroller-fade); }
+  }
+
+  @keyframes scroller-fade-end {
+    from { --scroller-fade-end: var(--scroller-fade); }
+    to { --scroller-fade-end: 0px; }
+  }
 }
 
 .scroller > :is(.chip-group, .tag-group) {
@@ -6789,7 +7222,7 @@ a.tag:focus-visible {
 .dialog-close {
   flex-shrink: 0;
   color: var(--text-faded);
-  transition: color var(--duration-2xs) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .dialog-close:hover {
@@ -6911,11 +7344,16 @@ a.tag:focus-visible {
   /* -- Motion -- */
   /* The surface timing every overlay shares. A drawer once ran faster than a
      dialog (400ms in, 200ms out), on the reasoning that it travels further;
-     on the house curve the glide carries the distance, and a 200ms close
-     over a tall sheet read as a snap rather than a slide (2026-10-16). */
+     on 2026-10-16 a 200ms close over a tall sheet read as a snap, and the
+     pair moved to 600/400. On 2026-11-12 the owner set every surface to
+     300/200 on the experiment pages, the drawer previewed beside the dialog,
+     choosing a product UI that answers at once over the long slide. Later the
+     same day the drawer's close moved to 300ms: it travels the full sheet, and
+     200ms over that distance read as a snap again. The dialog keeps 200ms.
+     A product value, so a literal, like the surface tokens themselves. */
   --drawer-enter-duration: var(--motion-surface-open-duration);
   --drawer-enter-easing: var(--motion-surface-open-easing);
-  --drawer-exit-duration: var(--motion-surface-close-duration);
+  --drawer-exit-duration: 300ms;
   --drawer-exit-easing: var(--motion-surface-close-easing);
   /* How far the drawer travels when closed. Percentages resolve against its
      own border box, so 100% parks it exactly off-screen whatever
@@ -7434,7 +7872,7 @@ input[type="range"]:where(:not(.slider-input))::-webkit-slider-thumb {
   border: 2px solid var(--background-primary);
   cursor: pointer;
   box-shadow: 0 1px 4px var(--black-alpha-20);
-  transition: transform var(--motion-feedback-press-duration) var(--motion-feedback-press-easing), box-shadow var(--motion-feedback-press-duration) var(--motion-feedback-press-easing);
+  transition: transform var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), box-shadow var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 input[type="range"]:where(:not(.slider-input))::-moz-range-thumb {
@@ -7465,6 +7903,14 @@ input[type="range"]:where(:not(.slider-input)):disabled {
 
 input[type="range"]:where(:not(.slider-input)):disabled::-webkit-slider-thumb {
   cursor: not-allowed;
+}
+
+/* The thumb still grows on hover, at once: the shadow keeps its fade. The
+   .slider component has no thumb transition, so only the bare range needs it. */
+@media (prefers-reduced-motion: reduce) {
+  input[type="range"]:where(:not(.slider-input))::-webkit-slider-thumb {
+    transition: box-shadow var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
+  }
 }
 
 /* -- Legacy wrapper --
@@ -7812,7 +8258,7 @@ input[type="range"]:where(:not(.slider-input)):disabled::-webkit-slider-thumb {
   height: var(--rating-size);
   cursor: pointer;
   color: var(--background-faded);
-  transition: color var(--motion-feedback-press-duration) var(--motion-feedback-press-easing), transform var(--motion-feedback-press-duration) var(--motion-feedback-press-easing);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), transform var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   flex-shrink: 0;
 }
 
@@ -7852,6 +8298,13 @@ input[type="range"]:where(:not(.slider-input)):disabled::-webkit-slider-thumb {
   transform: none;
 }
 
+/* The star still grows on hover, at once: the fill keeps its fade. */
+@media (prefers-reduced-motion: reduce) {
+  .rating-star {
+    transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
+  }
+}
+
 .rating--sm { --rating-size: 1rem; }
 .rating--lg { --rating-size: 2rem; }
 
@@ -7860,15 +8313,67 @@ input[type="range"]:where(:not(.slider-input)):disabled::-webkit-slider-thumb {
 
 .copy-btn {
   position: relative;
+  place-items: center;
+}
+
+/* Both labels share one grid cell, so they can cross and the button holds
+   the wider one's width: it never jumps when the label changes. Restated
+   at button.copy-btn, the weight of .button's own display rule. */
+.copy-btn,
+button.copy-btn {
+  display: inline-grid;
+}
+
+/* The clip keeps a rolling label inside the button. Not on a button with a
+   tooltip: its bubble is the button's own ::before, outside the box, and
+   the clip would cut it off. There the label fades as it leaves, so the
+   few pixels past the edge are nearly transparent. */
+.copy-btn:not([data-tooltip]) {
+  overflow: hidden;
+}
+
+/* -- Labels -- Copy rolls up and out as Copied! rolls in from below, on
+   the change step; reverting rolls them back. visibility travels with
+   opacity, so only the label on show is in the accessibility tree and
+   names the button. Under reduced motion it is a plain crossfade (guard
+   below). */
+.copy-btn > :is(.copy-btn-default, .copy-btn-copied) {
+  --copy-btn-roll: 100%;
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-s);
+  transition:
+    opacity var(--motion-feedback-change-duration) var(--motion-feedback-change-easing),
+    translate var(--motion-feedback-change-duration) var(--motion-feedback-change-easing),
+    visibility var(--motion-feedback-change-duration);
 }
 
 /* -- State: default -- */
-.copy-btn .copy-btn-default { display: inline-flex; align-items: center; gap: var(--space-s); }
-.copy-btn .copy-btn-copied  { display: none; }
+.copy-btn > .copy-btn-copied {
+  opacity: 0;
+  visibility: hidden;
+  translate: 0 var(--copy-btn-roll);
+}
 
 /* -- State: copied -- */
-.copy-btn.is-copied .copy-btn-default { display: none; }
-.copy-btn.is-copied .copy-btn-copied  { display: inline-flex; align-items: center; gap: var(--space-s); }
+.copy-btn.is-copied > .copy-btn-default {
+  opacity: 0;
+  visibility: hidden;
+  translate: 0 calc(var(--copy-btn-roll) * -1);
+}
+
+.copy-btn.is-copied > .copy-btn-copied {
+  opacity: 1;
+  visibility: visible;
+  translate: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-btn > :is(.copy-btn-default, .copy-btn-copied) {
+    --copy-btn-roll: 0%;
+  }
+}
 
 .copy-btn.is-copied {
   color: var(--status-success);
@@ -7899,6 +8404,9 @@ input[type="range"]:where(:not(.slider-input)):disabled::-webkit-slider-thumb {
   border: none;
   padding: var(--space-xs);
   color: var(--text-primary);
+  /* The busy ring reads the button's text token, which ghost leaves at the
+     filled button's inverted ink. */
+  --button-text-color: var(--text-primary);
 }
 
 .copy-btn.is-ghost:hover {
@@ -7914,6 +8422,7 @@ input[type="range"]:where(:not(.slider-input)):disabled::-webkit-slider-thumb {
 /* -- Tooltip: force visible on copied state -- */
 .copy-btn.is-copied[data-tooltip]::before {
   opacity: 1;
+  translate: none;
 }
 
 
@@ -7995,12 +8504,29 @@ input[type="range"]:where(:not(.slider-input)):disabled::-webkit-slider-thumb {
   cursor: pointer;
   font-size: var(--font-s);
   line-height: 1;
-  transition: background-color var(--duration-2xs) var(--ease-out);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
   flex-shrink: 0;
 }
 
 .number-input-btn:hover {
   background-color: var(--background-faded);
+}
+
+/* Press: the sign presses in. The sign sits in <span aria-hidden="true">,
+   since a text node cannot scale; a bare sign still works and does not
+   press. */
+.number-input-btn > * {
+  transition: transform var(--motion-feedback-press-duration) var(--motion-feedback-press-easing);
+}
+
+.number-input-btn:active:not(:disabled) > * {
+  transform: scale(0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .number-input-btn:active:not(:disabled) > * {
+    transform: none;
+  }
 }
 
 .number-input-btn:focus-visible {
@@ -8407,10 +8933,10 @@ fieldset[data-size="small"] {
   cursor: pointer;
   text-wrap: pretty;
   transition:
-    border var(--duration-xs) var(--ease-out),
-    background-color var(--duration-xs) var(--ease-out),
-    box-shadow var(--duration-xs) var(--ease-out),
-    transform var(--duration-xs) var(--ease-out);
+    border var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing),
+    background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing),
+    box-shadow var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing),
+    transform var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 /* Size re-points height, title and inset together — a short cover with a
@@ -8500,7 +9026,7 @@ fieldset[data-size="small"] {
 
 .book-cover-trailing .svg-icn {
   opacity: 0;
-  transition: opacity var(--duration-xs) var(--ease-out);
+  transition: opacity var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 /* Focus reveals the affordance too — a keyboard user tabbing a shelf should
@@ -8597,7 +9123,7 @@ fieldset[data-size="small"] {
    don't multiply. */
 .book-cover[data-variant="media"] .book-cover-trailing {
   opacity: 0;
-  transition: opacity var(--duration-xs) var(--ease-out);
+  transition: opacity var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .book-cover[data-variant="media"] .book-cover-trailing .svg-icn {
@@ -8740,7 +9266,7 @@ fieldset[data-size="small"] {
   color: inherit;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color var(--duration-xs) var(--ease-out);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .book-contents-item:hover {
@@ -8894,7 +9420,7 @@ fieldset[data-size="small"] {
 .book-contents-item-trailing .svg-icn {
   opacity: 0;
   flex-shrink: 0;
-  transition: opacity var(--duration-xs) var(--ease-out);
+  transition: opacity var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 :is(a, button).book-contents-item:hover .book-contents-item-trailing .svg-icn,
@@ -8954,7 +9480,7 @@ details.book-contents-item > summary {
   padding: var(--book-contents-item-padding);
   font-size: inherit;
   color: inherit;
-  transition: background-color var(--duration-xs) var(--ease-out);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 /* Section 13 draws its own left-side chevron on every summary; this row
@@ -8978,7 +9504,7 @@ details.book-contents-item > summary:focus-visible {
 
 details.book-contents-item .book-contents-item-trailing .svg-icn {
   opacity: 1;
-  transition: transform var(--duration-xs) var(--ease-out);
+  transition: transform var(--motion-feedback-travel-duration) var(--motion-feedback-travel-easing);
 }
 
 details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn {
@@ -9080,7 +9606,7 @@ details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn
   background: var(--page-nav-background);
   text-decoration: none;
   color: var(--text-primary);
-  transition: background-color var(--duration-xs) var(--ease-out);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .page-nav-link[data-direction="prev"] {
@@ -9144,7 +9670,7 @@ details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn
 .page-nav-arrow {
   flex-shrink: 0;
   color: var(--page-nav-arrow-color);
-  transition: color var(--duration-xs) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .page-nav-link:hover .page-nav-arrow {
@@ -9247,7 +9773,7 @@ details.book-contents-item[open] > summary .book-contents-item-trailing .svg-icn
   font-size: var(--font-s);
   line-height: 1;
   text-decoration: none;
-  transition: color var(--duration-2xs) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .nav-link:hover {
@@ -9499,6 +10025,7 @@ section[id] {
   --button-padding-x: var(--space-m);
   --button-text-size: var(--font-s);
   --button-radius: 0; /* flush with the header's edge whatever the scale */
+  --button-min-size: auto; /* the header's height, not a brand's button floor */
   align-self: stretch;
   flex-shrink: 0;
   min-block-size: var(--target-min);
@@ -9990,8 +10517,8 @@ section[id] {
   color: var(--text-primary);
   text-decoration: none;
   border-left: var(--border-s) solid var(--border-faded);
-  transition: background-color var(--duration-2xs) var(--ease-out),
-              color var(--duration-2xs) var(--ease-out);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing),
+              color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .bar-close:hover {
@@ -10044,6 +10571,9 @@ section[id] {
 .bar .button {
   --button-padding-y: 0;
   --button-padding-x: var(--space-m);
+  /* The bar's height holds the row; a brand's button floor would widen an
+     icon-only button past the square the height gives it. */
+  --button-min-size: auto;
 }
 
 .bar .dropdown-trigger {
@@ -10078,6 +10608,11 @@ section[id] {
 .bar .dropdown-trigger:hover,
 .bar .dropdown-trigger.is-hover {
   background-color: var(--background-faded);
+}
+
+/* The press, restated after the hover above, which outweighs the base one. */
+.bar .dropdown-trigger:active {
+  background-color: var(--background-darker);
 }
 
 /* Fields keep an edge, and re-point the input surface to the bar's own ground
@@ -10949,7 +11484,7 @@ section[id] {
   font-size: var(--font-s);
   line-height: var(--line-height-m);
   text-decoration: none;
-  transition: color var(--duration-2xs) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .footer-link:hover {
@@ -11420,8 +11955,8 @@ section[id] {
   font-weight: var(--font-weight-semi-bold);
   text-transform: uppercase;
   transition:
-    border-color var(--duration-xs) var(--ease-out),
-    background-color var(--duration-xs) var(--ease-out);
+    border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing),
+    background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 /* Pre-revealed punctuation (hyphens, slashes, apostrophes) — shown, not typed */
@@ -11572,9 +12107,8 @@ section[id] {
  * .is-hidden state.
  *
  * The current-state switch has no dedicated animation — platform tab bars
- * snap — but hover feedback transitions on the primitives, the same as
- * .nav-link (section 39). No element-scope semantic motion token exists
- * yet; never hardcode a duration here instead.
+ * snap — but hover feedback transitions on --motion-feedback-hover, the
+ * same as .nav-link (section 39). Never hardcode a duration here.
  */
 
 :root {
@@ -11630,7 +12164,7 @@ section[id] {
   min-block-size: var(--target-min);
   color: var(--app-nav-color);
   text-decoration: none;
-  transition: color var(--duration-2xs) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .app-nav-link:hover {
@@ -11755,7 +12289,7 @@ section[id] {
 :root {
   --skeleton-background: var(--background-faded);
   --skeleton-radius: var(--radius-detail);
-  --skeleton-duration: var(--duration-2xl);
+  --skeleton-duration: var(--motion-loading-pulse-duration);
 }
 
 .skeleton-line {
@@ -11838,7 +12372,7 @@ section[id] {
   /* Narrowest a scale stop may be before the row wraps. Sized so five stops
      fit two rows on a 375px viewport at --font-s. */
   --chip-scale-min: 7rem;
-  --chip-duration: var(--duration-2xs);
+  --chip-duration: var(--motion-feedback-hover-duration);
 
   /* -- Colour variant -- */
   /* 48px clears --target-min (44px) on both axes, so a chip carrying no text
@@ -11916,9 +12450,16 @@ section[id] {
   border: var(--border-m) solid var(--chip-border);
   border-radius: var(--chip-radius);
   cursor: pointer;
-  transition: background-color var(--chip-duration) var(--ease-out),
-              color var(--chip-duration) var(--ease-out),
-              border-color var(--chip-duration) var(--ease-out);
+  transition: background-color var(--chip-duration) var(--motion-feedback-hover-easing),
+              color var(--chip-duration) var(--motion-feedback-hover-easing),
+              border-color var(--chip-duration) var(--motion-feedback-hover-easing),
+              transform var(--motion-feedback-press-duration) var(--motion-feedback-press-easing);
+}
+
+/* -- Press -- the button's answer, on the press token. A disabled chip does
+   not answer. Under reduced motion it holds still (guard below). */
+.chip:active:not(:has(input:disabled)) {
+  transform: scale(0.97);
 }
 
 /* The radio covers the chip as an invisible hit area. Never display:none —
@@ -12000,12 +12541,14 @@ section[id] {
   border-color: var(--border-faded);
 }
 
-/* No prefers-reduced-motion block, deliberately. The chip transitions colour
-   and nothing else — no transform, no movement — so there is no motion to
-   reduce, and 2.3.3 explicitly excludes colour and opacity changes that do not
-   move anything. The safety comes from "colour only", not from the duration
-   value: a brand re-pointing --chip-duration to 400ms still only slows a fade.
-   The segmented control carries a guard because its thumb translates. */
+/* Reduced motion: the press scale goes, the colour stays. A colour change
+   moves nothing, so 2.3.3 does not ask for it to go, and a brand
+   re-pointing --chip-duration to 400ms still only slows a fade. */
+@media (prefers-reduced-motion: reduce) {
+  .chip:active:not(:has(input:disabled)) {
+    transform: none;
+  }
+}
 
 /* Backgrounds flatten under forced colours, so selection cannot be carried by
    a fill. Keep the drawn boundary, hand selection to the system Highlight
@@ -12085,7 +12628,9 @@ section[id] {
      paint (36 → 33 → 30px), and animating a layout property on every tile of a
      40-swatch grid is both a reduced-motion question and a needless reflow.
      The width snaps; the colour fades. */
-  transition: border-color var(--chip-duration) var(--ease-out);
+  transition:
+    border-color var(--chip-duration) var(--motion-feedback-hover-easing),
+    transform var(--motion-feedback-press-duration) var(--motion-feedback-press-easing);
 }
 
 
@@ -12190,7 +12735,7 @@ section[id] {
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
   -webkit-mask-size: contain;
-  transition: opacity var(--chip-duration) var(--ease-out);
+  transition: opacity var(--chip-duration) var(--motion-feedback-hover-easing);
 }
 
 /* A chip that stands for a colour PAIR can report whether the pair works. The
@@ -12488,8 +13033,8 @@ section[id] {
   font-size: var(--font-s);
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  transition: background-color var(--duration-2xs) var(--ease-out),
-              color var(--duration-2xs) var(--ease-out);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing),
+              color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .date-picker-day:hover {
@@ -12653,7 +13198,7 @@ section[id] {
   flex-wrap: wrap;
   gap: var(--space-m);
   opacity: 0;
-  transition: opacity var(--duration-xs) var(--ease-out);
+  transition: opacity var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .swatch:hover .swatch-actions,
@@ -12669,8 +13214,11 @@ section[id] {
 .swatch-copy,
 .swatch-copy.is-copied,
 .swatch-copy.is-copied:hover {
-  display: inline-flex;
+  /* A grid, as every copy button is, so the two labels share a cell and
+     roll; start-aligned, as a text action is. */
+  display: inline-grid;
   align-items: center;
+  justify-items: start;
   min-block-size: var(--swatch-target);
   padding: 0;
   border: 0;
@@ -13323,11 +13871,15 @@ section[id] {
     --button-padding-y: var(--space-m);
     --button-padding-x: var(--space-l);
     --button-text-size: var(--font-xs);
+    --button-min-size: var(--button-min-height-small);
   }
 
   /* A dropdown trigger has no small size of its own and declares its padding
      on itself, so, as in the bar, the block padding goes and the small height
      holds the row; the type stays, a menu label is not a field value. */
+  /* On a .dropdown-trigger that is also a .button, the button's own
+     min-height (0,1,1) outranks this one: its padding and the compact
+     --button-min-size hold that trigger instead. */
   :where([data-density="compact"]:not(.bar)) .dropdown-trigger {
     --dropdown-trigger-padding-y: 0;
     min-height: var(--field-height-s);
@@ -13342,6 +13894,79 @@ section[id] {
 
   [data-density="compact"]:not(.bar) .form-toggle[data-variant="mono"] input[type="checkbox"]::before {
     content: none;
+  }
+}
+
+/* ------ 57. SPINNER ------
+ * The loading ring: work the reader is waiting on, with no known end. A ring
+ * of currentColor with one quarter open, turning at a constant speed
+ * (--motion-loading-spin-*), so it takes the ink of whatever it sits in and
+ * needs no icon file. It waits --motion-loading-delay before it fades in, so
+ * a fast answer never flashes one. Decorative: it carries aria-hidden, and
+ * the area it sits in carries aria-busy and words a reader can hear. A busy
+ * .button draws the same ring itself (section 11, .is-loading). Under
+ * reduced motion it keeps turning: it is the only sign the work is still
+ * going. See cms/spinner.md.
+ */
+
+:root {
+  --spinner-size: 1em;
+  --spinner-width: var(--border-m);
+}
+
+.spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--spinner-size);
+  height: var(--spinner-size);
+  border: var(--spinner-width) solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--radius-full);
+  animation:
+    spinner-turn var(--motion-loading-spin-duration) var(--motion-loading-spin-easing) infinite,
+    spinner-appear var(--motion-feedback-hover-duration) var(--ease-out) var(--motion-loading-delay) both;
+}
+
+.spinner[data-size="large"] {
+  --spinner-size: var(--space-2xl);
+}
+
+/* Forced colours would repaint the open quarter, leaving a still circle. */
+@media (forced-colors: active) {
+  .spinner {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    border-right-color: transparent;
+  }
+}
+
+@keyframes spinner-turn {
+  to { rotate: 360deg; }
+}
+
+@keyframes spinner-appear {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* -- Arriving --
+ * Content landing where a skeleton or a spinner held its place fades in, a
+ * child at a time, 30ms apart and four steps at most, so a long list does
+ * not trickle. The script that swaps the content in sets .is-arriving on the
+ * container and may leave it: only children created or shown while it is on
+ * animate. Opacity only, so no reduced-motion guard is needed beyond
+ * dropping the stagger. */
+.is-arriving > * {
+  animation: spinner-appear var(--motion-feedback-change-duration) var(--motion-feedback-change-easing) backwards;
+}
+
+.is-arriving > :nth-child(2) { animation-delay: var(--motion-element-stagger-duration); }
+.is-arriving > :nth-child(3) { animation-delay: calc(var(--motion-element-stagger-duration) * 2); }
+.is-arriving > :nth-child(n + 4) { animation-delay: calc(var(--motion-element-stagger-duration) * 3); }
+
+@media (prefers-reduced-motion: reduce) {
+  .is-arriving > :nth-child(n) {
+    animation-delay: 0ms;
   }
 }
 

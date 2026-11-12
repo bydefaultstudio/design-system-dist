@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /**
  * engine-paths.mjs - the engine's fixed addresses, the same on every site
  * (engine-parity-phase-d.md, PD-2).

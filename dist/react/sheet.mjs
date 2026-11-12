@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /**
  * <Sheet> — React adapter over the Drawer markup contract (cms/drawer.md).
  *
@@ -14,7 +14,7 @@
  * `handle={false}` (or `true`) to override.
  */
 import * as React from 'react';
-import { cx, warnOnce, closeButton } from './internal.mjs';
+import { cx, warnOnce, closeButton, syncModal } from './internal.mjs';
 
 var h = React.createElement;
 
@@ -55,20 +55,7 @@ export var Sheet = React.forwardRef(function Sheet(props, forwardedRef) {
   React.useEffect(
     function () {
       var el = innerRef.current;
-      if (!el) return;
-      if (open && !el.open && el.isConnected) {
-        el.showModal();
-        // React's autoFocus cannot do this: it fires at mount, before the
-        // dialog opens, and React never writes the attribute client-side.
-        // data-autofocus is the adapter's hook — without it the browser
-        // takes the first focusable, which on a destructive dialog is the
-        // destructive action.
-        var target = el.querySelector('[data-autofocus]');
-        if (target) target.focus();
-      } else if (!open && el.open) {
-        selfClosing.current = true;
-        el.close();
-      }
+      if (el) syncModal(el, open, selfClosing);
     },
     [open]
   );

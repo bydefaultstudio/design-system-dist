@@ -169,7 +169,7 @@ A hub's logos are not finished until their clear space is, and since engine pari
 - **The rule, as a Layout Spec.** `logos.spec` is the clear-space rule built in [Layout Specs](/tools/layout-specs-docs.html), drawn round every logo that has no spec of its own. Left out, every logo gets the plain ring at `--artwork-logo-clear-space` X. A logo whose rule is a placement (an avatar on a circle) carries its own `spec`.
 - **The graphic for X.** `clearSpaceGlyph` is the shape X is measured from, so a reader sees the unit rather than a number. Its viewBox is the glyph's **whole** box, so the glyph's width is exactly X and the marker sits inside the band. A viewBox cropped tighter than the glyph draws it larger than X and spills over the zone (a letter cropped to half its height overlaps the band, and the rule reads as the letter's width).
 
-The Brand Book draws the same thing with `{{logo-spec:<id>}}` ([Logo Spec Figure](/web/logo-spec.html)), so a guide's clear-space figure can never disagree with this tool.
+The Brand Book draws the same thing with `{{logo-spec:<id>}}` ([Logo Spec Figure](/components/logo-spec.html)), so a guide's clear-space figure can never disagree with this tool.
 
 ### One manifest, and that is now the design
 

@@ -61,7 +61,6 @@
   // Two debounces, deliberately different (the glossary's reasoning): the
   // filter follows typing closely; the count is a live region, and a region
   // rewritten on every keystroke is read on every keystroke.
-  var COPY_FEEDBACK_MS = 2000;  // copy-button.js's own feedback window
   var FILTER_DEBOUNCE_MS = 100;
   // An arrow held down repeats about thirty times a second; the URL is
   // written once it settles, under the browsers' replaceState throttle.
@@ -752,7 +751,9 @@
   // settles. Without the shared answer a render that finished after a
   // switch to a format with no file would hand the button back enabled.
   function canDownload() {
-    return Boolean(iconsByKey[params.selected]) && !pngExporting;
+    // Not gated on pngExporting: downloadPng gates on the flag, and the
+    // button shows busy meanwhile. Disabling it mid-render dropped focus.
+    return Boolean(iconsByKey[params.selected]);
   }
 
   // PNG is the one format with no text to hand the clipboard, so its
@@ -771,36 +772,12 @@
     el.filename.value = ready ? buildFilename(format.ext) : '';
   }
 
-  // copy-button.js swaps the tooltip to "Copied!" for the formats it handles,
-  // and the PNG path never reaches it. Both places this file drives the copied
-  // state have to keep that contract, or the bubble contradicts the check icon
-  // beside it. Same attribute protocol as the module: the original is parked
-  // once and restored once, so a second copy inside the feedback window cannot
-  // capture "Copied!" as the thing to go back to.
-  function setCopiedTooltip(button) {
-    if (!button.hasAttribute('data-tooltip')) return;
-    if (!button.hasAttribute('data-tooltip-original')) {
-      button.setAttribute('data-tooltip-original', button.getAttribute('data-tooltip'));
-    }
-    button.setAttribute('data-tooltip', 'Copied!');
-  }
-
-  // Safe to call on a button that never swapped: the parked attribute is the
-  // only thing it reads. That is also what makes it safe to run ahead of
-  // copy-button.js's own revert timer — that timer finds nothing parked and
-  // leaves the restored tooltip alone.
-  function restoreTooltip(button) {
-    if (!button.hasAttribute('data-tooltip-original')) return;
-    button.setAttribute('data-tooltip', button.getAttribute('data-tooltip-original'));
-    button.removeAttribute('data-tooltip-original');
-  }
-
   // A "Copied!" describes one format of one icon. Changing either makes it a
-  // claim about something the clipboard does not hold — the tooltip included,
-  // which outlived the class before it was cleared here too.
+  // claim about something the clipboard does not hold, the tooltip included.
+  // copy-button.js owns the copied state (class, tooltip swap, revert), so
+  // both paths here go through it.
   function clearCopiedState() {
-    el.copy.classList.remove('is-copied');
-    restoreTooltip(el.copy);
+    if (window.bdCopyButton) window.bdCopyButton.reset(el.copy);
   }
 
   // SVG string -> Image -> canvas at the EXACT export pixels. No
@@ -895,35 +872,44 @@
       return;
     }
     var button = el.copy;
+    if (isBusy(button)) return;
     var mySession = session;
-    rasterise(buildStandaloneSvg(), params.size, params.size, 'image/png', null)
+    // Built before the button goes busy: a throw here must not leave it so.
+    var svg = buildStandaloneSvg();
+    setBusy(button, true);
+    rasterise(svg, params.size, params.size, 'image/png', null)
       .then(function (blob) {
         return navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
       })
       .then(function () {
+        setBusy(button, false);
         if (mySession !== session) return;
-        button.classList.add('is-copied');
-        setCopiedTooltip(button);
+        // The module's feedback, with its tooltip swap and its one revert
+        // timer, so the two copy paths cannot strip each other's "Copied!".
+        if (window.bdCopyButton) window.bdCopyButton.flash(button);
         // copy-button.js announces its own copies through its live region;
         // this path bypasses the module, so the success is spoken here or it
         // is silent for a screen reader (WCAG 4.1.3). The failure path already
         // lands in the alert.
         announce('Copied PNG');
-        // The shared handle, not a private timer: copy-button.js clears this
-        // one on its own copies, so the two paths cannot strip each other's
-        // "Copied!" early. Taking the handle also takes the revert, which is
-        // why this one has to restore the tooltip as well — the module's
-        // timer is the only other code that would have.
-        window.clearTimeout(button.bdCopyRevertTimer);
-        button.bdCopyRevertTimer = window.setTimeout(function revert() {
-          button.classList.remove('is-copied');
-          restoreTooltip(button);
-        }, COPY_FEEDBACK_MS);
       })
       .catch(function () {
+        setBusy(button, false);
         if (mySession !== session) return;
         showError('Couldn\u2019t copy the PNG in this browser. Download it instead.');
       });
+  }
+
+  // A raster takes a moment at 512px: the button shows the ring
+  // (design-system.css, Busy) while it works, and aria-busy says so.
+  function setBusy(button, busy) {
+    button.classList.toggle('is-loading', busy);
+    if (busy) button.setAttribute('aria-busy', 'true');
+    else button.removeAttribute('aria-busy');
+  }
+
+  function isBusy(button) {
+    return button.classList.contains('is-loading');
   }
 
   // The raster path is async: without a gate a double-click launches two
@@ -937,27 +923,23 @@
     // Captured: el is emptied on the next Barba arrival, and a render that
     // settles after a departure must not throw out of the promise.
     var button = el.download;
-    var hadFocus = document.activeElement === button;
     // A render still in flight when the reader navigates away resolves on
     // whatever page they are on now: it must not save a file they have left
     // behind, and it must not open the gate a later export is holding.
     var token = ++exportSeq;
     var mySession = session;
     pngExporting = true;
-    button.disabled = true;
+    setBusy(button, true);
 
     function isCurrent() {
       return token === exportSeq && mySession === session;
     }
 
+    // Busy, not disabled, while it renders: the focused button keeps focus.
     function releaseExport() {
       if (!isCurrent()) return;
       pngExporting = false;
-      button.disabled = !canDownload();
-      // Disabling the focused button blurred a keyboard user to <body>; hand
-      // focus back to the reader who had it, and only when it actually fell
-      // there. A mouse user in Safari never focused the button at all.
-      if (hadFocus && document.activeElement === document.body) button.focus();
+      setBusy(button, false);
     }
 
     rasterise(svgString, params.size, params.size, 'image/png', null)

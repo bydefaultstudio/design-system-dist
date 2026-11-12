@@ -74,7 +74,7 @@ The profile picture's PNG is the logo kit's avatar mark, centred inside the safe
 
 ## A format on any page
 
-The same drawing and switches go on any documentation page as a [format card](/web/format-card.html). Put the tag on a line of its own in the page's `cms/*.md` source:
+The same drawing and switches go on any documentation page as a [format card](/components/format-card.html). Put the tag on a line of its own in the page's `cms/*.md` source:
 
 ```markdown
 {{format: instagram/story}}
@@ -101,7 +101,7 @@ For Notion, Webflow, a deck or a client document, frame the public embed. It tak
 <iframe src="{{brand:url}}/tools/formats-embed.html?format=instagram/story&show=artwork,safe-area" width="480" height="760" title="Instagram Story format" loading="lazy"></iframe>
 ```
 
-A wrong address shows a message saying what is wrong in place of the card. The full reference is on the [format card](/web/format-card.html#embedding-a-format-elsewhere) page.
+A wrong address shows a message saying what is wrong in place of the card. The full reference is on the [format card](/components/format-card.html#embedding-a-format-elsewhere) page.
 
 ## Adding a format
 

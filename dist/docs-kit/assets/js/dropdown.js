@@ -23,7 +23,8 @@
  * ARIA wiring is applied here rather than authored: aria-controls on the
  * trigger, aria-labelledby on the menu, and tabindex="-1" on every item.
  * Roving tabindex only has to hold while the menu is open, because a closed
- * .dropdown-menu is display:none and its items are not focusable at all.
+ * .dropdown-menu is inert while it fades and display:none once it has, so
+ * its items are not focusable at all.
  *
  * Checkable items:
  *   <button class="dropdown-item" role="menuitemcheckbox" type="button"
@@ -52,7 +53,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "2.2.0";
+  var VERSION = "2.4.0";
   var ITEM_SELECTOR =
     '[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]';
   var TYPEAHEAD_RESET_MS = 500;
@@ -177,6 +178,11 @@
     // A nudge from the last resolve would shift the box being measured.
     menu.style.removeProperty("--dropdown-nudge");
 
+    // A static menu (one nested in the bar's overflow panel) always lays out
+    // below its trigger: it has no side to resolve, and calling it top would
+    // make it rise into a place it does not sit.
+    if (window.getComputedStyle(menu).position === "static") return;
+
     var requested = dropdown.getAttribute("data-placement");
     if (!requested) {
       requested = menu.classList.contains("is-right") ? "bottom-end" : "bottom-start";
@@ -264,6 +270,17 @@
   function openDropdown(dropdown, focusTarget) {
     wireRelationship(dropdown);
     closeAll(dropdown);
+    // Reopened mid-close: the menu is still showing, and its transition
+    // reverses from where it is, so the entrance is not restarted.
+    var menuNode = getMenu(dropdown);
+    var stillShowing = !!menuNode && window.getComputedStyle(menuNode).display !== "none";
+
+    // Cleared on open rather than on close, so the next open measures fresh
+    // and a closing menu fades where it was instead of jumping to the
+    // default side for its 150ms (resolvePlacement drops the nudge itself).
+    dropdown.removeAttribute("data-resolved-placement");
+    var menuEl = getMenu(dropdown);
+    if (menuEl) menuEl.inert = false;
 
     dropdown.classList.add("is-open");
     var trigger = getTrigger(dropdown);
@@ -271,6 +288,7 @@
 
     // Must follow .is-open: the menu needs a real box to measure.
     resolvePlacement(dropdown);
+    if (!stillShowing) restartEntrance(dropdown);
 
     var items = getItems(dropdown);
     items.forEach(function applyRovingTabindex(item) {
@@ -279,6 +297,24 @@
 
     if (focusTarget === "first") focusItem(items[0]);
     if (focusTarget === "last") focusItem(items[items.length - 1]);
+  }
+
+  // Showing the menu to measure it started its entrance from below the
+  // trigger. One that resolved above it starts again from there: a frame
+  // of display: none, never painted, so @starting-style applies afresh
+  // with the travel the resolved placement sets (design-system.css).
+  function restartEntrance(dropdown) {
+    var placement = dropdown.getAttribute("data-resolved-placement") || "";
+    if (placement.indexOf("top") !== 0) return;
+    var menu = getMenu(dropdown);
+    if (!menu) return;
+    // Transitions off for the frame: the menu transitions display with
+    // allow-discrete, which would keep it shown through the none.
+    menu.style.transition = "none";
+    menu.style.display = "none";
+    void menu.offsetWidth;
+    menu.style.removeProperty("display");
+    menu.style.removeProperty("transition");
   }
 
   function closeDropdown(dropdown, returnFocus) {
@@ -290,11 +326,11 @@
     var wasOpen = dropdown.classList.contains("is-open");
 
     dropdown.classList.remove("is-open");
-    // Cleared so the next open measures fresh rather than inheriting a flip
-    // decided at a different scroll position or viewport size.
-    dropdown.removeAttribute("data-resolved-placement");
+    // The menu stays painted for its closing fade (design-system.css,
+    // Dropdown). Inert for that time, in every browser, so a quick Tab after
+    // Escape cannot land inside a panel that is about to vanish.
     var menu = getMenu(dropdown);
-    if (menu) menu.style.removeProperty("--dropdown-nudge");
+    if (menu) menu.inert = true;
     var trigger = getTrigger(dropdown);
     if (trigger) {
       trigger.setAttribute("aria-expanded", "false");
@@ -629,6 +665,14 @@
     // inside a scrolling panel rather than the page itself.
     window.addEventListener("resize", repositionOpen);
     window.addEventListener("scroll", repositionOpen, true);
+    // A page transition closes every open menu, the header's included, as
+    // the leave begins: a link click inside a menu already closed it, but
+    // Back, Forward and a scripted navigation did not, and an open menu
+    // re-measured itself against the leaving page as it slid away. Focus
+    // stays where the router puts it.
+    document.addEventListener("bd:before-nav", function closeOnLeave() {
+      closeAll(null);
+    });
 
     console.log("[dropdown] v" + VERSION + " — init");
   }

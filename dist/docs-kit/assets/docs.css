@@ -274,8 +274,8 @@
   border-radius: var(--radius-detail);
 
   transition:
-    background-color var(--duration-xs) var(--ease-out),
-    color var(--duration-xs) var(--ease-out);
+    background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing),
+    color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 /* One step up the faded ladder, not a cross to --background-faded — that
@@ -615,52 +615,96 @@
 
 
 /* ------ 5. ASSET CARD ------
- * Generic showcase card for presenting a single brand asset with context.
- * The wrapper, preview frame, and footer stay consistent — only the
- * content inside the preview slot changes:
+ * A brand asset in the shared media frame (cms/media-frame.md): a logo, a
+ * font specimen, an icon, a swatch, a template. The frame, preview and
+ * footer stay the same; only what sits in the preview changes.
  *
- *   logo SVG • font specimen • brand icon • brand image • token
+ *   .asset-card [data-ground] [data-footer]
+ *     .asset-card-preview       — the asset, centred, at --media-preview-ratio
+ *     .asset-card-footer        — optional: title and actions
  *
- * Three composable parts:
+ * data-ground on the card sets what the asset sits on:
+ *   faded (default) --media-ground · plain --background-plain ·
+ *   dark --background-inverted · none — a picture fills the preview edge to
+ *   edge, the same as .asset-card-preview--fill.
+ * data-footer="ground" puts the footer on that ground with no divider; the
+ * default is a plain bar under a divider. A picture (ground none) keeps the
+ * bar, or the footer would sit on the photo.
  *
- *   .asset-card
- *     .asset-card-preview       — centred visual area (auto min-height)
- *     .asset-card-footer        — title + actions row at the bottom
+ * The older preview modifiers still work, as aliases for one release:
+ * --light is the faded ground, --dark the dark one, --fill ground none.
  *
- * Light/dark variants set the preview background — useful for any visual
- * asset that needs to be tested against both surfaces:
- *   .asset-card-preview--light  — uses --background-faded
- *   .asset-card-preview--dark   — uses --neutral-950 + light text
- *
- * Edges stay square — no border-radius (project rule).
+ * The card does not clip itself: only the preview clips its ground to the
+ * corners, so anything that pops out of the card is not cut off.
  *
  * See cms/asset-card.md for usage.
  */
 
+/* The card previews' shared settings, here rather than in design-system.css
+   because only the docs-site cards read them. theme.css loads after this
+   file, so a brand re-points them there. */
+:root {
+  --media-preview-ratio: 4 / 3;  /* the shape of an asset or format card's preview */
+  --media-preview-max: 40rem;    /* the tallest a preview grows */
+  --media-asset-max: 50%;        /* a centred logo or icon, of the preview's width */
+}
+
 .asset-card {
+  --asset-card-ground: var(--media-ground);
+  --asset-card-ink: var(--text-primary);
+  --asset-card-inner-radius: max(0px, calc(var(--media-radius) - var(--media-border-width)));
   display: flex;
   flex-direction: column;
-  border: var(--border-s) solid var(--border-faded);
+  border: var(--media-border-width) solid var(--media-border-color);
+  border-radius: var(--media-radius);
   background: var(--background-plain);
 }
+
+.asset-card[data-ground="plain"] { --asset-card-ground: var(--background-plain); }
+.asset-card[data-ground="dark"]  { --asset-card-ground: var(--media-ground-dark); --asset-card-ink: var(--media-ink-dark); }
 
 .asset-card-preview {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 1;
-  min-height: 220px;
-  padding: var(--space-3xl);
+  /* A minimum shape, not a fixed one: a specimen taller than the ratio
+     grows the preview rather than spilling out of it. */
+  aspect-ratio: var(--media-preview-ratio);
+  max-height: var(--media-preview-max);
+  padding: var(--media-padding);
+  background-color: var(--asset-card-ground);
+  color: var(--asset-card-ink);
+  border-radius: var(--asset-card-inner-radius) var(--asset-card-inner-radius) 0 0;
+  /* clip, not hidden: hidden makes a scroll container, which takes no
+     content-based minimum from aspect-ratio and would cut a tall specimen
+     off instead of growing round it. */
+  overflow: clip;
 }
 
+/* The preview takes every corner when there is no footer below it. */
+.asset-card-preview:last-child {
+  border-radius: var(--asset-card-inner-radius);
+}
+
+/* A centred logo or icon is a specimen, with clear space round it: never
+   wider than half the preview, however wide the card. */
+.asset-card-preview > :is(img, svg, picture, .svg-logo) {
+  max-width: var(--media-asset-max);
+  max-height: 100%;
+  height: auto;
+}
+
+/* Aliases for the older modifiers, one release. */
 .asset-card-preview--light {
-  background-color: var(--background-faded);
+  --asset-card-ground: var(--media-ground);
+  background-color: var(--asset-card-ground);
   color: var(--text-primary);
 }
 
 .asset-card-preview--dark {
-  background-color: var(--neutral-950);
-  color: var(--white);
+  background-color: var(--media-ground-dark);
+  color: var(--media-ink-dark);
 }
 
 .asset-card-footer {
@@ -669,16 +713,35 @@
   justify-content: space-between;
   gap: var(--space-m);
   padding: var(--space-m) var(--space-l);
-  border-top: var(--border-s) solid var(--border-faded);
+  border-top: var(--media-border-width) solid var(--media-border-color);
   background: var(--background-plain);
+  color: var(--text-primary);
+  border-radius: 0 0 var(--asset-card-inner-radius) var(--asset-card-inner-radius);
 }
+
+/* -- Footer on the ground: one surface, no divider. The preview and the
+      footer each paint the ground once over the card's plain surface, so a
+      translucent ground (--background-faded is one) never doubles up. -- */
+.asset-card[data-footer="ground"]:not([data-ground="none"]) .asset-card-preview {
+  padding-block-end: 0;
+}
+
+.asset-card[data-footer="ground"]:not([data-ground="none"]) .asset-card-footer {
+  border-top: 0;
+  background: var(--asset-card-ground);
+  color: var(--asset-card-ink);
+}
+
+/* On the dark ground the footer also carries data-theme="dark" (the
+   {{asset:}} shortcode adds it), so its buttons take light-on-dark colours
+   in both page modes: the ground is fixed dark. */
 
 .asset-card-title {
   margin: 0;
   font-family: var(--font-primary);
   font-size: var(--font-l);
   font-weight: var(--font-weight-regular);
-  color: var(--text-primary);
+  color: inherit;
   line-height: 1.2;
 }
 
@@ -696,45 +759,45 @@
   --button-padding-x: var(--space-s);
 }
 
-/* Logo preview — constrains the rendered logo width inside an asset card.
- * Apply alongside .asset-card-preview when the slot contains a logo image.
- * Change the max-width here to resize every logo card at once. */
+/* Logo preview — the logo is a specimen, so it takes the asset cap. Kept as
+   a hook for pages that already carry it. */
 .asset-card-preview.logo-preview img {
-  max-width: 200px;
   width: 100%;
+  max-width: var(--media-asset-max);
   height: auto;
-  max-height: 200px;
+  max-height: 100%;
 }
 
-/* Image fill — edge-to-edge <img> previews (OG images, photographic assets).
- * Removes the slot padding; the image spans the full width at its own ratio.
- * No inline styles needed on the <img>. */
+/* -- A picture, edge to edge: ground none, or the --fill alias. The
+      preview takes the picture's own shape. -- */
+.asset-card[data-ground="none"] .asset-card-preview,
 .asset-card-preview--fill {
-  min-height: 0;
+  aspect-ratio: auto;
+  max-height: none;
   padding: 0;
+  background: none;
 }
 
+.asset-card[data-ground="none"] .asset-card-preview > img,
 .asset-card-preview--fill img {
   display: block;
   width: 100%;
+  max-width: none;
   height: auto;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
 }
 
-/* Contain — template previews of any ratio (feed 4:5, story 9:16, banner 6:1).
- * The image keeps its aspect ratio and is capped to the stage, so tall and
- * wide templates sit at a consistent, legible size instead of one spanning
- * full width while another shrinks. Cards in a grid stay equal height; the
- * image just centres in whatever vertical space its row gets. */
-.asset-card-preview--contain {
-  padding: var(--space-xl);
-}
-
+/* Contain — template previews of any ratio (feed 4:5, story 9:16, banner
+ * 6:1), fitted whole inside the preview's ratio box, so tall and wide
+ * templates sit at a consistent, legible size. */
 .asset-card-preview--contain img {
   display: block;
   width: auto;
   height: auto;
   max-width: 100%;
-  max-height: 600px;
+  max-height: 100%;
   object-fit: contain;
 }
 
@@ -744,35 +807,49 @@
  * its layer switches, size and ratio and its two verbs (cms/format-card.md,
  * assets/js/format-card.js). It replaces the asset card for formats.
  *
- *   .format-card
- *     .format-card-preview   — the drawing's area, faded ground, ratio badge
- *       .format-card-stage   — sized in px by the script to the view's ratio
- *       .format-card-ratio   — a .badge in the corner
- *     .format-card-body
- *       .format-card-title / .format-card-meta
- *       .format-card-layers  — a bare fieldset of .form-toggle switches
- *       .format-card-actions — a .button-group
+ *   .format-card [data-shape]
+ *     .format-card-layout    — stacked, or side by side for a tall format
+ *       .format-card-preview — the drawing's area at --media-preview-ratio
+ *         .format-card-stage — sized in px by the script, fitted inside
+ *       .format-card-body
+ *         .format-card-title
+ *         .format-card-specs  — Platform, Size, Ratio as label and value rows
+ *         .format-card-layers — a bare fieldset of .form-toggle switches
+ *         .format-card-actions — a .button-group
  *
  * data-variant="tile" is the Formats tool's grid tile: a <button>, the
  * artwork as a still picture (.format-card-picture), no switches or verbs,
  * with a hover, a focus ring and a selected ring (aria-current).
  *
- * --format-card-preview-height sets the drawing's area; the embed fills
- * the frame instead (Format embed, below).
+ * The frame, ground and padding are the media frame's (cms/media-frame.md).
+ * The preview holds --media-preview-ratio up to --media-preview-max, and the
+ * script fits the drawing inside it. A tall format (data-shape="tall",
+ * set by the script) goes side by side once the card itself is 45rem wide:
+ * a container query on the card, never the screen, so a card in a narrow
+ * column of a wide page stays stacked. The breakpoint is a number, not a
+ * token, because a container query cannot read a custom property.
+ *
+ * The card does not clip itself: the preview clips its own ground to the
+ * corners, so a layer's info dropdown is never cut off at the card's edge.
  */
 
 .format-card {
-  --format-card-preview-height: 24rem;
+  --format-card-inner-radius: max(0px, calc(var(--media-radius) - var(--media-border-width)));
   display: flex;
   flex-direction: column;
   min-width: 0;
-  border: var(--border-s) solid var(--border-faded);
-  /* A role, never a scale step (cms/border.md): a card is a surface. The
-     preview's ground is clipped to it. */
-  border-radius: var(--radius-surface);
-  overflow: hidden;
+  container: format-card / inline-size;
+  border: var(--media-border-width) solid var(--media-border-color);
+  border-radius: var(--media-radius);
   background: var(--background-plain);
   color: var(--text-primary);
+}
+
+.format-card-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .format-card-preview {
@@ -780,13 +857,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: var(--format-card-preview-height);
-  padding: var(--space-xl) var(--space-3xl);
+  aspect-ratio: var(--media-preview-ratio);
+  max-height: var(--media-preview-max);
+  /* Hold the ratio exactly. Without this a drawing sized for a wider card
+     keeps the preview tall after the card narrows, and the ResizeObserver
+     that fits it never sees the area shrink. */
+  min-height: 0;
+  padding: var(--media-padding);
   /* A view's crop masks in the preview's own ground, so it reads as gone:
      the card's surface, with the preview's tint over it. */
   --overlay-crop-mask-under: var(--background-plain);
-  --overlay-crop-mask: var(--background-faded);
-  background-color: var(--background-faded);
+  --overlay-crop-mask: var(--media-ground);
+  background-color: var(--media-ground);
+  border-radius: var(--format-card-inner-radius) var(--format-card-inner-radius) 0 0;
   overflow: hidden;
 }
 
@@ -796,9 +879,9 @@
   width: auto;
   max-width: 100%;
   height: auto;
-  max-height: var(--format-card-preview-height);
+  max-height: var(--media-preview-max);
   margin-inline: auto;
-  padding: var(--space-xl);
+  padding: var(--media-padding);
 }
 
 .format-card-stage {
@@ -819,18 +902,12 @@
   pointer-events: none;
 }
 
-.format-card-ratio {
-  position: absolute;
-  inset-block-start: var(--space-xs);
-  inset-inline-start: var(--space-xs);
-}
-
 .format-card-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-s);
-  padding: var(--space-m) var(--space-l) var(--space-l);
-  border-top: var(--border-s) solid var(--border-faded);
+  gap: var(--space-l);
+  padding: var(--space-xl);
+  border-top: var(--media-border-width) solid var(--media-border-color);
 }
 
 .format-card-title {
@@ -839,30 +916,114 @@
   line-height: var(--line-height-s);
 }
 
+/* -- Specs: label left in the secondary ink, value right, a faint rule
+      over every row, as the Format Library's Spec reads (tools.css
+      .tool-meta). Repeated here because tools.css is an app stylesheet and
+      this card renders on pages that do not load it. -- */
+.format-card-specs {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-size: var(--font-s);
+}
+
+.format-card-specs > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-l);
+  padding-block: var(--space-s);
+  border-top: var(--border-s) solid var(--border-faded);
+}
+
+.format-card-specs dt {
+  flex: none;
+  margin: 0;
+  font-style: normal;
+  font-weight: var(--font-weight-regular);
+  color: var(--text-secondary);
+}
+
+.format-card-specs dd {
+  margin: 0;
+  text-align: end;
+  font-weight: var(--font-weight-medium);
+}
+
+.format-card-layers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+/* A switch with a note reads as the word, its info button beside it, then
+   the switch at the far end of the row (owner, 2026-11-09). The script
+   builds the row in that order, so tabbing follows it; the switch takes the
+   free space before it. */
+.form-toggle:has(> .format-layer-info) > input {
+  margin-inline-start: auto;
+}
+
+.format-card-layers > .form-toggle {
+  justify-content: space-between;
+}
+
+.format-card-actions {
+  flex-wrap: wrap;
+}
+
+/* The tile's ratio badge, in the picture's corner. */
+.format-card-ratio {
+  position: absolute;
+  inset-block-start: var(--space-xs);
+  inset-inline-start: var(--space-xs);
+}
+
+/* The tile's one-line caption under its title. */
 .format-card-meta {
   margin: 0;
   font-size: var(--font-s);
   color: var(--text-secondary);
 }
 
-.format-card-layers {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-s) var(--space-l);
+/* A container is a stacking context, so an open layer note would paint
+   under the next card down. The card with the open note rises above it. */
+.format-card:has(.dropdown.is-open) {
+  position: relative;
+  z-index: 1;
 }
 
-/* A switch with a note reads as the word, its info button beside it, then
-   the switch at the far end of the row (owner, 2026-11-09). The script
-   builds the row in that order, so tabbing follows it; the switch takes the
-   free space before it. In a row as wide as its panel (the Format
-   Library's dock) the two ends sit apart; in the card's wrapping row,
-   which hugs its content, they sit together. */
-.form-toggle:has(> .format-layer-info) > input {
-  margin-inline-start: auto;
+/* The layer info button meets the house 44px target. */
+.format-layer-info .dropdown-trigger {
+  min-inline-size: var(--target-min);
+  min-block-size: var(--target-min);
 }
 
-.format-card-actions {
-  flex-wrap: wrap;
+/* -- Side by side: a tall format in a wide card. The preview takes half
+      the card at 3:4, the details the other half. -- */
+/* Not in the embed, which is one stacked card filling its frame. */
+@container format-card (min-width: 45rem) {
+  .format-card[data-shape="tall"]:not(.format-embed-frame > *) > .format-card-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .format-card[data-shape="tall"]:not(.format-embed-frame > *) .format-card-preview {
+    aspect-ratio: 3 / 4;
+    /* Logical corners: the preview is on the start side, in either direction. */
+    border-radius: 0;
+    border-start-start-radius: var(--format-card-inner-radius);
+    border-end-start-radius: var(--format-card-inner-radius);
+  }
+
+  .format-card[data-shape="tall"]:not(.format-embed-frame > *) .format-card-body {
+    justify-content: center;
+    border-top: 0;
+    border-inline-start: var(--media-border-width) solid var(--media-border-color);
+  }
+
+  .format-card[data-shape="tall"]:not(.format-embed-frame > *) .format-card-actions > .button {
+    flex: 1 1 100%;
+  }
 }
 
 /* -- Tile --
@@ -872,6 +1033,7 @@
    caption across the full width instead. */
 .format-card[data-variant="tile"] {
   /* A tile is a control. */
+  --format-card-inner-radius: max(0px, calc(var(--radius-control) - var(--media-border-width)));
   border-radius: var(--radius-control);
   /* Clear of the tool's sticky bar when the arrow keys bring it into view. */
   scroll-margin-top: var(--scroll-offset);
@@ -881,7 +1043,7 @@
   font: inherit;
   text-align: start;
   cursor: pointer;
-  transition: border-color var(--duration-xs) var(--ease-out);
+  transition: border-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .format-card[data-variant="tile"] .format-card-preview {
@@ -958,10 +1120,19 @@
   min-height: 0;
 }
 
-.format-embed-frame > .format-card > .format-card-preview {
+.format-embed-frame > .format-card > .format-card-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.format-embed-frame > .format-card > .format-card-layout > .format-card-preview {
   flex: 1 1 0;
   height: auto;
   min-height: 0;
+  aspect-ratio: auto;
+  max-height: none;
   contain: size;
 }
 
@@ -975,7 +1146,7 @@
     flex: 1 0 auto;
   }
 
-  .format-embed-frame > .format-card > .format-card-preview {
+  .format-embed-frame > .format-card > .format-card-layout > .format-card-preview {
     flex: 0 0 16rem;
   }
 }
@@ -1149,7 +1320,12 @@
   object-fit: cover;
   /* Holds the cell while a lazy image is still out of view. Without it the
      ratio box is a transparent hole against the page. */
-  background-color: var(--background-faded);
+  background-color: var(--media-ground);
+  /* Each tile in the shared media frame (cms/media-frame.md); a video tile
+     gets the same frame from .bd-video itself. */
+  box-sizing: border-box;
+  border: var(--media-border-width) solid var(--media-border-color);
+  border-radius: var(--media-radius);
 }
 
 .gallery-item > .bd-video .bd-video-player {
@@ -1292,7 +1468,8 @@ hr {
   --toc-border: color-mix(in srgb, var(--text-primary) 10%, transparent);
   --toc-border-active: color-mix(in srgb, var(--text-primary) 30%, transparent);
   /* The sidebar collapsing changes the layout around it: a surface toggle
-     (400ms, emphasised), decided with the motion tokens on 2026-10-15. */
+     (400ms, emphasised), decided with the motion tokens on 2026-10-15.
+     Instant under reduced motion (design-system.css, motion tokens). */
   --sidebar-transition: var(--motion-surface-toggle-duration) var(--motion-surface-toggle-easing);
 }
 
@@ -1612,7 +1789,7 @@ body.no-sidebar .docs-layout {
   cursor: pointer;
   color: var(--text-primary);
   padding: 0;
-  transition: color var(--duration-xs) var(--ease-out), background var(--duration-xs) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), background var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .site-sidebar-toggle:hover {
@@ -1814,7 +1991,7 @@ body.sidebar-collapsed .site-sidebar .sidebar-nav-section-toggle[data-tooltip]::
   cursor: pointer;
   list-style: none;
   user-select: none;
-  transition: color var(--duration-xs) var(--ease-out), background var(--duration-xs) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), background var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .sidebar-nav-section-toggle:hover {
@@ -1869,7 +2046,7 @@ body.sidebar-collapsed .site-sidebar .sidebar-nav-section-toggle[data-tooltip]::
 .sidebar-nav-toggle-icon {
   display: inline-flex;
   align-items: center;
-  transition: transform var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
+  transition: transform var(--motion-feedback-travel-duration) var(--motion-feedback-travel-easing);
   margin-left: auto;
 }
 
@@ -1935,7 +2112,7 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   font-size: var(--sidebar-nav-font-size);
   font-weight: var(--sidebar-nav-font-weight);
   line-height: var(--sidebar-nav-line-height);
-  transition: color var(--duration-xs) var(--ease-out), background var(--duration-xs) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), background var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .sidebar-nav-link:hover {
@@ -2065,7 +2242,7 @@ body[data-role="guest"] .header-search-btn {
   cursor: pointer;
   list-style: none;
   user-select: none;
-  transition: color var(--duration-xs) var(--ease-out), background var(--duration-xs) var(--ease-out);
+  transition: color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing), background var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 .sidebar-nav-subsection-toggle:hover {
@@ -3818,8 +3995,8 @@ main.page-content[tabindex="-1"]:focus {
   font-size: var(--wireframe-label-size);
   text-align: center;
   cursor: pointer;
-  transition: background-color var(--duration-2xs) var(--ease-out),
-              color var(--duration-2xs) var(--ease-out);
+  transition: background-color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing),
+              color var(--motion-feedback-hover-duration) var(--motion-feedback-hover-easing);
 }
 
 /* .wireframe-region sets display:flex, and an author rule beats the UA sheet's

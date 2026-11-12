@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /**
  * W3C CSS Color 3 named colours — full list.
  * Keys: lowercase name. Values: 6-digit hex (no #).

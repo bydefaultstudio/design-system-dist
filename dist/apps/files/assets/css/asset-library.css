@@ -285,6 +285,25 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  /* Comes into focus over its placeholder as it arrives: from a 12px blur
+     and transparent to sharp, over 400ms on the house curve. The script sets
+     .is-loaded on load. No blur under reduced motion; the fade stays. */
+  opacity: 0;
+  filter: blur(12px);
+  transition:
+    opacity var(--duration-s) var(--ease-out),
+    filter var(--duration-s) var(--ease-out);
+}
+
+[data-tool="asset-library"] .tool-thumb.is-loaded img {
+  opacity: 1;
+  filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-tool="asset-library"] .tool-thumb img {
+    filter: none;
+  }
 }
 
 /* A file with transparency — a logo, a cutout — stands clear of the edges

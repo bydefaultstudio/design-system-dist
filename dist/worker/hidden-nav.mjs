@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /**
  * hidden-nav.mjs - per-reader navigation for `accessNav: 'hidden'`
  * (levels-groups-plan.md D19, §3.3).
@@ -22,7 +22,7 @@ import { navVisible } from './gate.mjs';
 const OWN_LEVEL_TAGS = new Set(['html', 'body', 'main']);
 
 // Resolved against the page's own URL, not the origin: the pager's links are
-// page-relative (`components.html` on /web/button.html is /web/components.html).
+// page-relative (`about.html` on /components/button.html is /components/about.html).
 function hrefPath(href, base) {
   try {
     return new URL(href, base).pathname;

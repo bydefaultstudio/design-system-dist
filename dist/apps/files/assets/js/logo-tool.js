@@ -125,10 +125,6 @@
   // 60k-px logo. SVG is vector, but the cap stays universal to keep WYSIWYG simple.
   var MAX_WIDTH = 4096;
 
-  // How long "Copied!" shows after an image copy — copy-button.js's own feedback
-  // window, so the two copy paths read the same.
-  var COPY_FEEDBACK_MS = 2000;
-
   // Bumped by every render. An image copy that resolves after a later render keeps
   // its clipboard contents but not its "Copied!" — see handleCopy.
   var copySession = 0;
@@ -618,22 +614,24 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  // The rasterise path is async: without a disabled gate a double-click launches two
-  // canvas chains — two downloads of the same filename, or two clipboard writes.
-  // Returns the release. Disabling the focused button blurred a keyboard user to
-  // <body>, so release hands focus back rather than restarting them at the top of the
-  // document — only if the button HAD focus when it was disabled, and focus is still on
-  // body. Safari and Firefox never focus a clicked button, so "focus is on body" alone
-  // would pull every mouse user's focus onto it; a user who moved elsewhere mid-render
-  // keeps their place.
+  // The rasterise path is async and slow at 4096px: without a gate a double-click
+  // launches two canvas chains, two downloads of the same filename or two clipboard
+  // writes. The button is held busy (design-system.css, Busy): the ring replaces its
+  // label after a moment, aria-busy says so, and a second press waits. Not disabled,
+  // because disabling the focused button blurred a keyboard user to <body>. Returns
+  // the release.
   function holdButton(button) {
     if (!button) return function () {};
-    var hadFocus = document.activeElement === button;
-    button.disabled = true;
+    button.classList.add('is-loading');
+    button.setAttribute('aria-busy', 'true');
     return function release() {
-      button.disabled = false;
-      if (hadFocus && document.activeElement === document.body) button.focus();
+      button.classList.remove('is-loading');
+      button.removeAttribute('aria-busy');
     };
+  }
+
+  function isHeld(button) {
+    return !!button && (button.disabled || button.classList.contains('is-loading'));
   }
 
   // The raster's ground: the included background, which the SVG already
@@ -643,7 +641,7 @@
   }
 
   function handleExport() {
-    if (el.exportBtn && el.exportBtn.disabled) return;
+    if (isHeld(el.exportBtn)) return;
     showError('');
 
     // Everything derived from params sits inside one guard — exportDims() and
@@ -682,7 +680,7 @@
   // JPG copies as a PNG of the same pixels — the background baked in, as the file has it.
   function handleCopy() {
     var button = el.copyBtn;
-    if (!button || button.disabled) return;
+    if (!button || isHeld(button)) return;
     showError('');
 
     if (params.format === 'svg') {
@@ -726,14 +724,10 @@
         // landed since, the stage no longer shows what the clipboard holds — the
         // clipboard keeps the copy, the button keeps quiet.
         if (session !== copySession) return;
-        button.classList.add('is-copied');
+        // The module's feedback and its one revert timer, so the two copy paths
+        // cannot strip each other's "Copied!" early.
+        if (window.bdCopyButton) window.bdCopyButton.flash(button);
         announceImageCopied();
-        // The shared handle, not a private timer: copy-button.js clears this one on
-        // its own copies, so the two paths cannot strip each other's "Copied!" early.
-        window.clearTimeout(button.bdCopyRevertTimer);
-        button.bdCopyRevertTimer = window.setTimeout(function () {
-          button.classList.remove('is-copied');
-        }, COPY_FEEDBACK_MS);
       })
       .catch(function () {
         release();
@@ -1322,7 +1316,7 @@
       try { payload = buildSvgString(); } catch (error) { payload = ''; }
     }
     el.copyBtn.setAttribute('data-copy', payload);
-    el.copyBtn.classList.remove('is-copied');
+    if (window.bdCopyButton) window.bdCopyButton.reset(el.copyBtn);
   }
 
   // Reads the RENDERED frame size (after the CSS fit-scaling) so the honesty note and

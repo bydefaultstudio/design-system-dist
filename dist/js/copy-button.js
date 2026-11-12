@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 // Copy button — unified handler for all .copy-btn variants
 // Supports data-copy (static value), data-clipboard-target (element text
 // content) and data-download (fetch-free file download via a temporary link).
@@ -12,6 +12,12 @@
 //     // path data, keeping the module dependency-free.
 //     spritePath: "/assets/images/svg-icons/_sprite.svg"
 //   };
+//
+// A copy made by other code (a tool writing an image to the clipboard)
+// shows the same feedback by calling window.bdCopyButton.flash(button) once
+// its write succeeds: the class, the tooltip swap and the revert all live
+// here, in one place, with one duration. It does not announce; the caller
+// says what it copied.
 (function () {
   'use strict';
 
@@ -123,9 +129,66 @@
     }
   }
 
+  // ── Showing a copy ──
+  //
+  // The tooltip's original is captured once, in its own attribute: a second
+  // copy inside the feedback window would otherwise capture "Copied!" as the
+  // original and leave it stuck. A second copy re-arms the revert rather
+  // than letting the first one cut the second flash short.
+  function restoreTooltip(btn) {
+    if (!btn.hasAttribute('data-tooltip-original')) return;
+    btn.setAttribute('data-tooltip', btn.getAttribute('data-tooltip-original'));
+    btn.removeAttribute('data-tooltip-original');
+  }
+
+  // The labels cross over 200ms in CSS, and visibility keeps the outgoing
+  // one in the accessibility tree until its fade ends, so for that time the
+  // button would be named by both ("Copy code Copied"). aria-hidden flips
+  // with the class instead: the name changes in one step, the fade stays.
+  function showLabel(btn, copied) {
+    var idle = btn.querySelector(':scope > .copy-btn-default');
+    var done = btn.querySelector(':scope > .copy-btn-copied');
+    if (idle) idle.toggleAttribute('aria-hidden', copied);
+    if (done) done.toggleAttribute('aria-hidden', !copied);
+  }
+
+  function revertCopied(btn) {
+    clearTimeout(btn.bdCopyRevertTimer);
+    btn.classList.remove('is-copied');
+    showLabel(btn, false);
+    restoreTooltip(btn);
+  }
+
+  function flashCopied(btn) {
+    if (!btn) return;
+    btn.classList.add('is-copied');
+    showLabel(btn, true);
+    if (btn.hasAttribute('data-tooltip') && !btn.hasAttribute('data-tooltip-original')) {
+      btn.setAttribute('data-tooltip-original', btn.getAttribute('data-tooltip'));
+    }
+    if (btn.hasAttribute('data-tooltip-original')) {
+      btn.setAttribute('data-tooltip', 'Copied!');
+    }
+    clearTimeout(btn.bdCopyRevertTimer);
+    btn.bdCopyRevertTimer = setTimeout(function revertAfterFeedback() {
+      revertCopied(btn);
+    }, FEEDBACK_DURATION);
+  }
+
+  // flash shows a copy; reset takes it back at once, for a tool whose
+  // output changed so the "Copied!" no longer describes it.
+  window.bdCopyButton = {
+    flash: flashCopied,
+    reset: function resetCopied(btn) { if (btn) revertCopied(btn); }
+  };
+
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('.copy-btn');
     if (!btn) return;
+    // A busy copy answers no second press: the pointer is already stopped in
+    // CSS, Enter and Space are stopped here. (A tool with its own copy
+    // handler, drawing an image, guards its own.)
+    if (btn.classList.contains('is-loading')) return;
     // Download buttons are handled by their own listener below — never let
     // one button copy and download on the same click.
     if (btn.hasAttribute('data-download')) return;
@@ -146,27 +209,8 @@
     if (!text) return;
 
     copyToClipboard(text).then(function () {
-      btn.classList.add('is-copied');
+      flashCopied(btn);
       announceCopied(text);
-
-      // Swap tooltip text if present. The original is captured once, in its
-      // own attribute — a second click inside the feedback window would
-      // otherwise capture "Copied!" as the original and leave it stuck.
-      if (btn.hasAttribute('data-tooltip') && !btn.hasAttribute('data-tooltip-original')) {
-        btn.setAttribute('data-tooltip-original', btn.getAttribute('data-tooltip'));
-      }
-      if (btn.hasAttribute('data-tooltip-original')) {
-        btn.setAttribute('data-tooltip', 'Copied!');
-      }
-
-      clearTimeout(btn.bdCopyRevertTimer);
-      btn.bdCopyRevertTimer = setTimeout(function () {
-        btn.classList.remove('is-copied');
-        if (btn.hasAttribute('data-tooltip-original')) {
-          btn.setAttribute('data-tooltip', btn.getAttribute('data-tooltip-original'));
-          btn.removeAttribute('data-tooltip-original');
-        }
-      }, FEEDBACK_DURATION);
     }).catch(function (err) {
       // No false success state; the button stays as it was. Reported all the
       // same — a silent failure is worse than a reported one, and a screen
@@ -182,7 +226,7 @@
   // above ignores it.
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('.copy-btn[data-download]');
-    if (!btn) return;
+    if (!btn || btn.classList.contains('is-loading')) return;
 
     var url = btn.getAttribute('data-download');
     if (!url) return;
@@ -202,10 +246,12 @@
     getLiveRegion();
     var buttons = document.querySelectorAll('.copy-btn');
     buttons.forEach(function (btn) {
-      if (btn.querySelector('.copy-btn-default')) return;
-      var content = btn.innerHTML;
-      btn.innerHTML = '<span class="copy-btn-default">' + content + '</span>'
-        + '<span class="copy-btn-copied"><span class="svg-icn">' + iconCheck() + '</span> Copied</span>';
+      if (!btn.querySelector('.copy-btn-default')) {
+        var content = btn.innerHTML;
+        btn.innerHTML = '<span class="copy-btn-default">' + content + '</span>'
+          + '<span class="copy-btn-copied"><span class="svg-icn">' + iconCheck() + '</span> Copied</span>';
+      }
+      showLabel(btn, btn.classList.contains('is-copied'));
     });
   }
 

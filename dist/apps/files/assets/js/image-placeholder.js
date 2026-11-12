@@ -323,10 +323,26 @@
     lastPath = path;
 
     var fullUrl = window.location.origin + path;
+    // The server draws the image, so the band shows it is waiting (tools.css,
+    // Busy preview) until the new picture lands or fails. aria-busy goes on
+    // the picture, not the band, which holds the status region.
+    setBusy(true);
     el.preview.src = path;
     el.preview.alt = describe(state);
     el.url.value = fullUrl;
     el.open.href = fullUrl;
+  }
+
+  function setBusy(busy) {
+    var band = el.preview && el.preview.parentNode;
+    if (!band) { return; }
+    band.toggleAttribute('data-loading', busy);
+    if (busy) { el.preview.setAttribute('aria-busy', 'true'); }
+    else { el.preview.removeAttribute('aria-busy'); }
+  }
+
+  function handlePreviewSettled() {
+    setBusy(false);
   }
 
   function scheduleRender() {
@@ -401,6 +417,8 @@
   }
 
   function bindEvents() {
+    el.preview.addEventListener('load', handlePreviewSettled);
+    el.preview.addEventListener('error', handlePreviewSettled);
     el.width.addEventListener('input', scheduleRender);
     el.height.addEventListener('input', scheduleRender);
     el.width.addEventListener('change', handleWidthCommit);

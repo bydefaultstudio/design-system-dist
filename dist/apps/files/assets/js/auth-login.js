@@ -86,7 +86,7 @@
   window.bdSafeRedirect = safeRedirect;
 
   // The fragment the reader arrived with, before anything on this page (the
-  // skip link) can change it. A link to /web/button.html#variants reaches
+  // skip link) can change it. A link to /components/button.html#variants reaches
   // the gate without its fragment and is sent here with ?next=, and the
   // browser keeps #variants on this page's address across the redirect.
   const ARRIVED_HASH = window.location.hash;

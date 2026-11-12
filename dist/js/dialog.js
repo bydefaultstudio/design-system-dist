@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.0.0 */
+/* @bydefaultstudio/design-system v8.1.0 */
 /**
  * Dialog + Drawer component
  * Opens and closes native <dialog> elements declaratively.
@@ -100,16 +100,11 @@
 (function () {
   "use strict";
 
-  var VERSION = "2.3.0";
+  var VERSION = "2.4.0";
   var SURFACE_SELECTOR = "dialog.dialog, dialog.drawer";
   var OPEN_SELECTOR = "[data-dialog-open], [data-drawer-open]";
   var CLOSE_SELECTOR = "[data-dialog-close], [data-drawer-close], .dialog-close";
 
-  /* Outlives the pulse animation so a class left behind by an interrupted
-     animation cannot persist. Deliberately not keyed to animationend: on
-     .dialog there is no pulse animation to end, and under reduced motion the
-     drawer's own animation is replaced by a backdrop one. */
-  var PULSE_MS = 400;
 
   /* Margin past the exit's own duration before the close is forced, for a
      transitionend that never comes (a hidden tab, a property that did not
@@ -167,10 +162,32 @@
     void surface.offsetWidth;
     surface.classList.add("is-pulsing");
 
+    // Cleared on a timer read from the stylesheet, so the length lives in
+    // CSS only. Not on animationend: under reduced motion the animation runs
+    // on ::backdrop, whose events not every browser reports, so the longer
+    // of the surface's and the backdrop's runs is read instead.
     window.clearTimeout(surface.__bdPulseTimer);
     surface.__bdPulseTimer = window.setTimeout(function clearPulse() {
       surface.classList.remove("is-pulsing");
-    }, PULSE_MS);
+    }, pulseDurationMs(surface) + EXIT_GRACE_MS);
+  }
+
+  function longestMs(style) {
+    var durations = style.animationDuration.split(",");
+    var delays = style.animationDelay.split(",");
+    var longest = 0;
+    for (var i = 0; i < durations.length; i += 1) {
+      var total = parseFloat(durations[i]) + parseFloat(delays[i % delays.length] || "0");
+      if (total > longest) longest = total;
+    }
+    return longest * 1000;
+  }
+
+  function pulseDurationMs(surface) {
+    return Math.max(
+      longestMs(window.getComputedStyle(surface)),
+      longestMs(window.getComputedStyle(surface, "::backdrop"))
+    );
   }
 
   /**
@@ -540,7 +557,20 @@
     }
     // Reopened in the gap between an exit's close() and its close event.
     surface.classList.remove("is-closing");
+    // Another surface still playing its exit is still modal: opening over it
+    // would record a focus inside it to return to, and its close() a moment
+    // later would pull focus back to its own trigger. It finishes now.
+    document.querySelectorAll(SURFACE_SELECTOR).forEach(function finishOtherExit(other) {
+      if (other !== surface && other.__bdExit) other.__bdExit.finish();
+    });
     surface.showModal();
+  }
+
+  /** Close one surface with its exit, without the guard (bdCloseSurface). */
+  function closeSurface(surface) {
+    if (!isSurface(surface)) return;
+    if (drag && drag.surface === surface) finishDrag(false);
+    closeWithExit(surface);
   }
 
   /**
@@ -662,6 +692,11 @@
   // Lets application code open a surface the way a trigger does, which also
   // calls off an exit still playing instead of letting it finish closing.
   window.bdOpenSurface = openSurface;
+  // Lets application code close a surface the way the close button does,
+  // exit and all, but without the guard: a close the code has decided on
+  // (the React adapters' open prop turning false). Plain .close() cuts the
+  // exit and the surface vanishes.
+  window.bdCloseSurface = closeSurface;
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initDialog);

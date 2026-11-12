@@ -377,6 +377,10 @@
         var thumb = tile.querySelector('.tool-thumb');
         thumb.style.setProperty('--al-placeholder', 'url("' + placeholder + '")');
       }
+      // A picture already decoded from the cache may have fired its load
+      // before this frame; it must not wait hidden for an event that came.
+      var img = tile.querySelector('.tool-thumb img');
+      if (img && img.complete && img.naturalWidth > 0) showThumb(img);
     });
   }
 
@@ -398,10 +402,29 @@
 
   // Once the WebP has landed the placeholder has done its job; clearing it
   // keeps the hash from showing round a picture that does not fill the box.
+  // A loaded thumbnail comes into focus over its placeholder (.is-loaded,
+  // asset-library.css). The placeholder goes once the fade has run, so a
+  // transparent file never shows the blur behind it and the ground never
+  // flashes between the two. A timer on the computed duration, not
+  // transitionend: a tile filtered out mid-fade, or loaded while hidden,
+  // never fires one.
   function handleImageLoad(event) {
     var img = event.target;
     if (!img || img.tagName !== 'IMG' || !el.grid.contains(img)) return;
-    img.parentNode.style.removeProperty('--al-placeholder');
+    showThumb(img);
+  }
+
+  function showThumb(img) {
+    var thumb = img.parentNode;
+    if (thumb.classList.contains('is-loaded')) return;
+    thumb.classList.add('is-loaded');
+    var fade = getComputedStyle(img).transitionDuration.split(',').reduce(function (longest, part) {
+      var ms = parseFloat(part) * (part.indexOf('ms') > -1 ? 1 : 1000);
+      return isNaN(ms) ? longest : Math.max(longest, ms);
+    }, 0);
+    window.setTimeout(function dropPlaceholder() {
+      thumb.style.removeProperty('--al-placeholder');
+    }, fade);
   }
 
   //
@@ -1896,5 +1919,13 @@
     initAssetLibrary();
   }
 
+  // Leaving with a preview open: narrow, the viewer is fixed to the window
+  // inside the container, and the transformed container would carry it
+  // across the slide. It closes as the leave begins; closePreview writes no
+  // URL, so the address Barba set stays, and focus is left to the router.
+  function handleBeforeNav() {
+    if (previewOpen && el && el.preview) closePreview(false);
+  }
+  document.addEventListener('bd:before-nav', handleBeforeNav);
   document.addEventListener('bd:after-nav', handleAfterNav);
 })();
