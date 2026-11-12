@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.1.0 */
+/* @bydefaultstudio/design-system v8.1.1 */
 /**
  * validate.js — Sanitise and resolve all placeholder params. Never throws.
  */

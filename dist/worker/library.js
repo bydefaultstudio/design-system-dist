@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.1.0 */
+/* @bydefaultstudio/design-system v8.1.1 */
 /**
  * library.js — the Asset Library's files, streamed from R2 at /files/
  * (asset-library-plan.md §4.5).

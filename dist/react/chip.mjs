@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v8.1.0 */
+/* @bydefaultstudio/design-system v8.1.1 */
 /**
  * <ChipGroup> — React adapter over the chip contract (cms/chip.md).
  *

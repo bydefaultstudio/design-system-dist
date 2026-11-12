@@ -5053,15 +5053,18 @@ ${CONFIG.accessNav === 'hidden' ? `
         if (lockNote && lockNote.contains(links[li])) continue;
         lockItem(links[li], !canOpen(reader, links[li].getAttribute('data-access') || 'team', pathOf(links[li])), reason);
       }
-      // A section or subsection is locked when nothing listed in it opens;
-      // the Overview is listed, so a guest's sections stay expandable and
-      // show what the system holds - the locked rail is a sales surface.
+      // A section or subsection is locked when nothing listed in it opens
+      // for this reader; the Overview is listed, so a guest's sections stay
+      // expandable and show what the system holds - the locked rail is a
+      // sales surface. The links were just marked by canOpen, so their
+      // aria-disabled is the whole test: an admin section's links are all
+      // admin (its Overview too), and they open for an admin or an owner.
       var groups = sidebarEl.querySelectorAll('details');
       for (var gi = 0; gi < groups.length; gi++) {
         var inner = groups[gi].querySelectorAll('.sidebar-nav-list a[href], .sidebar-nav-sublist a[href]');
         var anyOpen = false;
         for (var ii = 0; ii < inner.length; ii++) {
-          if (inner[ii].getAttribute('aria-disabled') !== 'true' && !inner[ii].matches('[data-access="admin"]')) anyOpen = true;
+          if (inner[ii].getAttribute('aria-disabled') !== 'true') anyOpen = true;
         }
         var locked = out || !anyOpen;
         var toggle = groups[gi].querySelector(':scope > summary');

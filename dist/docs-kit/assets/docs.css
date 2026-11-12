@@ -646,7 +646,18 @@
 :root {
   --media-preview-ratio: 4 / 3;  /* the shape of an asset or format card's preview */
   --media-preview-max: 40rem;    /* the tallest a preview grows */
+  --media-preview-screen: 45vh;  /* the most of the window a stacked format preview takes */
+  --media-preview-floor: 16rem;  /* the least it takes, however short the window */
   --media-asset-max: 50%;        /* a centred logo or icon, of the preview's width */
+}
+
+/* svh where it is known: the small viewport, so the cap holds still while a
+   phone's browser bar slides. A custom property is never validated, so an
+   unknown unit would void the cap at use, not fall back: hence the guard. */
+@supports (height: 1svh) {
+  :root {
+    --media-preview-screen: 45svh;
+  }
 }
 
 .asset-card {
@@ -822,8 +833,9 @@
  * with a hover, a focus ring and a selected ring (aria-current).
  *
  * The frame, ground and padding are the media frame's (cms/media-frame.md).
- * The preview holds --media-preview-ratio up to --media-preview-max, and the
- * script fits the drawing inside it. A tall format (data-shape="tall",
+ * The preview holds --media-preview-ratio up to --media-preview-max, or
+ * --media-preview-screen of the window when stacked, and the script fits the
+ * drawing inside it. A tall format (data-shape="tall",
  * set by the script) goes side by side once the card itself is 45rem wide:
  * a container query on the card, never the screen, so a card in a narrow
  * column of a wide page stays stacked. The breakpoint is a number, not a
@@ -858,7 +870,12 @@
   align-items: center;
   justify-content: center;
   aspect-ratio: var(--media-preview-ratio);
-  max-height: var(--media-preview-max);
+  /* Never past the window's share either: a 4:3 preview in a wide column
+     was 584px tall, and with the details under it the card ran past a
+     laptop screen, the switches out of sight while the drawing was in it.
+     The floor keeps a drawing in a short window, a phone on its side, from
+     shrinking to nothing inside the padding. */
+  max-height: min(var(--media-preview-max), max(var(--media-preview-screen), var(--media-preview-floor)));
   /* Hold the ratio exactly. Without this a drawing sized for a wider card
      keeps the preview tall after the card narrows, and the ResizeObserver
      that fits it never sees the area shrink. */
@@ -999,16 +1016,29 @@
 }
 
 /* -- Side by side: a tall format in a wide card. The preview takes half
-      the card at 3:4, the details the other half. -- */
+      the card at the card's full height, the details the other half. -- */
 /* Not in the embed, which is one stacked card filling its frame. */
 @container format-card (min-width: 45rem) {
   .format-card[data-shape="tall"]:not(.format-embed-frame > *) > .format-card-layout {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* minmax(0, …): two equal halves whatever the details hold. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 
+  /* The preview fills its half to the card's foot. It held 3:4 before,
+     and the details are often taller, which left a band of the card's
+     surface under the drawing. No ratio here: with its height stretched,
+     a ratio would size its width from that height, past its column.
+     contain: size keeps the fitted drawing out of the row's height, so the
+     row follows the details and the drawing is fitted to the row, centred,
+     never the other way round. The floor keeps a short set of details
+     from squashing the drawing. */
   .format-card[data-shape="tall"]:not(.format-embed-frame > *) .format-card-preview {
-    aspect-ratio: 3 / 4;
+    aspect-ratio: auto;
+    align-self: stretch;
+    max-height: none;
+    min-block-size: 24rem;
+    contain: size;
     /* Logical corners: the preview is on the start side, in either direction. */
     border-radius: 0;
     border-start-start-radius: var(--format-card-inner-radius);
@@ -1049,6 +1079,7 @@
 .format-card[data-variant="tile"] .format-card-preview {
   height: auto;
   aspect-ratio: 4 / 3;
+  max-height: none;
   padding: var(--space-m);
 }
 

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.1.0 */
+/* @bydefaultstudio/design-system v8.1.1 */
 /**
  * site.mjs - what the access gate needs to know about the site it guards
  * (levels-groups-plan.md Phase 3, D21).
