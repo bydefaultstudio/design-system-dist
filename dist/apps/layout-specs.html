@@ -1,0 +1,272 @@
+
+      <!--
+        A tool on the shared canvas, built from docks (cms/tool-canvas.md):
+        the preview is the canvas with its specimen and every layer drawn over
+        it; the column on the right holds three sections — the layer stack
+        (what is drawn, in order, with the canvas as its bottom row), pinned
+        at the column's top with its list scrolling inside it, then the
+        settings of the one row selected and the export, scrolling under it
+        — with the two verbs pinned at the foot. On a phone the dock stacks under the
+        preview, the page scrolls, and the verbs stay pinned at the bottom of
+        the screen; the toggle in the preview's corner folds the dock away.
+
+        The spec is the product. Export makes it a file: the spec as JSON, or
+        an SVG of the layers with the spec inside, which Import spec reads back
+        in. Copy link carries it in the URL. The engine is
+        assets/js/layer-stack.js; this page's module is
+        assets/js/layout-specs.js.
+      -->
+      <div class="tool-canvas" id="layout-specs">
+
+        <div class="bar" data-sticky="true">
+          <div class="bar-container">
+            <div class="bar-content">
+              <h1 class="tool-canvas-title" data-priority="pinned">Layout Specs</h1>
+
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" id="al-copy-link">{{icon:link}}<span>Copy link</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" id="al-import">{{icon:file-json}}<span>Import spec</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" id="al-reset">{{icon:refresh}}<span>Reset</span></button>
+              </div>
+              <!-- Feedback: opens the shared dialog (cms/chrome/feedback-dialog.html) -->
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="share">{{icon:chat}}<span>Share feedback</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="problem">{{icon:warning}}<span>Report a problem</span></button>
+              </div>
+            </div><!-- /.bar-content -->
+            <div class="bar-actions">
+              <!-- On the bar, never demoted: starting over is the tool's
+                   first verb. It always opens the dialog. -->
+              <button type="button" class="button" data-variant="faded" id="al-new">{{icon:add}}<span class="tool-new-label">New spec</span></button>
+              <div class="dropdown bar-overflow" hidden>
+                <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
+                <div class="dropdown-menu is-right"></div>
+              </div>
+              <a class="bar-close" data-page-close aria-label="Back to Tools">{{icon:close-large}}</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- The canvas, its specimen and the layers. The stage is drawn by
+             the engine into the <svg>; the labels are HTML placed over it so
+             they stay readable at any scale. -->
+        <div class="tool-preview" data-layout="corners" data-ground="light">
+          <div class="tool-stage">
+            <div class="tool-spec-stage" id="al-stage">
+              <svg class="tool-spec-svg" id="al-svg" role="img" aria-labelledby="al-svg-name"><title id="al-svg-name">Canvas preview</title></svg>
+              <!-- The labels are in the <svg>'s name; this is their picture. -->
+              <div class="tool-labels" id="al-labels-host" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <div class="tool-details">
+            <p class="tool-caption">Canvas</p>
+            <p id="al-detail-size"></p>
+            <p id="al-detail-ratio"></p>
+            <p id="al-detail-artwork"></p>
+          </div>
+
+          <p class="tool-scale" id="al-warning"></p>
+
+          <!-- Announcements, in the one child the Controls toggle never
+               hides, so the bar's menu is heard with the column hidden. -->
+          <p class="visually-hidden" role="status" id="al-status"></p>
+
+          <section class="tool-options" aria-labelledby="al-preview-heading">
+            <h2 class="tool-caption" id="al-preview-heading">Preview</h2>
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="al-dark" role="switch">
+                <label for="al-dark">Dark ground</label>
+              </div>
+            </div>
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="al-labels" role="switch" checked>
+                <label for="al-labels">Labels</label>
+              </div>
+            </div>
+          </section>
+
+          <!-- Folds the dock away (tool-canvas.js), and the preview takes its
+               width. The name stays "Controls"; aria-expanded carries the
+               state. Last in the preview, in the free bottom-right corner;
+               data-edge points the icon at the dock. -->
+          <button class="button tool-dock-toggle" data-variant="transparent" data-icon-only data-edge="end" type="button" aria-controls="al-dock" aria-expanded="true" aria-label="Controls">
+            {{icon:sidebar-right-close}}{{icon:sidebar-right-open}}
+          </button>
+        </div>
+
+        <!--
+          The end dock: three accordion sections (cms/accordion.md, multi
+          mode), the button inside each h2 so the sections stay in the
+          heading outline, and the verbs under them, pinned to the window's
+          foot on a phone (data-actions). All start open; choosing a layer
+          opens Settings.
+        -->
+        <div class="tool-dock" data-edge="end" data-actions="pinned" id="al-dock">
+        <div class="tool-panels accordion" data-accordion="multi" id="al-panels" role="group" aria-label="Layout Specs controls">
+
+          <!-- The stack, top of the list is the top of the drawing. The
+               canvas is its bottom row, built by the script: selecting it
+               shows the frame's size in Settings (layout-specs.js,
+               canvasRows). Pinned: wide, it holds the column's top and its
+               list scrolls inside it, so Settings sits under the list
+               however long it grows (tools.css, Pinned section). -->
+          <div class="tool-panel accordion-item is-open" data-pinned>
+            <h2 class="tool-panel-header">
+              <button type="button" class="accordion-header" id="al-layers-heading" aria-expanded="true" aria-controls="al-layers-section">
+                <span class="tool-panel-title">Layers</span>{{icon:chevron-down}}
+              </button>
+            </h2>
+            <div class="accordion-content" id="al-layers-section" role="region" aria-labelledby="al-layers-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+              <!-- Add layer opens the type picker, a dialog built by the
+                   script (layout-specs.js, addDialogElement): a sidebar
+                   section clips anything that pops out of it, so a dropdown
+                   would be cut off. The moving instructions describe each
+                   movable row's name, not a printed hint; the docs carry them. -->
+              <div class="tool-add">
+                <button type="button" class="button" data-variant="outline" id="al-add">{{icon:add}}<span>Add layer</span></button>
+                <button type="button" class="button" data-variant="outline" data-icon-only id="al-add-group" aria-label="Add group" data-tooltip="Add group" data-tooltip-position="left">{{icon:folder}}</button>
+              </div>
+              <ol class="tool-layers" id="al-list" aria-label="Layers, top first"></ol>
+              <p class="visually-hidden" id="al-list-hint">Drag a layer to move it, or focus it and press Alt (Option on a Mac) with the up or down arrow. A layer moved past a group's edge goes in or out of it.</p>
+            </div>
+            </div>
+            </div>
+          </div>
+
+          <!-- The selected layer's settings, built from its type. -->
+          <div class="tool-panel accordion-item is-open">
+            <h2 class="tool-panel-header">
+              <button type="button" class="accordion-header" id="al-settings-heading" aria-expanded="true" aria-controls="al-settings-section">
+                <span class="tool-panel-title">Settings</span>{{icon:chevron-down}}
+              </button>
+            </h2>
+            <div class="accordion-content" id="al-settings-section" role="region" aria-labelledby="al-settings-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body" id="al-settings"></div>
+            </div>
+            </div>
+          </div>
+
+          <!-- What the FILE is: its format, its name, and whether the specimen
+               goes in. The verbs that make it are .tool-actions, pinned. -->
+          <div class="tool-panel accordion-item is-open">
+            <h2 class="tool-panel-header">
+              <button type="button" class="accordion-header" id="al-export-heading" aria-expanded="true" aria-controls="al-export-section">
+                <span class="tool-panel-title">Export</span>{{icon:chevron-down}}
+              </button>
+            </h2>
+            <div class="accordion-content" id="al-export-section" role="region" aria-labelledby="al-export-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <div class="block gap-s">
+                <div class="tool-label-row">
+                  <p data-variant="caption" id="al-format-caption">Export as</p>
+                  <button type="button" class="button tool-info" data-variant="transparent" data-size="xsmall" data-icon-only aria-expanded="false" aria-label="About export as" aria-describedby="al-format-hint" aria-controls="al-format-hint">{{icon:info-circled}}</button>
+                </div>
+                <div class="segmented-control tool-segmented" data-variant="faded" role="radiogroup" aria-labelledby="al-format-caption" aria-describedby="al-format-hint" id="al-format">
+                  <label class="segmented-control-option"><input type="radio" name="al-format" value="svg" checked><span>SVG</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="al-format" value="json"><span>JSON</span></label>
+                </div>
+                <p class="form-hint tool-info-note" id="al-format-hint" hidden>SVG carries the spec inside the drawing. JSON is the spec alone.</p>
+              </div>
+
+              <!-- Rewritten on every change, so not a live region. Read-only
+                   keeps it selectable from the keyboard (cms/field.md, Action). -->
+              <div class="block gap-s">
+                <label data-variant="caption" for="al-filename">File name</label>
+                <div class="field">
+                  <input type="text" id="al-filename" readonly spellcheck="false" autocomplete="off">
+                  <button class="field-action copy-btn" type="button" data-clipboard-target="#al-filename">
+                    <span class="copy-btn-default">{{icon:copy}}<span class="visually-hidden">Copy file name</span></span>
+                    <span class="copy-btn-copied">{{icon:check}}<span class="visually-hidden">Copied!</span></span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- SVG only: the script hides it for the spec. The hint is
+                   the note behind the ⓘ, and the switch's description. -->
+              <div class="tool-label-row" id="al-include-artwork-row">
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" id="al-include-artwork" role="switch" checked aria-describedby="al-include-artwork-note">
+                  <label for="al-include-artwork">Include specimen</label>
+                </div>
+                <button type="button" class="button tool-info" data-variant="transparent" data-size="xsmall" data-icon-only aria-expanded="false" aria-label="About include specimen" aria-describedby="al-include-artwork-note" aria-controls="al-include-artwork-note">{{icon:info-circled}}</button>
+                <p class="form-hint tool-info-note" id="al-include-artwork-note" hidden>Off, the file holds the rules alone, to lay over artwork in a design tool. The background leaves with the specimen. An image specimen never goes in the file.</p>
+              </div>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!--
+          The verbs, pinned: the foot of the column when wide, the bottom of
+          the screen on a phone. Reset stays in the bar's menu, off the main
+          path. The error line sits above the buttons, so a failure shows
+          where the reader acted, and stays in the accessibility tree while
+          empty (tools.css, The actions); a failure from the bar's menu shows
+          the column again (layout-specs.js, showError). The import's file
+          input lives here too, so the canvas keeps its five children.
+        -->
+        <div class="tool-actions" id="al-actions">
+          <p class="form-error" role="alert" id="al-error"></p>
+          <input type="file" id="al-import-file" accept=".json,.svg,application/json,image/svg+xml" class="is-hidden" aria-label="Spec or SVG file to import">
+          <div class="button-group">
+            <button class="button" type="button" id="al-download" data-download>
+              {{icon:download}}{{icon:lock}}<span>Download <span id="al-download-format">SVG</span></span>
+            </button>
+            <button class="button copy-btn" data-variant="outline" type="button" id="al-copy" data-copy="">
+              <span class="copy-btn-default">{{icon:copy}}<span>Copy <span id="al-copy-format">SVG</span></span></span>
+              <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
+            </button>
+          </div>
+        </div>
+        </div>
+
+        <!-- Icons the module stamps into generated rows. -->
+        <template id="al-icons">
+          <span data-icon-name="eye">{{icon:eye}}</span>
+          <span data-icon-name="eye-off">{{icon:eye-off}}</span>
+          <span data-icon-name="copy">{{icon:copy}}</span>
+          <span data-icon-name="trash">{{icon:trash}}</span>
+          <span data-icon-name="menu">{{icon:menu}}</span>
+          <span data-icon-name="info">{{icon:info-circled}}</span>
+          <span data-icon-name="search">{{icon:search}}</span>
+          <span data-icon-name="close">{{icon:close}}</span>
+          <span data-icon-name="folder-open">{{icon:folder-open}}</span>
+          <!-- The layer types' icons (layout-specs.js, TYPE_ICONS). -->
+          <span data-icon-name="square">{{icon:square}}</span>
+          <span data-icon-name="shapes">{{icon:shapes}}</span>
+          <span data-icon-name="square-dashed">{{icon:square-dashed}}</span>
+          <span data-icon-name="line">{{icon:line}}</span>
+          <span data-icon-name="grid">{{icon:grid}}</span>
+          <span data-icon-name="open-full">{{icon:open-full}}</span>
+          <span data-icon-name="file-doc">{{icon:file-doc}}</span>
+          <span data-icon-name="circle">{{icon:circle}}</span>
+          <span data-icon-name="photo">{{icon:photo}}</span>
+          <span data-icon-name="folder">{{icon:folder}}</span>
+          <!-- The templates' icons (layout-specs.js, TEMPLATE_ICONS). -->
+          <span data-icon-name="bullseye">{{icon:bullseye}}</span>
+          <span data-icon-name="user">{{icon:user}}</span>
+          <span data-icon-name="mobile-video">{{icon:mobile-video}}</span>
+          <span data-icon-name="mobile">{{icon:mobile}}</span>
+          <span data-icon-name="video">{{icon:video}}</span>
+          <span data-icon-name="page">{{icon:page}}</span>
+        </template>
+      </div>
+
+      {{icon-manifest}}

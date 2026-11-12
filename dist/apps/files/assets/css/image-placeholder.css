@@ -1,0 +1,60 @@
+/* ------ IMAGE PLACEHOLDER STYLES ------ */
+/*
+  Layer: app. A tool on the shared canvas (tools.css, Tool canvas;
+  cms/tool-canvas.md), built from docks: the shell, the bar, the preview and
+  the checkerboard, the end dock, its sections and the pinned actions all
+  come from tools.css. What is left here is the tool's own: the image on the
+  band, the size row and the text field. Classes name the
+  component, never the tool (tool-<noun>, cms/tool-canvas.md Naming), and
+  every rule is scoped to [data-tool="image-placeholder"] because this file
+  loads on every page (extraStylesheets,
+  cms/docs.config.js), so an unscoped rule here reaches all of them.
+
+  No .bar-container rules here: the bar's content column belongs to
+  docs-site.css. Same reason as icon-library.css.
+
+  One deliberate exception to the tokens-only rule: the preset chips are painted
+  from brand hex values the script reads out of the palette tokens at init and
+  writes to --chip-fill, because the same values go into the image URL and a URL
+  cannot resolve a custom property. Everything else here is tokens.
+*/
+
+/* -- Preview --
+   A definite height while the dock is stacked under it, not the canvas's
+   floor: the image is any shape the fields say, and it has to scale to the
+   band rather than grow it. Docked, the preview runs the full height
+   (tools.css, Docks, placed) and the rule there outranks this one. 40vh
+   between 16 and 26rem, as the other artwork tools' bands are. The image
+   sits at its natural size and only ever scales down. */
+[data-tool="image-placeholder"] .tool-preview {
+  height: var(--tool-preview-height);
+}
+
+[data-tool="image-placeholder"] .tool-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+}
+
+/* -- Size --
+   Width × height on the shared .tool-size (tools.css): two steppers
+   joined by the glyph, sharing a row while both fit. The glyph is faded
+   and aria-hidden; the fields name themselves. */
+[data-tool="image-placeholder"] .tool-size {
+  align-items: center;
+}
+
+[data-tool="image-placeholder"] .tool-size-sep {
+  font-size: var(--font-xs);
+  color: var(--text-faded);
+}
+
+/* -- Text --
+   Element-qualified: input[type="text"] is (0,1,1) and a bare class never
+   lands (icon-library.css records the same trap). Capped rather than fluid —
+   a 100-character field does not want a 700px row. */
+[data-tool="image-placeholder"] input.tool-text {
+  max-width: 40rem;
+}

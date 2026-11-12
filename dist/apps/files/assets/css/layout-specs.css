@@ -1,0 +1,503 @@
+/* ------ LAYOUT SPECS STYLES ------ */
+/*
+  Layer: app. The Layout Specs tool on the shared canvas (tools.css, Tool
+  canvas; cms/tool-canvas.md). The layers' own paint is tools.css, Layer
+  stack, because the Icon Library and the Logo Tool draw them too; what is
+  here is the tool's layout. Classes name the component, never the tool
+  (tool-<noun>, cms/tool-canvas.md Naming), and every rule is scoped to
+  [data-tool="layout-specs"], because this file loads on every page
+  (extraStylesheets). The one exception is the type and template pickers'
+  grid, .tool-types: its dialogs sit on <body>, outside the tool.
+*/
+
+/* -- Preview --
+   The canvas sizes the preview: the full height beside the end dock when
+   wide, above the stacked dock on a phone (cms/tool-canvas.md, Docks).
+
+   The stage is sized in px by the script to the largest box of the view's
+   ratio that fits; the drawing fills it and the labels sit over it. Ink
+   follows the band (data-preview-ink), so measurements and notes read on the ground. */
+[data-tool="layout-specs"] .tool-spec-stage {
+  position: relative;
+  flex: 0 0 auto;
+  color: var(--tool-preview-ink, var(--text-primary));
+  --layer-stack-label-ink: var(--tool-preview-ink, var(--text-primary));
+  --layer-stack-label-paper: var(--tool-preview-paper, var(--background-primary));
+}
+
+[data-tool="layout-specs"] .tool-spec-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* -- The specimen's library --
+   A grid of radios, each a tile: one tab stop, the arrow keys move
+   through the tiles shown. It scrolls within itself, so a library of two
+   hundred icons never lengthens the column; the border marks where it
+   scrolls. Logos are wide, so they take fewer, wider tiles. Each tile
+   names itself in a tooltip, placed to fit the grid's box
+   (layout-specs.js, placeAssetTooltip). */
+[data-tool="layout-specs"] .tool-assets {
+  position: relative; /* the tiles' offsetParent, to scroll the chosen one into view */
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-xs);
+  max-height: 10rem;
+  padding: var(--space-xs);
+  border: var(--border-s) solid var(--border-faded);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+[data-tool="layout-specs"] .tool-assets[data-library="logo"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Each a square .tool-tile (tools.css) over a hidden radio; a logo's
+   tile is twice as wide. The focus ring sits inside the tile, since the
+   grid's scroll would clip it outside, and set in from the border so a
+   focused chosen tile shows a ring and a gap, not a border a pixel
+   thicker. */
+[data-tool="layout-specs"] .tool-assets[data-library="logo"] > .tool-tile {
+  aspect-ratio: 2;
+}
+
+[data-tool="layout-specs"] .tool-assets > .tool-tile:has(> input:focus-visible) {
+  outline-offset: calc(var(--border-s) * -4);
+}
+
+[data-tool="layout-specs"] .tool-asset-icon {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  pointer-events: none;
+}
+
+[data-tool="layout-specs"] .tool-assets[data-library="logo"] .tool-asset-icon {
+  width: 100%;
+  height: 100%;
+}
+
+[data-tool="layout-specs"] .tool-asset-icon > svg {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* -- Layer list -- */
+[data-tool="layout-specs"] .tool-add {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+/* Add layer, or a menu (the canvas's template, a layer's Start from),
+   takes the row; the folder, or the menu's button, sits at its end. */
+[data-tool="layout-specs"] .tool-add > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* -- Pinned Layers --
+   Wide, the Layers section holds the column's top and its list scrolls
+   inside it (tools.css, Pinned section). Never under 20rem, so a short
+   window still shows the header, the add row and about four rows. The add
+   row stays over the list as it scrolls, on the panel's ground so the rows
+   pass under it — the body's gap taken into its padding, so no row shows
+   through between the two — and focus scrolls a row clear of it: a
+   control's height, rounded up (the button's is set by its text, ~49px),
+   that gap, and a little room. */
+@container main-content (min-width: 960px) {
+  [data-tool="layout-specs"] .tool-panel[data-pinned] {
+    --tool-panel-pinned-max: max(40%, 20rem);
+  }
+
+  [data-tool="layout-specs"] .tool-panel[data-pinned] .tool-panel-body {
+    scroll-padding-block-start: calc(var(--space-3xl) + var(--space-l) * 2);
+  }
+
+  [data-tool="layout-specs"] .tool-panel[data-pinned] .tool-add {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding-block-end: var(--space-l);
+    margin-block-end: calc(var(--space-l) * -1);
+    background-color: var(--background-primary);
+  }
+}
+
+/* -- Add layer's type picker --
+   A dialog on <body> (layout-specs.js, addDialogElement): one tile per
+   type, each with the icon it has in the layer list. A tile is a plain
+   button; picking it adds the layer. Four across at every width: at a
+   phone's the tiles are still wider than their longest name. */
+.tool-types {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-xs);
+}
+
+/* New spec's template picker reuses the grid (templateDialogElement):
+   nine templates sit three by three, where four across leaves one alone. */
+.tool-types[data-columns="3"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Each a .tool-tile (tools.css): the icon over the name, icons level
+   across a row when one name wraps. */
+.tool-types > .tool-tile {
+  align-content: start;
+  padding: var(--space-m) var(--space-2xs);
+  font-size: var(--text-size-xs);
+}
+
+.tool-type-icon {
+  --icon-size: var(--icon-size-m);
+  display: flex;
+}
+
+/* One gap everywhere — between top-level entries, between a group's
+   header and its layers, and between those layers — so the drag's step is
+   the same wherever a row goes (layout-specs.js, pitch). */
+[data-tool="layout-specs"] .tool-layers {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The prose rule gives every <li> a top margin; a component list has none. */
+[data-tool="layout-specs"] .tool-layers > li {
+  margin: 0;
+}
+
+/* A group: its header row, then its own layers, indented, with a rule down
+   their left so the run reads as one. The indent is what the drag measures
+   for in or out (layout-specs.js). */
+[data-tool="layout-specs"] .tool-layer-group {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+[data-tool="layout-specs"] .tool-layer-children {
+  padding-inline-start: var(--space-l);
+  border-inline-start: var(--border-s) solid var(--border-faded);
+}
+
+/* A folded group's layers leave the list (layout-specs.js, syncFold); the
+   list's own display would otherwise outrank [hidden]. */
+[data-tool="layout-specs"] .tool-layer-children[hidden] {
+  display: none;
+}
+
+/* Folded, the group's row sits on a stack: two edges under it, each set in
+   further, as if its layers were cards beneath (Figma, By Default |
+   Website, node 18981:128976). The group's box makes room for them, so the
+   list's gap still follows the last edge. */
+[data-tool="layout-specs"] .tool-layer-group:has(> .tool-layer-children[hidden]) {
+  --layout-specs-stack-edge: calc(var(--space-2xs) + var(--border-s));
+  padding-block-end: calc(var(--layout-specs-stack-edge) * 2);
+}
+
+[data-tool="layout-specs"] .tool-layer-group:has(> .tool-layer-children[hidden]) > .tool-layer {
+  position: relative;
+}
+
+[data-tool="layout-specs"] .tool-layer-group:has(> .tool-layer-children[hidden]) > .tool-layer::before,
+[data-tool="layout-specs"] .tool-layer-group:has(> .tool-layer-children[hidden]) > .tool-layer::after {
+  content: "";
+  position: absolute;
+  top: calc(100% + var(--border-s));
+  inset-inline: var(--space-2xs);
+  height: var(--layout-specs-stack-edge);
+  border: var(--border-s) solid var(--border-faded);
+  border-top: 0;
+  background-color: var(--background-primary);
+  pointer-events: none;
+}
+
+[data-tool="layout-specs"] .tool-layer-group:has(> .tool-layer-children[hidden]) > .tool-layer::after {
+  top: calc(100% + var(--border-s) + var(--layout-specs-stack-edge));
+  inset-inline: var(--space-xs);
+}
+
+[data-tool="layout-specs"] .tool-layers-empty {
+  padding: var(--space-2xs) var(--space-xs);
+}
+
+/* A hidden group dims its layers as a hidden layer dims itself. */
+[data-tool="layout-specs"] .tool-layer-group:has(> .tool-layer [data-role="eye"][aria-pressed="false"]) .tool-layer-children .tool-layer-name {
+  color: var(--text-faded);
+}
+
+/* While sorting, the rows a drag passes step aside (world-clock.css), and
+   the grabbing hand holds over every row, buttons included. */
+[data-tool="layout-specs"] .tool-layers.is-sorting {
+  user-select: none;
+}
+
+[data-tool="layout-specs"] .tool-layers.is-sorting * {
+  cursor: grabbing;
+}
+
+[data-tool="layout-specs"] .tool-layers.is-sorting .tool-layer,
+[data-tool="layout-specs"] .tool-layers.is-sorting > .tool-layer-group {
+  transition: transform var(--duration-2xs) var(--ease-out);
+}
+
+[data-tool="layout-specs"] .tool-layers.is-sorting .is-dragging {
+  position: relative;
+  z-index: 1;
+  transition: none;
+}
+
+[data-tool="layout-specs"] .tool-layer-group.is-dragging > .tool-layer {
+  background-color: var(--background-plain);
+  border-color: var(--border-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-tool="layout-specs"] .tool-layers.is-sorting .tool-layer,
+  [data-tool="layout-specs"] .tool-layers.is-sorting > .tool-layer-group {
+    transition: none;
+  }
+}
+
+/* A row: square, as the panels around it are. Selection fills it and
+   takes the primary border — the fill alone is ~1.1:1, under the 3:1 a
+   state needs (WCAG 1.4.11), so the border carries the contrast and the
+   fill makes it read at a glance. Hover takes the quieter control border,
+   so a hovered row never reads as the selected one.
+   The whole row is the drag handle (layout-specs.js, Drag), so it and its
+   name show the open hand; the eye and delete keep the button's pointer. */
+[data-tool="layout-specs"] .tool-layer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  border: var(--border-s) solid var(--border-faded);
+  background-color: var(--background-primary);
+}
+
+[data-tool="layout-specs"] .tool-layer:hover {
+  border-color: var(--border-control);
+}
+
+[data-tool="layout-specs"] .tool-layer.is-active {
+  border-color: var(--border-primary);
+  background-color: var(--background-faded);
+}
+
+/* Focus on the name is focus on the layer, so the row shows it: the same
+   border colour as selection, no ring of its own and no extra weight. The
+   eye and delete keep their own rings — they are separate stops. */
+[data-tool="layout-specs"] .tool-layer-name:focus-visible {
+  outline: none;
+}
+
+[data-tool="layout-specs"] .tool-layer:has(> .tool-layer-name:focus-visible) {
+  border-color: var(--border-primary);
+}
+
+[data-tool="layout-specs"] .tool-layer.is-dragging {
+  background-color: var(--background-plain);
+  border-color: var(--border-primary);
+  position: relative;
+  z-index: 1;
+}
+
+[data-tool="layout-specs"] .tool-layer:has([data-role="eye"][aria-pressed="false"]) .tool-layer-name {
+  color: var(--text-faded);
+}
+
+[data-tool="layout-specs"] .tool-layer,
+[data-tool="layout-specs"] .tool-layer-name {
+  cursor: grab;
+}
+
+/* The grip is the type's icon, in the name's ink (it dims with it, below),
+   and what a finger drags by — so touch-action none is here and not on the
+   row: on the rest of the row a swipe scrolls the column. Boxed like the
+   row's xsmall icon buttons — their padding and a border of their width,
+   unpainted — so the icons at both ends of a row sit the same. */
+[data-tool="layout-specs"] .tool-layer-grip {
+  display: flex;
+  flex: 0 0 auto;
+  padding: var(--space-s);
+  border: var(--border-m) solid transparent;
+  color: var(--text-primary);
+  touch-action: none;
+}
+
+/* A group's grip is its fold, the row's xsmall transparent button (the
+   eye's look and hover wash), with a ring inside its unpainted border, so
+   the row's own border never doubles it. */
+
+[data-tool="layout-specs"] .tool-layer-grip[data-role="fold"]:focus-visible {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--border-m) * -1);
+}
+
+[data-tool="layout-specs"] .tool-layer:has([data-role="eye"][aria-pressed="false"]) .tool-layer-grip,
+[data-tool="layout-specs"] .tool-layer-group:has(> .tool-layer [data-role="eye"][aria-pressed="false"]) .tool-layer-children .tool-layer-grip {
+  color: var(--text-faded);
+}
+
+[data-tool="layout-specs"] .tool-layer-grip .svg-icn,
+[data-tool="layout-specs"] .tool-layer .button .svg-icn {
+  --icon-size: var(--icon-size-xs);
+  --icon-trim: 0;
+}
+
+/* The specimen row's delete, and the canvas row's eye and delete, only
+   hold the columns: never shown, never reached. */
+[data-tool="layout-specs"] .tool-layer[data-type="specimen"] [data-role="delete"],
+[data-tool="layout-specs"] .tool-layer[data-type="canvas"] [data-role="eye"],
+[data-tool="layout-specs"] .tool-layer[data-type="canvas"] [data-role="delete"] {
+  visibility: hidden;
+}
+
+/* The canvas is the ground, and does not move. */
+[data-tool="layout-specs"] .tool-layer[data-type="canvas"],
+[data-tool="layout-specs"] .tool-layer[data-type="canvas"] .tool-layer-name {
+  cursor: pointer;
+}
+
+/* The name is the select target: the whole remaining width. */
+[data-tool="layout-specs"] .tool-layer-name {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  min-height: var(--target-min);
+  padding: 0 var(--space-xs);
+  text-align: start;
+}
+
+[data-tool="layout-specs"] .tool-layer-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-tool="layout-specs"] .tool-layer-type {
+  flex: 0 0 auto;
+  font-size: var(--font-2xs);
+  color: var(--text-secondary);
+}
+
+/* -- Settings --
+   Laid out as a design tool's inspector (layout-specs.js, LAYOUT): a
+   setting's label row carries an ⓘ for its hint; two settings can share a
+   row; a choice of five or fewer is a segmented control the column's width. */
+[data-tool="layout-specs"] .tool-label-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-height: 1.5rem;
+}
+
+/* The ⓘ, the height of the label so a row with one lines up with a row
+   without. */
+/* .button with the class, so it outranks .button[data-size="xsmall"]. */
+[data-tool="layout-specs"] .button.tool-info {
+  --button-padding-y: 0;
+  height: 1.5rem;
+  min-height: 0;
+  color: var(--text-secondary);
+}
+
+[data-tool="layout-specs"] .tool-info .svg-icn {
+  --icon-size: var(--icon-size-xs);
+  --icon-trim: 0;
+}
+
+/* The note behind the ⓘ, opened in place under its setting: a hint like
+   every tool's notes (.form-hint), on a line of its own. */
+[data-tool="layout-specs"] .tool-info-note {
+  flex-basis: 100%;
+}
+
+[data-tool="layout-specs"] .tool-info-note[hidden] {
+  display: none;
+}
+
+/* Only a row holding a note wraps (a switch's); elsewhere a long label
+   keeps its ⓘ beside it. */
+[data-tool="layout-specs"] .tool-label-row:has(> .tool-info-note) {
+  flex-wrap: wrap;
+}
+
+[data-tool="layout-specs"] .tool-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-xs);
+  align-items: start;
+}
+
+/* A row whose settings are all hidden for this kind hides with them. */
+[data-tool="layout-specs"] .tool-pair:not(:has(> :not(.is-hidden))) {
+  display: none;
+}
+
+[data-tool="layout-specs"] .tool-segmented {
+  width: 100%;
+}
+
+/* The zone's marker settings, ruled off as a group of their own. */
+[data-tool="layout-specs"] .tool-group-start {
+  padding-top: var(--space-l);
+  border-top: var(--border-s) solid var(--border-faded);
+}
+
+@media (forced-colors: active) {
+  /* Forced colours flatten the borders to one colour, so selection takes
+     the system highlight. */
+  [data-tool="layout-specs"] .tool-layer.is-active,
+  [data-tool="layout-specs"] .tool-layer:has(> .tool-layer-name:focus-visible) {
+    border-color: Highlight;
+  }
+
+  [data-tool="layout-specs"] .tool-layer:has([data-role="eye"][aria-pressed="false"]) .tool-layer-name,
+  [data-tool="layout-specs"] .tool-layer-group:has(> .tool-layer [data-role="eye"][aria-pressed="false"]) .tool-layer-children .tool-layer-name {
+    color: GrayText;
+  }
+}
+
+/* The labels' layer, over the drawing; the engine places each label by
+   percentage of the view. */
+[data-tool="layout-specs"] .tool-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Every colour in the settings at the tools' one chip size
+   (tools.css, --tool-colour-chip-size), so the palette matches the
+   other tools' colour rows. */
+[data-tool="layout-specs"] .tool-swatches {
+  --chip-colour-size: var(--tool-colour-chip-size);
+  --chip-colour-check: calc(var(--chip-colour-size) / 2);
+}
+
+/* The narrowest phones: the title, New spec, the overflow and the
+   close no longer fit in one row. The button sheds its words and stays
+   named, clipped rather than removed, with the .visually-hidden
+   declarations (a utility class cannot be applied from a media query) —
+   the same cut Colour Pairing makes on its Reset. */
+@media (max-width: 480px) {
+  [data-tool="layout-specs"] .tool-new-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}

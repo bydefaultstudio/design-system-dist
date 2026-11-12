@@ -1,0 +1,331 @@
+
+      <!--
+        A tool on the shared canvas, built from docks (cms/tool-canvas.md,
+        Docks): the bar, the selected icon in the preview, the settings
+        docked on the right and the icons docked under the preview. No footer:
+        every readout has a home on the preview or in a panel. No page header
+        (the canvas is the page).
+
+        The bar names the tool. Copy link and Reset are permanent residents
+        of the overflow menu (data-priority="menu"), so the trailing cluster
+        is the menu and the close. The exit is last: build-time contract.
+
+        The docks split by job. What the FILE is — its colour (Style), its
+        format, size and name (Export) — is the end dock, pinned: no
+        toggle names it, so it never hides, and the two verbs sit at its foot
+        where no section can close over them. What finds an icon — search,
+        category, the grid — is the bottom dock, which the preview's toggle
+        collapses to its header so the icon can take the height. The end dock
+        is first in source, so a phone meets the settings before 176 icons.
+      -->
+      <div class="tool-canvas">
+
+        <div class="bar" data-sticky="true">
+          <div class="bar-container">
+            <div class="bar-content">
+              <h1 class="tool-canvas-title" data-priority="pinned">Icon Library</h1>
+
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item js-copy-url">{{icon:link}}<span>Copy link</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" id="il-reset">{{icon:refresh}}<span>Reset all</span></button>
+              </div>
+              <!-- Feedback: opens the shared dialog (cms/chrome/feedback-dialog.html) -->
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="share">{{icon:chat}}<span>Share feedback</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="problem">{{icon:warning}}<span>Report a problem</span></button>
+              </div>
+            </div><!-- /.bar-content -->
+            <div class="bar-actions">
+              <div class="dropdown bar-overflow" hidden>
+                <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
+                <div class="dropdown-menu is-right"></div>
+              </div>
+              <a class="bar-close" data-page-close aria-label="Back to Tools">{{icon:close-large}}</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- The selected icon at the export colour. Its ground follows the
+             colour — a light ground behind a dark icon, a dark one behind a
+             pale one (icon-library.js, pickGround) — or is the checkerboard
+             while Transparent is on, which is what an SVG or PNG export
+             really is. The band cannot show 512px, so the scale note at its
+             foot says at what percentage it is drawn, and the accessible
+             name carries the real export size.
+
+             The layout is the canvas's (tools.css, Preview corners): the
+             icon centred, Details top left — what the file is — and the
+             Preview group top right, a switch that changes what the band
+             shows and nothing in any file. All of it takes the ink that
+             reads on the ground, the icon's own colour where it clears AA. -->
+        <div class="tool-preview" data-layout="corners" data-ground="light">
+          <div class="tool-stage">
+            <div class="tool-icon-preview" id="il-preview" role="img"></div>
+          </div>
+
+          <!-- The name takes focus on a keyboard selection (tabindex="-1"):
+               it is read, and Tab carries on into the panels. -->
+          <div class="tool-details">
+            <p class="tool-caption">Details</p>
+            <p class="tool-selected" id="il-detail-title" tabindex="-1"></p>
+            <p id="il-detail-category"></p>
+            <p id="il-detail-colour"></p>
+            <p id="il-detail-size"></p>
+          </div>
+
+          <p class="tool-scale" id="il-scale-note"></p>
+
+          <section class="tool-options" aria-labelledby="il-preview-heading">
+            <h2 class="tool-caption" id="il-preview-heading">Preview</h2>
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="il-transparent" role="switch">
+                <label for="il-transparent">Transparent</label>
+              </div>
+            </div>
+            <!-- Fill draws the icon as large as the stage allows instead of
+                 at the export size, so the drawing can be inspected — most
+                 of all with the Icons panel folded away. The scale note
+                 keeps saying how far it is enlarged. Preview only. -->
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="il-fill" role="switch">
+                <label for="il-fill">Fill screen</label>
+              </div>
+            </div>
+            <!-- The icon spec drawn over the icon, one switch per group of
+                 assets/js/layer-stack.js's icon template: Guides (padding,
+                 centre lines, diagonals, keylines) and Grids (the unit grid,
+                 from the --artwork-icon-* tokens). Preview only. -->
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="il-guides" role="switch">
+                <label for="il-guides">Guides</label>
+              </div>
+            </div>
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="il-grids" role="switch">
+                <label for="il-grids">Grids</label>
+              </div>
+            </div>
+          </section>
+
+          <!-- Collapses the icons dock to its header (tool-canvas.js), and the
+               preview takes the height. The name stays "Icons panel";
+               aria-expanded carries the state. Last in the preview, in the
+               free bottom-right corner; data-edge turns the icon to point
+               down at the dock. -->
+          <button class="button tool-dock-toggle" data-variant="transparent" data-icon-only data-edge="bottom" type="button" aria-controls="il-icons-dock" aria-expanded="true" aria-label="Icons panel">
+            {{icon:sidebar-right-close}}{{icon:sidebar-right-open}}
+          </button>
+        </div>
+
+        <!-- Pinned on the right: the sections scroll as one column
+             (tool-canvas.js adds the tab stop while it overflows), and the
+             verbs sit under them. Both sections start open. -->
+        <div class="tool-dock" data-edge="end">
+          <div class="tool-panels accordion" data-accordion="multi" id="il-panels" role="group" aria-label="Icon Library settings">
+
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="il-style-heading" aria-expanded="true" aria-controls="il-style-section">
+                  <span class="tool-panel-title">Style</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+              <button class="button tool-panel-action" data-variant="transparent" data-icon-only type="button" id="il-style-reset" data-reset="style" aria-label="Reset Style" data-tooltip="Reset Style" data-tooltip-position="left" disabled>{{icon:refresh}}</button>
+            </div>
+            <div class="accordion-content" id="il-style-section" role="region" aria-labelledby="il-style-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <!-- The tools' one colour control (tool-colour.js; cms/tool-canvas.md,
+                   Colour), built here at init: the brand palette as colour
+                   chips, then a picker and hex field that always show the
+                   chosen colour. -->
+              <div id="il-colour"></div>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="il-export-heading" aria-expanded="true" aria-controls="il-export-section">
+                  <span class="tool-panel-title">Export</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+            </div>
+            <div class="accordion-content" id="il-export-section" role="region" aria-labelledby="il-export-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <!-- One format, all in view: the segmented control every tool's
+                   Export as uses, named by its caption. The two verbs that
+                   make it sit at the dock's foot. Which colour and
+                   size a format honours is the guide's to explain. -->
+              <fieldset data-variant="bare">
+                <legend data-variant="caption" id="il-format-label">Export as</legend>
+                <div class="segmented-control" data-variant="faded" id="il-format">
+                  <label class="segmented-control-option"><input type="radio" name="il-format" value="svg" checked><span>SVG</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="il-format" value="png"><span>PNG</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="il-format" value="html"><span>HTML</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="il-format" value="css"><span>CSS</span></label>
+                </div>
+              </fieldset>
+
+              <!-- The export size, beside the format it matters to: the
+                   tools' shared size control (tools.css, Size), a field and
+                   presets that wrap to two rows when they do not fit. A size
+                   that matches no preset leaves none checked. -->
+              <div class="block gap-s">
+                <label data-variant="caption" for="il-size" id="il-size-label">Size (px)</label>
+                <div class="tool-size">
+                  <div class="number-input" role="group">
+                    <button class="number-input-btn" data-number-decrement type="button" aria-label="Decrease size">&minus;</button>
+                    <input type="number" id="il-size" value="24" min="16" max="512" step="1" inputmode="numeric">
+                    <button class="number-input-btn" data-number-increment type="button" aria-label="Increase size">+</button>
+                  </div>
+                  <div class="segmented-control" data-variant="faded" id="il-sizes" role="radiogroup" aria-label="Size presets">
+                    <label class="segmented-control-option"><input type="radio" name="il-size-preset" value="16"><span>16</span></label>
+                    <label class="segmented-control-option"><input type="radio" name="il-size-preset" value="24" checked><span>24</span></label>
+                    <label class="segmented-control-option"><input type="radio" name="il-size-preset" value="32"><span>32</span></label>
+                    <label class="segmented-control-option"><input type="radio" name="il-size-preset" value="48"><span>48</span></label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- What you are about to get, before the act: the file's name.
+                   A read-only field the
+                   script rewrites on every render, so not a live region;
+                   read-only keeps it in the tab order, and its copy button is
+                   the keyboard's route to it (cms/field.md, Action). No
+                   tooltip, because its text would join the button's name and
+                   read twice (ROADMAP). -->
+              <div class="block gap-s">
+                <label data-variant="caption" for="il-filename" id="il-filename-label">File name</label>
+                <div class="field">
+                  <input type="text" id="il-filename" readonly spellcheck="false" autocomplete="off">
+                  <button class="field-action copy-btn" type="button" data-clipboard-target="#il-filename">
+                    <span class="copy-btn-default">{{icon:copy}}<span class="visually-hidden">Copy file name</span></span>
+                    <span class="copy-btn-copied">{{icon:check}}<span class="visually-hidden">Copied!</span></span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          </div>
+
+          <div class="tool-actions">
+            <p class="form-error" id="il-error" role="alert"></p>
+            <!--
+              The two verbs, each naming the format it makes. The format word
+              is a span the script rewrites inside the button's own text, so
+              the name follows it with no aria-label to override Copy's
+              "Copied!" swap. Both describe themselves with the selected
+              icon's name.
+
+              data-copy is rewritten on every render and format change;
+              copy-button.js reads it at click time and leaves the button
+              alone when it is empty, which is how PNG takes its own path to
+              the clipboard.
+            -->
+            <div class="button-group">
+              <button class="button" type="button" id="il-download" data-download aria-describedby="il-detail-title" disabled>
+                {{icon:download}}{{icon:lock}}<span>Download <span id="il-download-format">SVG</span></span>
+              </button>
+              <button class="button copy-btn" data-variant="outline" type="button" id="il-copy" data-copy="" aria-describedby="il-detail-title" disabled>
+                <span class="copy-btn-default">{{icon:copy}}<span>Copy <span id="il-copy-format">SVG</span></span></span>
+                <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Under the preview, taking the spare height: the grid scrolls in
+             its own body while the search row stays put. Collapsed by the
+             preview's toggle to its header — the title and the count. -->
+        <div class="tool-dock" data-edge="bottom" id="il-icons-dock">
+          <div class="tool-panels">
+          <section class="tool-panel" aria-labelledby="il-icons-heading">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-title" id="il-icons-heading">Icons</h2>
+              <!-- In the header, not in the scrolling body: a live region
+                   that has scrolled away still announces, but a count the
+                   eye can find is the point. Written straight at init,
+                   debounced after. -->
+              <p class="tool-count text-size-s text-secondary" id="il-count" aria-live="polite"></p>
+            </div>
+
+            <!-- What narrows the grid, between the title and the grid: its own
+                 row of the panel, so in fixed mode it stays put while the grid
+                 scrolls under it. Search takes the full width; the categories
+                 are a row of chips under it, every one a single press away,
+                 scrolling sideways when they outrun the panel. Each control
+                 carries its own name; the placeholder and the "All" chip say
+                 what they are to the eye. -->
+            <div class="tool-filters">
+              <search role="search" class="tool-search">
+                <div class="field">
+                  <div class="field-icon">{{icon:search}}</div>
+                  <input type="search" id="il-search" aria-label="Search icons by name or category" aria-controls="il-grid" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Search icons">
+                  <button type="button" class="field-clear" aria-label="Clear search">{{icon:close}}</button>
+                </div>
+              </search>
+              <!-- Chips are built from the icon manifest at init, names only
+                   (the header's count says how many are showing): native
+                   radios, so the group is one tab stop and the arrows
+                   move and choose. The scroller fades whichever edge has more
+                   chips past it. -->
+              <div class="scroller" id="il-category-scroll">
+                <div class="chip-group" id="il-category" role="radiogroup" aria-label="Category"></div>
+              </div>
+            </div>
+            <div class="tool-panel-body tool-browse" id="icon-library">
+
+              <!-- The module rewrites the title with the query and the
+                   description with the active category; this is the fallback
+                   wording. -->
+              <div class="callout is-hidden" data-type="info" id="il-no-match">
+                <div class="callout-title" id="il-no-match-title">No icon matches that search</div>
+                <p class="callout-description" id="il-no-match-text">Icons are named for what they are: try arrow, check or user. Clear the search to see the whole set.</p>
+              </div>
+
+              <!-- Tiles are built from the manifest at init: one <button> per
+                   icon, aria-current on the selected one, a roving tabindex so
+                   the grid is a single tab stop. -->
+              <div class="tool-icons" id="il-grid" role="group" aria-label="Icons" aria-describedby="il-grid-keys"></div>
+              <p class="visually-hidden" id="il-grid-keys">Arrow keys choose an icon. Enter moves to its details.</p>
+
+              <!-- Shown instead of the grid when the manifest or the SVG engine
+                   is missing. -->
+              <div class="tool-empty" id="il-empty" hidden>
+                {{icon:warning}}
+                <p data-empty-message></p>
+              </div>
+
+              <!-- A pointer click leaves focus on the tile, so nothing is read;
+                   this is the cue for assistive tech whose activations arrive as
+                   clicks. Written only on that path. -->
+              <p class="visually-hidden" role="status" id="il-status"></p>
+
+            </div>
+          </section>
+          </div>
+        </div>
+
+
+      </div>
+
+      {{icon-manifest}}

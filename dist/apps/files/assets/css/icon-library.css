@@ -1,0 +1,216 @@
+/* ------ ICON LIBRARY STYLES ------ */
+/*
+  Layer: app. A tool on the shared canvas, built from docks (tools.css,
+  Docks; cms/tool-canvas.md): the bar, the selected icon in the preview,
+  the Style and Export sections docked on the right, the icons docked under
+  the preview. The shell, preview, dock and panel rules are the canvas's
+  own; what is here is the tool's. Classes
+  name the component, never the tool (tool-<noun>, cms/tool-canvas.md
+  Naming), and every rule is scoped to [data-tool="icon-library"] because this file loads on every page
+  (extraStylesheets, cms/docs.config.js), so an unscoped rule here reaches
+  all of them.
+
+  No .bar-container rules here: the bar's content column belongs to
+  docs-site.css. Same reason as svg-cleaner.css.
+
+  Deliberate exceptions to the tokens-only rule, all export data: the swatch
+  fills (brand hex values the script reads from the palette tokens at init,
+  because an exported file cannot resolve a custom property) and the focus
+  outlines (the system's own 2px convention, as in the segmented control).
+  Everything else here is tokens.
+*/
+
+/* -- Search and category --
+   A row of the Icons panel between its header and its body, so in fixed mode
+   it stays put while the grid scrolls. Its bottom padding is the room above
+   the grid, the header's own being above it; as the row over the body, it
+   draws the scrolled rule (tools.css, Panels). Search takes the full width,
+   the category chips sit on a line of their own under it. The inline padding
+   is the children's, not the row's, so the chip scroller can run edge to edge
+   of the panel and a chip slides out under the panel's edge, not short of it. */
+[data-tool="icon-library"] .tool-filters {
+  padding-bottom: var(--space-l);
+}
+
+[data-tool="icon-library"] .tool-search {
+  padding-inline: var(--tool-filters-inset);
+}
+
+/* -- Category chips --
+   One line of the system's chips in the engine's .scroller (design-system
+   §28, scroller.js), every category a single press away. Here the row runs
+   edge to edge of the panel, so a chip slides out under the panel's edge:
+   its inline padding is the filters' inset instead of the scroller's ring
+   room, and it takes no pull-back margin. */
+[data-tool="icon-library"] .scroller {
+  padding-inline: var(--tool-filters-inset);
+  margin-inline: 0;
+}
+
+/* -- Preview --
+   The layout — the stage, the Details and Preview corners, the scale note —
+   and the ink they share are the canvas's (tools.css, Preview corners). What
+   is here is the icon: drawn at the export size until the stage's height
+   bites, and the scale note says so. The colour arrives as --il-colour from
+   the script (export hex, see the header note); the size as --il-size. The
+   ground is the band's own data-ground, set by the script from the colour
+   and the Transparent switch. */
+/* Taller than the canvas default: the corners and the scale note take their
+   room from the band, and the icon still needs its 8rem. */
+[data-tool="icon-library"] .tool-preview {
+  --tool-preview-height: clamp(16rem, 34vh, 22rem);
+}
+
+/* One track of the box's own height: an implicit row sizes to its content,
+   which leaves the icon's 100% below with nothing definite to resolve
+   against, so a short band drew it at the 8rem floor and out of the box. */
+[data-tool="icon-library"] .tool-icon-preview {
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--il-colour, currentColor);
+}
+
+/* Height-driven: the band is wider than it is tall, so the height is the
+   constraint that bites first, and the wrapper's own aspect ratio gives the
+   width. Drawn at the export size, but never under 8rem — a 24px icon in a
+   12rem band is a speck, and an SVG loses nothing scaled up — and never
+   over the stage. Either way the scale note says at what percentage. */
+[data-tool="icon-library"] .tool-icon-preview .svg-icn {
+  height: min(max(var(--il-size, 1.5rem), 8rem), 100%);
+  width: auto;
+  --icon-trim: 0;
+}
+
+/* Fill: the drawing as large as the stage allows, whatever the export size,
+   for inspecting it rather than judging its size. The stage's own padding
+   still keeps it clear of the corners and the note, and the note still says
+   how far it is enlarged. */
+[data-tool="icon-library"] .tool-icon-preview[data-scale="fill"] .svg-icn {
+  height: 100%;
+}
+
+/* The count sits beside the title in the panel header; the global paragraph
+   margin would centre its margin box and float the text above the title's
+   centre line. */
+[data-tool="icon-library"] .tool-count {
+  margin: 0;
+  text-align: end;
+}
+
+/* -- Grid -- */
+/* auto-fill, not auto-fit: a filtered result of three icons keeps its column
+   width instead of stretching three tiles across the page. The gap is wide
+   enough for a tile's focus ring to sit in the gutter. The track is narrow
+   because a tile carries no caption, so its width is the drawing's, not a
+   word's. */
+[data-tool="icon-library"] .tool-icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4rem, 1fr));
+  gap: var(--space-xs);
+  /* The tooltip bubble is opacity: 0, not display: none, so its box exists
+     at every moment and the last column's hangs past the panel's edge. clip,
+     not hidden: it never creates a scroll container, and the clip margin is
+     wide enough that an edge tile's tooltip is still drawn in full. */
+  overflow-x: clip;
+  overflow-clip-margin: 8rem;
+}
+
+/* Empty state swaps via a state class: the grid and the callout leave
+   together and the message takes their place (the count is in the panel
+   header, outside this, and stays blank on the empty-state paths). The message block itself is
+   the one thing toggled with [hidden], after init has settled. */
+[data-tool="icon-library"] .tool-browse.is-empty > :not(.tool-empty) {
+  display: none;
+}
+
+/* With no icons there is nothing to preview or export: the band — its
+   Details, its switches, its scale note and the dock toggle — the settings
+   dock, the search and the bar's menu go too, rather than standing live
+   around nothing. Read from the same state class through :has(), so the
+   script still sets one. */
+[data-tool="icon-library"] .tool-canvas:has(.tool-browse.is-empty) > .tool-preview,
+[data-tool="icon-library"] .tool-canvas:has(.tool-browse.is-empty) > .tool-dock[data-edge="end"],
+[data-tool="icon-library"] .tool-canvas:has(.tool-browse.is-empty) .tool-filters,
+[data-tool="icon-library"] .tool-canvas:has(.tool-browse.is-empty) .bar-group,
+[data-tool="icon-library"] .tool-canvas:has(.tool-browse.is-empty) .bar-overflow {
+  display: none;
+}
+
+/* Placed, the grid still holds a column and a row for what went: the
+   message takes the canvas under the bar instead. Later than tools.css at
+   the same weight, so this wins. */
+@container main-content (min-width: 960px) {
+  [data-tool="icon-library"] .tool-canvas:has(.tool-browse.is-empty) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "bar" "bottom" "footer";
+  }
+}
+
+/* -- Tile --
+   A bare <button> (the base reset, not .button): a tile is a picture, not a
+   labelled action. Its name lives in aria-label and data-tooltip, so the
+   drawing is the whole visible tile. Selection is aria-current, keyed
+   directly so the class and the attribute cannot desync — pressing the
+   selected tile again does nothing, which is why it is not aria-pressed.
+
+   The tooltip is below the tile: the grid's first row sits at the top of a
+   panel body that is a scroll container in the canvas's fixed mode, and a
+   scroll container clips a bubble drawn past its top edge.
+
+   scroll-margin keeps a tile that focus lands on clear of the docked bar in
+   page-scroll mode: a tile already inside the viewport does not scroll on
+   focus, so without the margin it can gain focus underneath the bar. */
+/* The tile is a bare .tool-tile (tools.css): no border at rest, a hundred
+   outlines would be noise. Bigger icon than an inline one, because here the
+   drawing is the content rather than a mark beside a word. */
+[data-tool="icon-library"] .tool-tile {
+  min-height: var(--target-min);
+}
+
+[data-tool="icon-library"] .tool-tile .svg-icn {
+  --icon-size: var(--icon-size-l);
+}
+
+/* -- Touch --
+   The tooltip is the tile's only visible name, and it needs hover, which a
+   touch screen does not have: without this a reader on a phone has no route
+   to a name but tapping all 176. The caption comes back where the pointer
+   cannot ask for it, and the tile gives up its square to make room. */
+@media (hover: none) {
+  [data-tool="icon-library"] .tool-tile {
+    aspect-ratio: auto;
+    gap: var(--space-2xs);
+    font-size: var(--font-2xs);
+    line-height: var(--line-height-l);
+    text-align: center;
+  }
+
+  [data-tool="icon-library"] .tool-tile::after {
+    content: attr(aria-label);
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    color: var(--text-secondary);
+  }
+}
+
+/* -- Forced colours --
+   The preview keeps its own colours for the same reason the swatch fill
+   does. The selected tile's ring is the tile's own (tools.css, Tile). */
+@media (forced-colors: active) {
+  [data-tool="icon-library"] .tool-icon-preview {
+    forced-color-adjust: none;
+  }
+}
+
+/* -- Guides --
+   The icon spec's layers (tools.css, Layer stack), over the icon in its own
+   viewBox: the overlay fills the icon's wrapper, so it scales with the
+   drawing. Preview only. */
+[data-tool="icon-library"] .tool-icon-preview .svg-icn {
+  position: relative;
+}
+

@@ -1,0 +1,444 @@
+/* ------ ASSET LIBRARY STYLES ------ */
+/*
+  Layer: app. A tool on the shared canvas (tools.css, Docks; cms/tool-canvas.md)
+  with the grid as the work: the preview holds the filters and the files and
+  fills the canvas, the chosen file's details sit in the pinned end dock, and
+  the preview overlay covers the work — filters and grid. The shell, dock and panel rules
+  are the canvas's own; what is here is the tool's. Classes name the
+  component, never the tool (tool-<noun>, cms/tool-canvas.md Naming), and
+  every rule is scoped to [data-tool="asset-library"] because this file
+  loads on every page (extraStylesheets, cms/docs.config.js).
+
+  Focus rings read --focus-width and --focus-offset. The grounds (light,
+  dark, the checkerboard) are the canvas's (tools.css, Grounds), read from
+  data-ground on the thumb and the preview's picture.
+*/
+
+/* -- Filters --
+   The search band, the rule under the filters, the region and the grid are
+   tools.css's (Browse), shared with the Format Library. What is here: the
+   filters on in the search field, and the four categories with the open
+   one's row of options (owner's Figma, 2026-10-08). */
+/* The filters that are on, at the end of the field after the text: a word
+   the library recognised, an option pressed, a tag from the dock, each a
+   removable tag (the Tag doc's active-filter pattern). While there are any
+   the field wraps, so a narrow field puts them on a line under the text
+   rather than clipping a tag or its remove button; the input keeps a
+   usable width either way. The group's block padding keeps a wrapped line
+   of them off the edge; on the input's line it fits inside the field's
+   height, so a tag arriving never moves the field or anything under it. */
+[data-tool="asset-library"] .tool-search .field:has(> .tool-applied:not([hidden])) {
+  flex-wrap: wrap;
+  row-gap: var(--space-xs);
+}
+
+[data-tool="asset-library"] .tool-applied {
+  flex: 0 1 auto;
+  align-self: center;
+  justify-content: flex-end;
+  min-width: 0;
+  padding-block: var(--space-xs);
+  padding-inline-start: var(--space-s);
+}
+
+/* An applied filter in the search field: the full-size close and a tighter
+   end, and the whole tag takes it off (the remove button is the named
+   control a keyboard reaches), so it answers the pointer like a button. */
+[data-tool="asset-library"] .tool-applied .tag {
+  --tag-padding-end: var(--space-s);
+  --tag-remove-icon-size: var(--tag-icon-size);
+  --tag-remove-opacity: 1;
+  cursor: pointer;
+  transition: background-color var(--duration-2xs) var(--ease-out);
+}
+
+[data-tool="asset-library"] .tool-applied .tag:hover {
+  --tag-bg: var(--tag-bg-hover);
+}
+
+/* The four categories: equal boxes on one row, the open one drawn in the
+   ink at the heavier border. Not the Tabs component's look (owner,
+   2026-10-08: no underline), only its keyboard, from tabs.js, which keys on
+   the roles. The open edge is 2px, the border and an inset shadow of the
+   same width, so nothing shifts and it reads on a standard screen, where
+   the Figma's 1.5px would round to the others' 1px. Two by two below a
+   440px container, where four would spill "Project". */
+[data-tool="asset-library"] .tool-categories {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--space-m);
+}
+
+[data-tool="asset-library"] .tool-category {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: var(--target-min);
+  padding-inline: var(--space-s);
+  border: var(--border-s) solid var(--border-faded);
+  border-radius: var(--radius-control);
+  font-size: var(--font-m);
+  color: var(--text-primary);
+  white-space: nowrap;
+  transition: border-color var(--duration-2xs) var(--ease-out);
+}
+
+[data-tool="asset-library"] .tool-category:hover {
+  border-color: var(--border-secondary);
+}
+
+[data-tool="asset-library"] .tool-category.is-active {
+  border-color: var(--border-primary);
+  box-shadow: inset 0 0 0 var(--border-s) var(--border-primary);
+}
+
+@container main-content (max-width: 440px) {
+  [data-tool="asset-library"] .tool-categories {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-s);
+  }
+}
+
+/* The open category's options: one line of filter tags in the engine's
+   .scroller (design-system §28), which keeps the ring room and the tags'
+   line itself. */
+
+/* -- Bar --
+   The narrowest phones: the title, Add new, the overflow and the close no
+   longer fit in one row. The button sheds its words and stays named,
+   clipped rather than removed, with the .visually-hidden declarations (a
+   utility class cannot be applied from a media query) — Layout Specs' cut
+   on New spec. */
+@media (max-width: 480px) {
+  [data-tool="asset-library"] .tool-add-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+/* -- Head --
+   Over the files, scrolling with them: the count at the start, the view
+   control at the end. */
+[data-tool="asset-library"] .tool-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-m);
+}
+
+/* The count shares the head with the view control: it gives way first.
+   Its size and weight are tools.css's (Browse). */
+[data-tool="asset-library"] .tool-count {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+[data-tool="asset-library"] .tool-view {
+  flex: 0 0 auto;
+}
+
+[data-tool="asset-library"] .tool-view .svg-icn {
+  --icon-trim: 0;
+}
+
+/* -- Tile --
+   The design system's book surfaces on a bare <button>, swapped with the
+   view by the script (TILE_CLASSES): in the grid a media cover
+   (.book-cover[data-variant="media"]) — the picture across the top, the
+   name and type under it, the shelf's border, ground, hover and dark mode;
+   in the list a contents row (.book-contents-item) inside a .book-contents
+   frame. The name is the accessible name. What is here is the tool's:
+   the components' tokens re-pointed to a tile's scale (§17 Rule 3) and
+   the focus ring clear of the tile. The cover's hover for a <button> and
+   the selected ring (aria-current) are the Book component's.
+   content-visibility keeps a thousand tiles cheap to paint; the intrinsic
+   size is a tile's typical height so the scrollbar does not jump. */
+[data-tool="asset-library"] .tool-file {
+  min-width: 0;
+  text-align: start;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 14rem;
+  scroll-margin-top: var(--scroll-offset);
+}
+
+/* A smaller caption than a shelf cover's. The cover itself, a <button>
+   here, takes its hover, focus, stretch and selected ring from the Book
+   component. */
+[data-tool="asset-library"] .tool-file[data-variant="media"] {
+  --book-cover-title-size: var(--font-m);
+  --book-cover-body-padding: var(--space-m);
+}
+
+[data-tool="asset-library"] .tool-file-body {
+  --al-open-size: var(--icon-size-s);
+  position: relative;
+  gap: var(--space-2xs);
+}
+
+[data-tool="asset-library"] .tool-file-title,
+[data-tool="asset-library"] .tool-file-meta {
+  overflow-wrap: anywhere;
+  padding-inline-end: calc(var(--al-open-size) + var(--space-s));
+}
+
+/* Open full: the hint that the tile opens large, the preview's close-full
+   in reverse, in the caption's top end. Like the shelf's trailing icon it
+   shows on hover and focus, and it stays on the selected tile, which is
+   the one a reader is about to open. A click on it opens at once (the
+   script's handleGridClick); it is part of the button, not a control. */
+[data-tool="asset-library"] .tool-file-open {
+  --icon-size: var(--al-open-size);
+  position: absolute;
+  top: var(--book-cover-body-padding, var(--space-m));
+  inset-inline-end: var(--book-cover-body-padding, var(--space-m));
+  margin: 0;
+  opacity: 0;
+  transition: opacity var(--duration-xs) var(--ease-out);
+}
+
+[data-tool="asset-library"] .tool-file:hover .tool-file-open,
+[data-tool="asset-library"] .tool-file:focus-visible .tool-file-open,
+[data-tool="asset-library"] .tool-file[aria-current="true"] .tool-file-open {
+  opacity: 1;
+}
+
+/* A row's caption is its height: the hint sits on its end, centred. */
+[data-tool="asset-library"] .tool-file.book-contents-item .tool-file-open {
+  top: 50%;
+  inset-inline-end: 0;
+  translate: 0 -50%;
+}
+
+@media (hover: none) {
+  [data-tool="asset-library"] .tool-file-open {
+    display: none;
+  }
+}
+
+/* List: the contents frame, its rows ruled and flush, no gap between them;
+   each row the picture at a fixed width, then the name and type. */
+[data-tool="asset-library"] .tool-files[data-view="list"] {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+[data-tool="asset-library"] .tool-file.book-contents-item {
+  --book-contents-item-padding: var(--space-s) var(--space-m) var(--space-s) var(--space-s);
+  --book-contents-item-gap: var(--space-m);
+  --book-contents-item-title-size: var(--font-m);
+  justify-content: flex-start;
+  contain-intrinsic-size: auto 5.5rem;
+}
+
+[data-tool="asset-library"] .tool-files[data-view="list"] .tool-thumb {
+  flex: 0 0 6rem;
+  width: 6rem;
+  border: var(--border-s) solid var(--border-faded);
+}
+
+/* A row's picture is small, so a type icon in it is small too, and the
+   extension badge would sit on it: the Format row in the dock says it. */
+[data-tool="asset-library"] .tool-files[data-view="list"] .tool-thumb .svg-icn {
+  --icon-size: var(--icon-size-m);
+}
+
+[data-tool="asset-library"] .tool-files[data-view="list"] .tool-thumb-badge {
+  display: none;
+}
+
+/* The picture box: the rendition on its own ground — light and dark are the
+   non-flipping pair, the checkerboard the convention for nothing behind
+   (tools.css, Grounds) — with the ThumbHash under it until the WebP lands.
+   The hash arrives from the script as --al-placeholder; cover, not contain,
+   because it is a blur of the whole picture. On a cover it runs edge to
+   edge across the top and is ruled off from the caption, as the cover's
+   own media slot is. The type icon and the badge take the ground's ink,
+   --ground-ink (tools.css, Grounds), since the ground does not follow the
+   theme. */
+[data-tool="asset-library"] .tool-thumb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-bottom: var(--border-s) solid var(--border-faded);
+  background-image: var(--al-placeholder, none);
+  background-size: cover;
+  background-position: center;
+}
+
+[data-tool="asset-library"] .tool-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* A file with transparency — a logo, a cutout — stands clear of the edges
+   so its ground reads as a ground; a photo fills the box. */
+[data-tool="asset-library"] .tool-thumb[data-alpha] img {
+  padding: var(--space-m);
+}
+
+[data-tool="asset-library"] .tool-thumb .svg-icn {
+  --icon-size: var(--icon-size-xl);
+  --icon-trim: 0;
+  color: var(--ground-ink);
+}
+
+/* The extension, on a tile that has no picture to say what it is. */
+[data-tool="asset-library"] .tool-thumb-badge {
+  /* The core badge (design-system.css, Badge) on the thumbnail's ground,
+     which does not follow the site theme: its ink and a tint of it, from
+     the ground's own --ground-ink (owner, 2026-10-13). */
+  --badge-bg: color-mix(in srgb, var(--ground-ink), transparent 88%);
+  --badge-color: var(--ground-ink);
+  position: absolute;
+  right: var(--space-s);
+  bottom: var(--space-s);
+}
+
+[data-tool="asset-library"] .tool-thumb-badge:empty {
+  display: none;
+}
+
+/* Focus: the system's 2px ring, 2px clear of the tile, so it reads the
+   same as every other tile and control on the canvas. In the list too:
+   outlines paint above the neighbouring rows, and outside the row it never
+   sits where the selected ring does. */
+[data-tool="asset-library"] .tool-file:focus-visible {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
+}
+
+/* Selected: the Book component's ring (aria-current="true"). The name
+   keeps its weight, since a heavier one rewraps the caption and shifts the
+   tile (owner, 2026-10-07). */
+
+/* -- No match and empty --
+   The callout is not live and never takes focus; the count's spoken text
+   carries the way out. Its action sits under the description, in the
+   Callout's own actions row. */
+
+/* With nothing to show, the region swaps to the message and everything
+   that would act on a file goes with it: the filters, the dock, the bar's
+   menu. Read from one state class through :has(). The message lives
+   inside the scroller, so the scroller stays and its other children go. */
+[data-tool="asset-library"] .tool-region.is-empty > :not(.tool-browse),
+[data-tool="asset-library"] .tool-region.is-empty .tool-browse > :not(.tool-empty) {
+  display: none;
+}
+
+[data-tool="asset-library"] .tool-canvas:has(.tool-region.is-empty) > .tool-dock[data-edge="end"],
+[data-tool="asset-library"] .tool-canvas:has(.tool-region.is-empty) .tool-filters,
+[data-tool="asset-library"] .tool-canvas:has(.tool-region.is-empty) .bar-group,
+[data-tool="asset-library"] .tool-canvas:has(.tool-region.is-empty) .bar-overflow {
+  display: none;
+}
+
+@container main-content (min-width: 960px) {
+  [data-tool="asset-library"] .tool-canvas:has(.tool-region.is-empty) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "bar" "preview" "bottom" "footer";
+  }
+}
+
+/* -- Preview overlay --
+   The shared viewer is the canvas's (tools.css, Viewer). What is here is
+   the Asset Library's own stage content: the file's picture and its
+   fallback. */
+[data-tool="asset-library"] .tool-viewer-img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-surface);
+}
+
+[data-tool="asset-library"] .tool-viewer-img[data-alpha] {
+  padding: var(--space-xl);
+}
+
+[data-tool="asset-library"] .tool-viewer-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-s);
+  padding: var(--space-2xl);
+  color: var(--text-primary);
+  background-color: var(--background-primary);
+  border-radius: var(--radius-surface);
+}
+
+[data-tool="asset-library"] .tool-viewer-fallback .svg-icn {
+  --icon-size: var(--icon-size-2xl);
+  --icon-trim: 0;
+  color: var(--text-secondary);
+}
+
+[data-tool="asset-library"] .tool-viewer-fallback p {
+  margin: 0;
+}
+
+/* -- Dock: the chosen file --
+   Two panes: the name, note and licence, then the file details. Placed,
+   the first keeps its height and the details pane takes the rest,
+   scrolling on its own (owner, 2026-10-07); stacked, both run at their
+   natural height. The verbs are the canvas's .tool-actions.
+   The title is a .tool-selected (tools.css). */
+@container main-content (min-width: 960px) {
+  /* The column scrolls as a last resort: a long name, note and licence on
+     a short window would otherwise push the details under the verbs. */
+  [data-tool="asset-library"] .tool-dock[data-edge="end"] > .tool-file-panels {
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow-y: auto;
+  }
+
+  [data-tool="asset-library"] .tool-facts {
+    min-height: 0;
+  }
+
+  [data-tool="asset-library"] .tool-facts > .tool-panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+[data-tool="asset-library"] .tool-file-details p {
+  margin: 0;
+}
+
+/* A file with no note and no licence line leaves the first pane its name
+   alone; its empty body would be a padded strip above the rule. */
+[data-tool="asset-library"] .tool-file-details:not(:has(> :not([hidden]))) {
+  display: none;
+}
+
+/* Stacked, the rows narrow their padding as the panels do (tools.css,
+   Stacked). */
+
+/* -- Forced colours --
+   A ring drawn with box-shadow vanishes; the outline and the border stay. */
+@media (forced-colors: active) {
+  /* The inset shadow goes; an outline inside the border keeps the open
+     category's 2px edge, in Highlight. */
+  [data-tool="asset-library"] .tool-category.is-active {
+    border-color: Highlight;
+    outline: var(--border-s) solid Highlight;
+    outline-offset: calc(-2 * var(--border-s));
+  }
+}

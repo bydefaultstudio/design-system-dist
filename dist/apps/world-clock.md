@@ -1,0 +1,21 @@
+---
+title: "World Clock"
+description: "Configure a multi-timezone clock and embed it in Notion, dashboards, or any HTML page."
+author: "Studio"
+section: "Tools"
+layer: "app"
+type: "tool"
+order: 12
+status: "stable"
+access: "public"
+brand: "internal"
+sidebar: "collapsed"
+version: "2.2.0"
+package: "utilities"
+guide: "world-clock-docs.md"
+embed: "/tools/world-clock-embed.html"
+needs: "tools, tool-canvas"
+scripts: "assets/js/world-clock.js"
+styles: "assets/css/world-clock.css"
+files: "assets/js/world-clock-core.js, tools/world-clock-embed.html"
+---

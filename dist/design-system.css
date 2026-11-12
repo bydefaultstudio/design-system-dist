@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.1 */
+/* @bydefaultstudio/design-system v8.0.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -572,7 +572,35 @@
   /* -- Dialog tokens -- */
   --dialog-max-width: 560px;
 
-  /* -- Slider tokens removed — uses semantic tokens directly -- */
+  /* -- Slider tokens --
+     The house slider. A brand sets these once in theme.css and every slider
+     follows; data-variant="pill|square|needle" re-points them for one slider.
+     Pill is the default below. The thumb is a box --slider-thumb-size wide
+     (not set: as wide as the track is tall), painted inside a transparent
+     border of the two insets, so one rule draws a disc, a bar or a needle.
+     Values that depend on the track's height are worked out on .slider,
+     where a compact track can still change them. */
+  --slider-height: var(--space-xl);
+  --slider-height-compact: var(--space-2xl);
+  --slider-track: var(--bg-faded-10);
+  --slider-fill: var(--text-primary);
+  /* What sits on the fill: the thumb, filled stops, Compact text. */
+  --slider-on-fill: var(--background-primary);
+  --slider-radius: var(--radius-full);
+  --slider-thumb-color: var(--slider-on-fill);
+  /* The edge round the thumb's paint. In the fill's colour on a pill, so the
+     fill stops at the thumb's centre and the ring rounds its end off. */
+  --slider-thumb-ring: var(--slider-fill);
+  /* How much of the thumb's box the painted fill stops short of: half for a
+     pill (the ring finishes it), none for a square or a needle. */
+  --slider-fill-trim: 0.5;
+  --slider-thumb-radius: var(--radius-full);
+  --slider-thumb-inset-block: var(--space-2xs);
+  --slider-thumb-inset-inline: var(--space-2xs);
+  /* How far the thumb reaches past the track, top and bottom together. */
+  --slider-thumb-overhang: 0px;
+  --slider-stop-size: var(--space-xs);
+  --slider-tick-length: var(--space-s);
 
   /* -- Rating tokens -- */
   --rating-size: 1.5rem;
@@ -7379,7 +7407,10 @@ html:has(.drawer[open]) {
 
 /* ------ 31. SLIDER ------ */
 
-input[type="range"] {
+/* -- Bare range input --
+   A plain input[type="range"] with no slider round it. :where() keeps these
+   rules off .slider-input, so the component never has to undo them. */
+input[type="range"]:where(:not(.slider-input)) {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
@@ -7393,7 +7424,7 @@ input[type="range"] {
   display: block;
 }
 
-input[type="range"]::-webkit-slider-thumb {
+input[type="range"]:where(:not(.slider-input))::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 18px;
@@ -7406,7 +7437,7 @@ input[type="range"]::-webkit-slider-thumb {
   transition: transform var(--motion-feedback-press-duration) var(--motion-feedback-press-easing), box-shadow var(--motion-feedback-press-duration) var(--motion-feedback-press-easing);
 }
 
-input[type="range"]::-moz-range-thumb {
+input[type="range"]:where(:not(.slider-input))::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
@@ -7416,44 +7447,355 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 1px 4px var(--black-alpha-20);
 }
 
-input[type="range"]:hover::-webkit-slider-thumb {
+input[type="range"]:where(:not(.slider-input)):hover::-webkit-slider-thumb {
   transform: scale(1.1);
   box-shadow: 0 2px 8px var(--black-alpha-20);
 }
 
-input[type="range"]:focus-visible {
+input[type="range"]:where(:not(.slider-input)):focus-visible {
   outline: var(--focus-width) solid var(--input-focus);
   outline-offset: var(--focus-offset);
   border-radius: var(--radius-full);
 }
 
-input[type="range"]:disabled {
+input[type="range"]:where(:not(.slider-input)):disabled {
   opacity: var(--opacity-disabled);
   cursor: not-allowed;
 }
 
-input[type="range"]:disabled::-webkit-slider-thumb {
+input[type="range"]:where(:not(.slider-input)):disabled::-webkit-slider-thumb {
   cursor: not-allowed;
 }
 
+/* -- Legacy wrapper --
+   The old markup: .slider-wrapper > .slider-header + bare input. Deprecated;
+   kept until the next major so a site that has not moved to .slider keeps
+   its layout. */
 .slider-wrapper {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
 }
 
-.slider-header {
-  display: flex;
+.slider-wrapper .slider-header {
   justify-content: space-between;
-  align-items: baseline;
   font-size: var(--font-s);
   color: var(--text-primary);
 }
 
-.slider-value {
+.slider-wrapper .slider-value {
   font-family: var(--font-quaternary);
   font-size: var(--font-xs);
   color: var(--text-faded);
+}
+
+/* -- Slider --
+   A label and value always in view over a native range input. The look
+   comes from the --slider-* tokens in :root. Per slider:
+     data-variant="pill|square|needle"   one slider in a style other than
+                                         the house one
+     data-layout="compact"               label and value inside the track
+     data-stops                          slider.js draws the stops
+   The fill is painted on the track from --slider-value (0 to 1), which
+   slider.js keeps in step with the input. Without the script the input still
+   works; only the fill and the readout stay at their first value. */
+.slider {
+  /* The thumb's box. Native thumbs travel from half their width in, so
+     every position below is measured from it. */
+  --slider-thumb-width: var(--slider-thumb-size, var(--slider-height));
+  --slider-thumb-height: calc(var(--slider-height) + var(--slider-thumb-overhang));
+  --slider-value: 0;
+  /* Where the fill ends: the thumb's far edge. */
+  --slider-fill-to: calc(var(--slider-thumb-width) + var(--slider-value) * (100% - var(--slider-thumb-width)));
+  --slider-direction: 90deg;
+
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+/* A native range runs from the inline start, so in RTL the fill does too. */
+.slider:dir(rtl) {
+  --slider-direction: -90deg;
+}
+
+.slider[data-variant="pill"] {
+  --slider-track: var(--bg-faded-10);
+  --slider-fill: var(--text-primary);
+  --slider-on-fill: var(--background-primary);
+  --slider-radius: var(--radius-full);
+  --slider-thumb-size: initial;
+  --slider-thumb-color: var(--background-primary);
+  --slider-thumb-ring: var(--slider-fill);
+  --slider-fill-trim: 0.5;
+  --slider-thumb-radius: var(--radius-full);
+  --slider-thumb-inset-block: var(--space-2xs);
+  --slider-thumb-inset-inline: var(--space-2xs);
+  --slider-thumb-overhang: 0px;
+}
+
+.slider[data-variant="square"] {
+  --slider-track: var(--bg-faded-5);
+  --slider-fill: var(--text-primary);
+  --slider-on-fill: var(--background-primary);
+  --slider-radius: var(--radius-control);
+  --slider-thumb-size: var(--space-l);
+  --slider-thumb-color: var(--background-primary);
+  --slider-thumb-ring: transparent;
+  --slider-fill-trim: 0;
+  --slider-thumb-radius: var(--radius-full);
+  --slider-thumb-inset-block: calc(var(--space-s) / 2);
+  --slider-thumb-inset-inline: calc((var(--space-l) - var(--border-l)) / 2);
+  --slider-thumb-overhang: 0px;
+}
+
+.slider[data-variant="needle"] {
+  --slider-track: var(--bg-faded-5);
+  --slider-fill: var(--bg-faded-10);
+  --slider-on-fill: var(--text-primary);
+  --slider-radius: var(--radius-control);
+  --slider-thumb-size: var(--space-xs);
+  --slider-thumb-color: var(--text-primary);
+  --slider-thumb-ring: transparent;
+  --slider-fill-trim: 0;
+  --slider-thumb-radius: var(--radius-full);
+  --slider-thumb-inset-block: 0px;
+  --slider-thumb-inset-inline: 0px;
+  --slider-thumb-overhang: var(--space-s);
+}
+
+.slider[data-layout="compact"] {
+  --slider-height: var(--slider-height-compact);
+}
+
+.slider-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-s);
+}
+
+.slider-label,
+.slider .slider-value {
+  margin: 0;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.slider .slider-value {
+  margin-inline-start: auto;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.slider-control {
+  position: relative;
+  display: grid;
+  align-items: center;
+}
+
+/* -- Input -- */
+.slider .slider-input {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: max(var(--slider-height), var(--slider-thumb-height));
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--slider-radius);
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider .slider-input::-webkit-slider-runnable-track {
+  height: var(--slider-height);
+  border-radius: var(--slider-radius);
+  background: linear-gradient(var(--slider-direction), var(--slider-fill) calc(var(--slider-fill-to) - var(--slider-thumb-width) * var(--slider-fill-trim)), transparent 0), var(--slider-track);
+}
+
+.slider .slider-input::-moz-range-track {
+  height: var(--slider-height);
+  border-radius: var(--slider-radius);
+  background: linear-gradient(var(--slider-direction), var(--slider-fill) calc(var(--slider-fill-to) - var(--slider-thumb-width) * var(--slider-fill-trim)), transparent 0), var(--slider-track);
+}
+
+/* One rule for every style: the thumb's box, with its colour painted inside
+   a border of the two insets. Pill: a disc in a ring of the fill's colour,
+   which rounds the fill's end. Square: a short bar. Needle: the whole box,
+   taller than the track. */
+.slider .slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: var(--slider-thumb-width);
+  height: var(--slider-thumb-height);
+  margin-top: calc((var(--slider-height) - var(--slider-thumb-height)) / 2);
+  border-style: solid;
+  border-color: var(--slider-thumb-ring);
+  border-width: var(--slider-thumb-inset-block) var(--slider-thumb-inset-inline);
+  border-radius: var(--slider-thumb-radius);
+  background: var(--slider-thumb-color) padding-box;
+}
+
+.slider .slider-input::-moz-range-thumb {
+  box-sizing: border-box;
+  width: var(--slider-thumb-width);
+  height: var(--slider-thumb-height);
+  border-style: solid;
+  border-color: var(--slider-thumb-ring);
+  border-width: var(--slider-thumb-inset-block) var(--slider-thumb-inset-inline);
+  border-radius: var(--slider-thumb-radius);
+  background: var(--slider-thumb-color) padding-box;
+}
+
+/* The ring goes round the input itself: every engine draws an outline on an
+   input, and the input's box is the track (taller for a needle, so the ring
+   clears its ends). */
+.slider .slider-input:focus-visible {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.slider:has(.slider-input:disabled) {
+  opacity: var(--opacity-disabled);
+}
+
+.slider .slider-input:disabled {
+  cursor: not-allowed;
+}
+
+/* -- Stops --
+   Drawn by slider.js, one per value the thumb can land on, placed on the
+   thumb's path so each sits under the thumb at its value. */
+.slider-stops {
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 0;
+  pointer-events: none;
+}
+
+.slider-stop {
+  position: absolute;
+  inset-inline-start: calc(var(--slider-thumb-width) / 2 + var(--slider-stop-at) * (100% - var(--slider-thumb-width)));
+  width: var(--slider-stop-size);
+  height: var(--slider-stop-size);
+  margin-block-start: calc(var(--slider-stop-size) / -2);
+  margin-inline-start: calc(var(--slider-stop-size) / -2);
+  border-radius: var(--radius-full);
+  background: var(--text-secondary);
+}
+
+.slider-stop.is-filled {
+  background: var(--slider-on-fill);
+}
+
+.slider-stop.is-active {
+  visibility: hidden;
+}
+
+/* -- Compact --
+   The header sits on the track. Its text is painted with the fill's edge:
+   the part of a word over the fill takes --slider-on-fill, the part over the
+   thumb and the empty track takes ink. The gradient covers the track's
+   height only, so a label that wraps past the track stays ink. */
+.slider[data-layout="compact"] .slider-header,
+.slider[data-layout="compact"] .slider-control {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.slider[data-layout="compact"] .slider-header {
+  z-index: 1;
+  align-self: center;
+  padding-inline: var(--space-m);
+  pointer-events: none;
+  background:
+    linear-gradient(var(--slider-direction),
+      var(--slider-on-fill) calc(var(--slider-fill-to) - var(--slider-thumb-width) + var(--slider-thumb-inset-inline)),
+      var(--text-primary) 0 calc(var(--slider-fill-to) - var(--slider-thumb-inset-inline)),
+      var(--slider-on-fill) 0 var(--slider-fill-to),
+      var(--text-primary) 0) center / 100% var(--slider-height) no-repeat,
+    linear-gradient(var(--text-primary), var(--text-primary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.slider[data-layout="compact"] .slider-label,
+.slider[data-layout="compact"] .slider-value {
+  color: inherit;
+}
+
+/* -- Scale --
+   Under the track. End labels name each end; ticks are a ruler, not steps.
+   data-variant="labels" puts one label under each stop instead. */
+.slider-scale {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  font-size: var(--font-2xs);
+  color: var(--text-secondary);
+}
+
+.slider-ticks {
+  --slider-tick-count: 20;
+  flex: 1;
+  height: var(--slider-tick-length);
+  background:
+    linear-gradient(90deg, var(--border-faded) var(--border-s), transparent 0) 0 0 / calc((100% - var(--border-s)) / var(--slider-tick-count)) 100% repeat-x,
+    linear-gradient(90deg, var(--border-faded) var(--border-s), transparent 0) 100% 0 / var(--border-s) 100% no-repeat;
+}
+
+.slider-scale[data-variant="labels"] {
+  justify-content: space-between;
+  gap: 0;
+  padding-inline: calc(var(--slider-thumb-width) / 2);
+}
+
+.slider-scale[data-variant="labels"] > * {
+  display: flex;
+  flex: 0 0 0;
+  width: 0;
+  min-width: 0;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* -- Forced colours --
+   Backgrounds and gradients are dropped, which would take the track, the
+   fill and two of the three thumbs with them. The edge, thumb and stops are
+   drawn in system colours instead; the thumb's place carries the value. */
+@media (forced-colors: active) {
+  .slider .slider-input::-webkit-slider-runnable-track {
+    outline: var(--border-s) solid CanvasText;
+    outline-offset: calc(var(--border-s) * -1);
+  }
+
+  .slider .slider-input::-moz-range-track {
+    outline: var(--border-s) solid CanvasText;
+    outline-offset: calc(var(--border-s) * -1);
+  }
+
+  .slider .slider-input::-webkit-slider-thumb {
+    forced-color-adjust: none;
+    border-color: transparent;
+    background: CanvasText padding-box;
+  }
+
+  .slider .slider-input::-moz-range-thumb {
+    forced-color-adjust: none;
+    border-color: transparent;
+    background: CanvasText padding-box;
+  }
+
+  .slider-stop,
+  .slider-stop.is-filled {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
 }
 
 
@@ -10788,14 +11130,19 @@ section[id] {
   text-align: center;
 }
 
+/* The slot is the logo's height, and never wider than the card: a long
+   wordmark at that height would overflow it, so it scales down to the width
+   instead (the SVG keeps its aspect ratio inside its box). */
 .login-logo {
   height: var(--login-logo-height);
+  max-width: 100%;
   color: var(--text-primary);
 }
 
 .login-logo svg {
   height: 100%;
   width: auto;
+  max-width: 100%;
 }
 
 /* Size and leading are fixed by the class; weight stays with the heading

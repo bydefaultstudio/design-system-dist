@@ -1,0 +1,203 @@
+/* ------ WORLD CLOCK TOOL STYLES ------ */
+/*
+  Layer: app. A tool on the shared canvas (tools.css, Tool canvas;
+  cms/tool-canvas.md), built from docks: the shell, the bar, the preview and
+  its grounds, the end dock, its sections and the pinned actions all come
+  from tools.css. What is here is the clock's own: the search results, the
+  city rows and their reorder states, the presets, the embed in the preview
+  and the snippet field. Classes name the component, never the tool
+  (tool-<noun>, cms/tool-canvas.md Naming), and every rule is scoped to
+  [data-tool="world-clock"] because this file loads on every page
+  (extraStylesheets, cms/docs.config.js), so an unscoped rule here reaches
+  all of them.
+*/
+
+/* -- Search --
+   The results sit in the flow under the field, not hung over the list. The
+   sections column is a scroll container when docked (cms/tool-canvas.md),
+   and a hung list is clipped by it while arrowing through it scrolls the
+   column instead — so the list pushes the cities down while it is open,
+   and the column's own scroll keeps the active row in view. */
+[data-tool="world-clock"] .tool-results {
+  margin-top: var(--space-xs);
+  /* Capped to the window too: on a short screen a 320px list ran off the
+     bottom. */
+  max-height: min(320px, 30vh);
+  overflow-y: auto;
+  background-color: var(--dropdown-background);
+  border: var(--border-s) solid var(--dropdown-border);
+  display: none;
+}
+
+[data-tool="world-clock"] .tool-results.is-open {
+  display: block;
+}
+
+/* An option, not a button: the input keeps focus and names the active row
+   through aria-activedescendant, so the row carries aria-selected. The popup
+   takes the dropdown's surface tokens, so it flips with the site theme the
+   way every other panel does. */
+[data-tool="world-clock"] .tool-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-m);
+  padding: var(--space-m) var(--space-l);
+  cursor: pointer;
+  font-size: var(--font-m);
+  color: var(--text-primary);
+  border-bottom: var(--border-s) solid var(--border-faded);
+  transition: background-color var(--duration-2xs) var(--ease-out);
+}
+
+[data-tool="world-clock"] .tool-result:last-child {
+  border-bottom: none;
+}
+
+[data-tool="world-clock"] .tool-result:hover,
+[data-tool="world-clock"] .tool-result[aria-selected="true"] {
+  background-color: var(--dropdown-item-hover);
+}
+
+/* The only mark of keyboard position — focus stays in the input — so it gets
+   an edge, not just a tint. Same treatment as the site search's active row. */
+[data-tool="world-clock"] .tool-result[aria-selected="true"] {
+  outline: var(--border-s) solid var(--border-control);
+  outline-offset: calc(var(--border-s) * -1);
+}
+
+[data-tool="world-clock"] .tool-result-meta {
+  font-size: var(--font-s);
+  color: var(--text-faded);
+  font-family: var(--font-quaternary);
+  flex-shrink: 0;
+}
+
+/* -- City list --
+   One row per city on the clock: the name at body size, its offset, and an
+   icon button to take it off. Rows rather than tags — a tag is sized for
+   metadata, and these are the clock's contents. */
+[data-tool="world-clock"] .tool-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* margin 0 cancels the prose rule li { margin-top } (design-system.css,
+   Lists): the list's gap is the only spacing between rows. */
+[data-tool="world-clock"] .tool-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-m);
+  margin: 0;
+  padding: var(--space-s);
+  background-color: var(--background-primary);
+  border: var(--border-s) solid var(--border-faded);
+  border-radius: var(--radius-surface);
+}
+
+/* -- Reorder --
+   The grip starts a drag; touch-action none so a finger on it drags the row
+   instead of scrolling the page. While sorting, the other rows glide aside;
+   the dragged one follows the pointer with no transition and sits above
+   them. */
+[data-tool="world-clock"] .tool-grip {
+  cursor: grab;
+  touch-action: none;
+}
+
+/* The grip is the brand menu icon, faded so the city name leads; it comes
+   up to full strength when it is being used. .button in the selector so it
+   outranks the transparent variant's own colour. */
+[data-tool="world-clock"] .tool-list .button.tool-grip {
+  color: var(--text-faded);
+}
+
+[data-tool="world-clock"] .tool-list .button.tool-grip:hover,
+[data-tool="world-clock"] .tool-list .button.tool-grip:focus-visible,
+[data-tool="world-clock"] .tool-list .is-open > .button.tool-grip,
+[data-tool="world-clock"] .tool-list .is-dragging .button.tool-grip {
+  color: var(--text-primary);
+}
+
+[data-tool="world-clock"] .tool-list.is-sorting {
+  user-select: none;
+}
+
+[data-tool="world-clock"] .tool-list.is-sorting .tool-grip {
+  cursor: grabbing;
+}
+
+[data-tool="world-clock"] .tool-list.is-sorting .tool-row {
+  transition: transform var(--duration-2xs) var(--ease-out);
+}
+
+[data-tool="world-clock"] .tool-list .tool-row.is-dragging {
+  position: relative;
+  z-index: 1;
+  transition: none;
+  outline: var(--border-s) solid var(--border-control);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-tool="world-clock"] .tool-list.is-sorting .tool-row {
+    transition: none;
+  }
+}
+
+[data-tool="world-clock"] .tool-row-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  /* --font-m, what the default .button resolves --button-text-size to, so a
+     name reads at the size of the preset buttons beside it. Not the button
+     token itself: it is declared on .button, not :root, and is undefined
+     here. */
+  font-size: var(--font-m);
+  color: var(--text-primary);
+}
+
+[data-tool="world-clock"] .tool-row-meta {
+  flex-shrink: 0;
+  font-size: var(--font-xs);
+  color: var(--text-faded);
+}
+
+/* -- Presets --
+   A vertical stack of full-width buttons, label to the left like the rows
+   beside them. */
+[data-tool="world-clock"] .tool-presets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+[data-tool="world-clock"] .tool-presets .button {
+  justify-content: flex-start;
+}
+
+/* -- Preview --
+   The embed's own background is transparent, so the preview's ground is the
+   surface it sits on, and that follows the clock's theme, not the site's:
+   world-clock.js sets data-ground="light" or "dark" (tools.css, Grounds).
+   Full width; the embed centres its own cards. 140px is the height the
+   embed snippet declares, so the preview is the embed at its real size.
+   color-scheme: light matches the embed document, which declares none — on
+   the dark site the iframe would otherwise inherit dark from :root, and a
+   scheme mismatch makes the browser paint an opaque white canvas behind the
+   transparent page. The copied snippet carries the same declaration, so a
+   host page in dark mode gets the same result. */
+[data-tool="world-clock"] .tool-preview iframe {
+  display: block;
+  width: 100%;
+  height: 140px;
+  border: none;
+  color-scheme: light;
+}
+
+/* -- Export --
+   The iframe snippet and the URL are .tool-code and a read-only input:
+   nothing of their own here. */

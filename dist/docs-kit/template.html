@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" {{BRAND_THEME_ATTR}}{{SPACE_ATTR}}>
+<html lang="en"{{SPACE_ATTR}}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -31,7 +31,6 @@
     <!-- Design System Framework (path set in docs.config.js) -->
     <link rel="stylesheet" href="{{DESIGN_SYSTEM_PATH}}" id="design-system-css"
           onerror="document.getElementById('ds-missing-banner').style.display='flex'">
-    {{BRAND_CSS}}
 
     {{FONT_HEAD}}
 
@@ -40,7 +39,7 @@
 
     {{EXTRA_STYLESHEETS}}
 
-    {{BRAND_THEME_CSS}}
+    {{BRAND_CSS}}
 
     {{EXTRA_HEAD}}
 </head>
@@ -94,6 +93,7 @@
          a page swap. The engine skips anything already on its way in, so
          the page container sitting inside this scope is not entered
          twice. -->
+    {{NOSCRIPT_SIGN_OUT}}
     <div class="docs-layout" id="site-nav" data-base="{{NAV_BASE}}" data-bd-chrome{{LAYOUT_ATTRS}}>{{NAV_SOURCE}}
     <div class="docs-main-area">
     <div{{WRAPPER_ATTRS}}>

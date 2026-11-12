@@ -43,7 +43,8 @@
  * there (search.js writeUrlQuery records why). So Back leaves the page rather
  * than closing the drawer, which is the accepted trade.
  *
- * Lifecycle: bd-site-init.js calls window.initGlossary(container) on initial
+ * Lifecycle: glossary-init.js (the docs kit's starter, on every site) calls
+ * window.initGlossary(container) on initial
  * load (no container) and after every Barba transition (the arriving one). Each arrival is a fresh container, so
  * elements are re-cached and re-bound; on pages without the glossary root
  * the module removes its drawer, hands the rail's observers back via
@@ -56,7 +57,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '2.3.0';
+  var VERSION = '2.4.1';
 
   var FILTER_DEBOUNCE_MS = 100;
 
@@ -104,7 +105,7 @@
   //
 
   // Cache Elements
-  // Scoped to the arriving container when bd-site-init passes one: after a
+  // Scoped to the arriving container when the starter passes one: after a
   // Barba navigation the leaving page is still in the DOM, and a document-
   // wide lookup would find the glossary being left.
   function cacheElements(container) {
@@ -214,7 +215,7 @@
 
       window.history.replaceState(window.history.state, '', next);
 
-      // A full URL, as barba-init.js passes it.
+      // A full URL, as the router passes it.
       if (window.barba && window.barba.history && window.barba.history.update) {
         window.barba.history.update({ url: window.location.href });
       }
@@ -553,13 +554,16 @@
   // the entry is not shared with the account; each needs its own next step.
   // Signing in comes back to this term, open in the drawer.
   function failureMessage(status, slug, href) {
+    // The engine's login page (window.bdPaths, written by nav.js); a page
+    // without nav.js has no address to offer, so it offers none
+    var login = window.bdPaths && window.bdPaths.login;
     if (status === 401) {
       return {
         text: 'Your session has ended, so the entry did not load.',
-        next: {
-          href: '/auth/login.html?next=' + encodeURIComponent(window.location.pathname + '?term=' + slug),
+        next: login ? {
+          href: login + '?next=' + encodeURIComponent(window.location.pathname + '?term=' + slug),
           text: 'Sign in again'
-        }
+        } : null
       };
     }
 

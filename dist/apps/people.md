@@ -1,0 +1,20 @@
+---
+title: "People"
+description: "Who can sign in to {{brand:siteName}}, what each person is, and what a guest's groups open - the list, invites, expiry and removal, without a terminal."
+author: "Studio"
+section: "Settings"
+layer: "app"
+type: "tool"
+order: 12
+status: "stable"
+access: "admin"
+brand: "internal"
+sidebar: "collapsed"
+version: "1.2.0"
+package: "core"
+guide: "people-docs.md"
+needs: "tools"
+scripts: "assets/js/people.js"
+styles: "assets/css/people.css"
+gate: "true"
+---

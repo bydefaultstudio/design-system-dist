@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.1 */
+/* @bydefaultstudio/design-system v8.0.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK: CORE
    The foundation, type, buttons, basic forms and simple components.
@@ -574,7 +574,35 @@
   /* -- Dialog tokens -- */
   --dialog-max-width: 560px;
 
-  /* -- Slider tokens removed — uses semantic tokens directly -- */
+  /* -- Slider tokens --
+     The house slider. A brand sets these once in theme.css and every slider
+     follows; data-variant="pill|square|needle" re-points them for one slider.
+     Pill is the default below. The thumb is a box --slider-thumb-size wide
+     (not set: as wide as the track is tall), painted inside a transparent
+     border of the two insets, so one rule draws a disc, a bar or a needle.
+     Values that depend on the track's height are worked out on .slider,
+     where a compact track can still change them. */
+  --slider-height: var(--space-xl);
+  --slider-height-compact: var(--space-2xl);
+  --slider-track: var(--bg-faded-10);
+  --slider-fill: var(--text-primary);
+  /* What sits on the fill: the thumb, filled stops, Compact text. */
+  --slider-on-fill: var(--background-primary);
+  --slider-radius: var(--radius-full);
+  --slider-thumb-color: var(--slider-on-fill);
+  /* The edge round the thumb's paint. In the fill's colour on a pill, so the
+     fill stops at the thumb's centre and the ring rounds its end off. */
+  --slider-thumb-ring: var(--slider-fill);
+  /* How much of the thumb's box the painted fill stops short of: half for a
+     pill (the ring finishes it), none for a square or a needle. */
+  --slider-fill-trim: 0.5;
+  --slider-thumb-radius: var(--radius-full);
+  --slider-thumb-inset-block: var(--space-2xs);
+  --slider-thumb-inset-inline: var(--space-2xs);
+  /* How far the thumb reaches past the track, top and bottom together. */
+  --slider-thumb-overhang: 0px;
+  --slider-stop-size: var(--space-xs);
+  --slider-tick-length: var(--space-s);
 
   /* -- Rating tokens -- */
   --rating-size: 1.5rem;

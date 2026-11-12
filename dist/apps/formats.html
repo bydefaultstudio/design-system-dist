@@ -1,0 +1,269 @@
+
+      <!--
+        The Format Library on the shared canvas (cms/tool-canvas.md), in two
+        states that share one shell.
+
+        Browsing is the Asset Library's: the preview holds the search, the
+        Platform, Ratio and Type chips and the grid of uniform tiles, filling
+        the canvas (data-fit="fill"), and the end dock is hidden, so its
+        column goes to the grid.
+
+        A format opens in the Asset Library's viewer (owner, 2026-11-01):
+        over the grid, with its name, "N of M" over the formats showing,
+        Back to formats and the previous and next arrows. Wide, the end dock
+        beside it holds Layers and Spec, the verbs pinned at its foot, and
+        the Panels toggle folds it (wireframe variant 1). Narrow, the viewer
+        fills the window, with Layers and Spec as closed bars under the
+        drawing and the verbs in its foot (variant 5).
+
+        Everything lives in the URL (q, platform, ratio, type, format), so a
+        filtered view or one format can be shared as a link. The data is the
+        registry (assets/data/formats/), inlined by the generator at the foot
+        of the page ({{format-manifest}}).
+
+        The bar names the tool. Copy link and Reset are permanent residents
+        of the overflow menu (data-priority="menu"). The exit is last:
+        build-time contract.
+      -->
+      <div class="tool-canvas">
+
+        <div class="bar" data-sticky="true">
+          <div class="bar-container">
+            <div class="bar-content">
+              <h1 class="tool-canvas-title" data-priority="pinned">Format Library</h1>
+
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item js-copy-url">{{icon:link}}<span>Copy link to this view</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" id="fm-reset">{{icon:refresh}}<span>Reset</span></button>
+              </div>
+              <!-- Feedback: opens the shared dialog (cms/chrome/feedback-dialog.html) -->
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="share">{{icon:chat}}<span>Share feedback</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="problem">{{icon:warning}}<span>Report a problem</span></button>
+              </div>
+            </div><!-- /.bar-content -->
+            <div class="bar-actions">
+              <div class="dropdown bar-overflow" hidden>
+                <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
+                <div class="dropdown-menu is-right"></div>
+              </div>
+              <a class="bar-close" data-page-close aria-label="Back to Tools">{{icon:close-large}}</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="tool-preview tool-work" data-fit="fill" id="fm-work">
+
+          <!-- What narrows the set. Search reads names, platforms, ratios,
+               types and sizes. Each category is one chip group: All, then
+               what the registry offers, built by the script so a value no
+               format has never gets a chip. -->
+          <div class="tool-filters" id="fm-filters">
+            <search class="tool-search" aria-label="Formats">
+              <div class="field" data-size="large">
+                <div class="field-icon">{{icon:search}}</div>
+                <input type="search" id="fm-search" aria-label="Search formats by name, platform, ratio or size" aria-controls="fm-grid" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Search formats">
+                <button type="button" class="field-clear" aria-label="Clear search">{{icon:close}}</button>
+              </div>
+            </search>
+            <div class="tool-format-filters">
+              <div class="tool-format-filter">
+                <p class="tool-caption" id="fm-platform-label">Platform</p>
+                <div class="chip-group" role="radiogroup" aria-labelledby="fm-platform-label" id="fm-platform"></div>
+              </div>
+              <div class="tool-format-filter">
+                <p class="tool-caption" id="fm-ratio-label">Ratio</p>
+                <div class="chip-group" role="radiogroup" aria-labelledby="fm-ratio-label" id="fm-ratio"></div>
+              </div>
+              <div class="tool-format-filter">
+                <p class="tool-caption" id="fm-type-label">Type</p>
+                <div class="chip-group" role="radiogroup" aria-labelledby="fm-type-label" id="fm-type"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- The grid. One tab stop with a roving tabindex (tool-grid.js);
+               Enter or a click opens the format. -->
+          <div class="tool-region" id="fm-region">
+            <div class="tool-browse">
+              <div class="tool-head">
+                <p class="tool-count text-size-l text-secondary" id="fm-count"></p>
+              </div>
+
+              <div class="callout is-hidden" data-type="info" id="fm-no-match">
+                <div class="callout-title">No format matches</div>
+                <p class="callout-description">Search reads names, platforms, ratios and sizes. Try one word, such as story or 9:16, or clear the filters.</p>
+                <div class="callout-actions"><button type="button" class="button" data-variant="outline" data-size="small" id="fm-no-match-action">Clear search and filters</button></div>
+              </div>
+
+              <div class="tool-files" id="fm-grid" role="group" aria-label="Formats" aria-describedby="fm-grid-keys"></div>
+              <p class="visually-hidden" id="fm-grid-keys">Arrow keys move between formats. Enter opens one.</p>
+
+              <div class="tool-empty" id="fm-empty" hidden>
+                {{icon:grid}}
+                <p class="tool-empty-title" data-empty-title></p>
+                <p data-empty-message></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- The chosen format, shown large over the work: the Asset
+               Library's viewer (tools.css, Viewer), a non-modal <dialog>
+               opened with show(), so the dock beside it stays live when
+               wide. The format is drawn live through format-card.js on the
+               light ground, so the artwork reads as it will be posted; the
+               labels are HTML over the drawing, in the drawing's name.
+               Narrow, the same element fills the window and carries what
+               the dock would: Layers and Spec as closed bars under the
+               drawing (the owner's wireframe, variant 5), and the verbs in
+               its foot. -->
+          <dialog class="tool-viewer tool-format-viewer" id="fm-viewer" aria-labelledby="fm-view-title" aria-describedby="fm-view-position">
+            <div class="tool-viewer-bar">
+              <div class="tool-viewer-heading">
+                <h2 class="tool-viewer-title" id="fm-view-title"></h2>
+                <p class="tool-viewer-position text-size-s" id="fm-view-position"></p>
+              </div>
+              <button class="button tool-viewer-close" data-variant="transparent" data-icon-only type="button" id="fm-viewer-close" aria-label="Back to formats">{{icon:close-full}}</button>
+            </div>
+            <div class="tool-viewer-stage tool-format-stage" data-ground="light" id="fm-stage-area">
+              <div class="tool-spec-stage" id="fm-stage">
+                <svg class="tool-spec-svg" id="fm-svg" role="img" aria-labelledby="fm-svg-name"><title id="fm-svg-name">Format preview</title></svg>
+                <div class="tool-labels" id="fm-labels" aria-hidden="true"></div>
+              </div>
+              <!-- In the stage rather than on the dialog, so they centre on
+                   the drawing, not on the drawing and the narrow panels. -->
+              <button class="button tool-viewer-nav" data-icon-only type="button" id="fm-viewer-prev" data-direction="-1" aria-label="Previous format" aria-disabled="true">{{icon:chevron-left-large}}</button>
+              <button class="button tool-viewer-nav" data-icon-only type="button" id="fm-viewer-next" data-direction="1" aria-label="Next format" aria-disabled="true">{{icon:chevron-right-large}}</button>
+              <!-- Wide only: folds the dock away (tool-canvas.js), and the
+                   drawing takes its width. The name stays "Panels";
+                   aria-expanded carries the state. -->
+              <button class="button tool-dock-toggle" data-variant="transparent" data-icon-only data-edge="end" type="button" id="fm-dock-toggle" aria-controls="fm-dock" aria-expanded="true" aria-label="Panels">
+                {{icon:sidebar-right-close}}{{icon:sidebar-right-open}}
+              </button>
+            </div>
+
+            <!-- Narrow only: the dock's two sections, closed until tapped. -->
+            <div class="tool-format-viewer-panels accordion" data-accordion="multi" id="fm-viewer-panels" role="group" aria-label="Format details" hidden>
+              <div class="accordion-item">
+                  <button type="button" class="accordion-header" id="fm-view-layers-heading" aria-expanded="false" aria-controls="fm-view-layers-section">
+                    <span class="accordion-title">Layers</span>{{icon:chevron-down}}
+                  </button>
+                <div class="accordion-content" id="fm-view-layers-section" role="region" aria-labelledby="fm-view-layers-heading">
+                  <div class="accordion-inner">
+                    <div class="accordion-body">
+                    <fieldset data-variant="bare">
+                      <legend class="visually-hidden">Layers shown on the format</legend>
+                      <div class="block gap-s" id="fm-view-layers"></div>
+                    </fieldset>
+                    <!-- The dock's Reset Layers, here as a labelled button: the
+                         section header is the accordion's own button and
+                         cannot hold another. -->
+                    <button class="button" data-variant="outline" data-size="small" type="button" id="fm-view-layers-reset" disabled>{{icon:refresh}}<span>Reset layers</span></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                  <button type="button" class="accordion-header" id="fm-view-spec-heading" aria-expanded="false" aria-controls="fm-view-spec-section">
+                    <span class="accordion-title">Spec</span>{{icon:chevron-down}}
+                  </button>
+                <div class="accordion-content" id="fm-view-spec-section" role="region" aria-labelledby="fm-view-spec-heading">
+                  <div class="accordion-inner">
+                    <div class="accordion-body">
+                    <dl class="tool-meta" id="fm-view-meta"></dl>
+                    <p class="form-hint" id="fm-view-notes" hidden></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Narrow only, mirroring the dock, which is off-screen under
+                 the viewer. -->
+            <div class="tool-viewer-foot" id="fm-viewer-foot">
+              <p class="form-error" role="alert" id="fm-view-error" hidden></p>
+              <a class="button" id="fm-view-download" href="" download data-download data-barba-prevent hidden>{{icon:download}}{{icon:lock}}<span>Download PNG</span></a>
+              <a class="button" id="fm-view-open" href="" hidden>{{icon:external-link}}<span id="fm-view-open-label"></span></a>
+              <button class="button copy-btn" data-variant="outline" type="button" id="fm-view-copy" data-copy="" hidden>
+                <span class="copy-btn-default">{{icon:link}}<span>Copy link to this format</span></span>
+                <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
+              </button>
+            </div>
+          </dialog>
+
+          <p class="visually-hidden" role="status" id="fm-status"></p>
+        </div>
+
+        <!-- The end dock, shown only while a format is open on a wide
+             layout: Layers (one switch per layer group in the spec, Artwork
+             and App screen on to start) and Spec (the registry's values
+             with their sources, and a link to the guide), each an accordion section; the
+             verbs pinned under them. Narrow, the viewer carries all of it
+             and the dock stays hidden. -->
+        <div class="tool-dock is-hidden" data-edge="end" data-actions="pinned" id="fm-dock">
+          <div class="tool-panels accordion" data-accordion="multi" role="group" aria-label="Format details">
+
+            <div class="tool-panel accordion-item is-open">
+              <div class="tool-panel-header">
+                <h2 class="tool-panel-heading">
+                  <button type="button" class="accordion-header" id="fm-layers-heading" aria-expanded="true" aria-controls="fm-layers-section">
+                    <span class="tool-panel-title">Layers</span>{{icon:chevron-down}}
+                  </button>
+                </h2>
+                <button class="button tool-panel-action" data-variant="transparent" data-icon-only type="button" id="fm-layers-reset" aria-label="Reset Layers" data-tooltip="Reset Layers" data-tooltip-position="left" disabled>{{icon:refresh}}</button>
+              </div>
+              <div class="accordion-content" id="fm-layers-section" role="region" aria-labelledby="fm-layers-heading">
+              <div class="accordion-inner">
+              <div class="tool-panel-body">
+                <fieldset data-variant="bare">
+                  <legend class="visually-hidden">Layers shown on the format</legend>
+                  <div class="block gap-s" id="fm-layers"></div>
+                </fieldset>
+              </div>
+              </div>
+              </div>
+            </div>
+
+            <div class="tool-panel accordion-item is-open">
+              <div class="tool-panel-header">
+                <h2 class="tool-panel-heading">
+                  <button type="button" class="accordion-header" id="fm-spec-heading" aria-expanded="true" aria-controls="fm-spec-section">
+                    <span class="tool-panel-title">Spec</span>{{icon:chevron-down}}
+                  </button>
+                </h2>
+              </div>
+              <div class="accordion-content" id="fm-spec-section" role="region" aria-labelledby="fm-spec-heading">
+              <div class="accordion-inner">
+              <div class="tool-panel-body">
+                <template id="fm-icons">{{icon:info-circled}}</template>
+                <dl class="tool-meta" id="fm-meta"></dl>
+                <p class="form-hint" id="fm-notes" hidden></p>
+              </div>
+              </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="tool-actions">
+            <p class="form-error" role="alert" id="fm-error"></p>
+            <div class="button-group">
+              <a class="button" id="fm-download" href="" download data-download data-barba-prevent aria-describedby="fm-view-title">{{icon:download}}{{icon:lock}}<span>Download PNG</span></a>
+              <a class="button" id="fm-open" href="" aria-describedby="fm-view-title" hidden>{{icon:external-link}}<span id="fm-open-label"></span></a>
+            </div>
+            <div class="button-group">
+              <button class="button copy-btn" data-variant="outline" type="button" id="fm-copy-link" data-copy="" aria-describedby="fm-view-title">
+                <span class="copy-btn-default">{{icon:link}}<span>Copy link to this format</span></span>
+                <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {{format-manifest}}

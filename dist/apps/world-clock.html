@@ -1,0 +1,241 @@
+
+      <!--
+        A tool on the shared canvas, built from docks (cms/tool-canvas.md,
+        Docks), in the Side panels layout: the bar, the clock in the preview,
+        the controls docked on the right in three sections — Cities, Style
+        and Export — and the two verbs pinned at the dock's foot. The toggle
+        in the preview's corner folds the dock away so the clock takes the
+        canvas. No footer and no page header: the canvas is the page, and
+        the embed URL has a home in Export.
+
+        The bar names the tool. Copy link and Reset all are permanent
+        residents of the overflow menu (data-priority="menu"), so the trailing
+        cluster is the menu and the close. The exit is last: build-time
+        contract.
+
+        The sections follow the tools' shared model with the tool's own
+        section first. Which cities the clock shows is Cities — the content,
+        with the presets under the list because a preset replaces it. How the
+        clock looks — which parts each card shows, and its theme — is Style.
+        What you get — the embed URL and the iframe snippet — is Export, and
+        the verbs copy each. The switches and the theme used to sit in the
+        bar, and the embed URL in a footer.
+
+        The two info toggletips the panel headers carried are notes in the
+        body now: nothing pops out of a section (cms/tool-canvas.md, Section
+        reset).
+      -->
+      <div class="tool-canvas" id="world-clock">
+
+        <div class="bar" data-sticky="true">
+          <div class="bar-container">
+            <div class="bar-content">
+              <h1 class="tool-canvas-title" data-priority="pinned">World Clock</h1>
+
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item js-copy-url">{{icon:link}}<span>Copy link</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" id="world-clock-reset">{{icon:refresh}}<span>Reset all</span></button>
+              </div>
+              <!-- Feedback: opens the shared dialog (cms/chrome/feedback-dialog.html) -->
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="share">{{icon:chat}}<span>Share feedback</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="problem">{{icon:warning}}<span>Report a problem</span></button>
+              </div>
+            </div><!-- /.bar-content -->
+            <div class="bar-actions">
+              <div class="dropdown bar-overflow" hidden>
+                <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
+                <div class="dropdown-menu is-right"></div>
+              </div>
+              <a class="bar-close" data-page-close aria-label="Back to Tools">{{icon:close-large}}</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- The preview is the real embed: it IS the page Notion loads, at
+             the height the snippet declares. Its ground follows the clock's
+             theme, set by world-clock.js. The one status region is here,
+             clipped, so the dock folding away never takes it out of the
+             tree; it says everything the tool does — search outcomes, cities
+             added and removed, presets, resets. -->
+        <div class="tool-preview" data-ground="light" id="world-clock-preview">
+          <iframe id="world-clock-frame" src="world-clock-embed.html" title="World clock preview" loading="lazy"></iframe>
+          <p class="visually-hidden" role="status" id="world-clock-status"></p>
+
+          <!-- Folds the dock away (tool-canvas.js), and the preview takes its
+               width. The name stays "Controls"; aria-expanded carries the
+               state. Last in the preview, in the bottom-right corner;
+               data-edge points the icon at the dock. -->
+          <button class="button tool-dock-toggle" data-variant="transparent" data-icon-only data-edge="end" type="button" aria-controls="world-clock-dock" aria-expanded="true" aria-label="Controls">
+            {{icon:sidebar-right-close}}{{icon:sidebar-right-open}}
+          </button>
+        </div>
+
+        <!-- The sections scroll as one column (tool-canvas.js adds the tab
+             stop while it overflows), and the verbs sit under them. Every
+             section starts open. Cities first: a phone meets the content
+             before the look and the embed. -->
+        <div class="tool-dock" data-edge="end" id="world-clock-dock">
+          <div class="tool-panels accordion" data-accordion="multi" id="world-clock-panels" role="group" aria-label="World Clock controls">
+
+          <!-- No reset: the cities are the reader's work. Reset all in the
+               bar's menu puts the default three back. -->
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="world-clock-cities-heading" aria-expanded="true" aria-controls="world-clock-cities-section">
+                  <span class="tool-panel-title">Cities</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+            </div>
+            <div class="accordion-content" id="world-clock-cities-section" role="region" aria-labelledby="world-clock-cities-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <div class="block gap-s">
+                <label data-variant="caption" for="world-clock-search">Add a city</label>
+                <div data-role="search">
+                  <!-- type="text", not "search": Escape closes the results
+                       here, and Chromium's search input takes it first. The
+                       results sit in the flow under the field, not hung over
+                       the list, so the column's own scroll keeps the active
+                       row in view (world-clock.css). -->
+                  <div class="field">
+                    <div class="field-icon">{{icon:search}}</div>
+                    <input type="text" id="world-clock-search" role="combobox" aria-expanded="false" aria-controls="world-clock-search-results" aria-autocomplete="list" aria-describedby="world-clock-search-hint" enterkeyhint="search" placeholder="Search cities…" autocomplete="off">
+                    <button type="button" class="field-clear" aria-label="Clear search">{{icon:close}}</button>
+                  </div>
+                  <div id="world-clock-search-results" class="tool-results" role="listbox" aria-label="City suggestions"></div>
+                </div>
+                <p class="form-hint is-hidden" id="world-clock-search-hint"></p>
+              </div>
+
+              <!-- One row per city: its name, its offset, a grip that drags
+                   or opens the move menu, and a remove. The list is built by
+                   the script. -->
+              <div class="block gap-s">
+                <ul id="world-clock-cities" class="tool-list" aria-label="Cities on the clock"></ul>
+                <p class="visually-hidden" id="world-clock-reorder-help">Opens move options. Arrow keys move one place; Home and End move to the top or bottom.</p>
+                <p class="form-hint is-hidden" id="world-clock-empty">No cities on the clock. Search above, or start from a preset.</p>
+                <p class="form-hint">Drag a city to reorder it, or use its move menu. Remove one with its Remove button.</p>
+              </div>
+
+              <!-- A ready-made set, built by the script. It replaces the
+                   list, so it sits with the list it replaces. -->
+              <fieldset data-variant="bare" aria-describedby="world-clock-presets-note">
+                <legend data-variant="caption" id="world-clock-presets-label">Presets</legend>
+                <div id="world-clock-presets" class="tool-presets"></div>
+                <p class="form-hint" id="world-clock-presets-note">A preset replaces every city on the clock. Add or remove cities afterwards to adjust it.</p>
+              </fieldset>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="world-clock-style-heading" aria-expanded="true" aria-controls="world-clock-style-section">
+                  <span class="tool-panel-title">Style</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+              <!-- Puts the switches and the theme back to their defaults. -->
+              <button class="button tool-panel-action" data-variant="transparent" data-icon-only type="button" id="world-clock-style-reset" data-reset="style" aria-label="Reset Style" data-tooltip="Reset Style" data-tooltip-position="left" disabled>{{icon:refresh}}</button>
+            </div>
+            <div class="accordion-content" id="world-clock-style-section" role="region" aria-labelledby="world-clock-style-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <fieldset data-variant="bare">
+                <legend data-variant="caption" id="world-clock-show-label">Show on each card</legend>
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" role="switch" id="world-clock-show-city" checked>
+                  <label for="world-clock-show-city">City</label>
+                </div>
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" role="switch" id="world-clock-show-tz" checked>
+                  <label for="world-clock-show-tz">Timezone</label>
+                </div>
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" role="switch" id="world-clock-show-seconds">
+                  <label for="world-clock-show-seconds">Seconds</label>
+                </div>
+              </fieldset>
+
+              <!-- Two short choices, both in view: the radio-backed faded
+                   segmented control, named by its caption. The preview's
+                   ground follows it. -->
+              <fieldset data-variant="bare">
+                <legend data-variant="caption" id="world-clock-theme-label">Theme</legend>
+                <div class="segmented-control" data-variant="faded" id="world-clock-theme">
+                  <label class="segmented-control-option"><input type="radio" name="world-clock-theme" value="light" checked><span>Light</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="world-clock-theme" value="dark"><span>Dark</span></label>
+                </div>
+              </fieldset>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="world-clock-export-heading" aria-expanded="true" aria-controls="world-clock-export-section">
+                  <span class="tool-panel-title">Export</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+            </div>
+            <div class="accordion-content" id="world-clock-export-section" role="region" aria-labelledby="world-clock-export-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <!-- What you are about to get, before the act: the two readouts
+                   the verbs copy, rewritten on every change, so not live
+                   regions. Read-only keeps them in the tab order, so each can
+                   be selected from the keyboard. -->
+              <div class="block gap-s">
+                <label data-variant="caption" for="world-clock-url">Embed URL</label>
+                <input type="text" id="world-clock-url" readonly spellcheck="false" autocomplete="off" aria-describedby="world-clock-url-note">
+                <p class="form-hint" id="world-clock-url-note">For Notion’s /embed command, or anything else that takes a URL.</p>
+              </div>
+
+              <div class="block gap-s">
+                <label data-variant="caption" for="world-clock-embed-code">Embed code</label>
+                <textarea id="world-clock-embed-code" class="tool-code" rows="3" readonly spellcheck="false" aria-describedby="world-clock-embed-note"></textarea>
+                <p class="form-hint" id="world-clock-embed-note">An iframe for any HTML page, 140px tall: the clock’s own height.</p>
+              </div>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          </div>
+
+          <!--
+            The verbs, pinned at the dock's foot, each naming what it copies.
+            Both are copy-button.js's: each reads its readout's value through
+            data-clipboard-target, so a copy made straight after a change
+            never takes the previous settings.
+          -->
+          <div class="tool-actions">
+            <div class="button-group">
+              <button type="button" class="button copy-btn" id="world-clock-copy-url" data-clipboard-target="#world-clock-url">
+                <span class="copy-btn-default">{{icon:copy}}<span>Copy embed URL</span></span>
+                <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
+              </button>
+              <button type="button" class="button copy-btn" data-variant="outline" id="world-clock-copy-embed" data-clipboard-target="#world-clock-embed-code">
+                <span class="copy-btn-default">{{icon:copy}}<span>Copy embed code</span></span>
+                <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>

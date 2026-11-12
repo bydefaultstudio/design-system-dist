@@ -1,0 +1,187 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bydefault.design/schemas/brand.schema.json",
+  "title": "brand.json",
+  "description": "A site's brand settings, version 1. The build checks more than this schema can (files exist, tokens are defined, X fits its logo): cms/generator/brand.js is the authority, and this file is for editor autocompletion.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "name", "slug", "url", "description", "footerText", "colours", "logos"],
+  "definitions": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "hex": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "https": { "type": "string", "pattern": "^https://[^\\s/]+" },
+    "plainText": { "type": "string", "minLength": 1, "pattern": "^[^<>\"\\u0000-\\u001f\\u007f]*$", "description": "Plain text, shown as text on every page: no < or >, no straight double quote, and no control character such as a line break." },
+    "pair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fg", "bg"],
+      "properties": {
+        "fg": { "type": "string", "minLength": 1, "description": "Foreground token, without the dashes." },
+        "bg": { "type": "string", "minLength": 1, "description": "Background token, without the dashes." }
+      }
+    }
+  },
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "name": { "allOf": [{ "$ref": "#/definitions/plainText" }], "maxLength": 60, "description": "The brand's name. The site is called \"<name> OS\" (D9); never add OS here." },
+    "slug": { "$ref": "#/definitions/id", "description": "Names the sender address (<slug>@bydefault.design) and the subdomain." },
+    "url": { "allOf": [{ "$ref": "#/definitions/https" }, { "not": { "pattern": "/$" } }], "description": "The site's canonical https address, no trailing slash." },
+    "description": { "allOf": [{ "$ref": "#/definitions/plainText" }], "maxLength": 300 },
+    "footerText": { "allOf": [{ "$ref": "#/definitions/plainText" }], "maxLength": 200 },
+    "fonts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "googleFontsUrl": { "anyOf": [{ "$ref": "#/definitions/https" }, { "type": "null" }] },
+        "typekitId": { "anyOf": [{ "type": "string", "pattern": "^[a-z0-9]+$" }, { "type": "null" }] },
+        "preload": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "favicons": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "svg": { "type": "string", "pattern": "^/" },
+        "ico": { "type": "string", "pattern": "^/" }
+      }
+    },
+    "ogImage": { "$ref": "#/definitions/https" },
+    "colours": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hues"],
+      "properties": {
+        "hues": { "type": "array", "minItems": 2, "maxItems": 9, "uniqueItems": true, "items": { "type": "string", "minLength": 1 }, "description": "The hues the colour tools offer, in grid order. Each needs -dark, base, -light and -lighter tokens." },
+        "named": {
+          "type": "array",
+          "minItems": 1,
+          "description": "The brand's colours as Figma names them, so a tool shows the brand colour and never a text ink.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "token", "group"],
+            "properties": {
+              "id": { "$ref": "#/definitions/id", "description": "The name used in exported file names." },
+              "label": { "type": "string", "minLength": 1, "description": "The colour's name in Figma." },
+              "token": { "type": "string", "minLength": 1, "description": "The custom property that holds it, without the dashes." },
+              "group": { "enum": ["primary", "secondary"] }
+            }
+          }
+        },
+        "pairings": { "type": "array", "items": { "$ref": "#/definitions/pair" }, "description": "Colour Pairing's recommended pairs." },
+        "toolPairings": { "type": "array", "items": { "$ref": "#/definitions/pair" }, "description": "Every other tool's Pairs row. Defaults to pairings." }
+      }
+    },
+    "logos": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["clearSpaceGlyph", "primary", "variants", "colourways"],
+      "properties": {
+        "clearSpaceGlyph": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["label", "file"],
+          "properties": {
+            "label": { "type": "string", "minLength": 1 },
+            "file": { "type": "string", "pattern": "\\.svg$", "description": "From the project root. Its viewBox is the glyph's own box, starting at x 0, so its width is X." }
+          }
+        },
+        "primary": { "$ref": "#/definitions/id", "description": "The variant the clear-space rule is stated on. List it first." },
+        "spec": { "type": "object", "required": ["version", "layers"], "description": "The clear-space rule as a Layout Spec, exported from the Layout Specs tool, drawn round every logo that has no spec of its own. Left out, the engine's Logo with clear space template." },
+        "variants": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "file", "minWidth", "clearSpace"],
+            "properties": {
+              "id": { "$ref": "#/definitions/id" },
+              "label": { "type": "string", "minLength": 1 },
+              "shortLabel": { "type": "string", "minLength": 1 },
+              "file": { "type": "string", "pattern": "\\.svg$" },
+              "minWidth": { "type": "number", "exclusiveMinimum": 0 },
+              "rotate": { "enum": [90, -90, 180] },
+              "clearSpace": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["paths", "label"],
+                "description": "Required on every mark. The build measures X off these paths of the file: the glyph's width in this logo's viewBox units.",
+                "properties": {
+                  "paths": { "type": "array", "minItems": 1, "items": { "type": "integer", "minimum": 1 }, "description": "The glyph's path numbers in this file, from 1, in the order it draws them." },
+                  "label": { "type": "string", "minLength": 1 }
+                }
+              },
+              "spec": { "type": "object", "required": ["version", "layers"], "description": "This logo's own Layout Spec, when its rule is a placement rather than the brand's (an avatar on a circle)." }
+            }
+          }
+        },
+        "colourways": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "value", "bg"],
+            "properties": {
+              "id": { "$ref": "#/definitions/id" },
+              "label": { "type": "string", "minLength": 1 },
+              "value": { "$ref": "#/definitions/hex" },
+              "bg": {
+                "type": "object",
+                "required": ["id", "value"],
+                "properties": { "id": { "type": "string", "minLength": 1 }, "value": { "$ref": "#/definitions/hex" } }
+              },
+              "variants": { "type": "array", "items": { "$ref": "#/definitions/id" } }
+            }
+          }
+        }
+      }
+    },
+    "wording": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "organisation": { "allOf": [{ "$ref": "#/definitions/plainText" }], "maxLength": 100, "description": "The owner named in app copy. Defaults to name." },
+        "website": { "allOf": [{ "$ref": "#/definitions/https" }, { "not": { "pattern": "/$" } }], "description": "The organisation's own public website, which can differ from the site's url. Defaults to url." },
+        "supportEmail": { "type": "string", "pattern": "^[^\\s@<>\"]+@[^\\s@<>\"]+\\.[^\\s@<>\"]+$", "description": "The address a reader writes to when a form can't send, named in the Ask for access form's error. Left out, the error names none." }
+      }
+    },
+    "access": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requestRoute": { "anyOf": [{ "type": "string", "maxLength": 200, "pattern": "^/[^/\\\\?#\\s\\u0000-\\u001f\\u007f][^\\\\?#\\s\\u0000-\\u001f\\u007f]*$" }, { "type": "null" }], "deprecated": true, "description": "No longer read: Ask for access is the engine's /support.html on every site (phase D). Delete it." },
+        "turnstileSiteKey": { "anyOf": [{ "type": "string", "pattern": "^[0-9A-Za-z_-]{10,100}$" }, { "type": "null" }], "description": "The spam check's site key on the Ask for access page, given with the form service's address. Public. Left out, a signed-out reader's request is refused by the spam check." }
+      }
+    },
+    "emailSignature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base", "previewBase", "logo", "logoWidth", "logoHeight", "icons", "cardBackground", "disclaimer"],
+      "properties": {
+        "base": { "type": "string", "pattern": "^https://.+/$", "description": "A permanent URL contract: sent signatures fetch their images from here forever." },
+        "previewBase": { "type": "string", "pattern": "/$" },
+        "logo": { "type": "string", "minLength": 1 },
+        "logoWidth": { "type": "number", "exclusiveMinimum": 0 },
+        "logoHeight": { "type": "number", "exclusiveMinimum": 0 },
+        "icons": { "type": "object", "required": ["email", "web", "linkedin", "instagram"] },
+        "cardBackground": { "$ref": "#/definitions/hex" },
+        "disclaimer": { "type": "string", "minLength": 1 }
+      }
+    },
+    "email": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Reserved for phase G: the email header, footer and security notes.",
+      "properties": {
+        "tokens": { "type": "object" },
+        "headerLogo": {},
+        "footer": {},
+        "securityNotes": {}
+      }
+    },
+    "switches": { "type": "object", "description": "Reserved for phase B: the packages and apps a site switches on." }
+  }
+}

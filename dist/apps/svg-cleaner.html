@@ -1,0 +1,307 @@
+
+      <!--
+        A tool on the shared canvas, built from docks (cms/tool-canvas.md,
+        Docks), in the Side panels layout: the bar, the cleaned SVG drawn in
+        the preview, the controls docked on the right in two sections —
+        Settings and Export — and the verbs pinned at the dock's foot. The
+        toggle in the preview's corner folds the dock away so the drawing
+        takes the canvas. No footer and no page header: the canvas is the
+        page, and the byte readout sits on the preview.
+
+        The bar names the tool. Copy link and Reset all are permanent
+        residents of the overflow menu (data-priority="menu"), so the trailing
+        cluster is the menu and the close. The exit is last: build-time
+        contract.
+
+        The sections are the tools' shared three less Style: the cleaner
+        changes nothing about how an SVG looks. What goes in and how it is
+        cleaned — the pasted code, then the format with the name it asks for
+        and the CSS shape, then the options the format locks — is Settings.
+        What comes out — the result — is Export. The format used to be a
+        deselectable mode in the bar; SVG is now a segment of its own, the
+        plain clean with the options as set, so a segment is always filled.
+      -->
+      <div class="tool-canvas" id="svg-cleaner">
+
+        <div class="bar" data-sticky="true">
+          <div class="bar-container">
+            <div class="bar-content">
+              <h1 class="tool-canvas-title" data-priority="pinned">SVG Cleaner</h1>
+
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item js-copy-url">{{icon:link}}<span>Copy link</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" id="svg-cleaner-reset">{{icon:refresh}}<span>Reset all</span></button>
+              </div>
+              <!-- Feedback: opens the shared dialog (cms/chrome/feedback-dialog.html) -->
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="share">{{icon:chat}}<span>Share feedback</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="problem">{{icon:warning}}<span>Report a problem</span></button>
+              </div>
+            </div><!-- /.bar-content -->
+            <div class="bar-actions">
+              <div class="dropdown bar-overflow" hidden>
+                <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
+                <div class="dropdown-menu is-right"></div>
+              </div>
+              <a class="bar-close" data-page-close aria-label="Back to Tools">{{icon:close-large}}</a>
+            </div>
+          </div>
+        </div>
+
+        <!--
+          The preview is the cleaned SVG as a browser draws it, as an <img>
+          from a Blob URL — an image never runs script, whatever was pasted.
+          The band starts on the light ground, the brand's off-white, as the
+          Logo Tool's and the QR Code Generator's do (owner, 2026-10-05); the
+          checkerboard is the Transparent switch. Either ground is light, so
+          the band's ink reads in both site themes. In CSS mode it is the
+          same SVG the CSS carries.
+
+          The frame is the SVG's own box — its viewBox, or its width and
+          height — scaled to fit the stage (svg-cleaner.css, Frame), so the
+          artboard outline drawn over it lines up with the drawing. Top left,
+          Details: the bytes before and after the clean, rewritten on every
+          clean, so not a live region; the one status
+          region is beside it, clipped, and says what the tool did. Top
+          right, the Preview group: two switches that change what the band
+          shows and nothing in the result.
+        -->
+        <div class="tool-preview" data-size="tall" data-layout="corners" data-ground="light" id="svg-cleaner-preview">
+          <div class="tool-stage">
+            <div class="tool-artwork" id="svg-cleaner-frame" hidden>
+              <img class="tool-image" id="svg-cleaner-drawing" alt="Preview of the cleaned SVG">
+            </div>
+            <p class="tool-placeholder" id="svg-cleaner-empty">Paste SVG code to see it here.</p>
+          </div>
+
+          <div class="tool-details">
+            <p class="tool-caption">Details</p>
+            <p id="svg-cleaner-size">Nothing cleaned yet.</p>
+          </div>
+
+          <!-- At what scale the drawing is shown, as the other previews say
+               it. Rewritten on every change, so not a live region. -->
+          <p class="tool-scale" id="svg-cleaner-scale-note"></p>
+
+          <p class="visually-hidden" role="status" id="svg-cleaner-status"></p>
+
+          <section class="tool-options" aria-labelledby="svg-cleaner-preview-heading">
+            <h2 class="tool-caption" id="svg-cleaner-preview-heading">Preview</h2>
+            <!-- The checkerboard behind the drawing, to see where it is
+                 empty. -->
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="svg-cleaner-transparent" role="switch">
+                <label for="svg-cleaner-transparent">Transparent</label>
+              </div>
+            </div>
+            <!-- The drawing as large as the stage allows instead of at its
+                 own size, for inspecting it. The scale note keeps saying how
+                 far it is enlarged. Preview only. -->
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="svg-cleaner-fill" role="switch">
+                <label for="svg-cleaner-fill">Fill screen</label>
+              </div>
+            </div>
+            <!-- The SVG's own box, as a dotted line, to see how much of it
+                 the drawing fills. -->
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="svg-cleaner-artboard" role="switch">
+                <label for="svg-cleaner-artboard">Artboard</label>
+              </div>
+            </div>
+          </section>
+
+          <!-- Folds the dock away (tool-canvas.js), and the preview takes its
+               width. The name stays "Controls"; aria-expanded carries the
+               state. Last in the preview, in the free bottom-right corner;
+               data-edge points the icon at the dock. -->
+          <button class="button tool-dock-toggle" data-variant="transparent" data-icon-only data-edge="end" type="button" aria-controls="svg-cleaner-dock" aria-expanded="true" aria-label="Controls">
+            {{icon:sidebar-right-close}}{{icon:sidebar-right-open}}
+          </button>
+        </div>
+
+        <!-- The sections scroll as one column (tool-canvas.js adds the tab
+             stop while it overflows), and the verbs sit under them. Both
+             start open. Settings first: a phone meets the paste before the
+             export. -->
+        <div class="tool-dock" data-edge="end" id="svg-cleaner-dock">
+          <div class="tool-panels accordion" data-accordion="multi" id="svg-cleaner-panels" role="group" aria-label="SVG Cleaner controls">
+
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="svg-cleaner-settings-heading" aria-expanded="true" aria-controls="svg-cleaner-settings-section">
+                  <span class="tool-panel-title">Settings</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+              <!-- Puts the format, the CSS shape and the options back to their
+                   defaults. The pasted code and the names typed for a format
+                   are the reader's work and stay; Reset all in the bar's menu
+                   clears them. -->
+              <button class="button tool-panel-action" data-variant="transparent" data-icon-only type="button" id="svg-cleaner-settings-reset" data-reset="settings" aria-label="Reset Settings" data-tooltip="Reset Settings" data-tooltip-position="left" disabled>{{icon:refresh}}</button>
+            </div>
+            <div class="accordion-content" id="svg-cleaner-settings-section" role="region" aria-labelledby="svg-cleaner-settings-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <div class="block gap-s">
+                <label data-variant="caption" for="svg-cleaner-input">SVG code</label>
+                <textarea id="svg-cleaner-input" class="tool-code" placeholder="<svg viewBox=&quot;0 0 24 24&quot;>&#10;  <path d=&quot;M12 2...&quot; fill=&quot;#000&quot;/>&#10;</svg>" spellcheck="false"></textarea>
+              </div>
+
+              <!-- The format first, above everything it decides (owner,
+              2026-10-05): it locks options, shows a name field and picks the
+              CSS shape, and below them a change would happen out of view.
+              It is a setting here rather than Export's, as the tool canvas's
+              export panel puts it, because it changes the cleaning, not only
+              the file. Five short formats, all in view: the radio-backed
+              faded segmented control, named by its caption. SVG is the plain
+              clean; the other four are the modes the engine knows. The note
+              under it says what the chosen one gives (svg-cleaner.js,
+              FORMAT_NOTES). -->
+              <fieldset data-variant="bare" aria-describedby="svg-cleaner-format-note">
+                <legend data-variant="caption" id="svg-cleaner-format-label">Format</legend>
+                <div class="segmented-control" data-variant="faded" id="svg-cleaner-format">
+                  <label class="segmented-control-option"><input type="radio" name="svg-cleaner-format" value="svg" checked><span>SVG</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="svg-cleaner-format" value="icon"><span>Icon</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="svg-cleaner-format" value="logo"><span>Logo</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="svg-cleaner-format" value="image"><span>Image</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="svg-cleaner-format" value="css"><span>CSS</span></label>
+                </div>
+                <p class="form-hint" id="svg-cleaner-format-note"></p>
+              </fieldset>
+
+              <!-- One name field per format that asks for one; the script
+                   shows the chosen format's own. -->
+              <div class="block gap-s is-hidden" id="svg-cleaner-group-icon-name">
+                <label data-variant="caption" for="svg-cleaner-icon-name">Icon name</label>
+                <input type="text" id="svg-cleaner-icon-name" placeholder="arrow-right" autocomplete="off" spellcheck="false">
+              </div>
+              <div class="block gap-s is-hidden" id="svg-cleaner-group-logo-name">
+                <label data-variant="caption" for="svg-cleaner-logo-name">Logo name</label>
+                <input type="text" id="svg-cleaner-logo-name" placeholder="brand" autocomplete="off" spellcheck="false">
+              </div>
+              <div class="block gap-s is-hidden" id="svg-cleaner-group-image-filename">
+                <label data-variant="caption" for="svg-cleaner-image-filename">File name</label>
+                <input type="text" id="svg-cleaner-image-filename" placeholder="logo-brand" autocomplete="off" spellcheck="false">
+              </div>
+
+              <!-- CSS only. -->
+              <fieldset data-variant="bare" class="is-hidden" id="svg-cleaner-css-shape">
+                <legend data-variant="caption" id="svg-cleaner-css-label">CSS format</legend>
+                <div class="form-check">
+                  <input type="radio" id="svg-cleaner-css-url" name="svg-cleaner-css-format" value="url" checked>
+                  <label for="svg-cleaner-css-url">URL wrapper</label>
+                </div>
+                <div class="form-check">
+                  <input type="radio" id="svg-cleaner-css-basic" name="svg-cleaner-css-format" value="basic">
+                  <label for="svg-cleaner-css-basic">Basic background-image</label>
+                </div>
+                <div class="form-check">
+                  <input type="radio" id="svg-cleaner-css-advanced" name="svg-cleaner-css-format" value="advanced">
+                  <label for="svg-cleaner-css-advanced">Advanced background-image</label>
+                </div>
+                <div class="form-check">
+                  <input type="radio" id="svg-cleaner-css-bullets" name="svg-cleaner-css-format" value="bullets">
+                  <label for="svg-cleaner-css-bullets">CSS bullets</label>
+                </div>
+                <div class="form-check">
+                  <input type="radio" id="svg-cleaner-css-class" name="svg-cleaner-css-format" value="class">
+                  <label for="svg-cleaner-css-class">Inside class</label>
+                </div>
+              </fieldset>
+
+              <!-- A format locks the options it decides; the switch is then
+                   disabled, which the system styles and which takes it out
+                   of the tab order, so the hint under the group says which
+                   and why. The group is described by it. -->
+              <fieldset data-variant="bare" aria-describedby="svg-cleaner-lock-hint">
+                <legend data-variant="caption" id="svg-cleaner-options-label">Options</legend>
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" role="switch" id="svg-cleaner-opt-size">
+                  <label for="svg-cleaner-opt-size">Size 100%</label>
+                </div>
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" role="switch" id="svg-cleaner-opt-current-color" checked>
+                  <label for="svg-cleaner-opt-current-color">currentColor</label>
+                </div>
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" role="switch" id="svg-cleaner-opt-minify">
+                  <label for="svg-cleaner-opt-minify">Minify</label>
+                </div>
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" role="switch" id="svg-cleaner-opt-strip-comments" checked>
+                  <label for="svg-cleaner-opt-strip-comments">Strip comments</label>
+                </div>
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" role="switch" id="svg-cleaner-opt-strip-metadata">
+                  <label for="svg-cleaner-opt-strip-metadata">Strip metadata</label>
+                </div>
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" role="switch" id="svg-cleaner-opt-round-decimals">
+                  <label for="svg-cleaner-opt-round-decimals">Round decimals</label>
+                </div>
+                <p class="form-hint" id="svg-cleaner-lock-hint"></p>
+              </fieldset>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="svg-cleaner-export-heading" aria-expanded="true" aria-controls="svg-cleaner-export-section">
+                  <span class="tool-panel-title">Export</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+            </div>
+            <div class="accordion-content" id="svg-cleaner-export-section" role="region" aria-labelledby="svg-cleaner-export-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <!-- What you are about to get, before the act: the result the
+                   verbs copy and download, rewritten on every clean, so not a
+                   live region. Read-only keeps it in the tab order, so it can
+                   be selected from the keyboard. -->
+              <div class="block gap-s">
+                <label data-variant="caption" for="svg-cleaner-output">Result</label>
+                <textarea id="svg-cleaner-output" class="tool-code" readonly placeholder="The cleaned code appears here." spellcheck="false"></textarea>
+              </div>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          </div>
+
+          <!--
+            The verbs, pinned at the dock's foot. Copy reads the result field
+            through copy-button.js (data-clipboard-target) and its noun
+            follows the format: Copy SVG, or Copy CSS. Download writes the
+            standalone file and shows only in Image mode, the one format that
+            makes a file — .is-hidden, because .button sets display as an
+            author rule, which beats the UA's [hidden]. Both stay disabled
+            until there is a result.
+          -->
+          <div class="tool-actions">
+            <div class="button-group">
+              <button type="button" class="button is-hidden" id="svg-cleaner-download" data-download disabled>{{icon:download}}{{icon:lock}}<span>Download SVG</span></button>
+              <button type="button" class="button copy-btn" data-variant="outline" id="svg-cleaner-copy" data-clipboard-target="#svg-cleaner-output" disabled>
+                <span class="copy-btn-default">{{icon:copy}}<span>Copy <span id="svg-cleaner-copy-format">SVG</span></span></span>
+                <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.1 */
+/* @bydefaultstudio/design-system v8.0.0 */
 /**
  * BD Animate
  * Entrances, scroll reveals and split-text staggers, driven by data-bd-*
@@ -46,7 +46,8 @@
  * left as a containing block or on a compositing layer. Focus landing inside
  * anything still pending completes it at once.
  *
- * Lifecycle, called by the router (assets/js/barba-init.js):
+ * Lifecycle, called by the kit router (barba-docs.js) through the motion
+ * option this file registers on window.bdBarbaOptions (see "Router hooks"):
  *   bdAnimateFreeze(current)   beforeLeave: triggers on the leaving page stop
  *   bdAnimateOut(current)      leave, first thing: exits play in place
  *   bdAnimateIn(next, opts)    enter: the entrance cascade, during the slide;
@@ -69,12 +70,12 @@
  *   window.bdAnimateConfig = { stagger: { chars, words, lines, list, group },
  *                              spreadSteps, manual, reducedMotion }
  *
- * @version 1.2.1
+ * @version 1.3.0
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.2.1';
+  var VERSION = '1.3.0';
 
   var ATTR = {
     enter: 'data-bd-enter',
@@ -1205,6 +1206,55 @@
       new Promise(function cap(resolve) { setTimeout(resolve, tl.totalDuration() * 1000 + OUT_PAD_MS); })
     ]);
   };
+
+  //
+  //------- ROUTER HOOKS -------//
+  //
+
+  // The kit router plays element motion through bdBarbaOptions.motion, read
+  // once when the router loads, which is after this file (engine parity C3).
+  // The router names no module; this is how the engine reaches it.
+  //
+  // land: the old container is out of the document, so its context reverts
+  // unseen, and the new one is in flow with no transform, so the scroll
+  // reveals measure the real layout. Returns true when the page has
+  // triggers, so the router lands a fragment instantly: a refresh records
+  // and restores the scroll position with scroll-behavior: auto, which cuts
+  // a smooth glide short. Never refreshed on a page with no triggers:
+  // nothing to measure, and a refresh briefly forces scroll-behavior: auto
+  // on the root.
+  function landAfterNav(container) {
+    try {
+      window.bdAnimateCleanup();
+      window.bdAnimateInit(container);
+    } catch (err) {
+      console.warn('[BD Animate] init after a page swap failed', err);
+      window.bdAnimateShow(container);
+    }
+    var hasTriggers = hasScrollTrigger && ScrollTrigger.getAll().length > 0;
+    if (hasTriggers) {
+      try {
+        ScrollTrigger.refresh();
+      } catch (err) {
+        console.warn('[BD Animate] refresh after a page swap failed', err);
+      }
+    }
+    return hasTriggers;
+  }
+
+  // Each hook looks the global up when it runs, as the router used to, so a
+  // test page that stubs one is still heard.
+  var routerOptions = window.bdBarbaOptions || {};
+  if (routerOptions.motion) console.warn('[BD Animate] replacing bdBarbaOptions.motion');
+  routerOptions.motion = {
+    reducedMotion: prefersReducedMotion,
+    freeze: function freeze(container) { return window.bdAnimateFreeze(container); },
+    out: function out(container) { return window.bdAnimateOut(container); },
+    in: function enter(container, options) { return window.bdAnimateIn(container, options); },
+    show: function show(container) { return window.bdAnimateShow(container); },
+    land: landAfterNav
+  };
+  window.bdBarbaOptions = routerOptions;
 
   //
   //------- RESIZE AND PREFERENCE CHANGES -------//

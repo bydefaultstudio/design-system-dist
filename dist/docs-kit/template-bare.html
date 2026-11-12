@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- A bare page (PAGE_TYPES.bare, engine-parity-phase-d.md PD-1): a page
+         outside the docs layout. The sign-in page, Ask for access and any
+         other page a reader meets at the door share this one template: the
+         site's head, the header bar alone, and the page's own body inside
+         main. No sidebar, no page transitions, no curtain, no element motion.
+         A signed-out reader is the one who meets these pages, so every file
+         the template and a public page load must be public at the gate: the
+         build checks each one (checkDoorPages in generate-docs.js). -->
+    <title>{{PAGE_TITLE}} - {{SITE_NAME}}</title>
+    <meta name="description" content="{{META_DESCRIPTION}}">
+    <meta name="robots" content="noindex, nofollow">
+    {{SHARE_META}}
+    {{FAVICON_LINKS}}
+
+    <!-- Design System Framework (path set in docs.config.js) -->
+    <link rel="stylesheet" href="{{DESIGN_SYSTEM_PATH}}">
+
+    {{FONT_HEAD}}
+
+    <!-- Docs chrome styles: the header bar and the page layouts -->
+    {{DOCS_CSS}}
+
+    {{BRAND_CSS}}
+</head>
+<body data-access="{{PAGE_ACCESS}}">
+
+    <!-- The header bar only: nav.js draws the logo, the contact link and the
+         theme toggle into this mount, with no sidebar and no search, and the
+         skip link that lands on main below -->
+    <div id="site-nav" data-base="{{NAV_BASE}}" data-sidebar="false" data-search="false"></div>
+    {{NOSCRIPT_SIGN_OUT}}
+
+    <div class="page-wrapper">
+        <!-- tabindex="-1": the skip link moves focus here, not only the
+             scroll, so the next Tab starts inside the page. It takes focus
+             from script and the skip link only, never from Tab -->
+        <main class="page-content" id="main" tabindex="-1"{{MAIN_ATTRS}}>
+{{PAGE_BODY}}
+        </main>
+    </div>
+
+    <!-- nav.js first: it draws the header and publishes the engine's
+         addresses (window.bdPaths) that the page's scripts read -->
+    <script src="{{NAV_BASE}}assets/js/nav.js"></script>
+    {{BARE_SCRIPTS}}
+</body>
+</html>

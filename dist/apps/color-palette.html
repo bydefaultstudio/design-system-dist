@@ -1,0 +1,132 @@
+
+
+      <!-- The page's one bar: Copy link in its overflow menu, then the
+           trailing cluster ending in the close. See cms/bar.md. Full width: the palette under
+           it runs edge to edge. No page header: the tool is the page, and
+           the h1 is in the body for assistive technology. -->
+      <div class="bar" data-sticky="true">
+        <div class="bar-container">
+        <div class="bar-content">
+          <!-- One choice of four: the radio-backed faded segmented control,
+               the one tools use (cms/tool-canvas.md, owner 2026-10-13). The
+               view goes in the address, so Copy link shares it. -->
+          <div class="bar-group">
+            <div class="segmented-control" data-variant="faded" id="palette-view" role="radiogroup" aria-label="Colours shown">
+              <label class="segmented-control-option"><input type="radio" name="palette-view" value="all" checked><span>All</span></label>
+              <label class="segmented-control-option"><input type="radio" name="palette-view" value="primary"><span>Primary</span></label>
+              <label class="segmented-control-option"><input type="radio" name="palette-view" value="tints"><span>Tints &amp; Shades</span></label>
+              <label class="segmented-control-option"><input type="radio" name="palette-view" value="neutrals"><span>Neutrals</span></label>
+            </div>
+          </div>
+
+          <!-- Copy link lives in the overflow menu, so the three-dots trigger
+               is always present and always has something in it. -->
+          <div class="bar-group" data-priority="menu">
+            <button type="button" class="dropdown-item js-copy-url">{{icon:link}}<span>Copy link</span></button>
+          </div>
+            <!-- Feedback: opens the shared dialog (cms/chrome/feedback-dialog.html) -->
+            <div class="bar-group" data-priority="menu">
+              <button type="button" class="dropdown-item" data-feedback-open="share">{{icon:chat}}<span>Share feedback</span></button>
+            </div>
+            <div class="bar-group" data-priority="menu">
+              <button type="button" class="dropdown-item" data-feedback-open="problem">{{icon:warning}}<span>Report a problem</span></button>
+            </div>
+          </div><!-- /.bar-content -->
+          <div class="bar-actions">
+            <div class="dropdown bar-overflow" hidden>
+              <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
+              <div class="dropdown-menu is-right"></div>
+            </div>
+            <a class="bar-close" data-page-close aria-label="Back to Tools">{{icon:close-large}}</a>
+          </div>
+        </div>
+      </div>
+
+      <h1 class="visually-hidden">Colour Palette</h1>
+
+      <div id="color-palette">
+
+        <!-- Shown when the browser refuses canvas readback: the tiles still
+             paint and Copy CSS still works, but no hex can be read. -->
+        <div class="padding-global top-small bottom-small is-hidden" id="palette-empty-wrap">
+          <div class="container-xl">
+            <p class="text-size-small text-faded" id="palette-empty">This browser will not let the tool read colour values, so the hex codes are hidden. The colours and their tokens are still here.</p>
+          </div>
+        </div>
+
+        <!-- The palette, edge to edge, built from Swatch (cms/swatch.md).
+             Each list is filled by the script from the live theme, so a
+             brand's own ramps are what shows. data-layout is the swatch
+             grid's; data-palette-set names the palette's own composition
+             (color-palette.css). -->
+        <section class="palette-set" data-view="all" aria-labelledby="palette-hues-heading">
+          <h2 class="visually-hidden" id="palette-hues-heading">Brand colours</h2>
+          <ul class="swatch-grid" role="list" data-layout="grid" data-palette-set="hues" id="palette-hues"></ul>
+        </section>
+
+        <section class="palette-set" data-view="all" aria-labelledby="palette-extras-heading">
+          <h2 class="visually-hidden" id="palette-extras-heading">Off black and off white</h2>
+          <ul class="swatch-grid" role="list" data-layout="grid" data-palette-set="extras" id="palette-extras"></ul>
+        </section>
+
+        <section class="palette-set" data-view="all" aria-labelledby="palette-neutrals-heading">
+          <h2 class="visually-hidden" id="palette-neutrals-heading">Neutrals</h2>
+          <ul class="swatch-grid" role="list" data-layout="grid" data-palette-set="neutrals" id="palette-neutrals"></ul>
+        </section>
+
+        <!-- Every hue at its base step as a tall column, and the two off
+             tones in a band beneath. A phone stacks them all full width. -->
+        <section class="palette-set" data-view="primary" aria-labelledby="palette-primary-heading">
+          <h2 class="visually-hidden" id="palette-primary-heading">Primary colours</h2>
+          <ul class="swatch-grid" role="list" data-layout="row" data-palette-set="primary" id="palette-primary"></ul>
+          <ul class="swatch-grid" role="list" data-layout="grid" data-palette-set="tones" id="palette-primary-tones"></ul>
+        </section>
+
+        <!-- Every hue at its four steps, the same grid as All, with the
+             four rows taking the whole window. -->
+        <section class="palette-set" data-view="tints" aria-labelledby="palette-tints-heading">
+          <h2 class="visually-hidden" id="palette-tints-heading">Tints and shades</h2>
+          <ul class="swatch-grid" role="list" data-layout="grid" data-palette-set="tints" id="palette-tints"></ul>
+        </section>
+
+        <!-- The neutral ramp on its own: thirteen strips, stacked lightest
+             to darkest. -->
+        <section class="palette-set" data-view="neutrals" aria-labelledby="palette-ramp-heading">
+          <h2 class="visually-hidden" id="palette-ramp-heading">Neutral ramp</h2>
+          <ul class="swatch-grid" role="list" data-palette-set="ramp" id="palette-ramp"></ul>
+        </section>
+
+        <!-- Filled by the script only when a brand leaves palette tokens
+             undefined or unreadable. -->
+        <div class="padding-global top-small bottom-small is-hidden" id="palette-skipped-wrap">
+          <div class="container-xl">
+            <p class="text-size-xsmall text-faded" id="palette-skipped"></p>
+          </div>
+        </div>
+
+        <!-- One swatch, cloned per colour. The tool measures every value
+             itself (color-core.js), so the swatch is marked unmanaged and
+             swatch.js never reads it. The copy actions are the system's
+             .copy-btn; copy-button.js reads data-copy on click. -->
+        <template id="palette-tile-template">
+          <li class="swatch" data-swatch-managed="false">
+            <div class="swatch-text">
+              <p class="swatch-name"><span class="visually-hidden" data-palette-part="kind"></span><span data-palette-part="label"></span></p>
+              <p class="swatch-value"></p>
+            </div>
+            <div class="swatch-actions">
+              <!-- Named by their visible word plus hidden context the script
+                   fills, so the spoken name starts with what is on screen. -->
+              <button type="button" class="copy-btn swatch-copy" data-format="hex" hidden>
+                <span class="copy-btn-default">{{icon:copy}}<span>Hex<span class="visually-hidden" data-palette-part="copy-context"></span></span></span>
+                <span class="copy-btn-copied">{{icon:check}}<span>Copied</span></span>
+              </button>
+              <button type="button" class="copy-btn swatch-copy" data-format="css">
+                <span class="copy-btn-default">{{icon:code}}<span>CSS<span class="visually-hidden" data-palette-part="copy-context"></span></span></span>
+                <span class="copy-btn-copied">{{icon:check}}<span>Copied</span></span>
+              </button>
+            </div>
+          </li>
+        </template>
+
+      </div>

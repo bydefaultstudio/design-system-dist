@@ -1,0 +1,61 @@
+/* ==========================================================================
+   Email Signature Generator — tool UI only
+   Layer: app. A tool on the shared canvas (tools.css, Tool canvas;
+   cms/tool-canvas.md), built from docks: the shell, the bar, the preview,
+   the end dock, its sections and the pinned actions all come from
+   tools.css. What is here is the tool's own: the rendered signature and
+   the source view on the band, and the prefixed fields. The generated
+   signature itself is deliberately raw table + inline-styled HTML (that is
+   the product); only the surrounding chrome is themed here. Classes name
+   the component, never the tool (tool-<noun>, cms/tool-canvas.md Naming),
+   and every rule is scoped to [data-tool="email-signature"] because this
+   file loads on every page (extraStylesheets, cms/docs.config.js), so an
+   unscoped rule here reaches all of them.
+   ========================================================================== */
+
+/* -- Preview --
+   A definite height while the dock is stacked under it, not the canvas's
+   floor: the card is some 240px on its own and the disclaimer adds to it,
+   and the source view wants the same room. Both scroll inside the band
+   rather than growing it, so the sections stay where they are whichever
+   format is showing. Docked, the preview runs the full height (tools.css,
+   Docks, placed) and the rule there outranks this one. */
+[data-tool="email-signature"] .tool-preview {
+  height: var(--tool-preview-height);
+}
+
+/* The rendered signature, on the band's own surface: the card carries its
+   own ground, so no frame of its own. Scrolls both ways — the card is up to
+   950px wide, by design, and a phone is not. Left-aligned, never centred:
+   a signature sits at the left of every mail client, so the preview shows
+   it there. The full width keeps the tables at the start edge of the band's
+   flex centre, and a card wider than a phone scrolls from its left edge. */
+[data-tool="email-signature"] .tool-document {
+  width: 100%;
+  max-height: 100%;
+  overflow: auto;
+}
+
+/* The design system appends an external-link glyph to a[target="_blank"]. That
+   styling never reaches a real inbox, so suppress it inside the preview only —
+   the copied HTML is unaffected. */
+[data-tool="email-signature"] .tool-document a[target="_blank"]::after {
+  content: none;
+}
+
+/* Raw HTML source view (shown while HTML is the format in Export). It ships
+   with .is-hidden and JS moves that class — the [hidden] attribute cannot do
+   this job, because the global `textarea { display: block }` rule outranks it,
+   while .is-hidden is display:none !important and does not. Fills the band;
+   resize off, because the band's height is the canvas's to give. The
+   builder writes the source as one line, so it wraps: pre kept it on one
+   row across the top of the band with the rest empty. The copied value is
+   read from .value, so the wrapping never reaches the clipboard. */
+[data-tool="email-signature"] .tool-source {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+

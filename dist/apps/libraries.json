@@ -1,0 +1,43 @@
+{
+  "$comment": "The libraries apps share (engine parity phase B). An app names the ones it needs in its manifest (cms/apps/<slug>.md, needs:), and the generator loads each once, after the libraries it needs itself. scripts and styles load on every page; files ship without a tag (loaded by the library itself, at runtime). Paths are from the engine's root, and land at the same path on every site.",
+  "tools": {
+    "styles": ["assets/css/tools.css"]
+  },
+  "tool-canvas": {
+    "scripts": ["assets/js/tool-canvas.js"]
+  },
+  "color-core": {
+    "scripts": ["assets/js/color-core.js"]
+  },
+  "tool-colour": {
+    "needs": ["color-core"],
+    "scripts": ["assets/js/tool-colour.js"]
+  },
+  "tool-grid": {
+    "scripts": ["assets/js/tool-grid.js"]
+  },
+  "layer-stack": {
+    "scripts": ["assets/js/layer-stack.js"]
+  },
+  "format-card": {
+    "needs": ["layer-stack"],
+    "scripts": ["assets/js/format-card.js"]
+  },
+  "svg-cleaner-core": {
+    "scripts": ["assets/js/vendor/svg-cleaner-core.js"]
+  },
+  "qrcode": {
+    "scripts": ["assets/js/vendor/qrcode-generator.min.js"],
+    "files": ["assets/js/vendor/jsqr.min.js"]
+  },
+  "thumbhash": {
+    "scripts": ["assets/js/vendor/thumbhash.js"]
+  },
+  "download-lock": {
+    "scripts": ["assets/js/download-lock.js"]
+  },
+  "showcase-stage": {
+    "needs": ["layer-stack"],
+    "scripts": ["assets/js/showcase-stage.js", "assets/js/showcase-player.js"]
+  }
+}

@@ -1,16 +1,19 @@
 {
   "name": "@bydefaultstudio/design-system",
-  "version": "7.5.1",
+  "version": "8.0.0",
   "description": "By Default design system framework CSS. Neutral engine defaults, brand applied per project via theme.css overrides.",
   "style": "dist/design-system.css",
   "license": "SEE LICENSE IN LICENSE.md",
   "bin": {
     "bd-sprite": "dist/tools/sprite-builder.js",
     "bd-sync": "dist/tools/sync-consumer.js",
-    "bd-migrations": "dist/tools/copy-migrations.js"
+    "bd-migrations": "dist/tools/copy-migrations.js",
+    "bd-brand": "dist/tools/brand-upgrade.js",
+    "bd-search": "dist/tools/build-search.js",
+    "bd-verify-router": "dist/tools/verify-router.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": "^20.19.0 || >=22.12.0"
   },
   "exports": {
     ".": "./dist/design-system.css",
@@ -33,6 +36,9 @@
   },
   "dependencies": {
     "marked": "^16.4.1",
-    "better-auth": "^1.7.5"
+    "better-auth": "^1.7.5",
+    "jsdom": "^29.1.1",
+    "pagefind": "1.5.2",
+    "ajv": "^8.20.0"
   }
 }

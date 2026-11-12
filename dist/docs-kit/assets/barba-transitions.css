@@ -2,16 +2,13 @@
    Barba.js page transitions — docs-kit stylesheet
    ==========================================================================
 
-   The CSS half of the docs-kit's optional page-transition feature
-   (pageTransitions: true in docs.config.js). Emitted into the output and
-   linked automatically when the flag is on.
+   The CSS half of the kit's router (barba-docs.js). Emitted into the output
+   and linked on every site, before the site's own stylesheets. There is one
+   copy: By Default OS loads this one too (engine parity C3).
 
-   Sibling file: the By Default OS site keeps its own copy at
-   assets/css/barba-transitions.css — a fix made here may need mirroring
-   there and vice versa. The kit copy differs only in its token fallbacks:
-   --top-nav-height and --background-primary may not exist in a consumer's
-   CSS, and an undefined var() inside calc() invalidates the whole
-   declaration silently.
+   Every token has a fallback: --top-nav-height and --background-primary may
+   not exist in a site's CSS, and an undefined var() inside calc()
+   invalidates the whole declaration silently.
 */
 
 /*
@@ -46,6 +43,28 @@
   position: relative;
   min-height: calc(100vh - var(--top-nav-height, 0px));
   background: var(--background-primary, #fff);
+}
+
+/* An exit (element motion, played by the router's motion option) runs
+   before is-animating goes on, and under sync: true Barba has already
+   appended the next container as an in-flow sibling. Left displayed it would
+   show under the current page for the length of the exit and grow the
+   scrollbar. The role is set synchronously at the top of leave() and
+   removed in after(), so the container is laid out normally by the time
+   anything measures it. */
+body:not(.is-animating) [data-bd-role="enter"] {
+  display: none;
+}
+
+/* The router moves focus to the arriving page's <main> (tabindex="-1",
+   focusable by script only, removed on blur), named after the page's
+   heading, so a keyboard or screen-reader user starts at the content. It is
+   a landing point, not a control: a ring round the whole page would only say
+   "you are on the page". The next Tab reaches the first control, which shows
+   its own focus ring as usual. A heading a fragment link lands on keeps its
+   ring, as the table of contents' do. */
+[data-barba="container"] main[tabindex="-1"]:focus {
+  outline: none;
 }
 
 /* Lock interaction + clip overflow during animation. clip, not hidden:

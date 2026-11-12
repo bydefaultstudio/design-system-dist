@@ -7,6 +7,12 @@ const assetLibrary = require('./asset-library');
 const formatRegistry = require('./formats');
 const formatCard = require('./format-card');
 const siteMap = require('./site-map');
+const brandFile = require('./brand');
+const appsRegistry = require('./apps');
+const osJson = require('./os-json');
+// The engine's own version, from the package this generator ships in, so a
+// generated file's banner can't freeze on the release it was first written in.
+const ENGINE_VERSION = require(path.join(__dirname, '..', '..', 'package.json')).version;
 const showcase = require('./showcase');
 const { marked } = require('marked');
 
@@ -41,6 +47,11 @@ const PROJECT = locateProject();
 const ROOT = PROJECT.root;
 const DOCS_DIR = PROJECT.contentDir;
 const TEMPLATE_FILE = path.join(__dirname, 'template.html');
+// The bare type's template (PD-1): every page outside the docs layout
+const BARE_TEMPLATE_FILE = path.join(__dirname, 'template-bare.html');
+// What applyTemplateChrome resolves that the bare template shares: the docs
+// CSS link and the UI scripts' paths
+const CHROME = { docsCssHref: null, uiScripts: [] };
 // Bundled fallback assets (docs.css, ui scripts, chrome icons) — present only
 // in the shipped docs-kit package, not when running from repo source.
 const KIT_ASSETS = path.join(__dirname, 'assets');
@@ -84,12 +95,16 @@ const CONFIG = {
   sectionIcons: userConfig.sectionIcons || {},
   rootLinks: userConfig.rootLinks || [],
   markdownSourceBase: userConfig.markdownSourceBase || null,
-  // Site search. Opt-in: the indexes are a build step (tools/build-search.js)
-  // and the UI is search.js, and the docs kit ships neither, so on by default
-  // a kit consumer would get a header button that opens nothing.
-  search: userConfig.search === true,
+  // Site search: search.js is a kit UI script and the indexes come from
+  // `npx bd-search` after the site is assembled (C1). Every site that installs has search (D3); `search: false` opts out. A
+  // legacy site keeps the old default, off, until it moves
+  search: userConfig.search === undefined ? !!userConfig.install : userConfig.search === true,
   validateLayers: userConfig.validateLayers === true,
-  pageTransitions: userConfig.pageTransitions === true,
+  // Page transitions are always on (engine parity C3, D5): one router,
+  // barba-docs.js, on every site. `transitions` picks a named transition
+  // per scenario from the kit's library, e.g. { open: 'fade' }; unset, each
+  // scenario keeps the kit's default (TRANSITION_DEFAULTS).
+  transitions: userConfig.transitions || null,
   // The feedback form (opt-in): the footer's "Was this helpful?" block, the
   // shared dialog, Share feedback / Report a problem in the doc bar's menu,
   // and feedback.js. It posts to /api/submit-form, which the site's own
@@ -100,8 +115,8 @@ const CONFIG = {
   feedbackScript: userConfig.feedbackScript || null,
   // The glossary reading drawer: on whenever cms/glossary/ exists, so a site
   // that builds a glossary gets glossary.js and its starter in
-  // assets/docs-kit/. A site that loads and starts glossary.js itself (By
-  // Default OS, through bd-site-init.js) sets false. See the docs-kit README,
+  // assets/docs-kit/. Every site uses it, By Default OS included; a site
+  // that loads and starts glossary.js itself sets false. See the docs-kit README,
   // "Glossary".
   glossaryDrawer: userConfig.glossaryDrawer !== false,
   // By Default OS features. Each writes files a docs-kit project does not own
@@ -131,8 +146,31 @@ const CONFIG = {
   bodyAttrs: userConfig.bodyAttrs || '',
   wrapperAttrs: userConfig.wrapperAttrs || '',
   containerAttrs: userConfig.containerAttrs || '',
-  brandManifest: userConfig.brandManifest || null,
+  // The brand settings file (brand.js, engine parity phase 0). cms/brand.json
+  // when it exists and the config names none.
+  brandManifest: userConfig.brandManifest
+    || (fs.existsSync(path.join(PROJECT.root, 'cms', 'brand.json')) ? 'cms/brand.json' : null),
+  // Where the two runtime files generated from it are written, from the
+  // output root. A site that gates its artwork serves the logo manifest from
+  // a gated folder (BlackDoctor: media/js/logo-manifest.js).
+  brandOutputs: Object.assign(
+    { themeConfig: 'assets/js/theme-config.js', logoManifest: 'assets/js/logo-manifest.js' },
+    userConfig.brandOutputs || {}
+  ),
   brandsDir: userConfig.brandsDir || null,
+  // By Default mentions a client site keeps on purpose, each with a reason:
+  // [{ file: 'brand/about.html', text: 'By Default', reason: '…' }]. The
+  // build fails on any other (checkClientWording).
+  allowWording: Array.isArray(userConfig.allowWording) ? userConfig.allowWording : [],
+  // Site paths a public door page loads that a build step after docgen
+  // copies into the output: ['/media/fonts/x.woff2']. The door check fails on
+  // any other file it can't find (checkDoorPages).
+  doorFilesAddedLater: Array.isArray(userConfig.doorFilesAddedLater) ? userConfig.doorFilesAddedLater : [],
+  // The packages and apps this site has (apps.js, engine parity phase B):
+  // { packages: ['brand', 'utilities'], off: ['color-palette'] }. Unset, the
+  // site keeps every cms/apps page it has and loads app files itself, as
+  // before phase B.
+  install: userConfig.install === undefined ? null : userConfig.install,
 };
 // Legacy alias — the body of this file predates the unified contract.
 const PROJECT_CONFIG = CONFIG;
@@ -145,12 +183,51 @@ if (CONFIG.basePath && (!CONFIG.basePath.startsWith('/') || CONFIG.basePath.ends
   process.exit(1);
 }
 
-// pageTransitions contract: strictly true or false/unset — an options object
-// is reserved for later, so anything else fails loudly rather than being
-// silently coerced to off.
-if (userConfig.pageTransitions !== undefined && typeof userConfig.pageTransitions !== 'boolean') {
-  console.error(`❌ Invalid pageTransitions: expected true or false, got ${JSON.stringify(userConfig.pageTransitions)}. Page transitions are opt-in — set pageTransitions: true only after reading the "Page transitions" section of the docs-kit README.`);
+// Page transitions stopped being a choice in engine parity C3: every site runs
+// the kit's router. A leftover flag does nothing, so it warns rather than
+// fails, and says what to delete.
+if (userConfig.pageTransitions !== undefined) {
+  console.warn(`⚠️  pageTransitions is gone: every site runs the kit's router (barba-docs.js). Delete pageTransitions from docs.config.js; to change how a navigation looks, set transitions (docs-kit README, "Page transitions").`);
+}
+
+// The router owns the Barba markup. A data-barba attribute in wrapperAttrs or
+// containerAttrs would put a second set on the element, and was how a site
+// ran its own router before C3.
+if (/data-barba(?:-[a-z]+)?\s*=/.test(CONFIG.wrapperAttrs + CONFIG.containerAttrs)) {
+  console.error('❌ wrapperAttrs/containerAttrs carry data-barba markup. The generator stamps it on every site now (engine parity C3): delete those attributes from docs.config.js, and the site\'s own Barba script and transition stylesheet with them.');
   process.exit(1);
+}
+
+// The kit router's transition library, by scenario. Mirrors TRANSITION_MAP
+// and TRANSITIONS in assets/js/barba-docs.js; bd-verify-router keeps them
+// equal. A new transition joins both.
+const TRANSITION_DEFAULTS = {
+  open: 'slide-up',
+  close: 'slide-down',
+  swap: 'slide-left',
+  'swap-back': 'slide-right',
+  fade: 'fade',
+};
+const TRANSITION_NAMES = ['slide-up', 'slide-down', 'slide-left', 'slide-right', 'fade'];
+
+if (CONFIG.transitions !== null) {
+  const t = CONFIG.transitions;
+  const problems = [];
+  if (typeof t !== 'object' || Array.isArray(t)) {
+    problems.push(`expected an object such as { open: 'fade' }, got ${JSON.stringify(t)}`);
+  } else {
+    for (const [scenario, name] of Object.entries(t)) {
+      if (!Object.prototype.hasOwnProperty.call(TRANSITION_DEFAULTS, scenario)) {
+        problems.push(`"${scenario}" is not a scenario (${Object.keys(TRANSITION_DEFAULTS).join(', ')})`);
+      } else if (!TRANSITION_NAMES.includes(name)) {
+        problems.push(`${scenario}: "${name}" is not a transition (${TRANSITION_NAMES.join(', ')})`);
+      }
+    }
+  }
+  if (problems.length) {
+    console.error(`❌ Invalid transitions in docs.config.js:\n  ${problems.join('\n  ')}`);
+    process.exit(1);
+  }
 }
 
 if (userConfig.feedback !== undefined && typeof userConfig.feedback !== 'boolean') {
@@ -171,9 +248,11 @@ const USE_PACKAGED_DS = !userConfig.designSystemPath && fs.existsSync(PACKAGED_D
 if (USE_PACKAGED_DS) CONFIG.designSystemPath = 'assets/docs-kit/design-system.css';
 
 const OUTPUT_DIR = path.resolve(ROOT, CONFIG.outputDir);
-const BRANDS_DIR = CONFIG.brandsDir ? path.resolve(ROOT, CONFIG.brandsDir) : null;
-// Site-relative brands path for markdown-source links in brand doc pages
-const BRANDS_REL = BRANDS_DIR ? path.relative(ROOT, BRANDS_DIR).split(path.sep).join('/') : '';
+// Brand spaces (brandsDir) were removed in phase 0 (P0-4): a deployment holds
+// one brand (access-plan.md D7), set in its brand.json.
+if (CONFIG.brandsDir) {
+  console.warn('⚠️  brandsDir is no longer read: brand spaces were removed. A site holds one brand, set in its brand.json (brandManifest). Delete brandsDir from docs.config.js.');
+}
 
 // Every page's level, for the access gate (access-plan.md §12.4;
 // permissions-plan.md §4.1). Each emitter records its output URL as it writes
@@ -222,8 +301,10 @@ function isIndexPagePath(pathname) {
  * 7). A link that already carries data-access, an external one, a fragment,
  * or a target that is not a page is left as written. Under 'locked' the
  * attribute is inert on prose: nav.js locks cards, pager and sidebar only.
+ * `mark: false` checks the links without writing the attribute, for a page
+ * where nothing would ever read it.
  */
-function stampBodyLinks(html, pagePath, pageLevel) {
+function stampBodyLinks(html, pagePath, pageLevel, { mark = true } = {}) {
   // Attribute values are matched whole, so a `>` inside one (a title, an
   // aria-label) does not end the tag early.
   const ATTRS = `(?:[^>"']|"[^"]*"|'[^']*')`;
@@ -240,7 +321,7 @@ function stampBodyLinks(html, pagePath, pageLevel) {
     if (!target.endsWith('.html')) return match;
     const level = levelOf(target);
     if (LEVEL_RANK[level] > LEVEL_RANK[pageLevel] && !isIndexPagePath(target)) bodyLinkViolations.push(`  ${pagePath} (${pageLevel}) links to ${target} (${level})`);
-    return `<a${before} href="${href}"${after} data-access="${level}">`;
+    return mark ? `<a${before} href="${href}"${after} data-access="${level}">` : match;
   });
 }
 
@@ -300,26 +381,193 @@ function validateSectionAccess() {
   }
 }
 
-// Root-site manifest (config: brandManifest): the site's admin values — name,
-// description, footer, favicons, fonts — come from a brand.json when one is
-// configured. docs.config.js keys are the fallback for projects without one.
+// The brand settings file (config: brandManifest; brand.js). Read, upgraded
+// and validated once, here: a file that fails stops the build with every
+// problem listed. ROOT_MANIFEST is its chrome view (name, fonts, favicons,
+// OG image); BRAND is the whole file, for the runtime files and the checks.
+// docs.config.js keys are the fallback for projects without one.
 const ROOT_MANIFEST_PATH = CONFIG.brandManifest ? path.resolve(ROOT, CONFIG.brandManifest) : null;
-const ROOT_MANIFEST = ROOT_MANIFEST_PATH ? readManifestFile(ROOT_MANIFEST_PATH) : null;
-const ROOT_BRAND_KEY = ROOT_MANIFEST_PATH ? path.basename(path.dirname(ROOT_MANIFEST_PATH)) : null;
+// The version brand.json is written at, before any upgrade in memory: what
+// /os.json reports as `brand`, so an old file shows on the fleet dashboard.
+let BRAND_FILE_VERSION = null;
+const BRAND = ROOT_MANIFEST_PATH ? loadSiteBrand(ROOT_MANIFEST_PATH) : null;
+const ROOT_MANIFEST = BRAND ? brandFile.chromeManifest(BRAND) : null;
 
-// Root pages load the root brand's theme as a static render-blocking link, so
-// the site carries its brand before any JS runs; a previewed brand theme is
-// injected after it in the head and wins the cascade. Only meaningful when
-// the manifest lives in a brandsDir whose assets get copied to output.
-function rootThemeCss(prefix) {
-  if (!ROOT_MANIFEST || !BRANDS_DIR) return '';
-  return `<!-- Instance-0 brand theme -->\n    <link rel="stylesheet" href="${prefix}${ROOT_BRAND_KEY}/assets/theme.css">`;
+function loadSiteBrand(file) {
+  const tokens = brandFile.definedTokens([
+    path.resolve(ROOT, CONFIG.designSystemPath),
+    CONFIG.brandCssPath && !/^(https?:)?\/\//.test(CONFIG.brandCssPath) && !CONFIG.brandCssPath.startsWith('/')
+      ? path.resolve(ROOT, CONFIG.brandCssPath) : null,
+  ]);
+  try {
+    const { brand, from } = brandFile.loadBrand(file, { root: ROOT, tokens });
+    BRAND_FILE_VERSION = from;
+    if (from < brandFile.BRAND_VERSION) {
+      console.warn(`⚠️  ${path.relative(ROOT, file)} is version ${from}. Run npx bd-brand upgrade to rewrite it as version ${brandFile.BRAND_VERSION}.`);
+    }
+    return brand;
+  } catch (err) {
+    if (err.name !== 'BrandError') throw err;
+    console.error(`\n❌ ${err.message}\n`);
+    process.exit(1);
+  }
 }
+
+// The apps: every one the package ships and the site writes, and the ones
+// this site installs. Read once; a bad install list stops the build here.
+const APP_REGISTRY = appsRegistry.loadApps({ generatorDir: __dirname, siteAppsDir: path.join(DOCS_DIR, 'apps'), parseFrontmatter });
+const INSTALL = appsRegistry.resolveInstall(APP_REGISTRY, CONFIG.install, {
+  engineHome: !!BRAND && BRAND.slug === brandFile.ENGINE_HOME_SLUG,
+  accessGate: CONFIG.accessGate,
+  allowDraft: !!(CONFIG.install && CONFIG.install.allowDraft),
+});
+if (INSTALL.errors.length) {
+  console.error(`\n❌ The apps this site installs can't be resolved:\n${INSTALL.errors.map((e) => `  - ${e}`).join('\n')}\n`);
+  process.exit(1);
+}
+if (!INSTALL.legacy) {
+  // The Asset Library's build data and download map follow its install
+  CONFIG.assetLibrary = INSTALL.installed.includes('asset-library');
+  for (const slug of INSTALL.installed) {
+    const overrides = APP_REGISTRY.apps.get(slug).overrides;
+    if (overrides.length) console.log(`ℹ️  ${slug}: this site's own ${overrides.join(' and ')} replace${overrides.length === 1 ? 's' : ''} the package's.`);
+  }
+}
+
+// The access gate's door pages and scripts come from the package by the
+// install list (phase D): a legacy site, with no `install`, would build a
+// gate with no sign-in page, and every reader, the owner too, would be
+// locked out
+if (CONFIG.accessGate && INSTALL.legacy) {
+  console.error('\n❌ accessGate is on, but docs.config.js has no `install`, so the engine\'s sign-in, Ask for access and locked pages and their scripts aren\'t installed. Add `install: { packages: [...] }` (see the docs-kit README, "Apps").\n');
+  process.exit(1);
+}
+// The gate answers at the site root: its addresses (engine-paths.mjs), its
+// public lists and the sign-out link know no basePath, so a gated site under
+// one would lock its own door pages away
+if (CONFIG.accessGate && CONFIG.basePath) {
+  console.error(`\n❌ accessGate is on with basePath "${CONFIG.basePath}". The access gate serves a site from its root: its sign-in, sign-out and public addresses have no prefix. Remove basePath, or serve the site from its own host.\n`);
+  process.exit(1);
+}
+
+// The ask for access settings (phase D): one place, the engine's /support.html
+if (BRAND && BRAND.access && Object.prototype.hasOwnProperty.call(BRAND.access, 'requestRoute')) {
+  console.warn(`⚠️  brand.json's access.requestRoute is no longer read: Ask for access is ${appsRegistry.ENGINE_PATHS.support} on every site. Delete it.`);
+}
+if (CONFIG.accessGate && !INSTALL.legacy && BRAND && !(BRAND.access && BRAND.access.turnstileSiteKey)) {
+  console.warn('⚠️  brand.json has no access.turnstileSiteKey, so Ask for access works only for a signed-in reader: the form service refuses a signed-out request that has no spam check.');
+}
+
+// Each installed app's guide: the site's own file, else the package's (PB-3)
+const GUIDES = appsRegistry.resolveGuides(APP_REGISTRY, INSTALL, DOCS_DIR);
+// The engine's pages (apps.js ENGINE_PAGES) build at the same address on
+// every site (engine-paths.mjs): the not-installed and locked pages with
+// site-absolute links, because the Worker serves them at other pages'
+// addresses; the search page only where search is on; the sign-in, Ask for
+// access and locked pages only where the access gate is on. None joins a
+// section: no nav group, no card, no pager chain.
+if (!CONFIG.search) GUIDES.sources.delete('search.md');
+const ENGINE_PAGE_FILES = new Set();
+for (const [page, address] of Object.entries(appsRegistry.ENGINE_PAGES)) {
+  if (address.gate && !CONFIG.accessGate) continue;
+  if (GUIDES.sources.has(page) || (!INSTALL.legacy && fs.existsSync(path.join(DOCS_DIR, page)))) {
+    // Pinned: the Worker, the scripts and the emails link these addresses
+    const own = CONFIG.filenameOverrides[page];
+    if (own && (own.folder !== address.folder || own.name !== address.name)) {
+      console.warn(`⚠️  filenameOverrides moves ${page}; the engine links it at /${address.folder ? `${address.folder}/` : ''}${address.name}, so it stays there.`);
+    }
+    const { gate, ...pinned } = address;
+    CONFIG.filenameOverrides[page] = { ...(own || {}), ...pinned };
+    ENGINE_PAGE_FILES.add(page);
+  }
+}
+if (GUIDES.errors.length) {
+  console.error(`\n❌ The app guides can't be resolved:\n${GUIDES.errors.map((e) => `  - ${e}`).join('\n')}\n`);
+  process.exit(1);
+}
+for (const guide of GUIDES.overridden) console.log(`ℹ️  ${guide}: this site's own guide replaces the package's.`);
+
+// The pages of sections this site doesn't install, to the section's name (D14)
+const OFF_SECTION_PAGES = new Map();
+
+/** Where a cms page's source is: the site's cms/, or a guide the package ships. */
+function docSource(filename) {
+  return GUIDES.sources.get(filename) || path.join(DOCS_DIR, filename);
+}
+
+/** Every page source in cms/, plus the package's guides, less uninstalled apps' guides. */
+function docFilenames() {
+  const names = fs.readdirSync(DOCS_DIR).filter((file) => file.endsWith('.md') && !GUIDES.skip.has(file)
+    && fs.statSync(path.join(DOCS_DIR, file)).isFile());
+  for (const guide of GUIDES.sources.keys()) if (!names.includes(guide)) names.push(guide);
+  return names.sort();
+}
+
+/**
+ * The values {{brand:key}} fills: the brand's, or, on a site with no
+ * brand.json, its name from docs.config.js for the keys that only name it.
+ */
+function siteTokens() {
+  if (BRAND) return brandFile.brandTokens(BRAND);
+  // The engine's Ask for access page reads the last two; empty means none
+  const tokens = { name: CONFIG.siteName, siteName: CONFIG.siteName, organisation: CONFIG.siteName, supportEmail: '', turnstileSiteKey: '' };
+  if (CONFIG.siteUrl) tokens.url = CONFIG.siteUrl;
+  return tokens;
+}
+
+/**
+ * A brand value as text in markdown: never markup, since marked runs with
+ * sanitize off. brand.js refuses <, > and " in these fields already, so for a
+ * valid brand this changes nothing; it holds for a site with no brand.json,
+ * and for a check that ever misses one. & is left alone, so a valid value in
+ * a code span still reads as written.
+ */
+function escapeBrandText(value) {
+  return String(value).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/**
+ * A markdown page's {{brand:key}} tokens, filled from siteTokens(), each
+ * escaped (escapeBrandText unless the caller passes its own). An unknown key
+ * stops the build, naming the page; `\{{brand:key}}` stays as written,
+ * without the backslash.
+ */
+function expandBrandTokens(markdown, source, escape = escapeBrandText) {
+  if (!markdown.includes('{{brand:')) return markdown;
+  const tokens = siteTokens();
+  return markdown.replace(/(\\?)\{\{brand:([a-zA-Z]+)\}\}/g, (match, escaped, key) => {
+    if (escaped) return match.slice(1);
+    if (!Object.prototype.hasOwnProperty.call(tokens, key)) {
+      console.error(`\n❌ ${source}: {{brand:${key}}} isn't a brand token (known: ${Object.keys(tokens).join(', ')}).\n`);
+      process.exit(1);
+    }
+    return escape(tokens[key]);
+  });
+}
+
+/** An installed app's source files, or null. */
+function installedApp(slug) {
+  if (!INSTALL.installed.includes(slug)) return null;
+  return APP_REGISTRY.apps.get(slug) || null;
+}
+
 const SITE = {
   name: (ROOT_MANIFEST && (ROOT_MANIFEST.siteName || ROOT_MANIFEST.name)) || CONFIG.siteName,
   description: (ROOT_MANIFEST && ROOT_MANIFEST.description) || CONFIG.indexDescription,
   footerText: (ROOT_MANIFEST && ROOT_MANIFEST.footerText) || CONFIG.footerText,
 };
+
+/**
+ * The site's name and description as markup: escaped once, here, for every
+ * place they land (each page's <title> and og:title, the header logo, the
+ * home page's meta description and subtitle). They come from brand.json,
+ * which a settings pull request can change (engine-parity-d18.md, review
+ * finding 1), so never as raw HTML. The footer is escaped in buildPageChrome.
+ */
+function siteTextHtml(site) {
+  return { name: escapeAttr(String(site.name || '')), description: escapeAttr(String(site.description || '')) };
+}
+const SITE_HTML = siteTextHtml(SITE);
 
 // Root a site-absolute href under basePath. The default '' keeps output
 // byte-identical to a build without the option; external (http, //) and
@@ -832,7 +1080,8 @@ function renderIconManifest() {
   // \u003c keeps "</script>" and "<!--" out of the block whatever the markup holds
   // The brand names the export files (icon_<brand>_<key>_...), so a second
   // instance's arrow-up never collides with this one's in a downloads folder.
-  const manifest = Object.assign(ROOT_BRAND_KEY ? { brand: ROOT_BRAND_KEY } : {}, { categories: order, icons: icons });
+  const brandKey = BRAND ? BRAND.slug : null;
+  const manifest = Object.assign(brandKey ? { brand: brandKey } : {}, { categories: order, icons: icons });
   const json = JSON.stringify(manifest).replace(/</g, '\\u003c');
   console.log(`Icon manifest: ${icons.length} icons in ${order.length} categories, ${Math.round(json.length / 1024)} KB`);
   return `<script type="application/json" id="icon-manifest">${json}</script>`;
@@ -920,7 +1169,7 @@ function loadFormatRegistry() {
 function writeFormatsEmbed() {
   const platforms = loadFormatRegistry();
   if (!platforms.length) return;
-  const html = formatCard.renderEmbedPage({ platforms, getIcon, themeLink: rootThemeCss('/') });
+  const html = formatCard.renderEmbedPage({ platforms, getIcon, themeLink: brandCssLink('/') });
   const out = path.join(OUTPUT_DIR, formatCard.EMBED_PATH);
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, html);
@@ -1629,6 +1878,18 @@ function markdownToHtml(markdown, source = 'a cms/*.md page') {
   // a page actually contains the placeholder.
   markdown = markdown.replace(/^\{\{icon-registry\}\}[^\S\n]*$/m, renderIconRegistry);
 
+  // {{logo-spec:<variant id>}}: the brand's logo drawn with its Layout Spec
+  // (logo-spec.js), so a guide's clear-space figure comes from the same data
+  // as the Logo Tool. Line-only, like the registry; an id brand.json doesn't
+  // have stops the build.
+  markdown = expandLogoSpecs(markdown);
+
+  // {{brand:key}}: the site's own name and addresses, so a guide the engine
+  // ships reads as this site's (PB-3). Everywhere in the page, code included,
+  // because an example URL is where a guide most often names its host. A
+  // backslash before it keeps it literal, for a page that documents the token.
+  markdown = expandBrandTokens(markdown, source);
+
   // {{page-types}} inlines the PAGE_TYPES table as JSON for the Page Layouts
   // wireframe. Same line-only match and lazy replacer as the registry above,
   // so a doc can still mention the placeholder inline as text.
@@ -2160,51 +2421,62 @@ function resolvePageType(frontmatter = {}) {
 
 // ── Spaces ──
 //
-// The generator writes two kinds of site from one template: the root docs site,
-// and one mini-site per brand instance under cms/brands/. They differ in seven
-// values and nothing else — theme stylesheet, theme attribute, favicons, OG
-// image, fonts, footer text, and the prefix on Barba's section slug.
-//
-// Before this descriptor existed, that difference was expressed by having two
-// of every emitter (generatePage/generateBrandDocs,
-// generateSectionIndexPage/generateBrandSectionOverviews, and so on), each a
-// near-copy of the other. A new page type had to be built twice or the two
-// sites silently disagreed, which is how the page bar's markup drifted apart.
-//
-// `brandRelBase` is a page's depth inside its own space, which is not the same
-// as navBase (depth from the output root). A brand page at
-// /acme/docs/x.html has navBase '../../' but brandRelBase '../'.
+// The values a page's chrome takes from where it lives. Since brand spaces
+// were removed (phase 0, P0-4) there is one space, the site itself; the
+// descriptor stays because every emitter already reads it, and a second
+// space would again be a change here, not a fork of every emitter.
 
 const ROOT_SPACE = {
   key: null,
   manifest: ROOT_MANIFEST,
-  themeCss: (navBase) => rootThemeCss(navBase),
-  themeAttr: '',
-  // Which space rendered this page, as an attribute nothing at runtime writes.
-  // `data-brand-theme` cannot answer that question: the early-theme bootstrap
-  // in the page head sets it from localStorage, so on a root page it means
-  // "this reader previewed a brand", not "this page belongs to one". Anything
-  // deciding what chrome to ship reads this instead. See generateNavJs.
+  // Which space rendered this page, as an attribute (data-space) nav.js reads
+  // to keep a non-root space out of the site's search. Empty for the site.
   spaceAttr: '',
   slugPrefix: '',
   footerText: () => SITE.footerText,
   defaultsDir: () => DOCS_DIR,
 };
 
-function brandSpace(brandKey, theme) {
-  return {
-    key: brandKey,
-    manifest: theme.manifest,
-    // Relative to the brand's own root, where copyBrandAssets puts theme.css —
-    // so this takes brandRelBase, unlike the root space which takes navBase.
-    themeCss: (brandRelBase) =>
-      `<!-- Brand Theme Override (must load last to override base styles) -->\n    <link rel="stylesheet" href="${brandRelBase}assets/theme.css">`,
-    themeAttr: `data-brand-theme="${brandKey}"`,
-    spaceAttr: ` data-space="${brandKey}"`,
-    slugPrefix: `${brandKey}-`,
-    footerText: () => buildFooterHtml(theme.manifest.footerText),
-    defaultsDir: () => path.join(DOCS_DIR, 'brands', brandKey),
-  };
+/**
+ * {{logo-spec:<id>}} on a line of its own, outside fenced code (``` or ~~~,
+ * any length, indented or not, closed only by the same mark at least as
+ * long), so a doc can show the block as an example. A malformed id stops the
+ * build rather than staying on the page as text.
+ */
+function expandLogoSpecs(markdown) {
+  let fence = null; // { mark, length } while inside a fenced block
+  return markdown.split('\n').map((line) => {
+    const opener = line.match(/^[^\S\n]*(`{3,}|~{3,})/);
+    if (fence) {
+      if (opener && opener[1][0] === fence.mark && opener[1].length >= fence.length && !line.slice(opener[0].length).trim()) fence = null;
+      return line;
+    }
+    if (opener) { fence = { mark: opener[1][0], length: opener[1].length }; return line; }
+    const block = line.match(/^[^\S\n]*\{\{logo-spec:([^}]*)\}\}[^\S\n]*$/);
+    if (!block) return line;
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(block[1])) {
+      console.error(`\n❌ {{logo-spec:${block[1]}}}: a logo id is lower-case and hyphenated, as brand.json writes it.\n`);
+      process.exit(1);
+    }
+    return renderLogoSpecFigure(block[1]);
+  }).join('\n');
+}
+
+/**
+ * The figure {{logo-spec:<id>}} expands to. logo-spec.js draws it in the
+ * browser from the logo manifest; the caption is filled there too, from the
+ * logo's measured X, so no number is written into the page.
+ */
+function renderLogoSpecFigure(id) {
+  const known = BRAND ? BRAND.logos.variants.map((v) => v.id) : [];
+  if (!known.includes(id)) {
+    console.error(`\n❌ {{logo-spec:${id}}}: ${BRAND ? `brand.json has no logo "${id}" (it has ${known.join(', ')})` : 'the site has no brand.json'}.\n`);
+    process.exit(1);
+  }
+  return `<figure class="logo-spec border border-faded" data-logo-spec="${id}">
+  <div class="logo-spec-stage"></div>
+  <figcaption class="logo-spec-caption text-size-small text-secondary"></figcaption>
+</figure>`;
 }
 
 /**
@@ -2226,7 +2498,6 @@ function renderPage(template, {
   // to './' — an empty NAV_BASE would turn a dynamic import('{{NAV_BASE}}…')
   // into a bare module specifier. The two bases are therefore not always equal.
   assetBase = null,
-  brandRelBase = null,
   title,
   description = '',
   header = '',
@@ -2264,7 +2535,6 @@ function renderPage(template, {
     ? `    <meta data-pagefind-filter="section[content]" data-pagefind-meta="section[content]" content="${escapeAttr(sectionLabel)}">\n`
     : '';
   const chrome = brandChromeSlots(space.manifest, assets);
-  const themeCssBase = brandRelBase === null ? assets : brandRelBase;
 
   // {{PAGE_BODY}} is filled LAST, and the order matters.
   //
@@ -2282,7 +2552,8 @@ function renderPage(template, {
   // it verbatim still gets it rewritten. Nothing does, and the alternative is
   // sentinels for a case that has not come up.
   return template
-    .replaceAll('{{PAGE_TITLE}}', () => title)
+    // Text, never markup: a title or site name with "<" or "&" stays as written
+    .replaceAll('{{PAGE_TITLE}}', () => escapeAttr(title))
     .replaceAll('{{META_DESCRIPTION}}', () => description)
     .replace('{{SEARCH_META}}', () => searchMeta)
     .replace('{{MAIN_ATTRS}}', () => (indexed ? ' data-pagefind-body' : ''))
@@ -2290,8 +2561,6 @@ function renderPage(template, {
     .replace('{{PAGE_STICKY_BAR}}', () => stickyBar)
     .replace('{{DESIGN_SYSTEM_PATH}}', () => prefixHref(assets, PROJECT_CONFIG.designSystemPath))
     .replace('{{BRAND_CSS}}', () => brandCssLink(assets))
-    .replace('{{BRAND_THEME_CSS}}', () => space.themeCss(themeCssBase))
-    .replace('{{BRAND_THEME_ATTR}}', () => space.themeAttr)
     .replace('{{SPACE_ATTR}}', () => space.spaceAttr)
     .replace('{{FONT_HEAD}}', () => fontHeadHtml(space.manifest, navBase))
     .replace('{{PAGE_NAV}}', () => pageNav)
@@ -2300,10 +2569,11 @@ function renderPage(template, {
     .replace('{{OG_IMAGE}}', () => chrome.ogImage)
     .replace('{{PAGE_ACCESS}}', () => access)
     .replace('{{PAGE_SCRIPTS}}', () => scripts)
-    // replaceAll: these are page-scoped constants, and the pageTransitions
-    // flag appends a second set of occurrences to containerAttrs — a single
-    // .replace() would let chrome injected earlier in the document steal the
-    // one substitution and leave the container carrying literal tokens.
+    // replaceAll: these are page-scoped constants, and the router's container
+    // attributes are appended to a site's own containerAttrs, which may use
+    // them too — a single .replace() would let chrome injected earlier in
+    // the document steal the one substitution and leave the container
+    // carrying literal tokens.
     .replaceAll('{{SECTION_SLUG}}', () => sectionSlug)
     .replaceAll('{{PAGE_SECTION}}', () => pageSection)
     .replaceAll('{{PAGE_ORDER}}', () => String(order))
@@ -2377,7 +2647,35 @@ function readFeedbackPartial(kitName, sourceName) {
   return fs.readFileSync(found, 'utf8');
 }
 
+/**
+ * The feedback dialog as this site shows it. The follow-up switch, between
+ * its `<!-- follow-up -->` markers, stays on the engine home only: a client
+ * site's feedback never carries a name or an email, so it offers no
+ * follow-up (PC-9). A partial that has lost its markers fails the build
+ * rather than ship the switch to a client. `engineHome` is this site's
+ * brand by default; scripts/verify-feedback-dialog.js passes it.
+ */
+function feedbackDialogHtml(html, engineHome = Boolean(BRAND && BRAND.slug === brandFile.ENGINE_HOME_SLUG)) {
+  if (engineHome) return html.replace(/[ \t]*<!-- \/?follow-up -->\n?/g, '');
+  const cut = html.replace(/[ \t]*<!-- follow-up -->[\s\S]*?<!-- \/follow-up -->\n?/, '');
+  if (cut === html || /feedback-follow-up/.test(cut)) {
+    console.error('❌ the feedback dialog has no <!-- follow-up --> block to remove — reinstall the docs-kit package.');
+    process.exit(1);
+  }
+  return cut;
+}
+
 let _extraContentHtml = null;
+// The engine's one credit line (P0-3), on a client site's footer only: By
+// Default's own site is the engine's home and needs none. Its text is the
+// engine's, exactly as written here; the wording checks admit this string
+// and no other By Default mention (brand.js ENGINE_CREDIT).
+function engineCreditHtml() {
+  if (!BRAND || BRAND.slug === brandFile.ENGINE_HOME_SLUG) return '';
+  return `\n                    <p class="text-size-small text-secondary" data-engine-credit>${brandFile.ENGINE_CREDIT}</p>`;
+}
+
+/** The page's closing chrome. `footerText` is the brand's plain text, escaped here. */
 function buildPageChrome(footerText) {
   // Icons are expanded here, not inherited from the template's pre-pass. This
   // block used to be substituted into the template before that pass ran; now
@@ -2396,7 +2694,7 @@ function buildPageChrome(footerText) {
         <footer class="footer">
             <div class="footer-inner">
                 <div class="footer-bottom" data-layout="center">
-                    <p class="text-size-small text-secondary">${footerText}</p>
+                    <p class="text-size-small text-secondary">${escapeAttr(String(footerText || ''))}</p>${engineCreditHtml()}
                 </div>
             </div>
         </footer>`;
@@ -2465,7 +2763,11 @@ function generateIndexPage(template, filesBySection) {
     // shelf reads as broken, so art is added one card at a time without
     // showing until the last one lands. And no two neighbours share a hue,
     // or the shelf reads as one band (D18).
-    const shelf = CONFIG.indexCards;
+    // A section this site doesn't install has no card (D14)
+    const shelf = CONFIG.indexCards.filter((card) => {
+      const folder = String(card.href || '').replace(/^\//, '').split('/')[0];
+      return !appsRegistry.sectionOff(INSTALL, folder);
+    });
     const missingArt = shelf.filter(card => !card.osIllustration).map(card => card.title);
     const illustrated = missingArt.length === 0;
     if (!illustrated && missingArt.length < shelf.length) {
@@ -2547,8 +2849,8 @@ function generateIndexPage(template, filesBySection) {
     navBase: './',
     assetBase: '',
     title: 'Home',
-    description: SITE.description,
-    header: buildPageHeaderHtml({ title: SITE.name, subtitle: SITE.description }),
+    description: SITE_HTML.description,
+    header: buildPageHeaderHtml({ title: SITE_HTML.name, subtitle: SITE_HTML.description }),
     content: indexContent,
     access,
     sectionSlug: 'home',
@@ -2559,6 +2861,36 @@ function generateIndexPage(template, filesBySection) {
     article: PAGE_TYPES.shelf.article,
     chrome: PAGE_TYPES.shelf.chrome,
   });
+}
+
+/**
+ * The Tools index's bookshelf: a cover per page, opening the tool a guide
+ * names (guideTarget), with the tool's drawing when every cover has one.
+ */
+function renderToolsShelf(files, section) {
+  const covers = files.map((file) => {
+    const target = guideTarget(file, section);
+    return { file, target, art: pageOsIllustration(file.frontmatter, file) };
+  });
+  const missingArt = covers.filter((c) => !c.art.osIllustration).map((c) => c.file.title);
+  const illustrated = missingArt.length === 0;
+  if (!illustrated && missingArt.length < covers.length) {
+    console.warn(`Tools shelf renders plain covers: no os-illustration for ${missingArt.join(', ')}`);
+  }
+  let html = `<div class="docs-section"><div class="book-shelf"${MOTION.shelf}>`;
+  for (const { file, target, art } of covers) {
+    html += `
+        ${renderBookCover({
+          href: target.href,
+          title: file.title,
+          subtitle: file.frontmatter.subtitle,
+          access: target.access,
+          headingLevel: 2,
+          ...(illustrated ? art : {}),
+        })}`;
+  }
+  return `${html}
+      </div></div>`;
 }
 
 /**
@@ -2583,12 +2915,17 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
 
   let cards = '';
 
+  // Tools is a bookshelf on every site (Erlen, 2026-11-10): one cover per
+  // tool, like the home shelf, and like it, art only when every cover has
+  // some, so a half-illustrated shelf never ships. Each cover opens its tool.
+  if (sectionFolder === 'tools') cards = renderToolsShelf(sorted, section);
+
   // Generic subsection grouping (works for all sections)
   const defaults = loadDefaults(DOCS_DIR);
   const subsectionOrder = getSubsectionOrder(defaults, section);
-  const ungrouped = sorted.filter(f => !f.frontmatter.subsection);
+  const ungrouped = cards ? [] : sorted.filter(f => !f.frontmatter.subsection);
   const grouped = {};
-  for (const file of sorted) {
+  for (const file of cards ? [] : sorted) {
     const sub = file.frontmatter.subsection;
     if (sub) {
       if (!grouped[sub]) grouped[sub] = [];
@@ -2602,23 +2939,9 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
     for (const file of ungrouped) {
       // Absolute href so the link resolves correctly from any depth and survives
       // Barba transitions that don't update the chrome's data-base.
-      let cardHref = '/' + file.htmlPath;
-      let cardAccess = deriveDataAccess(file.frontmatter);
-      const cardActionUrl = file.frontmatter.actionUrl || file.frontmatter.toolUrl;
-      if (cardActionUrl) {
-        // Frontmatter actionUrl normalized to absolute. Supports `./foo.html`,
-        // `../foo.html`, and bare `foo.html` — all rooted at /<section>/.
-        if (cardActionUrl.startsWith('/')) {
-          cardHref = cardActionUrl;
-        } else {
-          const sectionFolder = SECTION_FOLDERS[section] || section.toLowerCase();
-          const stripped = cardActionUrl.replace(/^(\.\.?\/)+/, '');
-          cardHref = '/' + sectionFolder + '/' + stripped;
-        }
-        // The card opens the app, so it carries the app's level, as the
-        // sidebar link does; an explicit actionAccess or toolAccess still wins.
-        cardAccess = file.frontmatter.actionAccess || file.frontmatter.toolAccess || appAccess(path.basename(cardHref, '.html'), cardAccess);
-      }
+      // A guide that names its tool opens the tool, at the tool's level
+      // (guideTarget), as the sidebar link does.
+      const { href: cardHref, access: cardAccess } = guideTarget(file, section);
       cards += renderBookContentsItem({
         href: cardHref,
         title: file.title,
@@ -2646,15 +2969,16 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
     // The id is what a doc page's subsection crumb lands on. It goes on the
     // h2, not the .docs-section div: §39B's scroll-margin-top covers
     // headings, main and section, so a div would land under the sticky bar.
-    const groupEntries = grouped[sub].map((file) => ({ level: deriveDataAccess(file.frontmatter), path: '/' + file.htmlPath }));
+    const groupEntries = grouped[sub].map((file) => { const t = guideTarget(file, section); return { level: t.access, path: t.href }; });
     cards += `<div class="docs-section"${accessAnyAttr(groupEntries)}><h2 class="book-contents-title" id="${subsectionAnchorId(sub)}">${sub}</h2><div class="book-contents"${MOTION.contents}>`;
     for (const file of grouped[sub]) {
+      const target = guideTarget(file, section);
       cards += renderBookContentsItem({
-        href: '/' + file.htmlPath,
+        href: target.href,
         title: file.title,
         subtitle: file.frontmatter.subtitle,
-        access: deriveDataAccess(file.frontmatter),
-        meta: audienceTag(deriveDataAccess(file.frontmatter)),
+        access: target.access,
+        meta: audienceTag(target.access),
       });
     }
     cards += `</div></div>`;
@@ -3000,9 +3324,8 @@ let claimedOsIllustrationsCache = null;
 function claimedOsIllustrations() {
   if (claimedOsIllustrationsCache) return claimedOsIllustrationsCache;
   const claimed = new Set((CONFIG.indexCards || []).map(c => c.osIllustration).filter(Boolean));
-  for (const filename of fs.readdirSync(DOCS_DIR)) {
-    if (!filename.endsWith('.md')) continue;
-    const { frontmatter } = parseFrontmatter(fs.readFileSync(path.join(DOCS_DIR, filename), 'utf8'));
+  for (const filename of docFilenames()) {
+    const { frontmatter } = parseFrontmatter(fs.readFileSync(docSource(filename), 'utf8'));
     const art = pageOsIllustration(frontmatter, { filename });
     if (art.osIllustration) claimed.add(art.osIllustration);
   }
@@ -3425,7 +3748,7 @@ function generateGlossaryPages(template, glossary, level) {
       sectionSlug: GLOSSARY_FOLDER,
       pageSection: GLOSSARY_FOLDER,
       // Alphabetical position, so a hop between entries slides the way
-      // the index reads (barba-init.js compares data-order).
+      // the index reads (the router, barba-docs.js, compares data-order).
       order: position + 1,
       level: type.level,
       chrome: type.chrome,
@@ -3450,6 +3773,220 @@ function generateGlossaryPages(template, glossary, level) {
   console.log(`📄 Generated: ${GLOSSARY_FOLDER}/ (${glossary.published.length} entry pages + index.json)`);
 }
 
+/**
+ * A raw HTML body (a `page`, a `bare` page): {{glossary-*}} fills, then the
+ * {{icon:name}} and {{logo:id}} shorthands and the {{brand:key}} tokens. Each
+ * stays literal inside <code>, <pre> and HTML comments, the same guard the
+ * markdown path keeps: an expansion inside a comment injects markup and
+ * breaks the comment open at the first `-->`. Nothing else touches the body.
+ */
+function expandHtmlBody(content, file) {
+  const source = `cms/${file.filename}`;
+  return expandGlossaryPlaceholders(content, file).replace(
+    /(<code[^>]*>[\s\S]*?<\/code>)|(<pre[^>]*>[\s\S]*?<\/pre>)|(<!--[\s\S]*?-->)|\{\{icon:([a-z0-9-]+)\}\}|\{\{logo:([a-z0-9-]+)\}\}/g,
+    (match, code, pre, comment, icon, logo) => {
+      if (code || pre || comment) return match;
+      return icon ? getIcon(icon) : brandLogoSvg(logo, source);
+    }
+  ).replace(/(<code[^>]*>[\s\S]*?<\/code>)|(<pre[^>]*>[\s\S]*?<\/pre>)|(<!--[\s\S]*?-->)|(\\?)\{\{brand:[a-zA-Z]+\}\}/g,
+    (match, code, pre, comment) => ((code || pre || comment) ? match : expandBrandTokens(match, source, escapeAttr)));
+}
+
+/**
+ * {{logo:<id>}}: one of the brand's logos inline, from brand.json, as the
+ * sign-in page shows it (phase D). `primary` is the brand's primary logo. The
+ * engine treats a logo as one-colour artwork that takes the text colour, the
+ * way the Logo Tool recolours it, so every paint but `none` becomes
+ * currentColor: the mark follows light and dark like the type around it. It
+ * is decoration (aria-hidden): the element around it names it, with
+ * brandLogoName(). A site with no brand logos gets that name in text instead.
+ *
+ * The file is cleaned by brand.js inlineLogoSvg, through the svg-cleaner
+ * core's sanitiser (the vendored copy every tool loads), never local
+ * regexes: what goes, and why, is written there.
+ */
+function brandLogoSvg(id, source) {
+  const logos = BRAND && BRAND.logos;
+  if (!logos || !Array.isArray(logos.variants) || !logos.variants.length) {
+    return `<span class="text-size-xlarge">${escapeAttr(brandLogoName())}</span>`;
+  }
+  const wanted = id === 'primary' ? logos.primary : id;
+  const variant = logos.variants.find((v) => v.id === wanted) || (id === 'primary' ? logos.variants[0] : null);
+  if (!variant) {
+    console.error(`\n❌ ${source}: {{logo:${id}}} isn't one of the brand's logos (it has primary, ${logos.variants.map((v) => v.id).join(', ')}).\n`);
+    process.exit(1);
+  }
+  const file = path.resolve(ROOT, variant.file);
+  if (!fs.existsSync(file)) {
+    console.error(`\n❌ ${source}: {{logo:${id}}} names ${variant.file}, which doesn't exist.\n`);
+    process.exit(1);
+  }
+  try {
+    return brandFile.inlineLogoSvg(brandFile.readSvg(file), svgSanitiser().sanitiseSVG);
+  } catch (err) {
+    if (!(err instanceof brandFile.InlineLogoError)) throw err;
+    console.error(`\n❌ ${source}: {{logo:${id}}} names ${variant.file}, which can't be inlined: ${err.message}.\n`);
+    process.exit(1);
+  }
+}
+
+/**
+ * The name the brand's logo carries, one source for the {{logo:}} text
+ * fallback and the sign-in page's label ({{brand:name}}): the brand's name,
+ * else the site's.
+ */
+function brandLogoName() {
+  return siteTokens().name || SITE.name;
+}
+
+/** The svg-cleaner core, from the package's vendored copy (never edited here). */
+let SVG_SANITISER = null;
+function svgSanitiser() {
+  if (!SVG_SANITISER) {
+    const core = path.join(APP_REGISTRY.filesRoot, 'assets', 'js', 'vendor', 'svg-cleaner-core.js');
+    if (!fs.existsSync(core)) {
+      console.error(`\n❌ The svg-cleaner core isn't in the package (${core}), so the brand's logo can't be cleaned for the page. Reinstall the package.\n`);
+      process.exit(1);
+    }
+    SVG_SANITISER = require(core);
+  }
+  return SVG_SANITISER;
+}
+
+/**
+ * Sign out for a browser with no JavaScript (PD-3), where the account menu
+ * never draws: a plain link to the gate's sign-out address, which signs out
+ * a click on the site's own page (auth.js handleSignOutLink). Only where the
+ * access gate is on; empty otherwise. In the docs template it is on every
+ * page, and docs-site.css hides it on a public one (body[data-access]),
+ * whose reader is likely signed out; a public bare page leaves it out.
+ */
+function noscriptSignOut() {
+  if (!CONFIG.accessGate) return '';
+  const href = siteHref(appsRegistry.ENGINE_PATHS.signOut);
+  // A landmark of its own: with no JavaScript there is no header, and this
+  // is the whole of it
+  return `<noscript><nav class="noscript-account" aria-label="Account"><a class="button" data-variant="text" href="${escapeAttr(href)}">Sign out</a></nav></noscript>`;
+}
+
+/**
+ * Where this site serves one of the UI scripts, for a page outside the docs
+ * template: the path in the site's own uiScripts list, else the kit's copy,
+ * which applyTemplateChrome has already put in assets/docs-kit/. Null when
+ * neither has it.
+ */
+function uiScriptPath(fileName) {
+  const name = (src) => String(src).split(/[?#]/)[0].split(/[\\/]/).pop().toLowerCase();
+  const own = CHROME.uiScripts.find((src) => name(src) === fileName.toLowerCase());
+  if (own) return own;
+  if (KIT_UI_SCRIPTS.includes(fileName)) {
+    copyKitAsset(`js/${fileName}`, path.join(OUTPUT_DIR, 'assets', 'docs-kit', fileName));
+    return `assets/docs-kit/${fileName}`;
+  }
+  return null;
+}
+
+/**
+ * The scripts a bare page loads after nav.js: dropdown.js (the header's
+ * menus), the brand's settings, then the page's own, by file name in its
+ * `scripts:` frontmatter. A name is the site's UI script of that name, or
+ * one of the access gate's own files (apps.js GATE_FILES); anything else
+ * stops the build, because a door page with a missing script is a door that
+ * doesn't open. Not deferred, at the end of body, as the pages always were.
+ */
+function bareScriptTags(file, navBase) {
+  const source = `cms/${file.filename}`;
+  const srcs = [];
+  const take = (src) => { if (src && !srcs.includes(src)) srcs.push(src); };
+  take(uiScriptPath('dropdown.js'));
+  if (BRAND) take(CONFIG.brandOutputs.themeConfig);
+  const gateFiles = CONFIG.accessGate ? [...appsRegistry.GATE_FILES.everyPage, ...appsRegistry.GATE_FILES.pages] : [];
+  for (const raw of parseList(file.frontmatter.scripts)) {
+    const fileName = /\.js$/i.test(raw) ? raw : `${raw}.js`;
+    if (!/^[a-z0-9-]+\.js$/i.test(fileName)) {
+      console.error(`\n❌ ${source}: scripts names "${raw}". A bare page names a script by its file name, such as auth-login.js.\n`);
+      process.exit(1);
+    }
+    const gate = gateFiles.find((rel) => rel.endsWith(`/${fileName}`));
+    const src = gate || uiScriptPath(fileName);
+    if (!src) {
+      console.error(`\n❌ ${source}: scripts names ${fileName}, which is neither one of this site's UI scripts nor ${CONFIG.accessGate ? 'one of the access gate\'s files' : 'available without the access gate (accessGate: true)'}.\n`);
+      process.exit(1);
+    }
+    take(src);
+  }
+  return srcs.map((src) => `<script src="${prefixHref(navBase, src)}"></script>`).join('\n    ');
+}
+
+/**
+ * The tags that describe a bare page when its address is shared: canonical,
+ * Open Graph and the X card. A bare page is often the one a reader is sent
+ * (Ask for access, a walkthrough), so it says what it is: absolute URLs when
+ * the config knows the site's origin (siteUrl), relative ones otherwise. A
+ * page's own `ogImage` replaces the brand's.
+ */
+function shareMetaHtml({ title, description, htmlPath, ogImage, navBase }) {
+  const fullTitle = `${title} - ${SITE.name}`;
+  const image = ogImage || (ROOT_MANIFEST && ROOT_MANIFEST.ogImage) || '/assets/images/og/og-default.jpg';
+  const absolute = (href) => (/^(https?:)?\/\//.test(href) ? href
+    : CONFIG.siteUrl && href.startsWith('/') ? CONFIG.siteUrl + siteHref(href)
+      : prefixHref(navBase, href.replace(/^\//, '')));
+  const pageUrl = CONFIG.siteUrl ? `${CONFIG.siteUrl}${siteHref('/' + htmlPath)}` : null;
+  const lines = [];
+  if (pageUrl) lines.push(`<link rel="canonical" href="${escapeAttr(pageUrl)}">`);
+  lines.push('<meta property="og:type" content="website">');
+  if (pageUrl) lines.push(`<meta property="og:url" content="${escapeAttr(pageUrl)}">`);
+  lines.push(`<meta property="og:title" content="${escapeAttr(fullTitle)}">`);
+  lines.push(`<meta property="og:description" content="${escapeAttr(description)}">`);
+  lines.push(`<meta property="og:image" content="${escapeAttr(absolute(image))}">`);
+  lines.push(`<meta property="og:site_name" content="${escapeAttr(SITE.name)}">`);
+  lines.push('<meta name="twitter:card" content="summary_large_image">');
+  lines.push(`<meta name="twitter:title" content="${escapeAttr(fullTitle)}">`);
+  lines.push(`<meta name="twitter:description" content="${escapeAttr(description)}">`);
+  lines.push(`<meta name="twitter:image" content="${escapeAttr(absolute(image))}">`);
+  return `<!-- Sharing -->\n    ${lines.join('\n    ')}`;
+}
+
+/**
+ * A `bare` page (PD-1): the shared template outside the docs layout, with
+ * the page's own body in main. The body is raw HTML, expanded as a `page`
+ * body is, its links checked against their levels like every page's.
+ */
+function generateBarePage(file, bareTemplate) {
+  const { frontmatter, content } = file;
+  // Depth-relative, as every page's links are, unless the override asks
+  // for site-absolute ones
+  const navBase = file.base || (file.htmlFolder ? '../' : './');
+  const access = deriveDataAccess(frontmatter);
+  // A bare page has no sidebar and no account menu, so under 'locked'
+  // nothing paints a lock from a link's level: the attribute would promise a
+  // marking that never comes. Under 'hidden' the Worker reads it to cut the
+  // link, so it stays. The links are checked either way.
+  const body = stampBodyLinks(expandHtmlBody(content, file), '/' + file.htmlPath, access, { mark: CONFIG.accessNav === 'hidden' });
+  // Searchable as any page is: a door that is public or team-level, unless it opts out
+  const indexed = frontmatter.search !== 'false' && (access === 'public' || access === 'team');
+  const chrome = brandChromeSlots(ROOT_SPACE.manifest, navBase);
+  const title = frontmatter.title || 'Untitled';
+  // The description names the site the way the body does ({{brand:key}})
+  const description = expandBrandTokens(frontmatter.description || '', `cms/${file.filename}`);
+  return bareTemplate
+    // Text, never markup: a title or site name with "<" or "&" stays as written
+    .replaceAll('{{PAGE_TITLE}}', () => escapeAttr(title))
+    .replace('{{META_DESCRIPTION}}', () => escapeAttr(description))
+    .replace('{{SHARE_META}}', () => shareMetaHtml({ title, description, htmlPath: file.htmlPath, ogImage: frontmatter.ogImage, navBase }))
+    .replace('{{FAVICON_LINKS}}', () => chrome.faviconLinks)
+    .replace('{{DESIGN_SYSTEM_PATH}}', () => prefixHref(navBase, PROJECT_CONFIG.designSystemPath))
+    .replace('{{FONT_HEAD}}', () => fontHeadHtml(ROOT_SPACE.manifest, navBase))
+    .replace('{{BRAND_CSS}}', () => brandCssLink(navBase))
+    .replace('{{PAGE_ACCESS}}', () => access)
+    // A public bare page is a door: its reader is signed out
+    .replace('{{NOSCRIPT_SIGN_OUT}}', () => (access === 'public' ? '' : noscriptSignOut()))
+    .replace('{{MAIN_ATTRS}}', () => (indexed ? ' data-pagefind-body' : ''))
+    .replace('{{BARE_SCRIPTS}}', () => bareScriptTags(file, navBase))
+    .replaceAll('{{NAV_BASE}}', () => navBase)
+    .replace('{{PAGE_BODY}}', () => body);
+}
+
 function generatePage(file, template, pageOrder, sidebarOrderMap = {}, subsectionHeadings = {}) {
   const { frontmatter, content } = file;
 
@@ -3472,12 +4009,8 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}, subsectio
   // {{glossary-terms}} and {{glossary-count}} fill the Glossary page from
   // cms/glossary/. Done before the icon pass: the rows carry {{icon:}}
   // shorthand for their chevrons.
-  const body = type.body === 'html' ? expandGlossaryPlaceholders(content, file) : content;
   let htmlContent = type.body === 'html'
-    ? body.replace(
-        /(<code[^>]*>[\s\S]*?<\/code>)|(<pre[^>]*>[\s\S]*?<\/pre>)|(<!--[\s\S]*?-->)|\{\{icon:([a-z0-9-]+)\}\}/g,
-        (match, code, pre, comment, name) => (code || pre || comment) ? match : getIcon(name)
-      )
+    ? expandHtmlBody(content, file)
     : markdownToHtml(content + buildComponentUsage(file), `cms/${file.filename}`);
 
   // Apply drop cap to first paragraph if enabled in frontmatter
@@ -3555,7 +4088,8 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}, subsectio
       closeLabel: sectionLabel,
       // Markdown-source items only when the .md files are reachable from the
       // served site (config: markdownSourceBase)
-      mdHref: CONFIG.markdownSourceBase ? `${navBase}${CONFIG.markdownSourceBase}/${file.markdownPath}` : null,
+      // A guide the package ships has no source in the site's cms/, so no link to one
+      mdHref: CONFIG.markdownSourceBase && !GUIDES.sources.has(file.markdownPath) ? `${navBase}${CONFIG.markdownSourceBase}/${file.markdownPath}` : null,
     });
   }
 
@@ -3564,7 +4098,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}, subsectio
 
   // The Glossary page is the index of its entry pages (generateGlossaryPages),
   // so it carries their section at level 1, the way the Showcase feed does:
-  // barba-init.js then reads entry to index as "close", not a cross-book
+  // the router then reads entry to index as "close", not a cross-book
   // "open".
   const isGlossaryIndex = GLOSSARY && file.htmlPath === 'glossary.html';
 
@@ -3613,6 +4147,26 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}, subsectio
  *                          there would open nothing, and on the pages served
  *                          signed out the indexes sit behind the gate anyway.
  */
+/**
+ * The engine's addresses as the browser reads them (window.bdPaths, written
+ * first in nav.js), rooted under basePath like every link nav.js writes.
+ * `bare` lists every bare page this build writes: none has a container, so
+ * the router (barba-docs.js) leaves each to the browser.
+ */
+function browserEnginePaths() {
+  const P = appsRegistry.ENGINE_PATHS;
+  return {
+    login: siteHref(P.login),
+    locked: siteHref(P.locked),
+    support: siteHref(P.support),
+    signOut: siteHref(P.signOut),
+    bare: [...BARE_PAGE_PATHS].sort(),
+  };
+}
+
+// The site paths of the bare pages this build writes (generateDocs fills it)
+const BARE_PAGE_PATHS = new Set();
+
 function generateNavJs(filesBySection) {
   // Build navigation HTML (no active page — active detection is done at runtime)
   // Under 'hidden' the list lives in each page (#site-nav-source), where the
@@ -3625,7 +4179,7 @@ function generateNavJs(filesBySection) {
   // Site-header logo (config: logoHtml) — plain site name when not configured.
   // A bare <span> rather than a class, because the class would have no CSS
   // anywhere; the link it sits in already supplies colour and alignment.
-  const logoHtml = CONFIG.logoHtml || `<span>${SITE.name}</span>`;
+  const logoHtml = CONFIG.logoHtml || `<span>${SITE_HTML.name}</span>`;
 
   // Contact link (config: contactHref / contactLabel) — omitted when unset.
   // Icon-only at every width, like every action in the end slot since the
@@ -3636,10 +4190,10 @@ function generateNavJs(filesBySection) {
   // Omitted when the site has no People page.
   // Same folder rule as the app pages and linkLevels: the pair's section,
   // Tools by default. A draft pair has no page, so no link.
-  const peopleSource = path.join(DOCS_DIR, 'apps', 'people.md');
+  const people = installedApp('people');
   let peopleHref = '';
-  if (CONFIG.accessGate && fs.existsSync(peopleSource)) {
-    const { frontmatter: peopleApp } = parseFrontmatter(fs.readFileSync(peopleSource, 'utf8'));
+  if (CONFIG.accessGate && people) {
+    const peopleApp = people.frontmatter;
     if (peopleApp.status !== 'draft') {
       const peopleSection = peopleApp.section || 'Tools';
       const peopleFolder = SECTION_FOLDERS[peopleSection] || peopleSection.toLowerCase();
@@ -3647,6 +4201,9 @@ function generateNavJs(filesBySection) {
     }
   }
 
+  // A contact page outside the docs layout (a bare page, the engine's Ask
+  // for access) needs nothing here: the router leaves every bare page in
+  // window.bdPaths to the browser
   const contactNavJs = CONFIG.contactHref ? `
     + '<a href="${siteHref(CONFIG.contactHref)}" class="button header-action header-contact-link" data-icon-only aria-label="${CONFIG.contactLabel}" data-tooltip="${CONFIG.contactLabel}" data-tooltip-position="bottom">'
     + '<span class="svg-icn">' + ICON_MAIL + '</span>'
@@ -3657,6 +4214,13 @@ function generateNavJs(filesBySection) {
  * Injects top nav + sidebar into any page with a #site-nav mount point.
  * DO NOT EDIT MANUALLY — re-run: cd cms/generator && npm run docgen
  */
+
+// The engine's fixed addresses (worker/engine-paths.mjs, PD-2): the sign-in,
+// locked and Ask for access pages and the sign-out link. Every script on the
+// page reads them here, so none names an address of its own. Set first, and
+// whether or not the page has the header mount: nav.js loads before them all.
+window.bdPaths = Object.freeze(${JSON.stringify(browserEnginePaths())});
+
 (function initSiteNav() {
   'use strict';
 
@@ -3771,7 +4335,8 @@ function generateNavJs(filesBySection) {
     + '<a class="dropdown-item" role="menuitem" href="${peopleHref}" data-account-people hidden>'
     + '<span class="svg-icn">' + ICON_USERS + '</span><span>People</span>'
     + '</a>'` : ''}
-    + '<button type="button" class="dropdown-item dropdown-item--danger" role="menuitem" data-account-sign-out>'
+    // An ordinary item: signing out loses nothing, so it is not a danger
+    + '<button type="button" class="dropdown-item" role="menuitem" data-account-sign-out>'
     + '<span class="svg-icn">' + ICON_LOGOUT + '</span><span>Sign out</span>'
     + '</button>'
     + '</div>'
@@ -3889,12 +4454,14 @@ function generateNavJs(filesBySection) {
       + '<span class="svg-icn">' + ICON_CLOSE + '</span>'
       + '</button>'
       + '</div>'
-      + '<div class="site-sidebar-content"${MOTION.sidebarGroup}>'
+      + '<div class="site-sidebar-content"${MOTION.sidebarGroup}>'${CONFIG.accessNav === 'hidden' ? `
+      // No lock note under accessNav 'hidden': the Worker cuts what a reader
+      // can't open, so no lock is ever shown for a note to explain (phase D)` : `
       // Shown only while the sidebar is locked (body.is-signed-out), and only
       // where labels show — the expanded sidebar and the mobile drawer. Every
       // locked item points at it with aria-describedby, which reads hidden
       // text too, so the reason reaches a screen reader on the rail as well.
-      + '<p class="sidebar-lock-note" id="sidebar-lock-note">Log in to access the rest of the system.</p>'
+      + '<p class="sidebar-lock-note" id="sidebar-lock-note">Log in to access the rest of the system.</p>'`}
       + '<a href="${siteHref('/index.html')}" class="sidebar-nav-link sidebar-nav-home" data-access="team" aria-label="Home" data-tooltip="Home" data-tooltip-position="right"${MOTION.sidebarItem}>'
       + '<span class="svg-icn">' + ICON_HOME + '</span>'
       + '<span>Home</span>'
@@ -3962,8 +4529,8 @@ ${CONFIG.accessNav === 'hidden' ? `
   }
 
   // An index heading whose cards the Worker removed is a heading over
-  // nothing. Both routers (barba-init.js, barba-docs.js) call this on every
-  // arriving container.
+  // nothing. The router (barba-docs.js) calls this on every arriving
+  // container.
   function pruneEmptyCardSections(scope) {
     if (!scope || !scope.querySelectorAll) return;
     var groups = scope.querySelectorAll('.docs-section');
@@ -4163,7 +4730,8 @@ ${CONFIG.accessNav === 'hidden' ? `
       owner: ''
     };
     var LOCK_TOOLTIPS = { out: 'Log in to access', guest: 'For the team', team: 'For admins', admin: 'For the owner', owner: '' };
-    var SUPPORT_PATH = '${siteHref('/support.html')}';
+    // The engine's Ask for access page, the same on every site (window.bdPaths, above)
+    var SUPPORT_PATH = window.bdPaths.support;
     var lockNote = sidebarEl ? sidebarEl.querySelector('#' + LOCK_NOTE_ID) : null;
 
     function askHref() {
@@ -4232,8 +4800,10 @@ ${CONFIG.accessNav === 'hidden' ? `
 
     // The reason, for assistive tech: the name stays exactly the visible
     // label, aria-disabled says unavailable, and this says why.
+    // Under accessNav 'hidden' there is no note (the Worker cuts what a reader
+    // can't open), so nothing points at one; the tooltip still says why.
     function describeLock(el, locked) {
-      if (locked) el.setAttribute('aria-describedby', LOCK_NOTE_ID);
+      if (locked && lockNote) el.setAttribute('aria-describedby', LOCK_NOTE_ID);
       else if (el.getAttribute('aria-describedby') === LOCK_NOTE_ID) el.removeAttribute('aria-describedby');
     }
 
@@ -4259,7 +4829,7 @@ ${CONFIG.accessNav === 'hidden' ? `
 
     // The pager and the cards sit inside the Barba container, so they are
     // re-marked on every swap - from beforeEnter, before the new container
-    // animates in (barba-init.js), and again on bd:after-nav, as well as
+    // animates in (barba-docs.js), and again on bd:after-nav, as well as
     // here. data-access is the generator's record of the target's level;
     // .is-locked is each component's own state (design-system.css §38, the
     // Book). scope is the arriving container when there is one, so the
@@ -4328,7 +4898,7 @@ ${CONFIG.accessNav === 'hidden' ? `
     }
 
     // Stops the native follow and the <details> toggle. The router is
-    // stopped by its own prevent rule (shouldPrevent in barba-init.js), not
+    // stopped by its own prevent rule (shouldPrevent in barba-docs.js), not
     // here: stopPropagation would also hide the click from document-level
     // listeners like dropdown.js's outside-click close. auxclick covers
     // middle-click; Enter on a link and Enter or Space on a summary arrive
@@ -4385,7 +4955,7 @@ ${CONFIG.accessNav === 'hidden' ? `
       relockSwapped(e && e.detail ? e.detail.container : null);
     }
 
-    // For barba-init.js's beforeEnter hook: the arriving container, marked
+    // For the router's beforeEnter hook (barba-docs.js): the arriving container, marked
     // before it animates in rather than after.
     window.bdRelockSwapped = relockSwapped;
 
@@ -4403,8 +4973,8 @@ ${CONFIG.accessNav === 'hidden' ? `
   }
 
   // ── Section toggle clicks: delegated guard on the sidebar ──
-  // Delegated (not per-summary) so it survives theme-loader.js rebuilding
-  // the nav for brand users. stopPropagation would hide the click from
+  // Delegated (not per-summary) so it survives the nav being rebuilt.
+  // stopPropagation would hide the click from
   // document-level router listeners; preventDefault stops the details
   // toggle / native follow while the event keeps bubbling so navigation
   // still happens.
@@ -4598,10 +5168,33 @@ function accessAnyAttr(entries) {
 }
 
 function appAccess(slug, fallback) {
-  const source = path.join(DOCS_DIR, 'apps', `${slug}.md`);
-  if (!fs.existsSync(source)) return fallback;
-  const { frontmatter } = parseFrontmatter(fs.readFileSync(source, 'utf8'));
-  return deriveDataAccess(frontmatter);
+  const app = installedApp(slug);
+  return app ? deriveDataAccess(app.frontmatter) : fallback;
+}
+
+/**
+ * Where a guide's sidebar entry and index card point, in any section: a guide
+ * whose frontmatter names its tool (actionUrl, or the older toolUrl) opens the
+ * tool, one click from the nav, carrying the tool's own level. Otherwise the
+ * guide itself. Section-wide since 2026-11-10, when People moved to Settings:
+ * the rule was Tools-only, so Settings' entry opened the guide.
+ * Returns a site-absolute path (not yet siteHref'd) and the level.
+ */
+function guideTarget(file, section) {
+  const ownHref = '/' + file.htmlPath;
+  const ownAccess = deriveDataAccess(file.frontmatter);
+  const actionUrl = file.frontmatter.actionUrl || file.frontmatter.toolUrl;
+  if (!actionUrl) return { href: ownHref, access: ownAccess };
+  let href;
+  if (actionUrl.startsWith('/')) {
+    href = actionUrl;
+  } else {
+    // Relative to the guide's folder: ./foo.html, ../foo.html or foo.html.
+    const sectionFolder = SECTION_FOLDERS[section] || section.toLowerCase();
+    href = '/' + sectionFolder + '/' + actionUrl.replace(/^(\.\.?\/)+/, '');
+  }
+  const access = file.frontmatter.actionAccess || file.frontmatter.toolAccess || appAccess(path.basename(href, '.html'), ownAccess);
+  return { href, access };
 }
 
 /**
@@ -4743,21 +5336,11 @@ function buildNavSectionsHtml(filesBySection) {
 
     // Render ungrouped files first
     for (const file of ungrouped) {
-      // For Tools section: link to the tool app itself, carrying the APP's
-      // own level - the lock the reader sees must describe the page the
-      // link opens, and a guide and its tool can sit at different levels.
-      // All hrefs are emitted as absolute paths (`/section/file.html`).
-      let linkHref = siteHref('/' + file.htmlPath);
-      let linkAccess = deriveDataAccess(file.frontmatter);
-      const navActionUrl = file.frontmatter.actionUrl || file.frontmatter.toolUrl;
-      if (section === 'Tools' && navActionUrl) {
-        // actionUrl is relative to the tool docs page (e.g. "./cpm-calculator.html").
-        // Resolve to an absolute site path.
-        const fileName = navActionUrl.replace(/^(\.\.?\/)+/, '');
-        const sectionFolder = SECTION_FOLDERS[section] || 'tools';
-        linkHref = siteHref('/' + sectionFolder + '/' + fileName);
-        linkAccess = appAccess(fileName.replace(/\.html$/, ''), linkAccess);
-      }
+      // A guide that names its tool links the tool, in any section
+      // (guideTarget). All hrefs are emitted as absolute paths.
+      const target = guideTarget(file, section);
+      const linkHref = siteHref(target.href);
+      const linkAccess = target.access;
       sectionEntries.push({ level: linkAccess, path: linkHref });
       html += `<li><a href="${linkHref}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span>${navLock}</a></li>`;
       navPos++;
@@ -4793,14 +5376,15 @@ function buildNavSectionsHtml(filesBySection) {
     // Each subsection is its own collapsed dropdown so long sections (Design
     // System, Brand Book) stay scannable. setActiveLink opens the active one.
     for (const sub of subsections) {
-      const subEntries = grouped[sub].map((file) => ({ level: deriveDataAccess(file.frontmatter), path: siteHref('/' + file.htmlPath) }));
+      const subEntries = grouped[sub].map((file) => { const t = guideTarget(file, section); return { level: t.access, path: siteHref(t.href) }; });
       sectionEntries.push(...subEntries);
       html += `<li${accessAnyAttr(subEntries)}><details class="sidebar-nav-subsection">
         <summary class="sidebar-nav-subsection-toggle"><span>${sub}</span>${navChevron}</summary>
         <ul class="sidebar-nav-sublist">`;
       for (const file of grouped[sub]) {
-        const linkAccess = deriveDataAccess(file.frontmatter);
-        html += `<li><a href="${siteHref('/' + file.htmlPath)}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span>${navLock}</a></li>`;
+        const target = guideTarget(file, section);
+        const linkAccess = target.access;
+        html += `<li><a href="${siteHref(target.href)}" class="sidebar-nav-link" data-section="${sectionSlug}" data-order="${navPos}" data-access="${linkAccess}"><span>${file.title}</span>${navLock}</a></li>`;
         navPos++;
       }
       html += `</ul></details></li>`;
@@ -4846,65 +5430,6 @@ function copyDirRecursive(src, dest) {
 // the live JS file anymore.
 
 /**
- * Read and validate one brand manifest by path. Returns null if the file does
- * not exist (not a brand space); throws on malformed JSON or a missing name
- * so a broken manifest fails the build instead of shipping a half-built brand.
- * Hoisted — the config head calls it for the root manifest.
- */
-function readManifestFile(manifestPath) {
-  if (!fs.existsSync(manifestPath)) return null;
-  let manifest;
-  try {
-    manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  } catch (err) {
-    throw new Error(`Invalid JSON in ${manifestPath}: ${err.message}`);
-  }
-  if (!manifest.name || typeof manifest.name !== 'string') {
-    throw new Error(`${manifestPath} is missing the required "name" field`);
-  }
-  return manifest;
-}
-
-function loadBrandManifest(brandKey) {
-  if (!BRANDS_DIR) return null;
-  return readManifestFile(path.join(BRANDS_DIR, brandKey, 'brand.json'));
-}
-
-/**
- * Scan cms/brands/ and build the in-memory theme registry from manifests.
- * Shape matches the runtime THEME_CONFIG contract (label/css/fonts/pages);
- * css is convention (<brand>/assets/theme.css), never configured. The raw
- * manifest rides along for build-time use and is stripped before emit.
- */
-function loadBrandThemes() {
-  const brandsDir = BRANDS_DIR;
-  if (!brandsDir || !fs.existsSync(brandsDir)) return {};
-  const themes = {};
-  // Sorted so the emitted registry is deterministic across filesystems
-  for (const dir of fs.readdirSync(brandsDir).sort()) {
-    if (!fs.statSync(path.join(brandsDir, dir)).isDirectory()) continue;
-    // Instance 0 is the root site, not a switchable brand space: its theme
-    // loads as a static link on every root page, and "clear preview" IS the
-    // return to By Default. Listing it in the registry would spawn a
-    // duplicate /bydefault/ shell and a switcher entry that unloads itself.
-    if (dir === ROOT_BRAND_KEY) continue;
-    const manifest = loadBrandManifest(dir);
-    if (!manifest) continue;
-    // Only brands with a theme stylesheet are switchable instances.
-    if (!fs.existsSync(path.join(brandsDir, dir, 'assets', 'theme.css'))) continue;
-    themes[dir] = {
-      label: manifest.name,
-      description: manifest.description || '',
-      css: `${dir}/assets/theme.css`,
-      fonts: manifest.googleFontsUrl || null,
-      pages: [{ title: 'Home', href: `/${dir}/index.html` }],
-      manifest,
-    };
-  }
-  return themes;
-}
-
-/**
  * Resolve the favicon/OG chrome slots for a page. Brand manifests provide
  * absolute site paths; pages without a brand (or manifests without the keys)
  * fall back to the site defaults, resolved against the page's nav base.
@@ -4929,75 +5454,154 @@ function brandChromeSlots(manifest, base) {
 }
 
 /**
- * Serialize the theme registry to assets/js/theme-config.js in one write.
- * JSON.stringify handles all quoting, so the regex-rewrite escaping bugs
- * this replaced can't recur.
+ * window.THEME_CONFIG (brandOutputs.themeConfig), from brand.json, in one
+ * write. JSON.stringify handles all quoting.
  */
-function writeThemeConfig(themes) {
-  const emitted = {};
-  for (const [key, t] of Object.entries(themes)) {
-    emitted[key] = {
-      label: t.label,
-      description: t.description,
-      css: t.css,
-      fonts: t.fonts,
-      // Page hrefs are site-absolute in the in-memory registry; root them
-      // under basePath at the emit boundary, like every other output href.
-      pages: t.pages.map(pg => ({ ...pg, href: siteHref(pg.href) })),
-    };
-  }
-  const payload = { themes: emitted };
-  // Instance-0 signature settings ride along so the Email Signature tool's
-  // output reads from the manifest, never from literals (rework §3.4).
-  if (ROOT_MANIFEST && ROOT_MANIFEST.emailSignature) {
-    payload.emailSignature = ROOT_MANIFEST.emailSignature;
-  }
-  // Pair lists are the brand's call, so the engine carries none: the Colour
-  // Pairing tool's recommended pairs (colorPairings), and the shorter list
-  // every other tool's Pairs row offers (toolPairings). A malformed list
-  // fails here rather than reaching the page as a panel of broken chips.
-  // Token names are checked at runtime, against the palette the theme
-  // actually defines.
-  for (const key of ['colorPairings', 'toolPairings']) {
-    if (!ROOT_MANIFEST || ROOT_MANIFEST[key] === undefined) continue;
-    const pairs = ROOT_MANIFEST[key];
-    const valid = Array.isArray(pairs) && pairs.every(pair =>
-      pair && typeof pair.fg === 'string' && pair.fg && typeof pair.bg === 'string' && pair.bg);
-    if (!valid) {
-      throw new Error(`${ROOT_MANIFEST_PATH}: "${key}" must be an array of { "fg": "<token>", "bg": "<token>" }`);
-    }
-    const seen = new Set();
-    for (const pair of pairs) {
-      const pairKey = `${pair.fg}|${pair.bg}`;
-      if (seen.has(pairKey)) {
-        throw new Error(`${ROOT_MANIFEST_PATH}: "${key}" lists ${pair.fg} on ${pair.bg} twice`);
-      }
-      seen.add(pairKey);
-    }
-    payload[key] = pairs.map(pair => ({ fg: pair.fg, bg: pair.bg }));
-  }
-  // The engine's own version, from the package this generator ships in, so
-  // the banner cannot freeze on the release it was first written in.
-  const engineVersion = require(path.join(__dirname, '..', '..', 'package.json')).version;
-  const banner = `/**
- * Theme Configuration (GENERATED FILE, do not edit)
- *
- * Built from cms/brands/<brand>/brand.json manifests by
- * cms/generator/generate-docs.js. Edit a manifest (or the brand's markdown),
- * then re-run: cd cms/generator && npm run docgen
- *
- * Tool access is managed via frontmatter in cms/*.md files (toolAccess field),
- * NOT here. See cms/access-control.md.
- *
- * @version ${engineVersion}
- */
+function writeThemeConfig() {
+  if (!BRAND) return;
+  // The brand's keys (brand.js themeConfigPayload): name, wording, the
+  // access route, hues, the named colours, the pair lists and the email
+  // signature. Validated when the file was read, so nothing malformed
+  // reaches a tool.
+  writeBrandRuntimeFile(CONFIG.brandOutputs.themeConfig,
+    brandFile.themeConfigJs(brandFile.themeConfigPayload(BRAND), ENGINE_VERSION));
+}
 
-`;
-  const js = banner + 'var THEME_CONFIG = ' + JSON.stringify(payload, null, 2) + ';\n';
-  const themeConfigPath = path.join(OUTPUT_DIR, 'assets', 'js', 'theme-config.js');
-  fs.mkdirSync(path.dirname(themeConfigPath), { recursive: true });
-  fs.writeFileSync(themeConfigPath, js);
-  console.log('📄 Generated: assets/js/theme-config.js');
+/**
+ * Fail a client site's build when a page it just wrote shows By Default's
+ * name or addresses (failure scenario 11). The engine's own test keeps them
+ * out of the package (scripts/verify-engine-wording.js); this catches a
+ * client's content that carries them, such as a Brand Book page started from
+ * By Default's. Skipped on the engine's own site. Pages this build wrote are
+ * the ones modified since it started; hand-authored pages are not scanned.
+ */
+function checkClientWording(since) {
+  if (!BRAND || BRAND.slug === brandFile.ENGINE_HOME_SLUG) return;
+  const allowed = (file, match) => CONFIG.allowWording.some((a) =>
+    a && a.file === file && a.text === match && typeof a.reason === 'string' && a.reason.trim());
+  const skip = new Set(['node_modules', '_site', 'dist', '.git', 'experiments']);
+  const found = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (skip.has(entry.name)) continue;
+      const abs = path.join(dir, entry.name);
+      if (entry.isDirectory()) { walk(abs); continue; }
+      if (!entry.name.endsWith('.html') || fs.statSync(abs).mtimeMs < since) continue;
+      const rel = path.relative(OUTPUT_DIR, abs).split(path.sep).join('/');
+      for (const hit of brandFile.findEngineWording(fs.readFileSync(abs, 'utf8'))) {
+        if (!allowed(rel, hit.match)) found.push(`  ${rel}:${hit.line}: "${hit.match}" in ${JSON.stringify(hit.text.slice(0, 120))}`);
+      }
+    }
+  };
+  walk(OUTPUT_DIR);
+  if (found.length) {
+    console.error(`\n❌ ${found.length} ${brandFile.ENGINE_NAME} mention(s) on this site's pages. A client site shows its own brand:\n${found.join('\n')}\n` +
+      'Edit the page source, or, for a mention kept on purpose, add it to allowWording in docs.config.js with { file, text, reason }.\n');
+    process.exit(1);
+  }
+}
+
+/**
+ * A file the engine loads for an installed app must not also be in the
+ * site's own lists: most scripts bind document listeners with no guard, so
+ * a second copy acts twice. Compared by file name, like the UI scripts.
+ */
+function assertNotListedTwice(engineFiles, siteFiles, listName) {
+  const name = (src) => String(src).split(/[?#]/)[0].split(/[\\/]/).pop().toLowerCase();
+  const engine = new Map(engineFiles.map((f) => [name(f), f]));
+  const twice = siteFiles.filter((f) => engine.has(name(f)));
+  if (twice.length) {
+    console.error(`\n❌ These are loaded by the engine for the installed apps, so remove them from ${listName} in docs.config.js:\n${twice.map((f) => `  - ${f}`).join('\n')}\n`);
+    process.exit(1);
+  }
+}
+
+/**
+ * On a site built from the package, copy the installed apps' files to the
+ * same paths they have in the engine. A file the site already has there,
+ * with different bytes, is its own old copy: the build stops and says to
+ * delete it, rather than overwrite a file the site committed.
+ */
+function copyAppFiles() {
+  if (INSTALL.legacy) return;
+  const fromPackage = path.resolve(APP_REGISTRY.filesRoot) !== path.resolve(ROOT);
+  if (!fromPackage) return;
+  // The record of what the engine wrote last time, at the output's root, out
+  // of /assets/ so it isn't published with it
+  const stamp = path.join(OUTPUT_DIR, '.engine-apps.json');
+  const ours = new Set(fs.existsSync(stamp) ? JSON.parse(fs.readFileSync(stamp, 'utf8')) : []);
+  const wanted = new Set([...INSTALL.scripts, ...INSTALL.styles, ...INSTALL.files]);
+  // An app switched off since: its files go, so they are never served
+  for (const rel of ours) {
+    if (!wanted.has(rel)) fs.rmSync(path.join(OUTPUT_DIR, rel), { force: true });
+  }
+  const clashes = [];
+  const written = [];
+  for (const rel of [...INSTALL.scripts, ...INSTALL.styles, ...INSTALL.files]) {
+    const src = path.join(APP_REGISTRY.filesRoot, rel);
+    const dest = path.join(OUTPUT_DIR, rel);
+    if (fs.existsSync(dest) && !ours.has(rel) && !fs.readFileSync(dest).equals(fs.readFileSync(src))) {
+      clashes.push(rel);
+      continue;
+    }
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
+    written.push(rel);
+  }
+  if (clashes.length) {
+    console.error(`\n❌ This site has its own copies where the engine's app files go. Delete them (the engine ships these now), and gitignore them:\n${clashes.map((f) => `  - ${f}`).join('\n')}\n`);
+    process.exit(1);
+  }
+  fs.mkdirSync(path.dirname(stamp), { recursive: true });
+  fs.writeFileSync(stamp, JSON.stringify(written.sort(), null, 2) + '\n');
+  console.log(`📄 Copied ${written.length} app file${written.length === 1 ? '' : 's'} from the package`);
+}
+
+/**
+ * /os.json: what this site runs, for the fleet dashboard (D6, phase F): the
+ * engine's version, brand.json's version, and each installed app with its
+ * version, status and package (os-json.js). Written on every full build: a
+ * site not on `install` yet writes `apps` and `packages` as null, which the
+ * dashboard shows. Checked against the shape before it is written, so a site
+ * never sends the fleet service a report it would refuse. No build time:
+ * two builds of the same tree are byte-identical.
+ */
+function writeOsJson() {
+  const manifests = new Map([...APP_REGISTRY.apps].map(([slug, app]) => [slug, app.manifest]));
+  const payload = osJson.payload({
+    engine: ENGINE_VERSION,
+    brand: BRAND,
+    brandVersion: BRAND_FILE_VERSION,
+    brandSiteName: BRAND ? brandFile.siteName(BRAND) : null,
+    siteName: SITE.name,
+    install: INSTALL,
+    manifests,
+  });
+  const problems = osJson.validate(payload);
+  if (problems.length) {
+    console.error(`\n❌ os.json would not pass its own check:\n${problems.map((p) => `  - ${p}`).join('\n')}\n`);
+    process.exit(1);
+  }
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'os.json'), JSON.stringify(payload, null, 2) + '\n');
+  console.log(`📄 Generated: os.json (${payload.apps ? `${payload.apps.length} apps` : 'not on install yet'})`);
+}
+
+/**
+ * The Logo Tool's manifest (window.LogoManifest), built from brand.json's
+ * logos with each SVG's markup inlined. Every mark carries its own clear
+ * space: the brand file fails the build before this runs if one doesn't.
+ */
+function writeLogoManifest() {
+  if (!BRAND) return;
+  writeBrandRuntimeFile(CONFIG.brandOutputs.logoManifest,
+    brandFile.logoManifestJs(brandFile.logoManifestPayload(BRAND, ROOT), ENGINE_VERSION));
+}
+
+function writeBrandRuntimeFile(rel, js) {
+  const out = path.join(OUTPUT_DIR, rel);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, js);
+  console.log(`📄 Generated: ${rel}`);
 }
 
 /**
@@ -5044,6 +5648,13 @@ function writePageAccess() {
  *
  * ACCESS_NAV is docs.config.js accessNav: 'hidden' turns on the Worker's
  * per-reader cut of every page's links (worker/hidden-nav.mjs).
+ *
+ * APPS is the installed apps and the brand's primary logo: createGate mounts
+ * the Image Placeholder's and the Asset Library's routes from it.
+ *
+ * NOT_INSTALLED maps the address of each app this site doesn't install, and
+ * its guide's, to the app's name: the Worker answers them with the
+ * not-installed page and a 404 (createGate notInstalled).
  */
 `;
   const lines = entries.map(([p, e]) => `  [${JSON.stringify(p)}, { level: ${JSON.stringify(e.level)}, section: ${JSON.stringify(e.section)}, type: ${JSON.stringify(e.type)}, title: ${JSON.stringify(e.title)} }],`);
@@ -5051,12 +5662,442 @@ function writePageAccess() {
   const body = `export const ACCESS_NAV = ${JSON.stringify(CONFIG.accessNav)};\n\n`
     + `export const SECTIONS = Object.freeze(${JSON.stringify(sections)});\n\n`
     + `export const PAGE_ACCESS = new Map([\n${lines.join('\n')}\n]);\n\n`
-    + `export const SOURCE_PAGES = new Map([\n${sources.map(([s, p]) => `  [${JSON.stringify(s)}, ${JSON.stringify(p)}],`).join('\n')}\n]);\n`;
+    + `export const SOURCE_PAGES = new Map([\n${sources.map(([s, p]) => `  [${JSON.stringify(s)}, ${JSON.stringify(p)}],`).join('\n')}\n]);\n\n`
+    + `export const APPS = Object.freeze(${JSON.stringify(installedAppsForWorker())});\n\n`
+    + `export const NOT_INSTALLED = new Map([${[...notInstalledAddresses()].map(([a, n]) => `\n  [${JSON.stringify(a)}, ${JSON.stringify(n)}],`).join('')}\n]);\n`;
   fs.writeFileSync(path.join(workerDir, 'page-access.mjs'), banner + body);
   console.log(`📄 Generated: worker/page-access.mjs (${entries.length} pages: ${ACCESS_LEVELS.map((level) => `${counts[level]} ${level}`).join(', ')})`);
   if (levelsFromSection.length) {
     console.log(`🔐 ${levelsFromSection.length} page level(s) from sectionAccess:\n${levelsFromSection.map((line) => `   ${line}`).join('\n')}`);
   }
+}
+
+/**
+ * The gate's own modules, for checking against it at build time: beside the
+ * docs kit in the package (dist/worker/), two folders up in the engine's repo.
+ */
+function engineWorkerDir() {
+  const candidates = [path.join(__dirname, '..', 'worker'), path.join(__dirname, '..', '..', 'worker')];
+  return candidates.find((dir) => fs.existsSync(path.join(dir, 'gate.mjs'))) || null;
+}
+
+/**
+ * The gate's isPublicPath, judged with this site's own public lists, as the
+ * deployed Worker judges them. A site's worker/site-config.mjs exports the
+ * options it passes createGate() (SITE_OPTIONS) or configures itself
+ * (configureThisSite), the way bd-search reads it; with neither, only the
+ * engine's lists and the page map are known, so a file the site opens some
+ * other way is reported, with how to declare it.
+ */
+async function sitePublicJudge() {
+  const workerDir = engineWorkerDir();
+  if (!workerDir) {
+    console.error('\n❌ The access gate is on, but the gate\'s own files are missing from the package, so the sign-in pages can\'t be checked. Reinstall the package.\n');
+    process.exit(1);
+  }
+  const { pathToFileURL } = require('url');
+  const gate = await import(pathToFileURL(path.join(workerDir, 'gate.mjs')).href);
+  const site = await import(pathToFileURL(path.join(workerDir, 'site.mjs')).href);
+  const siteConfig = path.join(ROOT, 'worker', 'site-config.mjs');
+  let source = 'the engine\'s public lists and the page map (no worker/site-config.mjs here)';
+  if (fs.existsSync(siteConfig)) {
+    try {
+      const config = await import(pathToFileURL(siteConfig).href);
+      if (config.SITE_OPTIONS) site.configureSite(config.SITE_OPTIONS);
+      else if (typeof config.configureThisSite === 'function') config.configureThisSite();
+      else throw new Error('it exports neither SITE_OPTIONS nor configureThisSite');
+      source = 'worker/site-config.mjs';
+    } catch (err) {
+      console.warn(`⚠️  worker/site-config.mjs didn't load (${err.message}), so the sign-in pages are checked against the engine's public lists only.`);
+    }
+  }
+  if (source !== 'worker/site-config.mjs') {
+    // Configure the gate with what the build knows: every page by its level
+    site.configureSite({ pages: new Map([...pageAccess].map(([p, e]) => [p, { ...e }])), sections: {}, hosts: ['example.com'] });
+  }
+  return { isPublicPath: gate.isPublicPath, source };
+}
+
+/** The character references an attribute value can carry, decoded. */
+function decodeHtmlAttr(value) {
+  return value.replace(/&(?:#x([0-9a-f]+)|#([0-9]+)|(amp|quot|apos|lt|gt));?/gi, (match, hex, dec, name) => {
+    if (hex || dec) {
+      const code = parseInt(hex || dec, hex ? 16 : 10);
+      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
+    }
+    return { amp: '&', quot: '"', apos: "'", lt: '<', gt: '>' }[name.toLowerCase()];
+  });
+}
+
+/**
+ * Every start tag in some HTML, with its attributes read the way a browser
+ * reads them: a tag scanned character by character, values double-quoted,
+ * single-quoted or bare (a bare one may hold an apostrophe), names
+ * lowercased, references decoded. Nothing that loads nothing is read as
+ * markup: comments, what is inside a <template> (the tag itself kept), and
+ * the text of the raw-text elements (<script>, <textarea>, <title>), where
+ * "<img src=…>" in a string is text. A <style> element's text comes back as
+ * the tag's `css`.
+ */
+function htmlTags(html) {
+  const styles = [];
+  const text = String(html)
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/(<template(?=[\s/>])[^>]*>)[\s\S]*?<\/template\s*>/gi, '$1')
+    .replace(/(<(script|textarea|title|style)(?=[\s/>])[^>]*>)([\s\S]*?)(<\/\2\s*>)/gi, (match, open, name, body, close) => {
+      if (name.toLowerCase() !== 'style') return open + close;
+      styles.push(body);
+      return `${open.slice(0, -1)} data-bd-style-text="${styles.length - 1}">${close}`;
+    });
+  const n = text.length;
+  const space = (c) => c === ' ' || c === '\t' || c === '\n' || c === '\r' || c === '\f';
+  const tags = [];
+  let i = 0;
+  while ((i = text.indexOf('<', i)) !== -1) {
+    const start = /^<([a-z][a-z0-9-]*)/i.exec(text.slice(i, i + 80));
+    if (!start) { i++; continue; }
+    let j = i + start[0].length;
+    const attrs = new Map();
+    while (j < n) {
+      while (j < n && (space(text[j]) || text[j] === '/')) j++;
+      if (j >= n) break;
+      if (text[j] === '>') { j++; break; }
+      let k = j + 1; // a name may start with "=", as HTML allows
+      while (k < n && !space(text[k]) && text[k] !== '/' && text[k] !== '>' && text[k] !== '=') k++;
+      const name = text.slice(j, k).toLowerCase();
+      j = k;
+      while (j < n && space(text[j])) j++;
+      let value = '';
+      if (text[j] === '=') {
+        j++;
+        while (j < n && space(text[j])) j++;
+        const quote = text[j];
+        if (quote === '"' || quote === "'") {
+          const close = text.indexOf(quote, j + 1);
+          const stop = close === -1 ? n : close;
+          value = text.slice(j + 1, stop);
+          j = stop + 1;
+        } else {
+          let k2 = j;
+          while (k2 < n && !space(text[k2]) && text[k2] !== '>') k2++;
+          value = text.slice(j, k2);
+          j = k2;
+        }
+      }
+      if (!attrs.has(name)) attrs.set(name, decodeHtmlAttr(value));
+    }
+    const tag = { name: start[1].toLowerCase(), attrs };
+    if (tag.name === 'style' && attrs.has('data-bd-style-text')) {
+      tag.css = styles[Number(attrs.get('data-bd-style-text'))] || '';
+      attrs.delete('data-bd-style-text');
+    }
+    tags.push(tag);
+    i = j;
+  }
+  return tags;
+}
+
+/**
+ * A reference as the site path the Worker is asked for: resolved against
+ * the page, still percent-encoded, as the request arrives. Null for another
+ * origin (not the gate's to judge), a fragment, a data: or other scheme, or
+ * anything a browser wouldn't fetch either.
+ */
+function sitePathOf(ref, baseUrl) {
+  const value = String(ref || '').trim();
+  if (!value || /^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i.test(value)) return null;
+  try {
+    const url = new URL(value, baseUrl);
+    return url.origin === new URL(baseUrl).origin ? url.pathname : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The files a page loads by its markup, as site paths (sitePathOf): every
+ * link but a navigation hint, scripts, images and their srcset, media and
+ * frames, SVG <use> and <image>, and the url() and @import inside <style>
+ * blocks and style="" attributes. A plain <a href> is a navigation, not a
+ * load, so it is not one of them.
+ */
+function referencedFiles(html, pageUrl) {
+  const refs = [];
+  const add = (ref) => {
+    const sitePath = sitePathOf(ref, pageUrl);
+    if (sitePath) refs.push(sitePath);
+  };
+  const SRC = new Set(['script', 'img', 'source', 'video', 'audio', 'track', 'iframe', 'embed', 'input']);
+  const SVG_HREF = new Set(['use', 'image', 'feimage']);
+  for (const tag of htmlTags(html)) {
+    const at = (name) => tag.attrs.get(name);
+    if (tag.name === 'link') {
+      const rel = (at('rel') || '').toLowerCase().split(/\s+/);
+      if (!rel.some((r) => ['canonical', 'alternate', 'preconnect', 'dns-prefetch', 'next', 'prev', 'author', 'help', 'license', 'search'].includes(r))) {
+        add(at('href'));
+        for (const candidate of (at('imagesrcset') || '').split(',')) add(candidate.trim().split(/\s+/)[0]);
+      }
+    }
+    if (SRC.has(tag.name) && (tag.name !== 'input' || (at('type') || '').toLowerCase() === 'image')) add(at('src'));
+    if (tag.name === 'img' || tag.name === 'source') {
+      for (const candidate of (at('srcset') || '').split(',')) add(candidate.trim().split(/\s+/)[0]);
+    }
+    if (tag.name === 'video') add(at('poster'));
+    if (tag.name === 'object') add(at('data'));
+    if (SVG_HREF.has(tag.name)) add(at('href') || at('xlink:href'));
+    if (tag.css) refs.push(...cssReferences(tag.css, pageUrl));
+    if (at('style')) refs.push(...cssReferences(at('style'), pageUrl));
+  }
+  return refs;
+}
+
+/** What a stylesheet loads in its turn: url() and @import, as site paths. */
+function cssReferences(css, cssUrl) {
+  const refs = [];
+  const text = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  for (const m of text.matchAll(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s]*))\s*\)|@import\s+(?:"([^"]*)"|'([^']*)')/gi)) {
+    const sitePath = sitePathOf(m[1] || m[2] || m[3] || m[4] || m[5], cssUrl);
+    if (sitePath) refs.push(sitePath);
+  }
+  return refs;
+}
+
+/**
+ * Phase D's checks on the pages a reader meets at the door, after the page
+ * map is written. A broken sign-in page locks everyone out, the owner too,
+ * and it breaks silently in a signed-out browser, so each fails the build:
+ *
+ *   1. The sign-in and Ask for access pages exist, and are public.
+ *   2. Every file a public bare page loads, from its template or its own
+ *      markup, and every file those stylesheets load in turn, is public at
+ *      the gate (PD-1: the check covers the template as a whole), judged by
+ *      the encoded path the Worker is asked for, and is in the output: a
+ *      file a later build step adds is named in doorFilesAddedLater.
+ *   3. The sign-in page carries every id auth-login.js reads, and keeps what
+ *      makes it usable without sight: the email field's label, the error
+ *      lines as alerts described by their fields, and the confirmation line
+ *      as a status.
+ */
+async function checkDoorPages(allFiles) {
+  const ENGINE = appsRegistry.ENGINE_PATHS;
+  const problems = [];
+  const levelAt = (address) => (pageAccess.get(address) || {}).level;
+  for (const [address, page] of [[ENGINE.login, 'auth-login.md'], [ENGINE.support, 'support.md']]) {
+    if (!pageAccess.has(address)) {
+      problems.push(`  ${address} wasn't built, so a signed-out reader has no way in. The engine's ${page} ships with the package; if this site has its own cms/${page}, it must build (not a draft, not switched off).`);
+    } else if (levelAt(address) !== 'public') {
+      problems.push(`  ${address} is a ${levelAt(address)} page. It is the way in for a signed-out reader, so its source says access: "public".`);
+    }
+  }
+
+  // Encoded as the paths they are compared with are
+  const later = new Set(CONFIG.doorFilesAddedLater.map((p) => {
+    try { return new URL(siteHref(String(p)), 'https://site.invalid').pathname; } catch { return String(p); }
+  }));
+  const bare = allFiles.filter((f) => resolvePageType(f.frontmatter).name === 'bare' && levelAt('/' + f.htmlPath) === 'public');
+  if (bare.length) {
+    const judge = await sitePublicJudge();
+    const missing = [];
+    for (const file of bare) {
+      const address = '/' + file.htmlPath;
+      const pageUrl = `https://site.invalid${siteHref(address)}`;
+      const html = fs.readFileSync(path.join(OUTPUT_DIR, file.htmlPath), 'utf8');
+      const gated = [];
+      const seen = new Set();
+      const visit = (sitePath, from) => {
+        if (seen.has(sitePath)) return;
+        seen.add(sitePath);
+        if (!judge.isPublicPath(sitePath)) gated.push(from ? `${sitePath} (from ${from})` : sitePath);
+        // The file on disk is the decoded name; the Worker was judged on the encoded one
+        let onDisk = sitePath;
+        try { onDisk = decodeURIComponent(sitePath); } catch { /* a malformed escape: look for it as written */ }
+        // accessGate refuses a basePath, so a site path is the output path
+        const local = path.join(OUTPUT_DIR, onDisk.replace(/^\//, ''));
+        if (!fs.existsSync(local)) {
+          if (!later.has(sitePath)) missing.push(`${sitePath} (on ${address}${from ? `, from ${from}` : ''})`);
+          return;
+        }
+        if (/\.css$/i.test(sitePath)) {
+          for (const ref of cssReferences(fs.readFileSync(local, 'utf8'), `https://site.invalid${sitePath}`)) visit(ref, sitePath);
+        }
+      };
+      for (const ref of referencedFiles(html, pageUrl)) visit(ref, null);
+      if (gated.length) {
+        problems.push(`  ${address} loads ${gated.length === 1 ? 'a file' : 'files'} the gate keeps behind the sign-in, so a signed-out browser can't fetch ${gated.length === 1 ? 'it' : 'them'}:\n${gated.map((g) => `      ${g}`).join('\n')}`);
+      }
+    }
+    if (problems.some((p) => p.includes('keeps behind the sign-in'))) {
+      problems.push(`  Judged with ${judge.source}. Move each file under /assets/, or open it in the options your worker passes createGate() (publicPaths, publicPrefixes), exported as SITE_OPTIONS from worker/site-config.mjs so the build sees them.`);
+    }
+    if (missing.length) {
+      problems.push(`  The door pages load ${missing.length === 1 ? 'a file' : 'files'} that ${missing.length === 1 ? "isn't" : "aren't"} in the output, so a signed-out reader gets a broken page:\n${missing.map((m) => `      ${m}`).join('\n')}\n  If a later build step copies ${missing.length === 1 ? 'it' : 'them'} in, name ${missing.length === 1 ? 'it' : 'each'} in docs.config.js doorFilesAddedLater.`);
+    }
+  }
+
+  // The sign-in page's form, against the script that drives it
+  const login = allFiles.find((f) => '/' + f.htmlPath === ENGINE.login);
+  if (login) {
+    const script = path.join(APP_REGISTRY.filesRoot, 'assets', 'js', 'auth-login.js');
+    const html = fs.readFileSync(path.join(OUTPUT_DIR, login.htmlPath), 'utf8');
+    const ids = fs.existsSync(script)
+      ? [...new Set([...fs.readFileSync(script, 'utf8').matchAll(/getElementById\(\s*['"]([a-z0-9-]+)['"]\s*\)/g)].map((m) => m[1]))]
+      : [];
+    if (!ids.length) problems.push(`  auth-login.js wasn't found in the package (${script}), so the sign-in page can't be checked. Reinstall the package.`);
+    const tags = htmlTags(html);
+    const present = new Set(tags.map((t) => t.attrs.get('id')).filter(Boolean));
+    const absent = ids.filter((id) => !present.has(id));
+    if (absent.length) {
+      problems.push(`  ${ENGINE.login} is missing ${absent.map((id) => `#${id}`).join(', ')}, which auth-login.js reads. Without ${absent.length === 1 ? 'it' : 'them'} the page can't sign anyone in. Start a replacement cms/auth-login.md from the engine's.`);
+    }
+    // What a screen reader needs from it, which no id check sees
+    const lost = [];
+    if (!tags.some((t) => t.name === 'label' && t.attrs.get('for') === 'login-email')) lost.push('<label for="login-email">, the email field\'s name');
+    const errorLines = tags.filter((t) => (t.attrs.get('class') || '').split(/\s+/).includes('form-error'));
+    if (!errorLines.length) lost.push('the .form-error lines that say what went wrong');
+    const silent = errorLines.filter((t) => t.attrs.get('role') !== 'alert');
+    if (silent.length) lost.push(`role="alert" on ${silent.map((t) => (t.attrs.get('id') ? `#${t.attrs.get('id')}` : 'a .form-error line')).join(', ')}, so an error is announced`);
+    // The error text reaches each field through its description
+    for (const [field, line] of [['login-email', 'login-email-error'], ['login-code', 'login-code-error']]) {
+      const input = tags.find((t) => t.attrs.get('id') === field);
+      if (input && !(input.attrs.get('aria-describedby') || '').split(/\s+/).includes(line)) lost.push(`aria-describedby="${line}" on #${field}, so its error is read with the field`);
+    }
+    const success = tags.find((t) => t.attrs.get('id') === 'login-success');
+    if (success && success.attrs.get('role') !== 'status') lost.push('role="status" on #login-success, so "Code sent" is announced');
+    if (lost.length) {
+      problems.push(`  ${ENGINE.login} has lost ${lost.length === 1 ? 'something' : 'things'} a reader using a screen reader needs:\n${lost.map((l) => `      ${l}`).join('\n')}`);
+    }
+  }
+
+  if (problems.length) {
+    console.error(`\n❌ The sign-in pages can't ship as they are:\n${problems.join('\n')}\n`);
+    process.exit(1);
+  }
+  console.log(`🚪 Door pages checked: ${allFiles.filter((f) => resolvePageType(f.frontmatter).name === 'bare').length} bare page(s), each file they load is public at the gate`);
+}
+
+/**
+ * What createGate() needs to mount the installed apps' routes (B4): the
+ * installed slugs, and the brand's primary logo for the Image Placeholder,
+ * as a site path the asset layer serves.
+ */
+function installedAppsForWorker() {
+  let imageLogo = null;
+  const logos = BRAND && BRAND.logos;
+  if (logos && Array.isArray(logos.variants)) {
+    const primary = logos.variants.find((v) => v.id === logos.primary) || logos.variants[0];
+    if (primary && primary.file) imageLogo = '/' + String(primary.file).replace(/^\.?\//, '');
+  }
+  const embeds = INSTALL.installed.map((slug) => APP_REGISTRY.apps.get(slug).manifest.embed).filter(Boolean).sort();
+  // An embed is public and frameable, so it can never be a page the build
+  // gave a level: that would open it to everyone
+  const gated = embeds.filter((address) => pageAccess.has(address) && pageAccess.get(address).level !== 'public');
+  if (gated.length) {
+    console.error(`\n❌ An app's embed would open a page that has a level: ${gated.join(', ')}. An embed is its own standalone page, never an app or a doc page.\n`);
+    process.exit(1);
+  }
+  return { installed: [...INSTALL.installed].sort(), imageLogo, embeds };
+}
+
+/**
+ * The pages an earlier build wrote for an app this site no longer installs,
+ * and for its guide: deleted, so a switched-off app leaves nothing behind
+ * (the Worker answers those addresses with the not-installed page).
+ */
+function removeUninstalledOutputs() {
+  for (const address of notInstalledAddresses().keys()) {
+    const out = path.join(OUTPUT_DIR, address.replace(/^\//, ''));
+    if (fs.existsSync(out)) {
+      fs.rmSync(out);
+      console.log(`🧹 Removed: ${address.slice(1)} (its app isn't installed)`);
+    }
+  }
+}
+
+/**
+ * A guide the package ships can link to a page this site doesn't have: one
+ * of the engine's own docs pages, an app in a package the site doesn't
+ * install, an app switched off. On this site that link is plain text, so
+ * the guide never ships a dead link. A page the site writes itself fails
+ * the build instead when it links to an app or section the site switched
+ * off (failure scenario 6); its other links stay its own business. Reads
+ * what stampBodyLinks stamped (data-access), so only body links count.
+ */
+function unlinkMissingPages(allFiles) {
+  const missing = notInstalledAddresses();
+  const ATTRS = `(?:[^>"']|"[^"]*"|'[^']*')`;
+  const anchor = new RegExp(`<a\\b(${ATTRS}*?)\\shref="([^"]+)"(${ATTRS}*?) data-access="[a-z]+">([\\s\\S]*?)<\\/a>`, 'g');
+  const unlinked = [];
+  const broken = [];
+  for (const file of allFiles) {
+    const fromPackage = GUIDES.sources.has(file.markdownPath);
+    // A site's own page is checked only against what it switched off: its
+    // other links are its own business, as before
+    if (!fromPackage && !missing.size) continue;
+    const out = path.join(OUTPUT_DIR, file.htmlPath);
+    if (!fs.existsSync(out)) continue;
+    const pagePath = '/' + file.htmlPath;
+    const html = fs.readFileSync(out, 'utf8');
+    const next = html.replace(anchor, (match, before, href, after, text) => {
+      let target;
+      try {
+        target = new URL(href, `https://x${CONFIG.basePath}${pagePath}`).pathname;
+      } catch {
+        return match;
+      }
+      if (CONFIG.basePath && target.startsWith(`${CONFIG.basePath}/`)) target = target.slice(CONFIG.basePath.length);
+      if (target.endsWith('/')) target += 'index.html';
+      try { target = decodeURI(target); } catch { /* a malformed escape stays as written */ }
+      if (!fromPackage) {
+        if (missing.has(target)) broken.push(`  ${pagePath.slice(1)} links to ${target} (${missing.get(target)}, not installed)`);
+        return match;
+      }
+      const exists = pageAccess.has(target) || fs.existsSync(path.join(OUTPUT_DIR, target.slice(1)));
+      if (exists && !missing.has(target)) return match;
+      unlinked.push({ pagePath, target });
+      return text;
+    });
+    if (next !== html) fs.writeFileSync(out, next);
+  }
+  if (broken.length) {
+    console.error(`\n❌ ${broken.length} link(s) point at an app or section this site doesn't install (docs.config.js install). Remove the link, or install it:\n${broken.join('\n')}\n`);
+    process.exit(1);
+  }
+  if (!unlinked.length) return;
+  // A link that is gone points nowhere, so it can't point above its page
+  for (let i = bodyLinkViolations.length - 1; i >= 0; i--) {
+    if (unlinked.some((u) => bodyLinkViolations[i].startsWith(`  ${u.pagePath} (`) && bodyLinkViolations[i].includes(` links to ${u.target} (`))) bodyLinkViolations.splice(i, 1);
+  }
+  console.log(`🔗 ${unlinked.length} link(s) in the package's guides point at a page this site doesn't have, and read as text:\n${unlinked.map((u) => `   ${u.pagePath.slice(1)} → ${u.target}`).join('\n')}`);
+}
+
+/**
+ * The address of every app this site doesn't install, and of its guide, with
+ * the app's name (PB-4), sorted. Nothing for a legacy site, for a draft, for
+ * an engine-home app, or for an address the build wrote a page to.
+ */
+function notInstalledAddresses() {
+  const out = new Map();
+  if (INSTALL.legacy) return out;
+  for (const [address, section] of OFF_SECTION_PAGES) out.set(address, section);
+  for (const [slug, app] of APP_REGISTRY.apps) {
+    const m = app.manifest;
+    if (INSTALL.installed.includes(slug) || m.status === 'draft' || m.package === 'internal') continue;
+    // An app the site doesn't install can't stop its build: a bad token keeps the slug
+    const title = app.frontmatter.title || slug;
+    const tokens = siteTokens();
+    const name = title.replace(/\{\{brand:([a-zA-Z]+)\}\}/g, (match, key) => (Object.prototype.hasOwnProperty.call(tokens, key) ? tokens[key] : slug));
+    const section = app.frontmatter.section || 'Tools';
+    out.set(`/${SECTION_FOLDERS[section] || section.toLowerCase()}/${slug}.html`, name);
+    if (m.embed) out.set(m.embed, name);
+    if (m.guide) {
+      const source = [path.join(DOCS_DIR, m.guide), path.join(APP_REGISTRY.guidesDir, m.guide)].find((f) => fs.existsSync(f));
+      if (source) {
+        const guide = deriveOutputPath(m.guide, parseFrontmatter(fs.readFileSync(source, 'utf8')).frontmatter.section);
+        out.set(`/${guide.folder ? `${guide.folder}/` : ''}${guide.htmlName}`, name);
+      }
+    }
+  }
+  return new Map([...out].filter(([address]) => !pageAccess.has(address)).sort((a, b) => (a[0] < b[0] ? -1 : 1)));
 }
 
 /**
@@ -5098,205 +6139,11 @@ function writeLibraryIndex() {
   // The level the library's downloads need, as the tool page's container
   // says it (downloadAccess, else the page's access): the Worker checks it on
   // every original, so the lock in download-lock.js is never only a button.
-  const appFile = path.join(ROOT, 'cms', 'apps', 'asset-library.md');
-  const app = fs.existsSync(appFile) ? parseFrontmatter(fs.readFileSync(appFile, 'utf8')).frontmatter : {};
+  const libraryApp = installedApp('asset-library');
+  const app = libraryApp ? libraryApp.frontmatter : {};
   const level = app.downloadAccess ? normaliseLevel(app.downloadAccess) : deriveDataAccess(app);
   fs.writeFileSync(path.join(workerDir, 'library-index.mjs'), assetLibrary.renderLibraryIndex(entries, level));
   console.log(`📄 Generated: worker/library-index.mjs (${entries.length} downloadable file${entries.length === 1 ? '' : 's'})`);
-}
-
-function copyBrandAssets(brandKey) {
-  if (!BRANDS_DIR) return;
-  const srcDir = path.join(BRANDS_DIR, brandKey, 'assets');
-  if (!fs.existsSync(srcDir)) return;
-  copyDirRecursive(srcDir, path.join(OUTPUT_DIR, brandKey, 'assets'));
-}
-
-/**
- * Generate brand doc pages from markdown files in cms/brands/{brandFolder}/
- *
- * Frontmatter fields:
- *   title    — page title (required)
- *   section  — sidebar section label (optional, pages without one become top-level)
- *   order    — sort order within section (optional, default 99)
- *
- * Output: {brandFolder}/{sectionSlug}/{filename}.html
- * Appends each generated page to themes[brandKey].pages (emitted by writeThemeConfig).
- */
-function generateBrandDocs(template, themes) {
-  const brandsDir = BRANDS_DIR;
-  if (!brandsDir || !fs.existsSync(brandsDir)) return;
-
-  const brandDirs = fs.readdirSync(brandsDir).filter(dir => {
-    return fs.statSync(path.join(brandsDir, dir)).isDirectory() && themes[dir];
-  });
-
-  for (const brandKey of brandDirs) {
-    // Copy brand assets (theme CSS, logos) to output
-    copyBrandAssets(brandKey);
-
-    const brandDocsPath = path.join(brandsDir, brandKey);
-    const mdFiles = fs.readdirSync(brandDocsPath)
-      .filter(f => f.endsWith('.md') && !f.startsWith('README') && !f.startsWith('_'));
-
-    if (mdFiles.length === 0) continue;
-
-    const theme = themes[brandKey];
-    const space = brandSpace(brandKey, theme);
-    const pages = [];
-    const brandFiles = [];
-
-    // Load folder defaults for this brand directory
-    const brandDefaults = loadDefaults(brandDocsPath);
-
-    for (const filename of mdFiles) {
-      const filePath = path.join(brandDocsPath, filename);
-      const raw = fs.readFileSync(filePath, 'utf8');
-      const parsed = parseFrontmatter(raw);
-      // Merge folder defaults — page frontmatter wins
-      const frontmatter = { ...brandDefaults, ...parsed.frontmatter };
-      const content = parsed.content;
-
-      // Skip draft pages
-      if (frontmatter.status === 'draft') {
-        console.log(`⏭️  Skipped (draft): ${brandKey}/${filename}`);
-        continue;
-      }
-
-      const title = frontmatter.title || filename.replace('.md', '');
-      const htmlName = filename.replace('.md', '.html');
-      let htmlContent = markdownToHtml(content);
-
-      // Apply drop cap to first paragraph if enabled in frontmatter
-      if (frontmatter.dropcap === 'true') {
-        htmlContent = htmlContent.replace(/<p>/, '<p class="drop-cap">');
-      }
-
-      const tableOfContents = generateTableOfContents(htmlContent);
-      const order = parseInt(frontmatter.order, 10) || 99;
-
-      // Derive section subfolder for nested brand output
-      const sectionSlug = frontmatter.section ? frontmatter.section.toLowerCase().replace(/\s+/g, '-') : '';
-      const navBase = sectionSlug ? '../../' : '../';
-
-      // Full-width page header (lives outside the content grid)
-      const brandActionUrl = frontmatter.actionUrl || frontmatter.toolUrl;
-      const brandActionLabel = frontmatter.actionLabel || frontmatter.toolLabel || 'Open';
-      const brandActionHtml = brandActionUrl
-        ? `<a href="${siteHref(brandActionUrl)}" class="button page-action-link" data-size="small">${brandActionLabel}</a>`
-        : '';
-      pageHeader = buildPageHeaderHtml({
-        title,
-        subtitle: frontmatter.subtitle,
-        actions: brandActionHtml,
-        flipId: flipIdFromHref(htmlName),
-      });
-
-      // Build sticky sub-header bar (breadcrumb + markdown dropdown)
-      let pageSubbar = '';
-      if (title && frontmatter.section) {
-        const sectionLabel = frontmatter.section;
-        // Absolute href so the link resolves correctly from any page depth
-        // (e.g. surviving Barba transitions where chrome data-base goes stale).
-        const overviewHref = siteHref(sectionSlug
-          ? `/${brandKey}/${sectionSlug}/index.html`
-          : `/${brandKey}/index.html`);
-        // Section / page only. Brand instances are on their way out (D7 of
-        // access-plan.md removes multi-brand), so the subsection crumb is
-        // deliberately not threaded through here.
-        pageSubbar = buildBar({
-          crumbs: [{ label: sectionLabel, href: overviewHref }, { label: title }],
-          closeHref: overviewHref,
-          closeLabel: sectionLabel,
-          mdHref: `${navBase}${BRANDS_REL}/${brandKey}/${filename}`,
-        });
-      }
-
-      // {{PAGE_NAV}} is deliberately left unfilled — prev/next needs the whole
-      // brand's page order, which pass 2 below supplies.
-      const html = renderPage(template, {
-        space,
-        navBase,
-        brandRelBase: sectionSlug ? '../' : '',
-        title: `${theme.label} - ${title}`,
-        description: frontmatter.description || '',
-        header: pageHeader,
-        stickyBar: pageSubbar,
-        content: htmlContent,
-        toc: tableOfContents,
-        pageNav: '{{PAGE_NAV}}',
-        access: deriveDataAccess(frontmatter),
-        scripts: buildPageScripts(frontmatter.section || '', frontmatter, navBase),
-        sectionSlug: `${brandKey}-${slugifySection(frontmatter.section)}`,
-        pageSection: `${brandKey}-${slugifySection(frontmatter.section)}`,
-        order: parseInt(frontmatter.order, 10) || 999,
-        level: 2,
-      });
-
-      // Derive output path
-      const dir = sectionSlug
-        ? path.join(OUTPUT_DIR, brandKey, sectionSlug)
-        : path.join(OUTPUT_DIR, brandKey);
-      const outputRelPath = sectionSlug ? `${brandKey}/${sectionSlug}/${htmlName}` : `${brandKey}/${htmlName}`;
-      const htmlFolder = sectionSlug ? `${brandKey}/${sectionSlug}` : brandKey;
-
-      // Collect for two-pass rendering (nav needs full page order)
-      brandFiles.push({
-        filename,
-        title,
-        section: frontmatter.section || '',
-        htmlFolder,
-        htmlName,
-        htmlPath: outputRelPath,
-        subtitle: frontmatter.subtitle || '',
-        author: frontmatter.author || '',
-        order,
-        html,
-        dir
-      });
-    }
-
-    // Sort by order for prev/next navigation
-    brandFiles.sort((a, b) => {
-      if (a.order !== b.order) return a.order - b.order;
-      return a.title.localeCompare(b.title);
-    });
-
-    // Pass 2: Inject prev/next nav and write files
-    for (const file of brandFiles) {
-      const pageNav = generatePageNav(file, brandFiles);
-      // Function replacer, like every substitution in renderPage: a plain
-      // string replacement treats `$&`, `` $` ``, `$'` and `$$` in the
-      // *replacement* as patterns, and this one carries neighbouring page
-      // titles straight from brand frontmatter.
-      const finalHtml = file.html.replace('{{PAGE_NAV}}', () => pageNav);
-
-      fs.mkdirSync(file.dir, { recursive: true });
-      fs.writeFileSync(path.join(file.dir, file.htmlName), finalHtml);
-      console.log(`📄 Generated: ${file.htmlPath}`);
-
-      pages.push({
-        title: file.title,
-        subtitle: file.subtitle,
-        author: file.author,
-        // Absolute href so theme-loader.js can use the value directly without
-        // a per-page basePath prefix (which would go stale across Barba transitions).
-        href: '/' + file.htmlPath,
-        section: file.section || null,
-        order: file.order
-      });
-    }
-
-    // Sort pages and append to the in-memory registry for the theme-config emit
-    pages.sort((a, b) => a.order - b.order);
-    for (const { title, subtitle, author, href, section } of pages) {
-      const entry = { title, href };
-      if (subtitle) entry.subtitle = subtitle;
-      if (author) entry.author = author;
-      if (section) entry.section = section;
-      theme.pages.push(entry);
-    }
-  }
 }
 
 /**
@@ -5349,6 +6196,15 @@ function stripHtmlComments(html) {
   return html.replace(/<!--[\s\S]*?-->/g, '');
 }
 
+// The page sources in a standalone source directory: each .md but a README
+// or an _-prefixed partial. One rule for the writer below and the bare-page
+// list nav.js hands the router (generateDocs), so the two can't drift.
+function sourceDirPageFiles(srcDir) {
+  return fs.readdirSync(srcDir)
+    .filter(f => f.endsWith('.md') && !f.startsWith('README') && !f.startsWith('_'))
+    .sort();
+}
+
 /**
  * Generate pages from a standalone source directory under cms/.
  *
@@ -5374,6 +6230,7 @@ function stripHtmlComments(html) {
  *                                     folder's index, which is right for a tool
  *                                     but wrong for a directory that has none
  * @param {string}  opts.closeLabel    the crumb's text
+ * @param {string}  opts.bareTemplate  template-bare.html, for a `bare` page
  */
 function generateSourceDirPages(template, {
   dirName,
@@ -5382,23 +6239,49 @@ function generateSourceDirPages(template, {
   toolHook = false,
   closeHref = null,
   closeLabel = null,
+  bareTemplate = null,
 }) {
   const srcDir = path.join(DOCS_DIR, dirName);
-  if (!fs.existsSync(srcDir)) return [];
+  // The apps come from the registry (apps.js): the installed ones, each from
+  // the package or the site's own override. Any other source folder is read
+  // as it stands.
+  const fromRegistry = dirName === 'apps';
+  if (!fromRegistry && !fs.existsSync(srcDir)) return [];
 
-  const mdFiles = fs.readdirSync(srcDir)
-    .filter(f => f.endsWith('.md') && !f.startsWith('README') && !f.startsWith('_'))
-    .sort();
+  const mdFiles = fromRegistry
+    ? INSTALL.installed.map((slug) => `${slug}.md`)
+    : sourceDirPageFiles(srcDir);
+  const mdPathOf = (filename) => (fromRegistry ? APP_REGISTRY.apps.get(filename.replace(/\.md$/, '')).md : path.join(srcDir, filename));
+  // A site with no install list reads only its own files, as before phase B
+  const bodyPathOf = (slug) => {
+    const app = fromRegistry && !INSTALL.legacy ? APP_REGISTRY.apps.get(slug) : null;
+    return app && app.html ? app.html : path.join(srcDir, `${slug}.html`);
+  };
 
   const closeErrors = [];
   const generated = [];
 
   for (const filename of mdFiles) {
     const slug = filename.replace(/\.md$/, '');
-    const bodyPath = path.join(srcDir, `${slug}.html`);
+    const bodyPath = bodyPathOf(slug);
 
-    const parsed = parseFrontmatter(fs.readFileSync(path.join(srcDir, filename), 'utf8'));
+    const parsed = parseFrontmatter(fs.readFileSync(mdPathOf(filename), 'utf8'));
     const frontmatter = parsed.frontmatter;
+    // An app's title and description can name the brand too ({{brand:key}}),
+    // so an engine app's meta tags read as the site's own
+    for (const key of ['title', 'description']) {
+      if (typeof frontmatter[key] === 'string' && frontmatter[key].includes('{{brand:')) {
+        frontmatter[key] = frontmatter[key].replace(/\{\{brand:([a-zA-Z]+)\}\}/g, (match, token) => {
+          const tokens = siteTokens();
+          if (!tokens || !Object.prototype.hasOwnProperty.call(tokens, token)) {
+            closeErrors.push(`  ${dirName}/${slug}.md — ${match} in its ${key} ${tokens ? "isn't a brand token" : 'needs a brand.json (brandManifest)'}`);
+            return match;
+          }
+          // Escaped: the title and description go into the page as markup.
+          return escapeAttr(tokens[token]);
+        });
+      }
+    }
 
     if (frontmatter.status === 'draft') {
       console.log(`⏭️  Skipped (draft): ${dirName}/${filename}`);
@@ -5472,6 +6355,17 @@ function generateSourceDirPages(template, {
     let content = fillPageClose(body, upHref);
     if (type.body === 'html') {
       content = content.replace(/\{\{icon:([a-z0-9-]+)\}\}/g, (match, name) => getIcon(name));
+      // {{brand:key}}: the brand's own name and addresses (brand.js
+      // brandTokens), so an app page never carries one brand's copy. An
+      // unknown key or a site with no brand.json fails here, by name.
+      content = content.replace(/\{\{brand:([a-zA-Z]+)\}\}/g, (match, key) => {
+        const tokens = siteTokens();
+        if (!tokens || !Object.prototype.hasOwnProperty.call(tokens, key)) {
+          closeErrors.push(`  ${dirName}/${slug}.html — ${match} ${tokens ? `isn't a brand token (known: ${Object.keys(tokens).join(', ')})` : 'needs a brand.json (brandManifest)'}`);
+          return match;
+        }
+        return escapeAttr(tokens[key]);
+      });
       // {{icon-manifest}} resolves only in an HTML body like this one; in
       // markdown it warns instead (markdownToHtml). Line-anchored like
       // {{icon-registry}}, so an inline mention survives as text, and not
@@ -5490,6 +6384,26 @@ function generateSourceDirPages(template, {
       assertStamped(content, new RegExp('<div\\b' + ATTRS + '\\sclass="tool-canvas"' + ATTRS + '>', 'g'), 'tool canvases', `${dirName}/${slug}.html`);
     }
     if (type.name === 'page') content = stampBodyMotion(content);
+
+    // A bare page has its own template, as a cms page of the type does: the
+    // header and nothing else, outside the page transitions. The bare example
+    // is the one source page here that takes it.
+    if (type.name === 'bare') {
+      if (!bareTemplate) throw new Error(`cms/${dirName}/${filename}: a bare page here needs the bare template passed in`);
+      const html = generateBarePage({
+        frontmatter,
+        content,
+        filename: `${dirName}/${filename}`,
+        htmlPath: `${folder}/${slug}.html`,
+        htmlFolder: folder,
+      }, bareTemplate);
+      const dir = path.join(OUTPUT_DIR, folder);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, `${slug}.html`), html);
+      console.log(`📄 Generated: ${folder}/${slug}.html`);
+      generated.push(`${folder}/${slug}.html`);
+      continue;
+    }
 
     // Assert the close came out navigable. The check above proves the attribute
     // is there; this proves fillPageClose actually resolved it. Nothing in the
@@ -5885,722 +6799,6 @@ function generateShowcasePages(template) {
 }
 
 /**
- * Build tool registry from markdown frontmatter (single source of truth).
- * Returns an object keyed by tool slug with { title, subtitle, toolAccess, actionUrl }.
- */
-function buildToolRegistryFromFrontmatter() {
-  const toolFiles = fs.readdirSync(DOCS_DIR)
-    .filter(f => f.endsWith('.md') && !f.startsWith('_') && !f.startsWith('README'));
-  const tools = {};
-  for (const filename of toolFiles) {
-    const raw = fs.readFileSync(path.join(DOCS_DIR, filename), 'utf8');
-    const { frontmatter } = parseFrontmatter(raw);
-    const toolActionUrl = frontmatter.actionUrl || frontmatter.toolUrl;
-    if (frontmatter.section === 'Tools' && toolActionUrl) {
-      // Derive tool slug from actionUrl (e.g. "./cpm-calculator.html" → "cpm-calculator")
-      const slug = path.basename(toolActionUrl, '.html');
-      tools[slug] = {
-        title: frontmatter.title || slug,
-        subtitle: frontmatter.subtitle || '',
-        author: frontmatter.author || '',
-        // The app's own level: a brand space lists the public tools and
-        // none of the team's. (`actionAccess:` on the guides is gone.)
-        toolAccess: appAccess(slug, 'team'),
-        actionUrl: toolActionUrl
-      };
-    }
-  }
-  return tools;
-}
-
-/**
- * Check if a brand has access to a tool based on its toolAccess frontmatter value.
- */
-function brandHasToolAccess(toolAccess, brandKey) {
-  if (!toolAccess) return false;
-  // "public" or "brand" (any brand) → grant
-  if (toolAccess === 'public' || toolAccess === 'brand') return true;
-  // "team" or "admin" → brands don't get access
-  if (toolAccess === 'team' || toolAccess === 'admin') return false;
-  // "brand:acme,acme" → check if brandKey is in the list
-  if (toolAccess.startsWith('brand:')) {
-    const allowed = toolAccess.substring('brand:'.length).split(',').map(s => s.trim());
-    return allowed.includes(brandKey);
-  }
-  return false;
-}
-
-/**
- * Generate section overview pages for each brand (docs-overview, tools-overview).
- * Also appends the overview/tool entries to themes[brandKey].pages in memory.
- */
-function generateBrandSectionOverviews(template, themes) {
-  const toolRegistry = buildToolRegistryFromFrontmatter();
-
-  for (const [brandKey, theme] of Object.entries(themes)) {
-    const brandLabel = theme.label || brandKey;
-    const space = brandSpace(brandKey, theme);
-    const navBase = '../';
-
-    const dir = path.join(OUTPUT_DIR, brandKey);
-    fs.mkdirSync(dir, { recursive: true });
-
-    // Helper to build a brand overview page
-    function buildOverviewPage(title, cardsHtml, overrideNavBase) {
-      const base = overrideNavBase || navBase;
-      // Per-brand section order — used by the level-based directional
-      // transitions for L1 → L1 sibling navigation within a brand space.
-      // Docs comes first, then Tools, matching their order in the brand
-      // sidebar. New brand sections would extend this map.
-      const brandSectionOrder = { 'Docs': 0, 'Tools': 1, 'Brand Book': 2 };
-      const overviewOrder = brandSectionOrder[title] !== undefined ? brandSectionOrder[title] : 999;
-      return renderPage(template, {
-        space,
-        navBase: base,
-        // Overviews in a section subfolder sit one level below the brand root
-        brandRelBase: base === '../../' ? '../' : '',
-        title: `${brandLabel} - ${title}`,
-        description: `${title} overview for ${brandLabel}.`,
-        header: buildPageHeaderHtml({ title }),
-        content: cardsHtml,
-        access: deriveDataAccess(loadDefaults(space.defaultsDir())),
-        sectionSlug: `${brandKey}-${slugifySection(title)}-overview`,
-        pageSection: `${brandKey}-${slugifySection(title)}`,
-        order: overviewOrder,
-        // Read the row rather than restate it. A brand overview is a contents
-        // page in every respect, so when that row changes — as `article` just
-        // did — the brand space moves with the root instead of drifting.
-        level: PAGE_TYPES.contents.level,
-        frame: PAGE_TYPES.contents.frame,
-        article: PAGE_TYPES.contents.article,
-        chrome: PAGE_TYPES.contents.chrome,
-      });
-    }
-
-    // Docs overview — the section's contents list.
-    //
-    // book-contents, not book-shelf: the book metaphor puts covers on the shelf
-    // (L0) and a contents list inside a book (L1), and the root section indexes
-    // have always followed it. The brand spaces used covers at both levels, so
-    // a brand instance taught a different structure from the site it lives in.
-    const docsPages = (theme.pages || []).filter(p => p.section === 'Docs' && p.title !== 'Overview');
-    if (docsPages.length > 0) {
-      let cards = '<div class="docs-section"><div class="book-contents"' + MOTION.contents + '>';
-      for (const page of docsPages) {
-        // page.href is already absolute (`/<brand>/docs/<file>.html`).
-        cards += renderBookContentsItem({
-          headingLevel: 2,
-          href: page.href,
-          title: page.title,
-          subtitle: page.subtitle,
-          access: levelOf(page.href),
-        });
-      }
-      cards += '</div></div>';
-      const docsDir = path.join(dir, 'docs');
-      fs.mkdirSync(docsDir, { recursive: true });
-      fs.writeFileSync(path.join(docsDir, 'index.html'), buildOverviewPage('Docs', cards, '../../'));
-      console.log(`📄 Generated: ${brandKey}/docs/index.html`);
-    }
-
-    // Tools overview — cards for tools this brand has access to (from frontmatter)
-    const brandToolKeys = Object.keys(toolRegistry).filter(slug => brandHasToolAccess(toolRegistry[slug].toolAccess, brandKey));
-    if (brandToolKeys.length > 0) {
-      let cards = '<div class="docs-section"><div class="book-contents"' + MOTION.contents + '>';
-      for (const toolKey of brandToolKeys) {
-        const tool = toolRegistry[toolKey];
-        cards += renderBookContentsItem({
-          headingLevel: 2,
-          href: `/tools/${toolKey}.html`,
-          title: tool.title,
-          subtitle: tool.subtitle,
-          access: levelOf(`/tools/${toolKey}.html`),
-        });
-      }
-      cards += '</div></div>';
-      const toolsDir = path.join(dir, 'tools');
-      fs.mkdirSync(toolsDir, { recursive: true });
-      fs.writeFileSync(path.join(toolsDir, 'index.html'), buildOverviewPage('Tools', cards, '../../'));
-      console.log(`📄 Generated: ${brandKey}/tools/index.html`);
-    }
-  }
-
-  // Append overview + tool entries to the in-memory registry (emitted later)
-  for (const [brandKey, theme] of Object.entries(themes)) {
-    const hasDocsOverview = theme.pages.some(p => p.section === 'Docs');
-    const brandToolKeys = Object.keys(toolRegistry).filter(slug => brandHasToolAccess(toolRegistry[slug].toolAccess, brandKey));
-
-    if (hasDocsOverview && !theme.pages.some(p => p.href === `/${brandKey}/docs/index.html`)) {
-      theme.pages.push({ title: 'Overview', href: `/${brandKey}/docs/index.html`, section: 'Docs' });
-    }
-    if (brandToolKeys.length > 0 && !theme.pages.some(p => p.href === `/${brandKey}/tools/index.html`)) {
-      theme.pages.push({ title: 'Overview', href: `/${brandKey}/tools/index.html`, section: 'Tools' });
-    }
-    for (const slug of brandToolKeys) {
-      if (!theme.pages.some(p => p.href === `/tools/${slug}.html`)) {
-        theme.pages.push({ title: toolRegistry[slug].title, href: `/tools/${slug}.html`, section: 'Tools' });
-      }
-    }
-  }
-}
-
-/**
- * Generate brand-book.html for each brand.
- *
- * Scans cms/brands/{brandKey}/assets/logos/ for .svg files and builds a
- * logo gallery page with light + dark previews, copy-SVG and download buttons.
- * An optional cms/brands/{brandKey}/brand-book.md provides custom intro
- * content and frontmatter overrides (title, subtitle, description, access).
- */
-function generateBrandBook(template, themes) {
-  const brandsDir = BRANDS_DIR;
-  if (!brandsDir || !fs.existsSync(brandsDir)) return;
-
-  const brandDirs = fs.readdirSync(brandsDir).filter(dir => {
-    return fs.statSync(path.join(brandsDir, dir)).isDirectory() && themes[dir];
-  });
-
-  for (const brandKey of brandDirs) {
-    const theme = themes[brandKey];
-    const brandLabel = theme.label || brandKey;
-
-    // Scan for logo SVG files
-    const logosDir = path.join(brandsDir, brandKey, 'assets', 'logos');
-    if (!fs.existsSync(logosDir)) {
-      console.log(`⚠️  No logos/ folder for brand '${brandKey}', skipping brand book`);
-      continue;
-    }
-
-    const svgFiles = fs.readdirSync(logosDir).filter(f => f.endsWith('.svg'));
-    if (svgFiles.length === 0) {
-      console.log(`⚠️  No SVG files in logos/ for brand '${brandKey}', skipping brand book`);
-      continue;
-    }
-
-    // Load optional brand-book.md for intro content and frontmatter
-    const brandBookMdPath = path.join(brandsDir, brandKey, 'brand-book.md');
-    let frontmatter = {};
-    let introHtml = '';
-
-    if (fs.existsSync(brandBookMdPath)) {
-      const raw = fs.readFileSync(brandBookMdPath, 'utf8');
-      const parsed = parseFrontmatter(raw);
-      // Merge folder defaults — brand-book frontmatter wins
-      const brandDefaults = loadDefaults(path.join(brandsDir, brandKey));
-      frontmatter = { ...brandDefaults, ...parsed.frontmatter };
-      if (parsed.content) {
-        introHtml = markdownToHtml(parsed.content);
-      }
-    } else {
-      // Fall back to folder defaults only
-      frontmatter = loadDefaults(path.join(brandsDir, brandKey));
-    }
-
-    const pageTitle = frontmatter.title || 'Brand Book';
-    const pageSubtitle = frontmatter.subtitle || 'Logo, colour, typography, and interface elements styled with your brand tokens';
-    const pageDescription = frontmatter.description || `${brandLabel} brand book.`;
-
-    // Build the full-width page header (slots into PAGE_HEADER, outside the content grid)
-    const brandBookPageHeader = buildPageHeaderHtml({
-      title: pageTitle,
-      subtitle: pageSubtitle,
-      eyebrow: brandLabel,
-      flipId: 'brand-book',
-    });
-
-    // Build page content
-    let contentHtml = '';
-
-    // Custom intro from brand-book.md
-    if (introHtml) {
-      contentHtml += `<div class="block gap-l">${introHtml}</div>`;
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // PART 1 — PRIMITIVES
-    // The raw building blocks: logos, colours, fonts.
-    // Compact, scannable, copy-friendly. No editorial content.
-    // ─────────────────────────────────────────────────────────
-
-    // ─── LOGOS ───────────────────────────────────────────────
-    // Logos follow the convention: logo_brand-{type}-{light|dark}.svg
-    // Group by type, sort by canonical order, render light + dark side by side.
-    const logoTypeOrder = ['primary', 'wordmark', 'avatar', 'horizontal'];
-    const logoTypeTitles = {
-      'primary': 'Primary Logo',
-      'wordmark': 'Wordmark',
-      'avatar': 'Avatar Logo',
-      'horizontal': 'Horizontal Logo',
-    };
-
-    // Parse files: extract base type + variant
-    // e.g. "logo_brand-wordmark-light.svg" → { type: 'wordmark', variant: 'light', file: '...' }
-    const logoEntries = svgFiles
-      .map(f => {
-        const m = f.match(/^logo_brand-(.+?)-(light|dark)\.svg$/i);
-        if (!m) return null;
-        return { type: m[1], variant: m[2], file: f };
-      })
-      .filter(Boolean);
-
-    // Group by type
-    const logoGroups = {};
-    for (const entry of logoEntries) {
-      if (!logoGroups[entry.type]) logoGroups[entry.type] = {};
-      logoGroups[entry.type][entry.variant] = entry.file;
-    }
-
-    // Sort group keys by canonical order
-    const sortedGroupKeys = Object.keys(logoGroups).sort((a, b) => {
-      const aIdx = logoTypeOrder.indexOf(a);
-      const bIdx = logoTypeOrder.indexOf(b);
-      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
-      if (aIdx !== -1) return -1;
-      if (bIdx !== -1) return 1;
-      return a.localeCompare(b);
-    });
-
-    // Render the logos section only if we have at least one matching file
-    if (sortedGroupKeys.length > 0) {
-      contentHtml += `<section class="brand-book-section block gap-2xl">
-        <h2>Logos</h2>`;
-
-      for (const typeKey of sortedGroupKeys) {
-        const group = logoGroups[typeKey];
-        const title = logoTypeTitles[typeKey] || (typeKey.charAt(0).toUpperCase() + typeKey.slice(1) + ' Logo');
-
-        contentHtml += `<div class="block gap-m">
-          <h3>${title}</h3>
-          <div class="grid cols-2 gap-l">`;
-
-        // Render light then dark variants if they exist
-        for (const variant of ['light', 'dark']) {
-          const file = group[variant];
-          if (!file) continue;
-
-          let svgContent = fs.readFileSync(path.join(logosDir, file), 'utf8')
-            .replace(/\n\s*/g, '')
-            .trim();
-
-          // Add data-logo attribute to the <svg> element
-          svgContent = svgContent.replace(/<svg([^>]*)>/, `<svg data-logo="${typeKey}-${variant}"$1>`);
-
-          // Escape for data-copy attribute
-          const svgEscapedAttr = svgContent
-            .replace(/&/g, '&amp;')
-            .replace(/"/g, '&quot;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-
-          const previewClass = variant === 'dark' ? 'asset-card-preview--dark' : 'asset-card-preview--light';
-          const downloadHref = `assets/logos/${file}`;
-          const variantLabel = variant.charAt(0).toUpperCase() + variant.slice(1);
-
-          contentHtml += `<div class="asset-card">
-            <div class="asset-card-preview ${previewClass}">
-              <div class="svg-logo" style="max-width: 240px; max-height: 120px;">${svgContent}</div>
-            </div>
-            <div class="asset-card-footer">
-              <p class="asset-card-title">${variantLabel}</p>
-              <div class="asset-card-actions">
-                <button class="button copy-btn" data-size="small" data-icon-only type="button" data-copy="${svgEscapedAttr}" data-tooltip="Copy SVG" aria-label="Copy SVG">
-                  <span class="copy-btn-default">${getIcon('copy')}</span>
-                  <span class="copy-btn-copied">${getIcon('check')}</span>
-                </button>
-                <a class="button" data-size="small" data-icon-only href="${downloadHref}" download="${file}" data-tooltip="Download" aria-label="Download SVG">
-                  ${getIcon('download')}
-                </a>
-              </div>
-            </div>
-          </div>`;
-        }
-
-        contentHtml += `</div>
-        </div>`;
-      }
-
-      contentHtml += `</section>`;
-    }
-
-    // ─── COLOURS ─────────────────────────────────────────────
-    // Read brand primitives from this brand's theme.css.
-    // If none defined, fall back to the project semantic palette tokens.
-    const themeCssPath = path.join(brandsDir, brandKey, 'assets', 'theme.css');
-    let brandColorTokens = [];
-    if (fs.existsSync(themeCssPath)) {
-      const themeCssRaw = fs.readFileSync(themeCssPath, 'utf8');
-      const brandTokenRegex = /^\s*(--brand-[a-z0-9-]+)\s*:\s*([^;]+);/gm;
-      let m;
-      while ((m = brandTokenRegex.exec(themeCssRaw)) !== null) {
-        brandColorTokens.push({ token: m[1] });
-      }
-    }
-
-    // Fallback: use semantic tokens if no brand primitives are defined
-    if (brandColorTokens.length === 0) {
-      brandColorTokens = [
-        { token: '--background-primary' },
-        { token: '--background-secondary' },
-        { token: '--text-primary' },
-        { token: '--text-secondary' },
-        { token: '--text-accent' },
-        { token: '--text-link' },
-        { token: '--border-primary' },
-        { token: '--border-secondary' },
-      ];
-    }
-
-    // Split into two columns
-    const half = Math.ceil(brandColorTokens.length / 2);
-    const colorColLeft = brandColorTokens.slice(0, half);
-    const colorColRight = brandColorTokens.slice(half);
-
-    // Each colour is a strip swatch (cms/swatch.md): swatch.js reads the hex
-    // live from this brand's theme, picks the ink and names the actions;
-    // copy-button.js copies. The CSS action ships its own data-copy, the Hex
-    // action ships hidden until the hex is read.
-    const renderColorRow = (c) => `<li class="swatch" data-variant="strip" data-token="${c.token}" style="--swatch-fill: var(${c.token})">`
-      + `<div class="swatch-text"><p class="swatch-name">${c.token.replace(/^--/, '')}</p><p class="swatch-value"></p></div>`
-      + `<div class="swatch-actions">`
-      + `<button type="button" class="copy-btn swatch-copy" data-format="hex" hidden><span class="copy-btn-default">${getIcon('copy')}<span>Hex</span></span><span class="copy-btn-copied">${getIcon('check')}<span>Copied</span></span></button>`
-      + `<button type="button" class="copy-btn swatch-copy" data-format="css" data-copy="var(${c.token})"><span class="copy-btn-default">${getIcon('code')}<span>CSS</span></span><span class="copy-btn-copied">${getIcon('check')}<span>Copied</span></span></button>`
-      + `</div></li>`;
-    // An empty column (a brand with one colour) renders nothing, not an
-    // empty outlined box.
-    const renderColorList = (tokens) => tokens.length
-      ? `<ul class="swatch-grid border border-faded" role="list" data-pagefind-ignore>${tokens.map(renderColorRow).join('')}</ul>`
-      : '';
-
-    contentHtml += `<section class="brand-book-section block gap-l">
-      <h2>Colours</h2>
-      <div class="grid cols-2 gap-l">
-        ${renderColorList(colorColLeft)}
-        ${renderColorList(colorColRight)}
-      </div>
-    </section>`;
-
-    // ─── BACKGROUNDS ─────────────────────────────────────────
-    // Solid colour background tokens — useful for hero blocks, callouts,
-    // ad units, marketing surfaces. Each maps to a brand primitive (or
-    // falls back to the design system default).
-    const backgroundTokens = [
-      { token: '--background-accent' },
-      { token: '--background-black'  },
-      { token: '--background-white'  },
-      { token: '--background-blue'   },
-      { token: '--background-red'    },
-      { token: '--background-green'  },
-    ];
-
-    const bgHalf = Math.ceil(backgroundTokens.length / 2);
-    const bgColLeft = backgroundTokens.slice(0, bgHalf);
-    const bgColRight = backgroundTokens.slice(bgHalf);
-
-    contentHtml += `<section class="brand-book-section block gap-l">
-      <h2>Backgrounds</h2>
-      <div class="grid cols-2 gap-l">
-        ${renderColorList(bgColLeft)}
-        ${renderColorList(bgColRight)}
-      </div>
-    </section>`;
-
-    // ─── FONTS ───────────────────────────────────────────────
-    // Show every distinct brand font as a specimen card.
-    // Dedupe by family value — if --font-primary and --font-secondary share the
-    // same value, only one card is rendered.
-    const fontTokenSpecs = [
-      { token: '--font-primary',    fallback: 'Primary' },
-      { token: '--font-secondary',  fallback: 'Secondary' },
-      { token: '--font-tertiary',   fallback: 'Tertiary' },
-      { token: '--font-quaternary', fallback: 'Quaternary' },
-    ];
-
-    let fontTokens = [];
-    if (fs.existsSync(themeCssPath)) {
-      const themeCssRaw = fs.readFileSync(themeCssPath, 'utf8');
-      // Build a map of token → first family name from theme.css
-      const themeFontMap = {};
-      const fontTokenRegex = /^\s*(--font-(?:primary|secondary|tertiary|quaternary))\s*:\s*([^;]+);/gm;
-      let m;
-      while ((m = fontTokenRegex.exec(themeCssRaw)) !== null) {
-        if (themeFontMap[m[1]]) continue; // first definition wins
-        themeFontMap[m[1]] = m[2].split(',')[0].trim().replace(/^["']|["']$/g, '');
-      }
-
-      // Walk in canonical order, dedupe by family value
-      const seenFamilies = new Set();
-      for (const spec of fontTokenSpecs) {
-        const family = themeFontMap[spec.token];
-        if (!family || seenFamilies.has(family)) continue;
-        seenFamilies.add(family);
-        fontTokens.push({ token: spec.token, family });
-      }
-    }
-    if (fontTokens.length === 0) {
-      fontTokens = [
-        { token: '--font-primary',    family: 'Primary' },
-        { token: '--font-secondary',  family: 'Secondary' },
-        { token: '--font-tertiary',   family: 'Tertiary' },
-        { token: '--font-quaternary', family: 'Quaternary' },
-      ];
-    }
-
-    contentHtml += `<section class="brand-book-section block gap-l">
-      <h2>Fonts</h2>
-      <div class="grid cols-${Math.min(fontTokens.length, 3)} gap-l">`;
-    for (const f of fontTokens) {
-      contentHtml += `<div class="asset-card">
-        <div class="asset-card-preview asset-card-preview--light" style="text-align: center;">
-          <div style="font-family: var(${f.token});">
-            <p style="font-size: var(--font-9xl); margin: 0; line-height: 1;">Aa</p>
-            <p style="font-size: var(--font-s); margin: var(--space-l) 0 0; line-height: 1.5;">ABCDEFGHIJKLM<br>abcdefghijklm<br>0123456789</p>
-          </div>
-        </div>
-        <div class="asset-card-footer">
-          <p class="asset-card-title">${f.family}</p>
-        </div>
-      </div>`;
-    }
-    contentHtml += `</div>
-    </section>`;
-
-    // ─────────────────────────────────────────────────────────
-    // PART 2 — IN USE
-    // The brand applied across real scenarios — an article, a callout,
-    // a card grid, and a contact form. Each scenario stitches multiple
-    // elements together so the brand can be seen in context.
-    // ─────────────────────────────────────────────────────────
-
-    // ─── SCENARIO 1: Article ─────────────────────────────────
-    // Demonstrates: H1, H2, H3, eyebrow, lead paragraph, body, inline styling,
-    // internal + external links, unordered + ordered lists, blockquote, small print.
-    // Sits on the page, not in a bordered box.
-    // Header is a block composition (gap-driven); the article itself is NOT a
-    // block — prose flows on element margins, matching how markdown-generated
-    // pages render, so the specimen stays representative.
-    contentHtml += `<section class="brand-book-section block gap-l">
-      <header class="block gap-m">
-        <p class="eyebrow">Field notes</p>
-        <h1>Your Primary Headline, Big, Bold, and Unmissable</h1>
-        <p class="text-size-xlarge">This lead paragraph demonstrates how introductory body text will look across your layout, used to set the tone for the body that follows and draw the reader in.</p>
-      </header>
-      <article>
-        <p>This paragraph demonstrates how body text will look across your layout. <strong>Bold text</strong> adds emphasis, while <em>italics</em> offer a subtle highlight. You can also use <s>strikethrough</s> to show edits, or <code>inline code</code> for technical terms. For further information, check out <a href="#">this internal link</a>, or visit our <a href="https://example.com" target="_blank" rel="noopener noreferrer">external site</a>.</p>
-
-        <h2>Type with Purpose, Design with Intent</h2>
-
-        <p>This extended paragraph serves to demonstrate how substantial blocks of body text will behave across your layout, giving you a realistic sense of how readers will experience longer-form content. <strong>Strategic use of bold text</strong> helps break up visual monotony, while <em>italicised phrases introduce subtle emphasis</em>. As you work through multiple lines, you'll notice how spacing, line height, and text density all contribute to overall readability.</p>
-
-        <h3>What good typography does</h3>
-
-        <ul>
-          <li>Establishes a clear visual hierarchy</li>
-          <li>Improves readability over long passages</li>
-          <li>Carries the brand voice consistently
-            <ul>
-              <li>Across digital and print</li>
-              <li>Across light and dark surfaces</li>
-            </ul>
-          </li>
-          <li>Communicates without shouting</li>
-        </ul>
-
-        <h3>How we use it</h3>
-
-        <ol>
-          <li>Discovery and brief</li>
-          <li>Strategy and positioning</li>
-          <li>Design and prototyping
-            <ol>
-              <li>Visual exploration</li>
-              <li>Refinement</li>
-            </ol>
-          </li>
-          <li>Build and handover</li>
-        </ol>
-
-        <blockquote><p>Words matter, but how those words are presented matters just as much. Typography transforms content from mundane to magical, from ordinary to extraordinary.</p></blockquote>
-
-        <p class="text-size-small">Terms and conditions apply. Prices are subject to change without notice. See site for complete details.</p>
-      </article>
-    </section>`;
-
-    // ─── SCENARIO 2: Card grid ───────────────────────────────
-    // Demonstrates: book-cover, card-title, card-description, grid layout.
-    contentHtml += `<section class="brand-book-section block gap-l">
-      <h2>Three things worth your time</h2>
-      <div class="book-shelf" data-cols="3"${MOTION.shelf}>
-        ${renderBookCover({ href: '#', title: 'Catchy article title example', subtitle: 'A short preview of the article content, crafted to grab attention and spark curiosity. Just enough to tempt the reader to click.' })}
-        ${renderBookCover({ href: '#', title: 'Bold title for a blog post', subtitle: 'A few compelling lines that hint at the story within. Use this space to draw the reader in with tone, intrigue, or a bold statement.' })}
-        ${renderBookCover({ href: '#', title: 'Short and scroll-stopping', subtitle: 'Bold insights, fresh thinking, and a reason to scroll. This placeholder shows how a post excerpt will look in your feed layout.' })}
-      </div>
-    </section>`;
-
-    // ─── SCENARIO 3: Contact form ────────────────────────────
-    // One of each form element: text input, textarea, radio, toggle, button.
-    contentHtml += `<section class="brand-book-section block gap-l">
-      <h2>Get in touch</h2>
-      <div class="block gap-l">
-        <div class="block gap-xs">
-          <label for="bb-name"><strong>Name</strong></label>
-          <input type="text" id="bb-name" placeholder="Your name">
-        </div>
-        <div class="block gap-xs">
-          <label for="bb-message"><strong>Message</strong></label>
-          <textarea id="bb-message" rows="4" placeholder="Tell us a little about your project..."></textarea>
-        </div>
-        <div class="form-check">
-          <input type="radio" id="bb-radio" name="bb-radio" checked>
-          <label for="bb-radio">Subscribe me to updates</label>
-        </div>
-        <div class="form-toggle">
-          <input type="checkbox" role="switch" id="bb-toggle" checked>
-          <label for="bb-toggle">Email notifications</label>
-        </div>
-        <div class="button-group">
-          <button class="button" type="button">Send message</button>
-        </div>
-      </div>
-    </section>`;
-
-    // Build page from template (same pattern as generateBrandIndexPages)
-    const navBase = '../';
-
-    // Brand book uses the standard .copy-btn pattern (handled by copy-button.js)
-    // and native <a download> for downloads — no inline script needed.
-
-    const html = renderPage(template, {
-      space: brandSpace(brandKey, theme),
-      navBase,
-      brandRelBase: '',
-      title: `${brandLabel} - ${pageTitle}`,
-      description: pageDescription,
-      header: brandBookPageHeader,
-      content: contentHtml,
-      access: deriveDataAccess(frontmatter),
-      sectionSlug: `${brandKey}-brand-book`,
-      pageSection: `${brandKey}-brand-book`,
-      // Brand book is at order 2 in the per-brand section ordering
-      // (Docs=0, Tools=1, Brand Book=2) — see buildOverviewPage above.
-      order: 2,
-      level: 1,
-    });
-
-    // Write to brand folder
-    const dir = path.join(OUTPUT_DIR, brandKey);
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'brand-book.html'), html);
-    console.log(`📄 Generated: ${brandKey}/brand-book.html`);
-  }
-}
-
-function generateBrandIndexPages(template, themes) {
-  const toolRegistry = buildToolRegistryFromFrontmatter();
-
-  for (const [brandKey, theme] of Object.entries(themes)) {
-    let contentHtml = '';
-
-    // Both feed the page header, which is emitted into {{PAGE_HEADER}} below.
-    const brandLabel = theme.label || brandKey;
-    const brandDesc = theme.description || `Brand guidelines and tools for ${brandLabel}.`;
-
-    // Brand pages grouped by section (exclude index.html and Tools pages — tools handled separately)
-    const brandPages = (theme.pages || []).filter(p => !p.href.endsWith('/index.html') && p.section !== 'Tools');
-    const sectionGroups = {};
-    const sectionOrder = [];
-    for (const page of brandPages) {
-      const section = page.section || brandLabel;
-      if (!sectionGroups[section]) {
-        sectionGroups[section] = [];
-        sectionOrder.push(section);
-      }
-      sectionGroups[section].push(page);
-    }
-
-    for (const section of sectionOrder) {
-      // Sort so Overview is always first
-      sectionGroups[section].sort((a, b) => {
-        if (a.title === 'Overview') return -1;
-        if (b.title === 'Overview') return 1;
-        return 0;
-      });
-
-      contentHtml += `<div class="docs-section">
-      <h2 class="book-shelf-title">${section}</h2>
-      <div class="book-shelf"${MOTION.shelf}>`;
-      for (const page of sectionGroups[section]) {
-        // page.href is absolute (`/<brand>/<section>/<file>.html`) — use as-is.
-        contentHtml += renderBookCover({
-          href: page.href,
-          title: page.title,
-          subtitle: page.subtitle,
-          author: page.author,
-          access: levelOf(page.href),
-        });
-      }
-      contentHtml += `</div></div>`;
-    }
-
-    // Tools section — derived from frontmatter toolAccess
-    const brandToolKeys = Object.keys(toolRegistry).filter(slug => brandHasToolAccess(toolRegistry[slug].toolAccess, brandKey));
-    if (brandToolKeys.length > 0) {
-      contentHtml += `<div class="docs-section">
-      <h2 class="book-shelf-title">Tools</h2>
-      <div class="book-shelf"${MOTION.shelf}>`;
-      // Tools overview card first
-      const toolsOverviewPage = (theme.pages || []).find(p => p.section === 'Tools' && p.title === 'Overview');
-      if (toolsOverviewPage) {
-        contentHtml += renderBookCover({
-          href: toolsOverviewPage.href,
-          title: 'Overview',
-          subtitle: 'All available tools and utilities',
-          access: levelOf(toolsOverviewPage.href),
-        });
-      }
-      for (const toolKey of brandToolKeys) {
-        const tool = toolRegistry[toolKey];
-        contentHtml += renderBookCover({
-          href: `/tools/${toolKey}.html`,
-          title: tool.title,
-          subtitle: tool.subtitle,
-          author: tool.author,
-          access: levelOf(`/tools/${toolKey}.html`),
-        });
-      }
-      contentHtml += `</div></div>`;
-    }
-
-    // Build page from template
-    const navBase = '../';
-    const html = renderPage(template, {
-      space: brandSpace(brandKey, theme),
-      navBase,
-      brandRelBase: '',
-      title: `${brandLabel} - Brand Guidelines`,
-      description: brandDesc,
-      header: buildPageHeaderHtml({ title: brandLabel, subtitle: brandDesc }),
-      content: contentHtml,
-      access: deriveDataAccess(loadDefaults(path.join(DOCS_DIR, 'brands', brandKey))),
-      sectionSlug: `${brandKey}-home`,
-      pageSection: `${brandKey}-home`,
-      order: 0,
-      // A brand home is a shelf, so it reads the shelf's row — same reason as
-      // the overviews above and the root home at generateIndexPage.
-      level: PAGE_TYPES.shelf.level,
-      frame: PAGE_TYPES.shelf.frame,
-      article: PAGE_TYPES.shelf.article,
-      chrome: PAGE_TYPES.shelf.chrome,
-    });
-
-    // Write to brand folder
-    const dir = path.join(OUTPUT_DIR, brandKey);
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'index.html'), html);
-    console.log(`📄 Generated: ${brandKey}/index.html`);
-  }
-}
-
-/**
  * Copy a bundled docs-kit asset into the output. Bundled assets exist only in
  * the shipped package; running from source with the defaults unset warns and
  * skips rather than failing the whole build.
@@ -6660,6 +6858,8 @@ function applyTemplateChrome(rawTemplate) {
     copyKitAsset('docs.css', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'docs.css'));
   }
 
+  CHROME.docsCssHref = docsCssHref;
+
   // Docs UI scripts: project-provided list, or the kit-bundled set copied
   // into the output. The kit set is the docs chrome plus every core
   // component the generated pages can draw (D1, engine-parity-plan.md: a
@@ -6681,38 +6881,46 @@ function applyTemplateChrome(rawTemplate) {
     uiScripts = [];
     for (const f of KIT_UI_SCRIPTS) {
       if (siteScripts.has(f)) continue;
+      if (f === 'search.js' && !CONFIG.search) continue;
       uiScripts.push(`assets/docs-kit/${f}`);
       copyKitAsset(`js/${f}`, path.join(OUTPUT_DIR, 'assets', 'docs-kit', f));
     }
   }
+  // The bare template loads a few of these by name (uiScriptPath)
+  CHROME.uiScripts = uiScripts.slice();
 
   // All configured paths are site-root-relative; the {{NAV_BASE}} prefix
   // resolves them per page depth. Absolute URLs pass through untouched.
   const nav = (p) => prefixHref('{{NAV_BASE}}', p);
-  let styleLinks = CONFIG.extraStylesheets.map(href => `<link rel="stylesheet" href="${nav(href)}">`).join('\n    ');
-  const uiScriptTags = uiScripts.map(src => `<script src="${nav(src)}" defer></script>`).join('\n    ');
+  // The installed apps' files (apps.js), on every page so a page transition
+  // into an app finds it styled and started (PB-1): after the UI scripts,
+  // before the site's own. The brand's two generated files lead, since the
+  // libraries read them as they load.
+  const engineScripts = INSTALL.legacy ? [] : [
+    ...(BRAND ? [CONFIG.brandOutputs.themeConfig, CONFIG.brandOutputs.logoManifest] : []),
+    ...INSTALL.scripts,
+  ];
+  const engineStyles = INSTALL.legacy ? [] : INSTALL.styles;
+  assertNotListedTwice(engineScripts, [...(CONFIG.uiScripts || []), ...CONFIG.extraScripts], 'extraScripts or uiScripts');
+  assertNotListedTwice(engineStyles, CONFIG.extraStylesheets, 'extraStylesheets');
+  let styleLinks = [...engineStyles, ...CONFIG.extraStylesheets].map(href => `<link rel="stylesheet" href="${nav(href)}">`).join('\n    ');
+  const uiScriptTags = [...uiScripts, ...engineScripts].map(src => `<script src="${nav(src)}" defer></script>`).join('\n    ');
   let extraScriptTags = CONFIG.extraScripts.map(src => `<script src="${nav(src)}" defer></script>`).join('\n    ');
   const highlightTag = `<script src="${nav(CONFIG.highlightJs)}"></script>`;
 
-  // Page transitions (opt-in): ship the kit-bundled Barba assets and wire the
-  // markup the resolver needs. A config whose wrapperAttrs/containerAttrs
-  // already carry a data-barba attribute owns its Barba wiring outright — the
-  // flag is then skipped entirely (assets, tags, and attrs), because loading
-  // the kit's barba.min.js next to a site's own copy reassigns window.barba
-  // and boots a second router that intercepts every click twice.
+  // Page transitions, on every site (engine parity C3, D5): ship the kit's
+  // router, its stylesheet and the vendored @barba/core, and stamp the
+  // markup the resolver reads. A site's own wrapperAttrs/containerAttrs come
+  // first; they may not carry data-barba (checked at load).
   let wrapperAttrs = CONFIG.wrapperAttrs;
   let containerAttrs = CONFIG.containerAttrs;
-  const manualBarbaWiring = /data-barba\s*=/.test(wrapperAttrs + containerAttrs);
-  if (CONFIG.pageTransitions && manualBarbaWiring) {
-    console.warn('⚠️  pageTransitions: true ignored — wrapperAttrs/containerAttrs already carry data-barba markup, so this config owns its own Barba wiring (vendor script, init script, transition CSS). Remove the manual attrs to use the kit-bundled transitions.');
-  }
-  if (CONFIG.pageTransitions && !manualBarbaWiring) {
-    // The opt-in must not half-ship: pages linking scripts that 404 fail
-    // silently in the browser, so a missing bundled asset fails the build.
+  {
+    // Pages linking scripts that 404 fail silently in the browser, so a
+    // missing bundled asset fails the build.
     const barbaAssets = ['barba-transitions.css', 'js/barba-docs.js', 'js/vendor/barba.min.js', 'js/vendor/barba-LICENSE.txt'];
     for (const rel of barbaAssets) {
       if (!fs.existsSync(path.join(KIT_ASSETS, rel))) {
-        console.error(`❌ pageTransitions is on but a bundled asset is missing: ${path.join(KIT_ASSETS, rel)} — reinstall the docs-kit package.`);
+        console.error(`❌ A page-transition asset is missing: ${path.join(KIT_ASSETS, rel)} — reinstall the docs-kit package.`);
         process.exit(1);
       }
     }
@@ -6721,9 +6929,9 @@ function applyTemplateChrome(rawTemplate) {
     copyKitAsset('js/vendor/barba-LICENSE.txt', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'vendor', 'barba-LICENSE.txt'));
     copyKitAsset('js/barba-docs.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'barba-docs.js'));
 
-    // Before extraStylesheets so a consumer stylesheet can override; after
-    // extraScripts so consumer modules (window.bdBarbaOptions, bd:after-nav
-    // handlers) are in document order before the router boots.
+    // Before extraStylesheets so a site stylesheet can override; after
+    // extraScripts so modules that set window.bdBarbaOptions or listen for
+    // bd:after-nav are in document order before the router boots.
     const barbaStyleLink = `<link rel="stylesheet" href="${nav('assets/docs-kit/barba-transitions.css')}">`;
     styleLinks = styleLinks ? `${barbaStyleLink}\n    ${styleLinks}` : barbaStyleLink;
     const barbaScriptTags =
@@ -6732,6 +6940,11 @@ function applyTemplateChrome(rawTemplate) {
     extraScriptTags = extraScriptTags ? `${extraScriptTags}\n    ${barbaScriptTags}` : barbaScriptTags;
 
     wrapperAttrs += ' data-barba="wrapper"';
+    // The site's transition choices, read by the router at init. Only the
+    // scenarios it changes, validated against the library above.
+    if (CONFIG.transitions && Object.keys(CONFIG.transitions).length) {
+      wrapperAttrs += ` data-bd-transitions="${escapeAttr(JSON.stringify(CONFIG.transitions))}"`;
+    }
     containerAttrs += ' data-barba="container" data-barba-namespace="{{SECTION_SLUG}}" data-section="{{PAGE_SECTION}}" data-order="{{PAGE_ORDER}}" data-level="{{PAGE_LEVEL}}"';
   }
 
@@ -6753,10 +6966,13 @@ function applyTemplateChrome(rawTemplate) {
       const dest = path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'feedback.js');
       fs.mkdirSync(path.dirname(dest), { recursive: true });
       fs.copyFileSync(kitJs, dest);
+      // The Ask for access form's script is the access gate's now (phase
+      // D): the engine's support page loads it from assets/js/, like the
+      // gate's other files (apps.js GATE_FILES)
     }
     const feedbackTag = `<script src="${nav(feedbackSrc)}" defer></script>`;
     extraScriptTags = extraScriptTags ? `${extraScriptTags}\n    ${feedbackTag}` : feedbackTag;
-    const dialog = readFeedbackPartial('dialog.html', 'feedback-dialog.html').trimEnd();
+    const dialog = feedbackDialogHtml(readFeedbackPartial('dialog.html', 'feedback-dialog.html')).trimEnd();
     extraBodyEndHtml = extraBodyEndHtml ? `${extraBodyEndHtml}\n${dialog}` : dialog;
   }
 
@@ -6823,7 +7039,11 @@ function parseCliFilter() {
   for (const arg of args) {
     const name = arg.endsWith('.md') ? arg : arg + '.md';
     // Verify file exists
-    const filePath = path.join(DOCS_DIR, name);
+    const filePath = docSource(name);
+    if (GUIDES.skip.has(name)) {
+      console.error(`❌ ${name} is the guide of an app this site doesn't install (docs.config.js install), so it has no page.`);
+      process.exit(1);
+    }
     if (!fs.existsSync(filePath)) {
       console.error(`❌ File not found: ${path.basename(DOCS_DIR)}/${name}`);
       process.exit(1);
@@ -6837,6 +7057,9 @@ function parseCliFilter() {
  * Main generation function
  */
 async function generateDocs() {
+  // Pages modified from here on are this build's (checkClientWording). Two
+  // seconds early, for filesystems that keep mtimes to the second.
+  const buildStartedAt = Date.now() - 2000;
   validateSectionAccess();
   const filter = parseCliFilter();
   const isSingleFile = filter !== null;
@@ -6856,10 +7079,17 @@ async function generateDocs() {
   // Load template, apply project chrome (the config extension surface), then
   // resolve the site name — every page (root and brand) carries the suffix
   let template = applyTemplateChrome(fs.readFileSync(TEMPLATE_FILE, 'utf8'))
-    .replaceAll('{{SITE_NAME}}', SITE.name);
+    .replaceAll('{{SITE_NAME}}', () => SITE_HTML.name)
+    .replace('{{NOSCRIPT_SIGN_OUT}}', () => noscriptSignOut());
 
   // Pre-process template icon placeholders
   template = template.replace(/\{\{icon:([a-z0-9-]+)\}\}/g, (match, name) => getIcon(name));
+
+  // The bare template, after the docs one: it shares the docs CSS link and
+  // the UI scripts' paths that applyTemplateChrome resolved
+  const bareTemplate = fs.readFileSync(BARE_TEMPLATE_FILE, 'utf8')
+    .replace('{{DOCS_CSS}}', () => `<link rel="stylesheet" href="${CHROME.docsCssHref}">`)
+    .replaceAll('{{SITE_NAME}}', () => SITE_HTML.name);
 
   console.log('✅ Template loaded');
 
@@ -6870,13 +7100,8 @@ async function generateDocs() {
 
   // Find all markdown files (exclude generator folder and README files)
   // We always parse ALL files to build navigation, even for single-file mode
-  const markdownFiles = fs.readdirSync(DOCS_DIR)
+  const markdownFiles = docFilenames()
     .filter(file => {
-      const filePath = path.join(DOCS_DIR, file);
-      // Skip directories and non-markdown files
-      if (!fs.statSync(filePath).isFile() || !file.endsWith('.md')) {
-        return false;
-      }
       // Skip README and _defaults files
       if (file.startsWith('README') || file.startsWith('_')) {
         return false;
@@ -6911,16 +7136,37 @@ async function generateDocs() {
   const styleguideKnown = new Set();
 
   for (const filename of markdownFiles) {
-    const filePath = path.join(DOCS_DIR, filename);
+    const filePath = docSource(filename);
     const content = fs.readFileSync(filePath, 'utf8');
     const parsed = parseFrontmatter(content);
     // Merge folder defaults — page frontmatter wins
     const frontmatter = { ...cmsDefaults, ...parsed.frontmatter };
+    // A guide's title, subtitle and description can name the site too
+    for (const key of ['title', 'subtitle', 'description']) {
+      if (typeof frontmatter[key] === 'string' && frontmatter.status !== 'draft') frontmatter[key] = expandBrandTokens(frontmatter[key], `cms/${filename} (${key})`);
+    }
     const markdownContent = parsed.content;
+
+    // A draft of the site's own door page would replace the engine's with
+    // nothing: the build has no sign-in page, and nobody can get in
+    if (frontmatter.status === 'draft' && CONFIG.accessGate && ENGINE_PAGE_FILES.has(filename) && appsRegistry.ENGINE_PAGES[filename].gate) {
+      console.error(`\n❌ cms/${filename} is a draft. It replaces the engine's ${filename}, so the site would ship with no page at ${'/' + [appsRegistry.ENGINE_PAGES[filename].folder, appsRegistry.ENGINE_PAGES[filename].name].filter(Boolean).join('/')}. Publish it (status: "published"), or delete it to use the engine's.\n`);
+      process.exit(1);
+    }
 
     // Skip draft pages
     if (frontmatter.status === 'draft') {
       console.log(`⏭️  Skipped (draft): ${filename}`);
+      continue;
+    }
+
+    // A section whose package this site doesn't install (D14): its pages and
+    // index answer with the not-installed page instead
+    const sectionFolder = SECTION_FOLDERS[frontmatter.section];
+    if (sectionFolder && appsRegistry.sectionOff(INSTALL, sectionFolder)) {
+      const off = deriveOutputPath(filename, frontmatter.section);
+      OFF_SECTION_PAGES.set(`/${off.folder}/${off.htmlName}`, frontmatter.section);
+      OFF_SECTION_PAGES.set(`/${off.folder}/index.html`, frontmatter.section);
       continue;
     }
 
@@ -6990,16 +7236,14 @@ async function generateDocs() {
       typeErrors.push(`  ${filename} — invalid sidebar "${frontmatter.sidebar}" (must be one of: collapsed, expanded)`);
     }
 
-    // `tool` and `bare` are not producible from a cms/*.md file. A tool is a
-    // source pair in cms/apps/ (its body is raw HTML that must skip the
-    // markdown pipeline, and it has a close to enforce); a bare page has no
-    // sidebar and no Barba container, which this template cannot emit at all.
-    // Both would otherwise render as a half-formed doc with no error.
+    // `tool` is not producible from a cms/*.md file: a tool is a source pair
+    // in cms/apps/ (its body is raw HTML that must skip the markdown
+    // pipeline, and it has a close to enforce), and would otherwise render
+    // as a half-formed doc with no error. A `bare` page is, since phase D
+    // (PD-1): its own template (template-bare.html) emits the page outside
+    // the docs layout, with no sidebar and no page transitions.
     if (frontmatter.type === 'tool') {
       typeErrors.push(`  ${filename} — type "tool" belongs in cms/apps/ as a <slug>.md + <slug>.html pair`);
-    }
-    if (frontmatter.type === 'bare') {
-      typeErrors.push(`  ${filename} — type "bare" is hand-authored, not generated (start from templates/page-template.html)`);
     }
 
     const title = frontmatter.title || filename.replace('.md', '');
@@ -7041,7 +7285,14 @@ async function generateDocs() {
     // collapsible section. Keyed on the override, not the derived folder: a
     // missing sectionFolders entry also yields folder '', and those pages
     // must stay visible in the nav so the misconfiguration gets noticed.
-    const isRootPage = FILENAME_OVERRIDES[filename] && FILENAME_OVERRIDES[filename].folder === '';
+    // An engine page is standalone wherever it sits (the sign-in page is
+    // under auth/), and so is any bare page: a door joins no section.
+    const isRootPage = FILENAME_OVERRIDES[filename]
+      && (FILENAME_OVERRIDES[filename].folder === '' || FILENAME_OVERRIDES[filename].standalone === true);
+    file.standalone = !!isRootPage;
+    if (!isRootPage && frontmatter.type === 'bare') {
+      typeErrors.push(`  ${filename} — a bare page joins no section: give it a filenameOverrides entry with folder '' (or its own folder and standalone: true)`);
+    }
     if (!isRootPage) {
       if (!filesBySection[section]) {
         filesBySection[section] = [];
@@ -7049,6 +7300,17 @@ async function generateDocs() {
       filesBySection[section].push(file);
     }
     allFiles.push(file);
+    if (resolvePageType(frontmatter) && resolvePageType(frontmatter).name === 'bare') BARE_PAGE_PATHS.add(siteHref('/' + htmlPath));
+  }
+  // The bare example under cms/examples/ too, read here rather than where
+  // generateSourceDirPages writes it: a single-file run skips that, and
+  // nav.js (which hands the list to the router) is written on every run
+  const examplesDir = path.join(DOCS_DIR, 'examples');
+  if (fs.existsSync(examplesDir)) {
+    for (const f of sourceDirPageFiles(examplesDir)) {
+      const fm = parseFrontmatter(fs.readFileSync(path.join(examplesDir, f), 'utf8')).frontmatter;
+      if (fm.status !== 'draft' && fm.type === 'bare') BARE_PAGE_PATHS.add(siteHref(`/examples/${f.replace(/\.md$/, '')}.html`));
+    }
   }
 
   // Every page's level by URL, before anything is rendered, for the links and
@@ -7062,15 +7324,14 @@ async function generateDocs() {
   for (const section of Object.keys(filesBySection)) {
     if (SECTION_FOLDERS[section]) linkLevels.set(`/${SECTION_FOLDERS[section]}/index.html`, 'team');
   }
-  const appsDir = path.join(DOCS_DIR, 'apps');
-  if (fs.existsSync(appsDir)) {
-    for (const name of fs.readdirSync(appsDir).filter((f) => f.endsWith('.md'))) {
-      const { frontmatter: app } = parseFrontmatter(fs.readFileSync(path.join(appsDir, name), 'utf8'));
-      const appSection = app.section || 'Tools';
-      const appFolder = SECTION_FOLDERS[appSection] || appSection.toLowerCase();
-      const own = app.access !== undefined && app.access !== null && app.access !== '' ? app.access : sectionLevel(appFolder);
-      linkLevels.set(`/${appFolder}/${name.replace(/\.md$/, '')}.html`, normaliseLevel(own));
-    }
+  // Only apps that get a page: installed, and not drafts
+  for (const slug of INSTALL.installed) {
+    const app = APP_REGISTRY.apps.get(slug).frontmatter;
+    if (app.status === 'draft') continue;
+    const appSection = app.section || 'Tools';
+    const appFolder = SECTION_FOLDERS[appSection] || appSection.toLowerCase();
+    const own = app.access !== undefined && app.access !== null && app.access !== '' ? app.access : sectionLevel(appFolder);
+    linkLevels.set(`/${appFolder}/${slug}.html`, normaliseLevel(own));
   }
 
   console.log(`📂 Found sections: ${Object.keys(filesBySection).join(', ')}`);
@@ -7187,7 +7448,10 @@ async function generateDocs() {
 
   // Generate HTML for target files
   for (const file of filesToWrite) {
-    const pageContent = generatePage(file, template, pageOrder, sidebarOrderMap, subsectionHeadings);
+    // A bare page has its own template: the page outside the docs layout (PD-1)
+    const pageContent = resolvePageType(file.frontmatter).name === 'bare'
+      ? generateBarePage(file, bareTemplate)
+      : generatePage(file, template, pageOrder, sidebarOrderMap, subsectionHeadings);
 
     // Ensure output directory exists
     if (file.htmlFolder) {
@@ -7198,10 +7462,12 @@ async function generateDocs() {
     const outputPath = path.join(OUTPUT_DIR, file.htmlPath);
     fs.writeFileSync(outputPath, pageContent);
     console.log(`📄 Generated: ${file.htmlPath}`);
-    if (CONFIG.markdownSourceBase) sourcePages.set(`/${CONFIG.markdownSourceBase}/${file.markdownPath}`, '/' + file.htmlPath);
+    if (CONFIG.markdownSourceBase && !GUIDES.sources.has(file.markdownPath)) sourcePages.set(`/${CONFIG.markdownSourceBase}/${file.markdownPath}`, '/' + file.htmlPath);
     pageAccess.set('/' + file.htmlPath, {
       level: normaliseLevel(file.ownAccess),
-      section: file.htmlFolder,
+      // A standalone page (an engine page under its own folder, auth/) is in
+      // no section a group could be granted
+      section: file.standalone ? '' : file.htmlFolder,
       type: resolvePageType(file.frontmatter).name,
       title: file.title,
     });
@@ -7252,6 +7518,7 @@ async function generateDocs() {
       defaultSection: 'Docs',
       closeHref: '/docs/page-layouts.html',
       closeLabel: 'Page Layouts',
+      bareTemplate,
     });
   }
 
@@ -7277,20 +7544,28 @@ async function generateDocs() {
   fs.writeFileSync(navJsPath, navJs);
   console.log('📄 Generated: assets/js/nav.js');
 
-  // Brand docs (config: brandsDir) — only during full build. Manifests in,
-  // one theme-config out: the in-memory registry is populated by the brand
-  // generators, then serialized once. Nothing reads or rewrites the live JS
-  // file mid-build.
-  if (!isSingleFile && BRANDS_DIR) {
-    const themes = loadBrandThemes();
-    // The root brand's theme ships to output for the root pages' static link
-    if (ROOT_BRAND_KEY) copyBrandAssets(ROOT_BRAND_KEY);
-    generateBrandDocs(template, themes);
-    generateBrandBook(template, themes);
-    generateBrandSectionOverviews(template, themes);
-    generateBrandIndexPages(template, themes);
-    writeThemeConfig(themes);
+  // The brand's two runtime files, from brand.json: full builds only
+  if (!isSingleFile) {
+    writeThemeConfig();
+    writeLogoManifest();
+    copyAppFiles();
+    writeOsJson();
   }
+
+  // A package guide's links to pages this site doesn't have, and the pages of
+  // apps it doesn't install (B3)
+  if (!isSingleFile) {
+    const offSections = [...new Set(OFF_SECTION_PAGES.values())];
+    for (const section of offSections) {
+      const count = [...OFF_SECTION_PAGES].filter(([address, s]) => s === section && !address.endsWith('/index.html')).length;
+      console.log(`⏭️  ${section} is off (its package isn't in install.packages): ${count} page(s) not built`);
+    }
+    removeUninstalledOutputs();
+    unlinkMissingPages(allFiles);
+  }
+
+  // No By Default wording on a client site (failure scenario 11)
+  if (!isSingleFile) checkClientWording(buildStartedAt);
 
   // After every emitter has run. Never on a single-file build: a partial map
   // written here would gate every page the filter left out as a team page
@@ -7311,6 +7586,9 @@ async function generateDocs() {
   if (!isSingleFile && CONFIG.assetLibrary) writeLibraryIndex();
   if (!isSingleFile) writeFormatsEmbed();
 
+  // The door pages (phase D), once the page map they are judged by is written
+  if (!isSingleFile && CONFIG.accessGate) await checkDoorPages(allFiles);
+
   if (isSingleFile) {
     console.log(`✅ Done — regenerated ${filesToWrite.length} page(s) + nav.js`);
   } else {
@@ -7328,5 +7606,13 @@ if (require.main === module) {
   });
 }
 
-// watch-docs.js shares the project discovery
-module.exports = { locateProject };
+// watch-docs.js shares the project discovery; scripts/verify-feedback-dialog.js
+// checks the follow-up cut
+module.exports = {
+  locateProject,
+  feedbackDialogHtml,
+  // For scripts/verify-brand.js: where brand text enters the page
+  siteTextHtml,
+  buildPageChrome,
+  escapeBrandText,
+};

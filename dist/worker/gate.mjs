@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.1 */
+/* @bydefaultstudio/design-system v8.0.0 */
 /**
  * gate.mjs — the pure half of the access gate: route lists and predicates.
  *
@@ -35,13 +35,14 @@
  * file it did not is a copy nobody chose to ship. Fail closed.
  */
 import { normaliseRole } from './auth-schema.mjs';
-import { SITE } from './site.mjs';
+import { ENGINE_PATHS, SITE } from './site.mjs';
 
-export { normaliseRole };
+export { normaliseRole, ENGINE_PATHS };
 
-// The default login and locked pages. A site may move either
-// (createGate loginPath, lockedPath); the Worker reads SITE, never these.
-export const LOGIN_PATH = '/auth/login.html';
+// The login page, the same on every site (engine-paths.mjs, PD-2). A site
+// that still passes createGate a loginPath of its own is warned and
+// honoured until the next major, so the Worker reads SITE, never this.
+export const LOGIN_PATH = ENGINE_PATHS.login;
 
 /**
  * The page a signed-in reader is shown when authorise() says no, generated
@@ -49,7 +50,18 @@ export const LOGIN_PATH = '/auth/login.html';
  * so the sidebar highlights the section and the URL survives a reload. It is
  * an ordinary gated page when reached by its own address.
  */
-export const LOCKED_PATH = '/locked.html';
+export const LOCKED_PATH = ENGINE_PATHS.locked;
+
+/**
+ * The sign-out link (GET), for a page that wants a plain link rather than the
+ * header's account menu, and for a browser with no JavaScript. It signs out
+ * a navigation the reader made (a click on this site, a typed or bookmarked
+ * address), then sends the reader to the login page; anything else from a
+ * signed-in reader is refused with a page that says so
+ * (auth.js handleSignOutLink). Not the API route the menu posts to, which
+ * Better Auth answers at /api/auth/sign-out.
+ */
+export const SIGN_OUT_LINK = ENGINE_PATHS.signOut;
 
 /**
  * The landing page a signed-out visitor is shown at the site's home, the way
@@ -201,14 +213,6 @@ export function isIndexPath(pathname) {
 }
 
 /**
- * Pages every signed-in reader opens, whatever their role: a reader's own
- * account. Not public (a signed-out visitor still goes to sign in), and not
- * a page-map entry, because the map only knows page levels, and a
- * guest's groups would otherwise have to name the page to reach it.
- */
-export const SIGNED_IN_EXACT = new Set(['/auth/account.html']);
-
-/**
  * The role a reader acts with. The person named in ACCESS_OWNER
  * (wrangler.jsonc) is an owner whatever their row says, the lockout floor: a
  * deployment cannot refuse the person who runs it, and the first owner needs
@@ -266,6 +270,11 @@ export function managesPeople(role) {
   return role === 'owner' || role === 'admin';
 }
 
+/** The owner alone: an API behind an owner page (the Fleet page, F2) checks this itself. */
+export function isOwner(role) {
+  return role === 'owner';
+}
+
 /**
  * The levels a group can never open (D17, D23): admin and owner pages stay
  * with the roles they are named for, whatever a guest's groups say.
@@ -289,9 +298,6 @@ export function isClosedToGroups(level) {
  */
 export function authorise(role, pathname, pages = SITE.pages, sections = SITE.sections) {
   if (isConflictCopyPath(pathname)) return 'deny';
-  // A reader's own account opens for every role, before any level is read:
-  // it sits under a folder the map does not list.
-  if (SIGNED_IN_EXACT.has(pathname)) return 'allow';
   const entry = pageEntry(pathname, pages, sections);
   if (entry.level === 'public') return 'allow';
   if (role === 'owner') return 'allow';
@@ -316,6 +322,15 @@ export function lockedFor(html, level) {
   return html
     .replace('data-locked-level=""', `data-locked-level="${shown}"`)
     .replace(/<span data-for="(team|admin|owner)">([^<]*)<\/span>/g, (match, who, text) => (who === shown ? text : ''));
+}
+
+/**
+ * The not-installed page's markup for one app (PB-4): its name in place of
+ * the stand-in, escaped, every time it appears.
+ */
+export function notInstalledFor(html, name) {
+  const safe = String(name).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  return html.replace(/<span data-not-installed-app>[^<]*<\/span>/g, () => safe);
 }
 
 /**
@@ -516,7 +531,8 @@ export function evaluateRateLimit(rows, ipKey, emailKey, now, limits = SEND_LIMI
 
 /**
  * The Better Auth routes the site actually calls (assets/js/auth-login.js,
- * auth-account.js, header-account.js), as "METHOD /route" under /api/auth.
+ * header-account.js, and the sign-out link in auth.js), as "METHOD /route"
+ * under /api/auth.
  * Everything else the library mounts — password reset, email change, the
  * plugin's check-verification route — answers 404 before Better Auth runs:
  * none is wired, and each is one more way to ask the database about an

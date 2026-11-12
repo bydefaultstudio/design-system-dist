@@ -1,0 +1,282 @@
+
+      <!--
+        The People page (permissions-plan.md §5): an admin tool in Docs ›
+        Site Management, built from the components that exist - Table,
+        Dialog, the form primitives, Badge, Avatar, Toast - and nothing on the
+        tool canvas: this is a list to manage, not a preview to shape.
+
+        Where the actions sit, decided before building (the owner's rule for
+        every tool): "Add people" and "Add group" lead their sections, at the
+        right of each heading on desktop and under it when the heading wraps
+        on a phone. Every per-row action is behind one Edit button at the end
+        of the row - role, groups, expiry, demo, note, Resend invite and Remove
+        all live in the Edit dialog - so the table holds no menus that its
+        scroll container would clip, and a phone gets the same dialog. Copy
+        link is in the bar's overflow menu, the close is last: build-time
+        contract. One line under the intro says the only thing to know about
+        timing: changes take effect within five minutes.
+
+        The script (assets/js/people.js) fills the tables from /api/people/
+        and owns the dialogs; everything here is the empty shell it fills.
+      -->
+      <div id="people">
+
+        <div class="bar" data-sticky="true">
+          <div class="bar-container">
+            <div class="bar-content">
+              <h1 class="tool-canvas-title" data-priority="pinned">People</h1>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item js-copy-url">{{icon:link}}<span>Copy link</span></button>
+              </div>
+              <!-- Feedback: opens the shared dialog (cms/chrome/feedback-dialog.html) -->
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="share">{{icon:chat}}<span>Share feedback</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="problem">{{icon:warning}}<span>Report a problem</span></button>
+              </div>
+            </div><!-- /.bar-content -->
+            <div class="bar-actions">
+              <div class="dropdown bar-overflow" hidden>
+                <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
+                <div class="dropdown-menu is-right"></div>
+              </div>
+              <a class="bar-close" data-page-close aria-label="Back to Settings">{{icon:close-large}}</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="padding-global top-large bottom-large">
+          <div class="container-l">
+          <div class="block gap-3xl">
+
+            <p class="text-secondary" data-text-wrap="pretty">Everyone who can sign in, what they are, and what a guest's groups open. A change takes effect within five minutes.</p>
+
+            <!-- Shown instead of the tables when the list cannot be read:
+                 named, honest, forward-pointing. -->
+            <p class="form-error people-load-error" id="people-load-error" role="alert" aria-live="assertive"></p>
+
+            <section class="block gap-l" aria-labelledby="people-list-heading">
+              <div class="section-header">
+                <h2 class="section-header-title" id="people-list-heading">Who can sign in</h2>
+                <div class="section-header-actions">
+                  <button type="button" class="button" data-size="small" data-dialog-open="people-add">{{icon:user-add}}<span>Add people</span></button>
+                </div>
+              </div>
+              <div class="table-scroll">
+                <table class="table table-full table-hover" id="people-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Person</th>
+                      <th scope="col">Role</th>
+                      <th scope="col">Groups</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Last sign-in</th>
+                      <th scope="col"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="people-rows"></tbody>
+                </table>
+              </div>
+              <p class="text-secondary" id="people-empty" hidden>No one is on the list yet. Add people to invite them.</p>
+            </section>
+
+            <section class="block gap-l" aria-labelledby="people-groups-heading">
+              <div class="section-header">
+                <div class="block gap-xs">
+                  <h2 class="section-header-title" id="people-groups-heading">Groups</h2>
+                  <p class="text-secondary" data-text-wrap="pretty">A group is a bundle of sections and pages. A guest opens what their groups grant and the public pages; nothing else.</p>
+                </div>
+                <div class="section-header-actions">
+                  <button type="button" class="button" data-variant="outline" data-size="small" data-dialog-open="people-group" id="people-group-add">{{icon:users}}<span>Add group</span></button>
+                </div>
+              </div>
+              <div class="table-scroll">
+                <table class="table table-full table-hover" id="people-groups-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Group</th>
+                      <th scope="col">Opens</th>
+                      <th scope="col">People</th>
+                      <th scope="col"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="people-group-rows"></tbody>
+                </table>
+              </div>
+              <p class="text-secondary" id="people-groups-empty" hidden>No groups yet. Add one to give guests their pages.</p>
+            </section>
+
+          </div>
+          </div>
+        </div>
+
+        <!-- Add people. The form sits in the body and the submit in the
+             footer points at it (the feedback dialog's pattern). data-static:
+             a backdrop press must not throw typed addresses away. -->
+        <dialog id="people-add" class="dialog" aria-labelledby="people-add-title" data-static>
+          <div class="dialog-header">
+            <h2 class="dialog-title" id="people-add-title">Add people</h2>
+            <button class="button close-btn" type="button" data-icon-only data-size="small" data-dialog-close aria-label="Close">{{icon:close}}</button>
+          </div>
+          <div class="dialog-body">
+            <form id="people-add-form" class="people-form" novalidate>
+              <div class="form-group">
+                <label for="people-add-emails">Email addresses <span class="form-required" aria-hidden="true">*</span></label>
+                <textarea id="people-add-emails" name="emails" rows="3" required aria-required="true" autofocus autocapitalize="none" spellcheck="false" placeholder="one@example.com, two@example.com" aria-describedby="people-add-emails-hint"></textarea>
+                <p class="form-hint" id="people-add-emails-hint">One or several, separated by commas or lines. Each gets an email saying they have access.</p>
+              </div>
+              <div class="form-group">
+                <label for="people-add-role">Role</label>
+                <select id="people-add-role" name="role">
+                  <option value="team" selected>Team - opens every team page</option>
+                  <option value="guest">Guest - opens what their groups grant</option>
+                  <option value="admin">Admin - opens everything but owner pages, and manages people</option>
+                  <option value="owner" hidden disabled>Owner - opens everything, and manages admins and owners</option>
+                </select>
+              </div>
+              <fieldset class="form-group" data-groups-field hidden>
+                <legend>Groups</legend>
+                <div class="block gap-xs" data-groups-list></div>
+              </fieldset>
+              <div class="form-group">
+                <label for="people-add-expires">Access ends <span class="form-optional">(optional)</span></label>
+                <input type="date" id="people-add-expires" name="expiresAt" aria-describedby="people-add-expires-hint">
+                <p class="form-hint" id="people-add-expires-hint">They can sign in until the end of this day. Leave it empty for no end.</p>
+              </div>
+              <div class="form-group">
+                <label for="people-add-note">Note <span class="form-optional">(optional)</span></label>
+                <input type="text" id="people-add-note" name="note" maxlength="200" placeholder="Who this is">
+              </div>
+              <div class="form-group">
+                <div class="form-check">
+                  <input type="checkbox" id="people-add-demo" name="demo" aria-describedby="people-add-demo-hint">
+                  <label for="people-add-demo">Demo account - any six digits sign it in, no email is sent</label>
+                </div>
+                <p class="form-hint" id="people-add-demo-hint">Anyone who knows this address can sign in as it. Set Access ends so it closes on its own.</p>
+              </div>
+              <p class="form-error" id="people-add-error" role="alert" aria-live="assertive"></p>
+            </form>
+          </div>
+          <div class="dialog-footer">
+            <button type="button" class="button" data-variant="faded" data-dialog-close>Cancel</button>
+            <button type="submit" form="people-add-form" class="button" id="people-add-submit">Add</button>
+          </div>
+        </dialog>
+
+        <!-- Edit a person: everything a row carries, plus Resend and Remove
+             at the start of the footer so the save stays at the end. -->
+        <dialog id="people-edit" class="dialog" aria-labelledby="people-edit-title" data-static>
+          <div class="dialog-header">
+            <h2 class="dialog-title" id="people-edit-title">Edit person</h2>
+            <button class="button close-btn" type="button" data-icon-only data-size="small" data-dialog-close aria-label="Close">{{icon:close}}</button>
+          </div>
+          <div class="dialog-body">
+            <form id="people-edit-form" class="people-form" novalidate>
+              <p class="people-edit-email"><strong id="people-edit-email"></strong><span class="text-secondary" id="people-edit-status"></span></p>
+              <p id="people-edit-role-own" hidden></p>
+              <div class="form-group" id="people-edit-role-field">
+                <label for="people-edit-role">Role</label>
+                <select id="people-edit-role" name="role" autofocus>
+                  <option value="team">Team - opens every team page</option>
+                  <option value="guest">Guest - opens what their groups grant</option>
+                  <option value="admin">Admin - opens everything but owner pages, and manages people</option>
+                  <option value="owner" hidden disabled>Owner - opens everything, and manages admins and owners</option>
+                </select>
+              </div>
+              <fieldset class="form-group" data-groups-field hidden>
+                <legend>Groups</legend>
+                <div class="block gap-xs" data-groups-list></div>
+              </fieldset>
+              <div class="form-group">
+                <label for="people-edit-expires">Access ends <span class="form-optional">(optional)</span></label>
+                <input type="date" id="people-edit-expires" name="expiresAt" aria-describedby="people-edit-expires-hint">
+                <p class="form-hint" id="people-edit-expires-hint">They can sign in until the end of this day. Leave it empty for no end.</p>
+              </div>
+              <div class="form-group">
+                <label for="people-edit-note">Note <span class="form-optional">(optional)</span></label>
+                <input type="text" id="people-edit-note" name="note" maxlength="200">
+              </div>
+              <div class="form-group" id="people-edit-demo-field" hidden>
+                <div class="form-check">
+                  <input type="checkbox" id="people-edit-demo" name="demo" aria-describedby="people-edit-demo-hint">
+                  <label for="people-edit-demo">Demo account - any six digits sign it in, no email is sent</label>
+                </div>
+                <p class="form-hint" id="people-edit-demo-hint">Anyone who knows this address can sign in as it. Untick to end the demo: everyone signed in as it is signed out.</p>
+              </div>
+              <p class="form-error" id="people-edit-error" role="alert" aria-live="assertive"></p>
+            </form>
+          </div>
+          <div class="dialog-footer">
+            <div class="button-group people-edit-side">
+              <button type="button" class="button" data-variant="outline" data-size="small" id="people-edit-resend">Resend invite</button>
+              <button type="button" class="button" data-variant="outline" data-size="small" id="people-edit-unlock" hidden>Lift lockout</button>
+              <button type="button" class="button" data-variant="outline" data-color="danger" data-size="small" id="people-edit-remove">Remove</button>
+            </div>
+            <div class="button-group">
+              <button type="button" class="button" data-variant="faded" data-dialog-close>Cancel</button>
+              <button type="submit" form="people-edit-form" class="button" id="people-edit-submit">Save</button>
+            </div>
+          </div>
+        </dialog>
+
+        <!-- A group: its name, and the sections and pages it opens. The
+             pages are a multiple select grouped by section, which is the one
+             native control that lists a hundred pages without inventing one. -->
+        <dialog id="people-group" class="dialog" aria-labelledby="people-group-title" data-static>
+          <div class="dialog-header">
+            <h2 class="dialog-title" id="people-group-title">Add group</h2>
+            <button class="button close-btn" type="button" data-icon-only data-size="small" data-dialog-close aria-label="Close">{{icon:close}}</button>
+          </div>
+          <div class="dialog-body">
+            <form id="people-group-form" class="people-form" novalidate>
+              <input type="hidden" name="id" id="people-group-id">
+              <div class="form-group">
+                <label for="people-group-name">Name <span class="form-required" aria-hidden="true">*</span></label>
+                <input type="text" id="people-group-name" name="name" required aria-required="true" maxlength="60" autofocus>
+              </div>
+              <div class="form-group">
+                <label for="people-group-note">Note <span class="form-optional">(optional)</span></label>
+                <input type="text" id="people-group-note" name="note" maxlength="200" placeholder="Who this group is for">
+              </div>
+              <fieldset class="form-group">
+                <legend>Sections</legend>
+                <div class="block gap-xs" id="people-group-sections"></div>
+              </fieldset>
+              <div class="form-group">
+                <label for="people-group-pages">Single pages <span class="form-optional">(optional)</span></label>
+                <select id="people-group-pages" name="pages" multiple size="8" aria-describedby="people-group-pages-hint"></select>
+                <p class="form-hint" id="people-group-pages-hint">For a page outside the sections above. Pick several with Command or Control, or Shift and the arrow keys. Admin and owner pages are not offered.</p>
+              </div>
+              <p class="form-error" id="people-group-error" role="alert" aria-live="assertive"></p>
+            </form>
+          </div>
+          <div class="dialog-footer">
+            <div class="button-group people-edit-side">
+              <button type="button" class="button" data-variant="outline" data-color="danger" data-size="small" id="people-group-remove" hidden>Delete group</button>
+            </div>
+            <div class="button-group">
+              <button type="button" class="button" data-variant="faded" data-dialog-close>Cancel</button>
+              <button type="submit" form="people-group-form" class="button" id="people-group-submit">Save</button>
+            </div>
+          </div>
+        </dialog>
+
+        <!-- One confirmation for the two destructive actions. The copy is
+             filled per action; Cancel takes focus so Enter does nothing. -->
+        <dialog id="people-confirm" class="dialog" aria-labelledby="people-confirm-title">
+          <div class="dialog-header">
+            <h2 class="dialog-title" id="people-confirm-title">Remove this person?</h2>
+            <button class="button close-btn" type="button" data-icon-only data-size="small" data-dialog-close aria-label="Close">{{icon:close}}</button>
+          </div>
+          <div class="dialog-body">
+            <p id="people-confirm-text"></p>
+            <p class="form-error" id="people-confirm-error" role="alert" aria-live="assertive"></p>
+          </div>
+          <div class="dialog-footer">
+            <button type="button" class="button" data-variant="faded" data-dialog-close autofocus>Cancel</button>
+            <button type="button" class="button" data-color="danger" id="people-confirm-go">Remove</button>
+          </div>
+        </dialog>
+
+      </div>

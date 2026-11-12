@@ -1,0 +1,144 @@
+/* ------ FORMATS STYLES ------ */
+/*
+  The Format Library (cms/apps/formats.{md,html}, cms/formats-docs.md):
+  app layer, scoped to [data-tool="formats"].
+
+  Built on the shared canvas (tools.css): the bar, a filling preview, an
+  end dock with accordion sections, .tool-actions, .tool-filters,
+  .tool-tile and the dock toggle are all the canvas's. What is here is what
+  the canvas leaves to each tool. The browse column (the work, search
+  band, region and grid) is tools.css's Browse, shared with the Asset
+  Library since 2026-11-09. What is here: the chip rows, the format drawn
+  large and the Spec lists.
+
+  Sections:
+    - Filters
+    - The format, drawn
+    - Layer notes
+    - Dock: Spec
+*/
+
+/* -- Filters --
+   The search band, the rule and the grid are tools.css's (Browse). What is
+   here: the three chip rows, each a caption over its chips. */
+/* Three rows, each a caption over its chips; side by side once there is
+   room, so the grid starts higher. */
+[data-tool="formats"] .tool-format-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-m) var(--space-xl);
+}
+
+[data-tool="formats"] .tool-format-filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+/* -- The format, drawn --
+   The shared viewer (tools.css, Viewer) holds the format. What is here is
+   its stage: the drawing at the largest size the area allows, on the
+   light ground, the labels over it in the ground's ink, the Panels toggle
+   in its corner (wide only). The stage is sized in px by format-card.js.
+   One extra row under it for the narrow panels, so the viewer reads
+   bar, drawing, panels, foot. */
+[data-tool="formats"] .tool-format-viewer[open] {
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+}
+
+[data-tool="formats"] .tool-format-stage {
+  --tool-preview-ink: var(--tool-ink-on-light);
+  position: relative;
+  /* The sides keep a measure's value pill inside the band and clear of
+     the arrows; the foot keeps the toggle's row clear. */
+  padding: var(--space-xl) var(--space-4xl) var(--space-3xl);
+}
+
+[data-tool="formats"] .tool-spec-stage {
+  position: relative;
+  flex: 0 0 auto;
+  color: var(--tool-preview-ink);
+  --layer-stack-label-ink: var(--tool-preview-ink);
+  --layer-stack-label-paper: var(--tool-ground-light);
+}
+
+[data-tool="formats"] .tool-spec-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+[data-tool="formats"] .tool-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* The canvas's toggle rule reads .tool-preview > the toggle; here it sits
+   in the stage, so it is placed against the stage's corner. */
+[data-tool="formats"] .tool-format-stage > .button.tool-dock-toggle {
+  position: absolute;
+  inset-block-end: var(--space-m);
+  inset-inline-end: var(--space-m);
+}
+
+/* Narrow: Layers and Spec as closed bars under the drawing (wireframe
+   variant 5). Open, a section takes at most half the viewer and scrolls,
+   so the drawing never disappears. */
+[data-tool="formats"] .tool-format-viewer-panels {
+  max-height: 45dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-inline: var(--space-l);
+  background-color: var(--background-primary);
+  border-top: var(--border-s) solid var(--border-faded);
+}
+
+/* -- Layer notes --
+   A switch's note is a Dropdown content panel (format-card.js layerInfo;
+   owner, 2026-11-09). The dock and the narrow viewer clip what crosses
+   their edges (a scroller, an accordion that animates its height), and the
+   dropdown only measures against the window, so here the note is anchored
+   to its whole switch row rather than to the button: it spans the row and
+   always fits the panel's width. tools.css lets an open dropdown show past
+   its section's bottom and raises the section over the next one, so the
+   last switch's note is not cut off. The guide's cards and the embed
+   have no such edges and keep the component's own placement. */
+[data-tool="formats"] .form-toggle:has(> .format-layer-info) {
+  position: relative;
+}
+
+[data-tool="formats"] .form-toggle .format-layer-info {
+  position: static;
+}
+
+[data-tool="formats"] .form-toggle .format-layer-info > .dropdown-menu {
+  left: 0;
+  right: 0;
+  width: auto;
+  max-width: none;
+}
+
+/* -- Dock: Spec --
+   The rows are tools.css's shared details (Details). A list value (keep
+   clear, cropped area) is one plain line per entry, right-aligned with the
+   rest of the value column, as the Figma board draws it. */
+[data-tool="formats"] .tool-format-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+[data-tool="formats"] .tool-format-list li {
+  margin: 0;
+}
+
+/* A list of links (Sources, on a platform with no guide yet) keeps room
+   between them to tap; plain lines stay tight, as on the board. */
+[data-tool="formats"] .tool-format-list:has(a) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}

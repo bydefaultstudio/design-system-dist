@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>World Clock</title>
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    /* Standalone on purpose: the embed runs inside other people's pages
+       (Notion, dashboards) and loads nothing from the design system — plain
+       values, a system font stack, one script. Styled from the Website Figma
+       file, node 18765:142099. */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --clock-text: #1f1f1f;
+      --clock-text-faded: #6b6b6b;
+      --clock-card: rgba(0, 0, 0, 0.03);
+      --clock-gap: 16px;
+      --clock-pad: 16px;
+    }
+
+    :root[data-theme="dark"] {
+      --clock-text: #f5f5f5;
+      --clock-text-faded: #a0a0a0;
+      --clock-card: rgba(255, 255, 255, 0.06);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      /* Light throughout. Every face in the stack ships a 300; a device
+         without one falls back to its regular. */
+      font-weight: 300;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      min-height: 100vh;
+      /* Nothing here scrolls by design. A classic scrollbar would also take
+         ~15px from the 100vw the time is sized against. */
+      overflow: hidden;
+    }
+
+    /* #clock-root is body's flex item, and a flex item shrinks to its content
+       — it needs the full width, or the row has none to centre in. */
+    #clock-root,
+    .clock-container {
+      width: 100%;
+    }
+
+    /* One row, cards sized to their content and centred. The
+       script sets --clock-count and --clock-ems (the time's width in ems:
+       HH:MM or HH:MM:SS), so the time can shrink to fit the row. */
+    .clock-row {
+      display: flex;
+      flex-wrap: nowrap;
+      justify-content: center;
+      gap: var(--clock-gap);
+      --clock-count: 1;
+      --clock-ems: 2.9;
+    }
+
+    .clock-column {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--clock-pad);
+      padding: var(--clock-pad);
+      background: var(--clock-card);
+    }
+
+    /* The time decides the card's width, not the header: width 0 takes the
+       header out of the card's intrinsic size and min-width 100% gives the
+       space back. Otherwise "Los Angeles  PDT" outgrows a scaled-down time and
+       the row overflows a narrow frame. When the two no longer fit side by
+       side the timezone wraps under the city; only a city wider than the
+       whole card truncates. */
+    .clock-header {
+      width: 0;
+      min-width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0 12px;
+      font-size: 12px;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+
+    .clock-city {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--clock-text);
+    }
+
+    .clock-timezone {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--clock-text-faded);
+      text-align: right;
+    }
+
+    /* 72px at most, scaled down to whatever the width leaves once the gaps and
+       card padding are paid for, and to the height of the frame (the snippet
+       declares 140px). 14px is the floor — three clocks with seconds still fit a
+       343px phone column there. Tabular figures so the card does not
+       twitch as the minutes change. text-box trims the line box to the cap
+       height where supported; line-height 1 is the fallback. */
+    .clock-time {
+      display: block;
+      font-size: clamp(
+        14px,
+        min(
+          (100vw - (var(--clock-count) - 1) * var(--clock-gap) - var(--clock-count) * 2 * var(--clock-pad)) / (var(--clock-count) * var(--clock-ems)),
+          100vh - var(--clock-v-reserve)
+        ),
+        72px
+      );
+      line-height: 1;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      color: var(--clock-text);
+      text-align: center;
+      white-space: nowrap;
+      text-box: trim-both cap alphabetic;
+      margin-bottom: calc(var(--clock-pad) / 2);
+    }
+
+    /* Height the card spends on everything but the time: padding, header, gap
+       and the margin above. Without text-box the time keeps its full 1em line
+       box, so a browser that cannot trim (Firefox) reserves more. */
+    :root {
+      --clock-v-reserve: 72px;
+    }
+
+    @supports (text-box: trim-both cap alphabetic) {
+      :root {
+        --clock-v-reserve: 40px;
+      }
+    }
+
+    .clock-empty {
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--clock-text-faded);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="clock-root"></div>
+
+  <script src="../assets/js/world-clock-core.js"></script>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+
+      /* Theme */
+      var theme = params.get('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+
+      /* Cities */
+      var citiesParam = params.get('cities');
+      var cities = citiesParam
+        ? citiesParam.split(',').map(function (c) { return c.trim(); }).filter(Boolean)
+        : ['Europe/London', 'America/New_York', 'Asia/Tokyo'];
+
+      /* Display options */
+      var showCity = params.get('showCity') !== 'false';
+      var showTimezone = params.get('showTz') !== 'false';
+      var showSeconds = params.get('showSeconds') === 'true';
+      var intervalParam = params.get('interval');
+      var interval = intervalParam ? parseInt(intervalParam, 10) * 1000 : null;
+
+      WorldClockCore.init(document.getElementById('clock-root'), {
+        cities: cities,
+        showCity: showCity,
+        showTimezone: showTimezone,
+        showSeconds: showSeconds,
+        interval: interval
+      });
+    })();
+  </script>
+</body>
+
+</html>

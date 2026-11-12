@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.1 */
+/* @bydefaultstudio/design-system v8.0.0 */
 /**
  * session.js - the gate itself (access-plan.md §4.2, §13.2; permissions-plan.md §4.3).
  *

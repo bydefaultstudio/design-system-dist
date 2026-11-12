@@ -1,0 +1,364 @@
+
+      <!--
+        A tool on the shared canvas, built from docks (cms/tool-canvas.md):
+        the bar, the logo filling the preview, three collapsible sections in
+        the end dock — Settings, Style and Export — and the two verbs pinned
+        under them. No footer, because every readout has a home in a
+        panel or on the preview. No page header (the canvas is the page) and no
+        footer chrome. On a phone the dock stacks under the preview, the page
+        scrolls, and the verbs stay pinned at the bottom of the screen; the
+        toggle in the preview's corner folds the dock away.
+
+        The bar names the tool. Copy link and Reset are permanent residents of
+        the overflow menu (data-priority="menu"), so the trailing cluster is
+        the menu and the close — what fits at 320px beside the name. The exit
+        is last: build-time contract.
+
+        The sections are the tools' shared three (cms/tool-canvas.md, The
+        export panel). Which logo — the variation — is Settings. How it looks —
+        the colour — is Style. What the FILE is — the format, its width in
+        pixels, its name and flatten — is Export: the width only scales the
+        file, so it sits beside the format it matters to. The two verbs that
+        make it are not in a section: they are .tool-actions, pinned, so they
+        never scroll away or close with a section. Settings comes first in
+        source: a phone meets the choices before the export. What only the PREVIEW shows — Transparent,
+        Fill screen and Clear space — is the Preview group in the preview's top-right corner, in the band it
+        acts on.
+
+        Every choice is a visible option, and every one is native radios, so
+        the arrow keys and the group names come from the component. Variation
+        and colour are chips (cms/chip.md), built from the logo manifest at
+        init. The width presets
+        are a segmented control (cms/form.md, faded variant), authored here.
+      -->
+      <div class="tool-canvas" id="logo-tool">
+
+        <div class="bar" data-sticky="true">
+          <div class="bar-container">
+            <div class="bar-content">
+              <h1 class="tool-canvas-title" data-priority="pinned">Logo Tool</h1>
+
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item js-copy-url">{{icon:link}}<span>Copy link</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" id="lt-reset">{{icon:refresh}}<span>Reset all</span></button>
+              </div>
+              <!-- Feedback: opens the shared dialog (cms/chrome/feedback-dialog.html) -->
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="share">{{icon:chat}}<span>Share feedback</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="problem">{{icon:warning}}<span>Report a problem</span></button>
+              </div>
+            </div><!-- /.bar-content -->
+            <div class="bar-actions">
+              <div class="dropdown bar-overflow" hidden>
+                <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
+                <div class="dropdown-menu is-right"></div>
+              </div>
+              <a class="bar-close" data-page-close aria-label="Back to Tools">{{icon:close-large}}</a>
+            </div>
+          </div>
+        </div>
+
+        <!--
+          The preview is the file. The frame is the artwork at true pixel
+          size, scaled down to fit. Its ground follows the colour — a light
+          ground behind a dark logo, a dark one behind a light logo
+          (data-logo-ground) — or is the checkerboard (data-ground="checker")
+          while Transparent is on. While JPG is chosen it is the file's real
+          background instead, because that is part of the file. The script
+          sets one of the three, so the preview ignores the site theme.
+
+          The logo is centred on the band, with something in each top
+          corner and the scale note at its foot. Top left, the readout: what
+          the file is — variation, colour, size. Bottom centre, whether the
+          frame shows it at that size. The script rewrites both on every
+          render, so neither is a live region.
+          Top right, the Preview group: two switches that change what the
+          preview shows and nothing in any file, in the band rather than a
+          panel because they act on the band. All three take the ink that
+          reads on the ground (data-preview-ink, or the logo's own colour
+          where it clears AA), which the script sets on the band. The layout
+          and the ink are the canvas's (tools.css, Preview corners).
+        -->
+        <div class="tool-preview" data-size="tall" id="lt-stage" data-layout="corners">
+          <div class="tool-stage" id="lt-viewport">
+            <div class="tool-artwork" id="lt-frame">
+              <div class="tool-holder" id="lt-holder" role="img" aria-label="Logo preview"></div>
+            </div>
+          </div>
+
+          <div class="tool-details">
+            <p class="tool-caption">Details</p>
+            <p id="lt-readout-variant"></p>
+            <p id="lt-readout-colour"></p>
+            <p id="lt-readout-size"></p>
+          </div>
+
+          <p class="tool-scale" id="lt-scale-note"></p>
+
+          <!-- The notes are aria-describedby targets, not live regions: a
+               region hidden when its text is written never announces, whereas
+               accname reads a directly referenced hidden node. Transparent is
+               off and locked while JPG is chosen, because a JPG has its
+               background in the file; Clear space is disabled on a variation the
+               brand defines no clear-space rule for. Both say why. -->
+          <section class="tool-options" aria-labelledby="lt-preview-heading">
+            <h2 class="tool-caption" id="lt-preview-heading">Preview</h2>
+            <!-- Preview only, and always available: the checkerboard behind
+                 the logo whatever the background or the format. Whether the
+                 file has a background is Export's Include background. -->
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="lt-transparent" role="switch">
+                <label for="lt-transparent">Transparent</label>
+              </div>
+            </div>
+            <!-- The logo as large as the stage allows instead of at its
+                 export width, for inspecting the drawing. On when the tool
+                 opens; choosing a width turns it off. The scale note
+                 keeps saying how far it is enlarged. Preview only. -->
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="lt-fill" role="switch" checked>
+                <label for="lt-fill">Fill screen</label>
+              </div>
+            </div>
+            <!-- The brand's clear-space rule drawn round the logo, in the
+                 logo's colour — a usage guide, not part of the file. -->
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="lt-safezone" role="switch" aria-describedby="lt-safezone-note">
+                <label for="lt-safezone">Clear space</label>
+              </div>
+              <p class="tool-note" id="lt-safezone-note" hidden></p>
+            </div>
+          </section>
+
+          <!-- Folds the dock away (tool-canvas.js), and the preview takes its
+               width. The name stays "Controls"; aria-expanded carries the
+               state. Last in the preview, in the free bottom-right corner;
+               data-edge points the icon at the dock. -->
+          <button class="button tool-dock-toggle" data-variant="transparent" data-icon-only data-edge="end" type="button" aria-controls="lt-dock" aria-expanded="true" aria-label="Controls">
+            {{icon:sidebar-right-close}}{{icon:sidebar-right-open}}
+          </button>
+        </div>
+
+        <!--
+          The end dock: the sections scroll as one column (tool-canvas.js
+          adds the tab stop while it overflows), the verbs under them,
+          pinned to the window's foot on a phone (data-actions). Each panel
+          is an accordion section (cms/accordion.md, multi mode) with its
+          button inside the h2, so the sections stay in the heading outline.
+          All start open.
+        -->
+        <div class="tool-dock" data-edge="end" data-actions="pinned" id="lt-dock">
+        <div class="tool-panels accordion" data-accordion="multi" id="lt-panels" role="group" aria-label="Logo Tool controls">
+
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="lt-settings-heading" aria-expanded="true" aria-controls="lt-settings-section">
+                  <span class="tool-panel-title">Settings</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+              <button class="button tool-panel-action" data-variant="transparent" data-icon-only type="button" id="lt-settings-reset" data-reset="settings" aria-label="Reset Settings" data-tooltip="Reset Settings" data-tooltip-position="left" disabled>{{icon:refresh}}</button>
+            </div>
+            <div class="accordion-content" id="lt-settings-section" role="region" aria-labelledby="lt-settings-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <!-- Chips, not a segmented control: five lockup names cannot sit
+                   in one row of equal segments at phone width, and chips hug
+                   their text and wrap. -->
+              <fieldset data-variant="bare">
+                <legend data-variant="caption" id="lt-variant-caption">Variation</legend>
+                <div class="chip-group" id="lt-variants"></div>
+              </fieldset>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="lt-style-heading" aria-expanded="true" aria-controls="lt-style-section">
+                  <span class="tool-panel-title">Style</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+              <button class="button tool-panel-action" data-variant="transparent" data-icon-only type="button" id="lt-style-reset" data-reset="style" aria-label="Reset Style" data-tooltip="Reset Style" data-tooltip-position="left" disabled>{{icon:refresh}}</button>
+            </div>
+            <div class="accordion-content" id="lt-style-section" role="region" aria-labelledby="lt-style-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <!-- The tools' shared colour control (tool-colour.js): the
+                   manifest's colourways as Pairs, then Foreground and
+                   Background. Background's None, the default, is a
+                   transparent file. -->
+              <div id="lt-pairs"></div>
+              <div id="lt-fg"></div>
+              <div id="lt-bg"></div>
+              <p class="form-hint" id="lt-contrast"></p>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="lt-export-heading" aria-expanded="true" aria-controls="lt-export-section">
+                  <span class="tool-panel-title">Export</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+            </div>
+            <div class="accordion-content" id="lt-export-section" role="region" aria-labelledby="lt-export-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <!-- Three short formats, all in view: a segmented control, the
+                   radio-backed faded variant, named by its caption. -->
+              <fieldset data-variant="bare">
+                <legend data-variant="caption" id="lt-format-label">Export as</legend>
+                <div class="segmented-control" data-variant="faded" id="lt-format">
+                  <label class="segmented-control-option"><input type="radio" name="lt-format" value="svg" checked><span>SVG</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="lt-format" value="png"><span>PNG</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="lt-format" value="jpeg"><span>JPG</span></label>
+                </div>
+              </fieldset>
+
+              <!-- Whether Style's background goes into the file. Off, the
+                   background only colours the preview and SVG and PNG stay
+                   transparent. Disabled, with the reason in its note, under
+                   None (nothing to include) and under JPG (always included,
+                   because a JPG has no alpha). The note is an
+                   aria-describedby target, not a live region. -->
+              <div class="block gap-s" id="lt-export-bg-row">
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" id="lt-export-bg" role="switch" aria-describedby="lt-export-bg-note">
+                  <label for="lt-export-bg">Include background</label>
+                </div>
+                <p class="form-hint" id="lt-export-bg-note" hidden></p>
+              </div>
+
+              <!-- The field is the logo's width — the export size, so it sits
+                   in Export beside the format; the file grows around it with
+                   clear space on. Its floor is the variation's minimum: the
+                   hint says it before anyone hits it, a commit below it clamps
+                   with the reason in the status line, and presets under it
+                   are disabled. A width that matches no preset leaves no
+                   segment selected, and the thumb disappears. The visible
+                   label names the field, so the input carries no aria-label
+                   to override it. -->
+              <div class="block gap-s">
+                <label data-variant="caption" for="lt-width" id="lt-width-label">Size (px)</label>
+                <!-- Field and presets share a row while both fit, and wrap to
+                     two rows when they do not (tools.css, Size). -->
+                <div class="tool-size">
+                <div class="number-input" role="group">
+                  <button class="number-input-btn" data-number-decrement type="button" aria-label="Decrease size">&minus;</button>
+                  <input type="number" id="lt-width" value="300" min="120" max="4096" step="10" inputmode="numeric" aria-describedby="lt-width-hint">
+                  <button class="number-input-btn" data-number-increment type="button" aria-label="Increase size">+</button>
+                </div>
+                <div class="segmented-control" data-variant="faded" id="lt-widths" role="radiogroup" aria-label="Size presets">
+                  <label class="segmented-control-option"><input type="radio" name="lt-width-preset" value="150"><span>150</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="lt-width-preset" value="300"><span>300</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="lt-width-preset" value="600"><span>600</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="lt-width-preset" value="960"><span>960</span></label>
+                </div>
+                </div>
+                <p class="form-hint" id="lt-width-hint"></p>
+                <!-- The one polite status region. Written only on a committed
+                     width — never per keystroke. -->
+                <p class="form-hint" id="lt-size-note" role="status"></p>
+              </div>
+
+              <!-- What you are about to get, before the act: a read-only
+                   field the script rewrites on every render, so it is not a
+                   live region. Read-only keeps it in the tab order, so the
+                   name can be selected from the keyboard; people paste it into
+                   tickets and briefs, so the field carries its own copy
+                   button (cms/field.md, Action). copy-button.js reads the
+                   input's value at click time. Icon only: the hidden words
+                   carry the name. No tooltip, because its text would join that
+                   name and read twice (ROADMAP). -->
+              <div class="block gap-s">
+                <label data-variant="caption" for="lt-filename">File name</label>
+                <div class="field">
+                  <input type="text" id="lt-filename" readonly spellcheck="false" autocomplete="off">
+                  <button class="field-action copy-btn" type="button" data-clipboard-target="#lt-filename">
+                    <span class="copy-btn-default">{{icon:copy}}<span class="visually-hidden">Copy file name</span></span>
+                    <span class="copy-btn-copied">{{icon:check}}<span class="visually-hidden">Copied!</span></span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- The note is an aria-describedby target, not a live region.
+                   The script hides the Flatten row for PNG and JPG, where it
+                   does not apply. -->
+              <div class="block gap-s" id="lt-flatten-row">
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" id="lt-flatten" role="switch" checked aria-describedby="lt-flatten-note">
+                  <label for="lt-flatten">Flatten</label>
+                </div>
+                <p class="form-hint" id="lt-flatten-note" hidden></p>
+              </div>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!--
+          The verbs, pinned: the foot of the dock when wide, the bottom of
+          the screen on a phone. Reset is not here — it stays in the bar's
+          menu, off the main path, because it wipes the reader's work. The
+          error line sits above the buttons, so a failure shows where the
+          reader acted.
+        -->
+        <div class="tool-actions" id="lt-actions">
+
+              <p class="form-error" id="lt-error" role="alert"></p>
+
+              <!--
+                The two verbs, each naming the format it makes, so the button
+                is the answer to "what do I get". The format word is a span the
+                script rewrites; it sits inside the button's own text, so the
+                name follows it with no aria-label to override Copy's "Copied!"
+                swap. JPG copies "as PNG": the clipboard API has no JPEG type,
+                so the same pixels go on as a PNG with the background baked in.
+
+                Copy for SVG is copy-button.js's job — the script keeps
+                data-copy filled with the export markup on every render. For
+                PNG and JPG data-copy is empty, copy-button.js bails, and the
+                script rasterises to a PNG blob for the clipboard instead.
+              -->
+              <div class="button-group">
+                <button class="button" type="button" id="lt-export" data-download>
+                  {{icon:download}}{{icon:lock}}<span>Download <span id="lt-export-format">SVG</span></span>
+                </button>
+                <button class="button copy-btn" data-variant="outline" type="button" id="lt-copy" data-copy="">
+                  <span class="copy-btn-default">{{icon:copy}}<span>Copy <span id="lt-copy-format">SVG</span></span></span>
+                  <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
+                </button>
+              </div>
+
+        </div>
+        </div>
+
+        <!-- Shown instead of the preview and panels when the brand has no
+             logo manifest. -->
+        <div class="tool-empty" id="lt-empty" hidden>
+          {{icon:photo}}
+          <p data-empty-message></p>
+        </div>
+
+      </div>

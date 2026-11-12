@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.1 */
+/* @bydefaultstudio/design-system v8.0.0 */
 /**
  * site.mjs - what the access gate needs to know about the site it guards
  * (levels-groups-plan.md Phase 3, D21).
@@ -14,6 +14,11 @@
  * A site that forgets a setting is refused, never opened.
  */
 import { LEVELS } from './auth-schema.mjs';
+import { ENGINE_PATHS } from './engine-paths.mjs';
+
+// The engine's fixed addresses (engine-paths.mjs, PD-2): the login page, the
+// locked page, Ask for access, the sign-out link and the engine's own pages.
+export { ENGINE_PATHS };
 
 /**
  * The tokens worker/email-template.mjs reads, by name. Listed here rather
@@ -48,10 +53,18 @@ export const SITE = {
   embeddablePaths: new Set(),
   /** The page a signed-out visitor to the home is shown instead of the login, or null. */
   landingPath: null,
-  /** Where a signed-out reader is sent to sign in. Always public. */
-  loginPath: '/auth/login.html',
-  /** The page served, at the requested URL with 403, to a reader a page refuses. */
-  lockedPath: '/locked.html',
+  /** Where a signed-out reader is sent to sign in. Always public. The engine's, on every site (PD-2). */
+  loginPath: ENGINE_PATHS.login,
+  /** The page served, at the requested URL with 403, to a reader a page refuses. The engine's (PD-2). */
+  lockedPath: ENGINE_PATHS.locked,
+  /** The address of each app this site doesn't install, to its name (page-access.mjs NOT_INSTALLED). */
+  notInstalled: new Map(),
+  /** The page served, at such an address with 404, naming the app (PB-4). */
+  notInstalledPath: ENGINE_PATHS.notInstalled,
+  /** The apps the site installs (page-access.mjs APPS), whose Worker routes the gate mounts (B4). */
+  apps: Object.freeze({ installed: [], imageLogo: null, embeds: [] }),
+  /** The Asset Library's download map (library-index.mjs), when it is installed. */
+  library: null,
   /** Where the docs kit publishes markdown sources; one it does not map is admin only. */
   sourcePrefix: '/cms/',
   /** Overrides for the sign-in emails' literal tokens (email-template.mjs EMAIL_TOKENS): a client's own type and colour. */
@@ -83,6 +96,24 @@ function onePath(value, name, fallback) {
   // query, a fragment or a backslash: a page path and nothing else.
   if (typeof value !== 'string' || !value.startsWith('/') || value === '/' || value.startsWith('//') || /[?#\\]/.test(value)) fail(`\`${name}\` must be a plain path starting with /`);
   return value;
+}
+
+/**
+ * A path setting the engine fixed in phase D (PD-2): the sign-in and locked
+ * pages are generated at the engine's addresses on every site. A site that
+ * still names another is honoured for now, and told at start-up, because the
+ * page it points at is no longer one the build makes. The settings go at the
+ * next major.
+ */
+const warnedPaths = new Set();
+function deprecatedPath(value, name, enginePath) {
+  const chosen = onePath(value, name, enginePath);
+  // Once per setting and value: createGate() can configure twice on start-up
+  if (chosen !== enginePath && !warnedPaths.has(`${name} ${chosen}`)) {
+    warnedPaths.add(`${name} ${chosen}`);
+    console.warn(`createGate: \`${name}\` is deprecated. The engine builds this page at ${enginePath} on every site, so ${chosen} is a page the build no longer makes. Remove the setting; it goes at the next major.`);
+  }
+  return chosen;
 }
 
 /**
@@ -130,8 +161,19 @@ export function configureSite(options = {}) {
   const publicPrefixes = pathList(options.publicPrefixes, 'publicPrefixes', { prefix: true });
   const embeddablePaths = pathList(options.embeddablePaths, 'embeddablePaths');
   if (options.landingPath !== undefined && options.landingPath !== null && (typeof options.landingPath !== 'string' || !options.landingPath.startsWith('/'))) fail('`landingPath` must be a path starting with /');
-  const loginPath = onePath(options.loginPath, 'loginPath', '/auth/login.html');
-  const lockedPath = onePath(options.lockedPath, 'lockedPath', '/locked.html');
+  const loginPath = deprecatedPath(options.loginPath, 'loginPath', ENGINE_PATHS.login);
+  const lockedPath = deprecatedPath(options.lockedPath, 'lockedPath', ENGINE_PATHS.locked);
+  if (options.notInstalled !== undefined && !(options.notInstalled instanceof Map)) fail('`notInstalled` must be the NOT_INSTALLED Map from page-access.mjs');
+  const notInstalledPath = onePath(options.notInstalledPath, 'notInstalledPath', ENGINE_PATHS.notInstalled);
+  const apps = options.apps === undefined ? { installed: [], imageLogo: null, embeds: [] } : options.apps;
+  if (!apps || !Array.isArray(apps.installed)) fail('`apps` must be the APPS object from page-access.mjs');
+  // An installed app's embed is public and frameable, like a site's own entry
+  const embeds = pathList(apps.embeds, 'apps.embeds');
+  if (apps.imageLogo !== null && apps.imageLogo !== undefined && (typeof apps.imageLogo !== 'string' || !apps.imageLogo.startsWith('/'))) fail('`apps.imageLogo` must be a site path starting with /');
+  const library = options.library === undefined ? null : options.library;
+  if (apps.installed.includes('asset-library') && !(library && library.index instanceof Map && typeof library.downloadAccess === 'string')) {
+    fail('the Asset Library is installed: pass `library: { index: LIBRARY_INDEX, downloadAccess: LIBRARY_DOWNLOAD_ACCESS }` from library-index.mjs');
+  }
   const sourcePrefix = onePath(options.sourcePrefix, 'sourcePrefix', '/cms/');
   if (!sourcePrefix.endsWith('/')) fail('`sourcePrefix` must end with /');
   const emailTokens = emailTokenMap(options.emailTokens, EMAIL_TOKEN_NAMES);
@@ -142,12 +184,16 @@ export function configureSite(options = {}) {
   SITE.sources = options.sources || new Map();
   SITE.accessNav = options.accessNav || 'locked';
   SITE.hosts = hosts;
-  SITE.publicPaths = new Set(publicPaths);
+  SITE.publicPaths = new Set([...publicPaths, ...embeds]);
   SITE.publicPrefixes = [...publicPrefixes];
-  SITE.embeddablePaths = new Set(embeddablePaths);
+  SITE.embeddablePaths = new Set([...embeddablePaths, ...embeds]);
   SITE.landingPath = typeof options.landingPath === 'string' ? options.landingPath : null;
   SITE.loginPath = loginPath;
   SITE.lockedPath = lockedPath;
+  SITE.notInstalled = options.notInstalled || new Map();
+  SITE.notInstalledPath = notInstalledPath;
+  SITE.apps = Object.freeze({ installed: [...apps.installed], imageLogo: apps.imageLogo || null, embeds });
+  SITE.library = library;
   SITE.sourcePrefix = sourcePrefix;
   SITE.emailTokens = emailTokens;
   return SITE;

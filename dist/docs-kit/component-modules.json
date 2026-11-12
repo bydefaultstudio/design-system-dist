@@ -21,6 +21,7 @@
     "password-toggle.js",
     "rating.js",
     "scroller.js",
+    "slider.js",
     "swatch.js",
     "tabs.js",
     "toast.js"
@@ -28,7 +29,8 @@
   "kitUiScripts": [
     "bar.js", "dropdown.js", "breadcrumb.js", "copy-button.js", "swatch.js", "docs-copy-chrome.js",
     "number-input.js", "toast.js", "dialog.js", "accordion.js", "tabs.js", "rating.js",
-    "cell-input.js", "chip.js", "scroller.js", "date-picker.js", "password-toggle.js", "field.js"
+    "cell-input.js", "chip.js", "scroller.js", "date-picker.js", "password-toggle.js", "field.js",
+    "logo-spec.js", "slider.js", "search.js"
   ],
   "componentCss": [
     "bd-animate.css",
@@ -66,7 +68,8 @@
     "rating": "Rating",
     "cell-input": "CellInput",
     "chip": "ChipGroup",
-    "date-picker": "DatePicker"
+    "date-picker": "DatePicker",
+    "slider": "Slider"
   },
   "headless": [
     "bd-audio.js"

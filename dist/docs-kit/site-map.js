@@ -44,14 +44,10 @@ const DEFAULT_LEVEL = 'team';
 /** Pinned so two machines with different process locales sort ties alike. */
 const COLLATION = 'en';
 
-/** Pages that have no cms/ source. Read from the files themselves. */
+/** Pages that have no cms/ source. Read from the files themselves. The
+ * door pages (the sign-in page, Ask for access) have one since phase D. */
 const HAND_AUTHORED = [
   { file: 'index.html', kind: 'index', type: 'shelf' },
-  { file: 'support.html', kind: 'hand-authored', type: 'bare' },
-  { file: 'auth/login.html', kind: 'hand-authored', type: 'bare' },
-  // Its body says data-access="public", but the gate serves it to signed-in
-  // readers only, of any role (gate.mjs SIGNED_IN_EXACT)
-  { file: 'auth/account.html', kind: 'hand-authored', type: 'bare', access: 'signed-in' },
 ];
 
 /**

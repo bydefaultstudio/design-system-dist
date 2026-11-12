@@ -1,0 +1,185 @@
+/* ------ COLOUR PALETTE STYLES ------ */
+
+/* Loaded on every page (docs.config.js extraStylesheets), so every selector
+   here is scoped to the tool. The tiles are Swatch (design-system.css §53,
+   cms/swatch.md); this file only composes them: the hue matrix, the views,
+   and how tall each grid's swatches are. It sets Swatch's own custom
+   properties and nothing else of the component's.
+
+   The swatches paint palette primitives on purpose: they are the subject.
+   Each one's fill and ink arrive inline as --swatch-fill and --swatch-ink,
+   set by the script from the live theme. */
+
+[data-tool="color-palette"] {
+  /* The window under the site header and the bar. vh first, re-pointed at
+     dvh where it is known (see Responsive). */
+  --palette-space: calc(100vh - var(--top-nav-height) - var(--tool-bar-height));
+  /* A hue cell before the matrix fits the window: taller than Swatch's own
+     cell, so four steps read as a column. */
+  --palette-hue-height: 11rem;
+  /* The shortest a cell gets while it shares the window: name, hex and the
+     copy actions with the padding. */
+  --palette-fit-min: 7rem;
+  /* A column per hue: color-palette.js sets it from bdColor.HUES, the brand's
+     hues (brand.json colours.hues). Nine, the engine's, until it runs. */
+  --palette-hues: 9;
+  --palette-steps: 4;
+}
+
+/* -- Height: one rule --
+   Every grid's swatches are as tall as its share of the window, never under
+   its floor: --swatch-height, which every swatch in the grid takes. A share
+   of 0 is a fixed height. Each grid sets its floor and share below, and
+   the media queries re-point them. A swatch whose content needs more room
+   still grows its row (Swatch's own minimum). */
+[data-tool="color-palette"] .swatch-grid {
+  --palette-floor: var(--swatch-cell-height);
+  --palette-share: 0;
+  --swatch-height: max(var(--palette-floor), calc(var(--palette-space) * var(--palette-share)));
+}
+
+/* -- Hue matrix: All and Tints & Shades --
+   A Swatch grid with a column per hue and a row per step, darkest at the
+   top. Placed, not flowed: the script sets --col (hue) and --row (step) on
+   each swatch, so a step a brand leaves out leaves its cell empty instead
+   of shifting every later hue. The DOM is hue by hue, so a reader tabbing
+   through meets one hue at a time. */
+[data-tool="color-palette"] .swatch-grid[data-palette-set="hues"],
+[data-tool="color-palette"] .swatch-grid[data-palette-set="tints"] {
+  --palette-floor: var(--palette-hue-height);
+  --swatch-columns: var(--palette-hues);
+}
+
+[data-tool="color-palette"] .swatch-grid[data-palette-set="hues"] > .swatch,
+[data-tool="color-palette"] .swatch-grid[data-palette-set="tints"] > .swatch {
+  grid-column: var(--col);
+  grid-row: var(--row);
+}
+
+/* -- All: the off tones and the neutral ramp under the hues -- */
+[data-tool="color-palette"] .swatch-grid[data-palette-set="neutrals"] {
+  --swatch-columns: 13;
+}
+
+/* -- Primary: hue columns over an off-tone band --
+   Sized from 769px (see Responsive); a phone stacks them all full width
+   at the cell height. */
+
+/* -- Neutrals: thirteen strips sharing the window --
+   --palette-count is the number of strips shown, set on the list by the
+   script. */
+[data-tool="color-palette"] .swatch-grid[data-palette-set="ramp"] {
+  --palette-floor: var(--swatch-strip-height);
+  --palette-share: calc(1 / var(--palette-count, 13));
+}
+
+/* -- Views --
+   The bar's segmented control sets data-palette-view on the tool; All
+   shows the three full sets, the others their own one. Without the script
+   there is no attribute, and the page is All. */
+[data-tool="color-palette"] .palette-set:not([data-view="all"]),
+[data-tool="color-palette"][data-palette-view="primary"] .palette-set[data-view="all"],
+[data-tool="color-palette"][data-palette-view="tints"] .palette-set[data-view="all"],
+[data-tool="color-palette"][data-palette-view="neutrals"] .palette-set[data-view="all"] {
+  display: none;
+}
+
+[data-tool="color-palette"][data-palette-view="primary"] .palette-set[data-view="primary"],
+[data-tool="color-palette"][data-palette-view="tints"] .palette-set[data-view="tints"],
+[data-tool="color-palette"][data-palette-view="neutrals"] .palette-set[data-view="neutrals"] {
+  display: block;
+}
+
+/* ------ RESPONSIVE ------ */
+
+/* The width queries are exact complements, (width > 1024px) beside
+   (max-width: 1024px) and (width > 768px) beside Swatch's (max-width:
+   768px), so a zoomed width such as 768.5px falls in one or the other. */
+
+/* -- Fit the window: wider than 1024px, at least 760px tall --
+   The @supports keeps the fixed heights where dvh is unknown: a custom
+   property is never validated, so an unsupported unit would void the
+   height, not fall back. All and Tints & Shades fit only in the nine-column
+   layout. All's six rows share the window — four hue steps, the off tones,
+   the neutrals — and Tints & Shades' four. At --palette-fit-min a row stops
+   shrinking and the page scrolls. Primary and Neutrals size from the
+   window outside this guard, on the vh value where dvh is unknown. */
+@supports (height: 1dvh) {
+  [data-tool="color-palette"] {
+    --palette-space: calc(100dvh - var(--top-nav-height) - var(--tool-bar-height));
+  }
+
+  @media (width > 1024px) and (min-height: 760px) {
+    [data-tool="color-palette"] .swatch-grid[data-palette-set="hues"],
+    [data-tool="color-palette"] .swatch-grid[data-palette-set="extras"],
+    [data-tool="color-palette"] .swatch-grid[data-palette-set="neutrals"] {
+      --palette-floor: var(--palette-fit-min);
+      --palette-share: calc(1 / 6);
+    }
+
+    [data-tool="color-palette"] .swatch-grid[data-palette-set="tints"] {
+      --palette-floor: var(--palette-fit-min);
+      --palette-share: calc(1 / var(--palette-steps));
+    }
+  }
+}
+
+/* -- Primary: wider than 768px --
+   The off tones take a fifth of the window, the hue columns the rest,
+   never under Swatch's column and band heights. */
+@media (width > 768px) {
+  [data-tool="color-palette"] .swatch-grid[data-palette-set="primary"] {
+    --palette-floor: var(--swatch-column-height);
+    --palette-share: 0.8;
+  }
+
+  [data-tool="color-palette"] .swatch-grid[data-palette-set="tones"] {
+    --palette-floor: var(--swatch-band-height);
+    --palette-share: 0.2;
+  }
+}
+
+/* -- Tablet: 1024px and narrower --
+   Nine columns stop reading as a palette below a laptop: the matrix turns
+   a quarter, a row per hue and a column per step. */
+@media (max-width: 1024px) {
+  [data-tool="color-palette"] .swatch-grid[data-palette-set="hues"],
+  [data-tool="color-palette"] .swatch-grid[data-palette-set="tints"] {
+    --palette-floor: var(--swatch-cell-height);
+    --swatch-columns: var(--palette-steps);
+  }
+
+  [data-tool="color-palette"] .swatch-grid[data-palette-set="hues"] > .swatch,
+  [data-tool="color-palette"] .swatch-grid[data-palette-set="tints"] > .swatch {
+    grid-column: var(--row);
+    grid-row: var(--col);
+  }
+
+  [data-tool="color-palette"] .swatch-grid[data-palette-set="neutrals"] {
+    --swatch-columns: 5;
+  }
+}
+
+/* -- Mobile: 768px and narrower --
+   Two steps a row, back to flowing hue by hue, since explicit placement
+   cannot fold four steps into two columns. The off tones stack. */
+@media (max-width: 768px) {
+  [data-tool="color-palette"] .swatch-grid[data-palette-set="hues"],
+  [data-tool="color-palette"] .swatch-grid[data-palette-set="tints"] {
+    --swatch-columns: 2;
+  }
+
+  [data-tool="color-palette"] .swatch-grid[data-palette-set="hues"] > .swatch,
+  [data-tool="color-palette"] .swatch-grid[data-palette-set="tints"] > .swatch {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  [data-tool="color-palette"] .swatch-grid[data-palette-set="neutrals"] {
+    --swatch-columns: 3;
+  }
+
+  [data-tool="color-palette"] .swatch-grid[data-palette-set="tones"] {
+    --swatch-columns: 1;
+  }
+}

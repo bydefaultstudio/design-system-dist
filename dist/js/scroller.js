@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.1 */
+/* @bydefaultstudio/design-system v8.0.0 */
 /**
  * Scroller component
  * One line of chips or tags that scrolls sideways (.scroller, design-system.css

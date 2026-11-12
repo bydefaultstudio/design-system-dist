@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.1 */
+/* @bydefaultstudio/design-system v8.0.0 */
 /**
  * Swatch component
  * Reads each swatch's live fill and writes what depends on it: the hex in
@@ -303,9 +303,9 @@
   //
 
   // The theme toggle writes data-theme on <html> and fires no event. A
-  // brand theme writes data-brand-theme the moment it adds its stylesheet,
-  // before the sheet has loaded, so a stylesheet finishing loading is a
-  // change too (load does not bubble, hence the capture). One observer and
+  // stylesheet added later (a brand theme sets data-brand-theme the moment
+  // it adds its sheet, before the sheet has loaded) changes the colours
+  // too, so a stylesheet finishing loading counts as a change (load does not bubble, hence the capture). One observer and
   // two listeners for the document's life; each refresh queries the page.
   function handleSheetLoad(event) {
     var target = event.target;

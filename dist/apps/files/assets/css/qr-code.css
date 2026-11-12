@@ -1,0 +1,58 @@
+/* ====================================================================
+   QR CODE GENERATOR STYLES
+   ==================================================================== */
+/*
+  Layer: app. A tool on the shared canvas (cms/tool-canvas.md), built from
+  docks: the shell, the bar, the preview and its corners, the grounds and the
+  checkerboard, the end dock, its sections and the pinned actions all come
+  from tools.css. What is left here is the tool's own: the code's size on the
+  stage, the scan line in the Details corner and the notes in the sections.
+
+  Classes name the component, never the tool (tool-<noun>,
+  cms/tool-canvas.md Naming), and every rule is scoped to
+  [data-tool="qr-code"], because this stylesheet loads on every page.
+*/
+
+/* -- Preview --
+   A tall preview (tools.css, data-size="tall"): the code is the point of
+   the tool. */
+/* On a phone the corners take a row above the code, so the band needs more
+   height or a 512px code draws at a fifth of its size: at 375×667 the
+   default left it 105px across. */
+@media (max-width: 768px) {
+  [data-tool="qr-code"] .tool-preview {
+    --tool-preview-height: clamp(22rem, 55vh, 28rem);
+  }
+}
+
+/* The code is a .tool-artwork (tools.css), a square at its export size. */
+
+/* Enlarged — Fill on a small export — the canvas's pixels are drawn
+   hard-edged rather than blurred. Scaled down, the browser's smoothing keeps
+   modules even and curves round; nearest-neighbour would make them jagged.
+   The script sets data-enlarged from the measured size. */
+[data-tool="qr-code"] .tool-artwork[data-enlarged] {
+  image-rendering: pixelated;
+}
+
+/* -- Scan check --
+   The last of the Details: the badge, and under it what to try when the
+   code does not scan, in the band's ink. Collapsed while there is nothing
+   to report, without leaving the accessibility tree — it is the status
+   region. */
+[data-tool="qr-code"] .tool-verdict {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2xs);
+  margin-top: var(--space-2xs);
+}
+
+[data-tool="qr-code"] .tool-verdict:has(> .badge.is-hidden) {
+  margin-top: 0;
+}
+
+[data-tool="qr-code"] .tool-verdict-hint {
+  color: var(--tool-preview-ink);
+}
+

@@ -1,0 +1,100 @@
+/* ------ LOGO TOOL STYLES ------ */
+/*
+  Layer: app. A tool on the shared canvas (cms/tool-canvas.md): the shell, the
+  bar, the preview band, the panels and the checkerboard all come from
+  tools.css, and so do the preview's corners and scale note. What is left
+  here is the tool's own: the grounds, the frame that shows the file, the
+  safe-zone guides, and the readouts and notes in the panels.
+
+  Classes name the component, never the tool (tool-<noun>,
+  cms/tool-canvas.md Naming), and every rule is scoped to
+  [data-tool="logo-tool"], because this stylesheet loads on every page.
+
+  One deliberate exception to the tokens-only rule: while JPG is chosen the
+  preview's ground is set inline from brand EXPORT data (the hex background
+  the manifest bakes into a JPG), not from a theme token. The preview shows
+  the exported file there, so it must show the file's real colour.
+*/
+
+/* -- Preview --
+   Taller than the canvas default: the logo is the whole point of the tool,
+   where on most tools the preview is a glance. A definite height, not a
+   floor, because the frame scales down to fit it — the fit needs a box.
+   The layout — the stage, the details and Preview corners, the scale note —
+   and the ink they share are the canvas's (tools.css, Preview corners).
+
+   The two grounds the preview moves between as the colour changes: light
+   behind a colour designed for a light background, dark behind the rest.
+   Preview only — a JPG bakes in the manifest's own background, and the
+   preview shows that instead while JPG is chosen. Fixed in both site
+   themes, like the canvas's light/dark grounds: the artwork's ground is not
+   the page's: the shared artwork grounds (tools.css, :root). */
+[data-tool="logo-tool"] .tool-preview[data-logo-ground="light"] {
+  background-color: var(--tool-ground-light);
+}
+
+[data-tool="logo-tool"] .tool-preview[data-logo-ground="dark"] {
+  background-color: var(--tool-ground-dark);
+}
+
+/* The frame is a .tool-artwork (tools.css): the logo at true pixel size,
+   grown by the safe zone while that is shown, scaled down to fit the
+   stage. The script also sets `color` on it, so the logo and the
+   safe-zone guides both inherit it. */
+
+/* The holder is the LOGO box inside the frame. The safe zone is pure
+   percentages — the script sets width:<logo/file %> so everything scales
+   together with no padding drift. */
+[data-tool="logo-tool"] .tool-holder {
+  width: 100%;
+}
+
+/* With the safe zone shown the holder sits where the zone puts the logo
+   (left, top and width set by the script, all percentages of the frame):
+   centred inside a ring, or off centre where a variant's own spec moves it. */
+[data-tool="logo-tool"] .tool-holder[data-placed] {
+  position: absolute;
+}
+
+[data-tool="logo-tool"] .tool-holder svg {
+  display: block;
+}
+
+/* Safe-zone guides are .tool-guides (tools.css), over the frame: the
+   frame is the zone's outer edge, so the overlay fills it exactly. The
+   frame's colour is the logo's and the zone is painted in currentColor, so
+   it reads wherever the logo does. */
+
+/* -- Panels -- */
+
+/* -- Empty state --
+   The canvas keeps its bar, stripped to the name and the close: there is
+   nothing for the menu's Reset, the panels or the verbs to act on, but the
+   way out is what the reader most needs here. A state class rather than
+   [hidden] on the canvas rows: init runs inside Barba's afterEnter, and
+   changing an in-flow element's display while the transition settles is the
+   reflow-flash pattern this repo avoids. The toggle goes with the preview it
+   sits in. */
+[data-tool="logo-tool"] .tool-canvas.is-empty > .tool-preview,
+[data-tool="logo-tool"] .tool-canvas.is-empty .bar-group,
+[data-tool="logo-tool"] .tool-canvas.is-empty .bar-overflow {
+  display: none;
+}
+
+/* -- Narrow --
+   The band grows on a narrow content area, where the corners take a row
+   above the logo (tools.css, Preview corners), so the logo keeps its room. */
+@container main-content (max-width: 699.98px) {
+  [data-tool="logo-tool"] .tool-preview {
+    --tool-preview-height: clamp(21rem, 55vh, 26rem);
+  }
+}
+
+/* No prefers-reduced-motion block: this file declares no transitions or
+   animations of its own. */
+
+/* The zone's two edges at full strength, as the brand diagram draws them:
+   the fill stays faint, the boundary reads wherever the logo does. */
+[data-tool="logo-tool"] .tool-guides .layer-stack-edge {
+  stroke-opacity: 1;
+}

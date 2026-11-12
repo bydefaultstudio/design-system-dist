@@ -1,11 +1,10 @@
 /**
  * glossary-init.js - starts the glossary reading drawer on docs-kit sites
  *
- * glossary.js exports window.initGlossary and starts nothing itself: on the
- * By Default OS site, bd-site-init.js calls it. A docs-kit site has no
- * bd-site-init.js, so the generator ships this file beside glossary.js
- * whenever cms/glossary/ exists (unless the site sets glossaryDrawer: false
- * and wires its own) and loads it straight after.
+ * glossary.js exports window.initGlossary and starts nothing itself. The
+ * generator ships this file beside glossary.js on every site with a
+ * cms/glossary/, By Default OS included (unless a site sets glossaryDrawer:
+ * false and wires its own), and loads it straight after.
  *
  * It calls initGlossary on a hard load and again after every page transition
  * (bd:after-nav, dispatched by the kit's barba-docs.js after each swap), with

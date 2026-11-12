@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.1 */
+/* @bydefaultstudio/design-system v8.0.0 */
 /**
  * auth.js — Better Auth in the Worker: the sign-in endpoints (access-plan.md §4).
  *
@@ -318,6 +318,148 @@ export async function handleAuth(request, env, ctx) {
     return withReaderAccess(response, env);
   }
   return response;
+}
+
+/**
+ * GET /auth/sign-out (engine-paths.mjs `signOut`): the sign-out link, for a
+ * page that wants a plain link rather than the header's account menu, and for
+ * a browser with no JavaScript (engine-parity-phase-d.md, PD-3).
+ *
+ * A link anyone can point at must not sign a reader out from somewhere else:
+ * an image tag on another site, a page on a sibling subdomain. So it signs
+ * out a navigation the reader made themselves, read from headers no page can
+ * set: Sec-Fetch-Mode navigate, with Sec-Fetch-Site same-origin (a click on
+ * this site) or none (typed, bookmarked, opened from another app). A browser
+ * that sends no Sec-Fetch headers at all (Safari before 16.4) is trusted on a
+ * Referer from this origin, which another site cannot send either.
+ *
+ * Anything else from a signed-in reader is refused out loud, with a page that
+ * says they are still signed in and how to sign out, never a redirect that
+ * reads as though it worked. A visitor with no session cookie, and a HEAD,
+ * are sent to the login page with nothing changed. The sign-out itself is the
+ * account menu's, Better Auth's POST /sign-out made here on the reader's
+ * behalf through handleAuth, so its cookies are cleared and the cache emptied
+ * (Clear-Site-Data) exactly as the menu's are. If that fails the reader is
+ * told so, never sent on as if signed out: on a shared machine the difference
+ * matters.
+ */
+export async function handleSignOutLink(request, env, ctx) {
+  const url = new URL(request.url);
+  if (!isAllowedHost(url.hostname)) return new Response('Not found', { status: 404 });
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD', 'Cache-Control': 'no-store' } });
+  }
+  const toLogin = (signedOut = null) => {
+    const headers = new Headers({ Location: new URL(SITE.loginPath, url.origin).toString(), 'Cache-Control': 'private, no-store' });
+    if (signedOut) {
+      for (const cookie of signedOut.headers.getSetCookie()) headers.append('Set-Cookie', cookie);
+      const cleared = signedOut.headers.get('Clear-Site-Data');
+      if (cleared) headers.set('Clear-Site-Data', cleared);
+    }
+    return new Response(null, { status: 303, headers });
+  };
+  const cookie = request.headers.get('cookie');
+  if (request.method !== 'GET' || !hasSessionCookie(cookie)) return toLogin();
+  if (!readersOwnNavigation(request, url)) {
+    // A session cookie is not a live session (it may have expired), so the
+    // page says what it knows: nothing changed
+    return signOutPage(url, 403, 'Nothing was signed out', [
+      'This sign-out link was opened from somewhere other than this site, so it changed nothing. If you were signed in, you still are.',
+      'To sign out, use the account menu at the top of any page, or select Sign out below.',
+    ], 'Sign out');
+  }
+
+  const signOut = new Request(new URL(SIGN_OUT_PATH, url.origin), {
+    method: 'POST',
+    headers: { cookie, origin: url.origin, 'content-type': 'application/json' },
+    body: '{}',
+  });
+  let response;
+  try {
+    response = await handleAuth(signOut, env, ctx);
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'auth.sign_out_link_failed', error: String(error && error.message) }));
+    response = null;
+  }
+  if (!response || !response.ok) {
+    if (response) {
+      console.error(JSON.stringify({ event: 'auth.sign_out_link_refused', status: response.status }));
+      response.body?.cancel();
+    }
+    return signOutPage(url, 503, 'Sign-out didn’t complete', [
+      'You are still signed in. Nothing on this device was changed.',
+      'Wait a moment, then select Try signing out again below.',
+    ], 'Try signing out again', { 'Retry-After': '30' });
+  }
+  response.body?.cancel();
+  return toLogin(response);
+}
+
+/**
+ * Whether a sign-out request is a navigation the reader made: a click on this
+ * site or a typed address, never a page elsewhere loading the link.
+ */
+function readersOwnNavigation(request, url) {
+  const mode = request.headers.get('sec-fetch-mode');
+  const site = request.headers.get('sec-fetch-site');
+  if (mode !== null || site !== null) return mode === 'navigate' && (site === 'same-origin' || site === 'none');
+  // No Fetch Metadata at all: an older browser. Its Referer names the page
+  // the link was on, and only this site's own pages can name this origin
+  const referer = request.headers.get('referer');
+  if (!referer) return false;
+  try {
+    return new URL(referer).origin === url.origin;
+  } catch {
+    return false;
+  }
+}
+
+/** Text for an HTML page, never markup. */
+function escapeText(value) {
+  return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/**
+ * The page the sign-out link answers with when it signs nobody out: plain
+ * HTML in the site's language, the reason, and a way forward (`action`, the
+ * link that signs out from this page, and the home page). The retry relies
+ * on the browser sending this site's own Referer when it sends no Fetch
+ * Metadata, so this response never sets a no-referrer policy. Unstyled on purpose: it must work when the site's own
+ * files are what failed, and it loads nothing.
+ */
+function signOutPage(url, status, heading, lines, action, extraHeaders = {}) {
+  const home = new URL('/', url.origin).toString();
+  const again = new URL(url.pathname, url.origin).toString();
+  const body = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>${escapeText(heading)} - ${escapeText(SITE.name)}</title>
+</head>
+<body>
+<main>
+<h1>${escapeText(heading)}</h1>
+${lines.map((line) => `<p>${escapeText(line)}</p>`).join('\n')}
+<p><a href="${escapeText(again)}">${escapeText(action)}</a></p>
+<p><a href="${escapeText(home)}">Back to ${escapeText(SITE.name)}</a></p>
+</main>
+</body>
+</html>
+`;
+  return new Response(body, {
+    status,
+    // Never framed: a framed copy's own Sign out link would read as a click
+    // on this site. The Worker writes this page, so _headers doesn't reach it
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'private, no-store',
+      'X-Frame-Options': 'DENY',
+      'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+      ...extraHeaders,
+    },
+  });
 }
 
 /**

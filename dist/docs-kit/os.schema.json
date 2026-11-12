@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bydefault.design/schemas/os.schema.json",
+  "title": "os.json",
+  "description": "What a site runs: the engine, the brand file's version, and each installed app. Every full build writes it, and the site's Worker sends it to the fleet service once per deployment. cms/generator/os-json.js is the authority (it also checks that apps and packages are both lists or both null); this file is the same shape for editors and other tools. Fields it doesn't name are allowed, so a newer engine can add one without an older service refusing it.",
+  "type": "object",
+  "required": ["engine", "site", "brand", "packages", "apps"],
+  "definitions": {
+    "id": { "type": "string", "maxLength": 64, "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "version": {
+      "type": "string",
+      "maxLength": 40,
+      "pattern": "^(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+    }
+  },
+  "properties": {
+    "engine": { "$ref": "#/definitions/version", "description": "The engine's version: the package the site installs." },
+    "site": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "\\S", "description": "The site's name, \"<Brand> OS\"." },
+        "slug": { "$ref": "#/definitions/id", "description": "brand.json's slug. A site must have one to report." },
+        "url": { "type": "string", "maxLength": 200, "pattern": "^https://[^\\s/?#@]+(/[^\\s?#]*)?$", "description": "brand.json's canonical https address." }
+      }
+    },
+    "brand": {
+      "description": "The version brand.json is written at, before any upgrade in memory, or null with no brand.json.",
+      "oneOf": [{ "type": "integer", "minimum": 0, "maximum": 1000 }, { "type": "null" }]
+    },
+    "packages": {
+      "description": "The packages the site installs, or null for a site not on `install` yet.",
+      "oneOf": [
+        { "type": "array", "maxItems": 16, "uniqueItems": true, "items": { "$ref": "#/definitions/id" } },
+        { "type": "null" }
+      ]
+    },
+    "apps": {
+      "description": "Each installed app, or null for a site not on `install` yet.",
+      "oneOf": [
+        {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "required": ["slug", "version", "status", "package"],
+            "properties": {
+              "slug": { "$ref": "#/definitions/id" },
+              "version": { "oneOf": [{ "$ref": "#/definitions/version" }, { "type": "null" }] },
+              "status": { "$ref": "#/definitions/id", "description": "stable, beta or draft today. A newer engine may add one." },
+              "package": { "$ref": "#/definitions/id" }
+            }
+          }
+        },
+        { "type": "null" }
+      ]
+    }
+  }
+}

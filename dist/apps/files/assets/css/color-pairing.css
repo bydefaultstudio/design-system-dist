@@ -1,0 +1,560 @@
+/* ------ COLOUR PAIRING STYLES ------ */
+
+/* Loaded on every page (docs.config.js extraStylesheets), so every rule
+   here is scoped to [data-tool="color-pairing"], and nothing reaches
+   outside the tool. Classes name the component, never the tool
+   (tool-<noun>, cms/tool-canvas.md Naming).
+
+   The tool sits on the shared canvas (tools.css, Docks): the bar, the
+   preview, an end dock with three sections. This file draws only what is
+   the tool's own: the bento in the preview, the Contrast section's ratio
+   and checks, the colour grids in Style, and the Export readout.
+
+   The tool paints palette primitives on purpose: they are its subject. The
+   pair arrives as --color-pairing-fg and --color-pairing-bg, set by the
+   script on the container, with the two verdict inks beside them. The chips
+   are the system's colour chip (design-system.css, .chip
+   data-variant="colour"); this file only lays them out. Everything else,
+   the chrome around the painted surfaces, uses semantic tokens. */
+
+[data-tool="color-pairing"] {
+  --color-pairing-chip-gap: var(--space-xs);
+  /* The smallest a chip shrinks to: 32px still clears the 2.5.8 target
+     minimum of 24px with room to spare. */
+  --color-pairing-chip-min: 2rem;
+  /* The largest a chip grows to: the tools' one chip size (tools.css), so
+     a wide dock shows the same swatch as every other tool. */
+  --color-pairing-chip-max: var(--tool-colour-chip-size);
+  /* The widest the gap between hue columns grows. */
+  --color-pairing-col-gap-max: var(--space-2xl);
+  --color-pairing-icon-size: var(--icon-size-2xl);
+  --color-pairing-stamp-icon: 1rem;
+  /* The ampersand: four times the scale's top step, a glyph the size of
+     its cell rather than a line of type. Rem all the way, so it zooms with
+     the page (WCAG 1.4.4); three times, then twice, as the preview narrows
+     (below). */
+  --color-pairing-glyph-size: calc(var(--font-10xl) * 4);
+}
+
+/* ------ PREVIEW: THE BENTO ------ */
+
+/* The preview is a canvas band in its fill mode (tools.css, data-fit):
+   no padding, and the bento stretches to fill it. Its width is the size
+   container the bento lays out against: the dock and the site sidebar both
+   change it, so the viewport says nothing reliable about the room. */
+[data-tool="color-pairing"] .tool-specimen {
+  container: tool-specimen / inline-size;
+}
+
+/* Four cells and no gaps. Every cell paints its own ground, so the seams
+   are changes of colour, not rules. One column, narrow, in an order that
+   keeps the checkerboard alternating: title, ampersand, paragraph, icons. The bento
+   is aria-hidden and holds nothing focusable, so its visual order is free
+   to differ from the source's. Nothing in it takes the pointer either: the
+   specimen button is not a button. The painting opts out of forced colours:
+   a contrast tool the OS repaints measures nothing. */
+[data-tool="color-pairing"] .tool-bento {
+  display: grid;
+  flex: 1 1 auto;
+  align-self: stretch;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "title" "glyph" "paragraph" "icons";
+  min-width: 0;
+  pointer-events: none;
+  forced-color-adjust: none;
+}
+
+/* 2×2 from 30rem of preview: the placed canvas always gives at least 32rem
+   (960px less the 28rem dock), so wide is always the grid. The top row is
+   the taller, as the owner drew it; neither row shrinks below its content. */
+@container tool-specimen (inline-size >= 30rem) {
+  [data-tool="color-pairing"] .tool-bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(min-content, 3fr) minmax(min-content, 2fr);
+    grid-template-areas: "title glyph" "icons paragraph";
+  }
+}
+
+/* -- Cells --
+   Each cell reads its ink and ground from the pair: as chosen on the plain
+   cells, swapped on the inverted ones. Cell-level properties, never the
+   pair's own two swapped in place: --a: var(--b) beside --b: var(--a) is a
+   cycle, and both go invalid. The fallbacks are the page's own text on
+   background, so a cell is a legitimate pair before the script runs.
+   Everything in a cell sits on its vertical centre. */
+[data-tool="color-pairing"] .tool-cell {
+  --color-pairing-cell-ink: var(--color-pairing-fg, var(--text-primary));
+  --color-pairing-cell-ground: var(--color-pairing-bg, var(--background-primary));
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-xl);
+  min-width: 0;
+  padding: var(--space-3xl);
+  background-color: var(--color-pairing-cell-ground);
+  color: var(--color-pairing-cell-ink);
+}
+
+[data-tool="color-pairing"] .tool-cell[data-variant="inverted"] {
+  --color-pairing-cell-ink: var(--color-pairing-bg, var(--background-primary));
+  --color-pairing-cell-ground: var(--color-pairing-fg, var(--text-primary));
+}
+
+[data-tool="color-pairing"] .tool-cell[data-cell="title"] { grid-area: title; }
+[data-tool="color-pairing"] .tool-cell[data-cell="glyph"] { grid-area: glyph; align-items: center; }
+[data-tool="color-pairing"] .tool-cell[data-cell="icons"] { grid-area: icons; }
+[data-tool="color-pairing"] .tool-cell[data-cell="paragraph"] { grid-area: paragraph; }
+
+[data-tool="color-pairing"] .tool-cell p {
+  margin: 0;
+  color: inherit;
+}
+
+/* Large text: the title token, never under its 24px floor, which is
+   WCAG's own line for large text. */
+[data-tool="color-pairing"] .tool-cell-title {
+  max-width: 16ch;
+  font-size: var(--title-size);
+  font-weight: var(--title-weight);
+  line-height: var(--title-leading);
+  letter-spacing: var(--title-tracking);
+}
+
+/* Normal text: the body size. */
+[data-tool="color-pairing"] .tool-cell-body {
+  max-width: 36ch;
+  font-size: var(--body-size);
+  font-weight: var(--body-weight);
+  line-height: var(--body-leading);
+}
+
+/* The default filled button in the cell's pair: its ink as the fill, its
+   ground as the label, so the label reads at the pair's ratio and the fill
+   against the cell is the graphics test. Set on the button, which declares
+   its own tokens; later than .button:hover at the same specificity, so a
+   hover never repaints the specimen. */
+[data-tool="color-pairing"] .tool-cell .button {
+  --button-color: var(--color-pairing-cell-ink);
+  --button-text-color: var(--color-pairing-cell-ground);
+  align-self: flex-start;
+}
+
+/* Large text at its largest: one ampersand in the brand's tertiary face,
+   centred in the inverted cell. A fixed size, not a role token: it is a
+   specimen that must stay large text whatever a brand retunes its roles to. */
+[data-tool="color-pairing"] .tool-glyph {
+  font-family: var(--font-tertiary);
+  font-size: var(--color-pairing-glyph-size);
+  line-height: var(--line-height-s);
+}
+
+/* Graphics: the icons centred in the cell. */
+[data-tool="color-pairing"] .tool-icons {
+  --icon-size: var(--color-pairing-icon-size);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xl);
+}
+
+/* Normal text, a step up from the body copy, as a paragraph reads in a
+   longer piece: 20px is still under WCAG's 24px line for large text. */
+[data-tool="color-pairing"] .tool-cell-text {
+  max-width: 48ch;
+  font-size: var(--font-l);
+  line-height: var(--line-height-l);
+}
+
+/* One column: the icons at the size that keeps them on one row of a
+   phone, so the specimens push the dock no further down than they must. */
+@container tool-specimen (inline-size < 30rem) {
+  [data-tool="color-pairing"] .tool-icons {
+    --icon-size: var(--icon-size-l);
+  }
+
+  /* The last cell in one column, under the dock toggle in the preview's
+     corner: its foot is kept clear for it. */
+  [data-tool="color-pairing"] .tool-cell[data-cell="icons"] {
+    padding-block-end: var(--space-4xl);
+  }
+}
+
+/* A narrower preview: tighter cells, and the large specimens come down,
+   capped with min() so the title never rises above its own token's step
+   (--title-size is already 24px on a phone). Both stay large text. */
+@container tool-specimen (inline-size < 48rem) {
+  [data-tool="color-pairing"] .tool-cell {
+    padding: var(--space-xl);
+  }
+
+  [data-tool="color-pairing"] .tool-cell-title {
+    font-size: min(var(--title-size), var(--font-4xl));
+  }
+
+  [data-tool="color-pairing"] .tool-glyph {
+    font-size: calc(var(--font-10xl) * 3);
+  }
+}
+
+/* One column: the ampersand halves, so its cell is not a screen tall. */
+@container tool-specimen (inline-size < 30rem) {
+  [data-tool="color-pairing"] .tool-glyph {
+    font-size: calc(var(--font-10xl) * 2);
+  }
+}
+
+/* A short window, while the canvas is the window (from 960px of content):
+   placement reads the content's width, not the window's height, and at
+   800px tall the preview is about 667px under the nav and the bar, where
+   the 2×2's min-content rows at the full inset (about 630px at 1280 wide)
+   come close enough to overrun. Tighter there; below 960px the page
+   scrolls and the full inset stays. */
+@container main-content (min-width: 960px) {
+  @media (max-height: 50rem) {
+    [data-tool="color-pairing"] .tool-cell {
+      gap: var(--space-l);
+      padding: var(--space-xl);
+    }
+
+    [data-tool="color-pairing"] .tool-glyph {
+      font-size: calc(var(--font-10xl) * 3);
+    }
+  }
+}
+
+/* -- Toggle ink --
+   The dock toggle sits in the preview's bottom-right corner: over the
+   paragraph, the plain pair, in the grid; over the icons, the inverted pair,
+   in one column. It takes that cell's verdict ink, so it holds on a failing pair
+   (WCAG 1.4.11). Set on the toggle itself, which reads --tool-preview-ink
+   (tools.css): a container query cannot style its own container. Its focus
+   ring takes the same ink rather than the system's --input-focus, the page
+   ink, which would vanish on a dark cell. */
+[data-tool="color-pairing"] .tool-specimen .tool-dock-toggle {
+  --tool-preview-ink: var(--color-pairing-verdict-ink-inverted, var(--text-primary));
+}
+
+@container tool-specimen (inline-size >= 30rem) {
+  [data-tool="color-pairing"] .tool-specimen .tool-dock-toggle {
+    --tool-preview-ink: var(--color-pairing-verdict-ink, var(--text-primary));
+  }
+}
+
+[data-tool="color-pairing"] .tool-specimen .tool-dock-toggle:focus-visible {
+  outline-color: var(--tool-preview-ink);
+}
+
+/* ------ CONTRAST ------ */
+
+/* The pinned section holds a fixed-length verdict, not a growing list: its
+   floor is the ratio and five rows, so it never scrolls inside itself while
+   the notes are closed. */
+[data-tool="color-pairing"] .tool-panel[data-pinned] {
+  --tool-panel-pinned-max: max(40%, 20rem);
+}
+
+[data-tool="color-pairing"] .tool-ratio-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-m);
+  margin: 0;
+}
+
+/* The term reads as a caption, the Form caption's look (design-system.css,
+   label[data-variant="caption"]): it names a readout, not a control, so it
+   is a <dt>, not a label. */
+[data-tool="color-pairing"] .tool-ratio-row > dt {
+  font-size: var(--font-s);
+  font-style: normal;
+  font-weight: var(--font-weight-regular);
+  color: var(--text-primary);
+}
+
+[data-tool="color-pairing"] .tool-ratio {
+  margin: 0;
+  padding: 0;
+  /* Tabular figures on the number only: this face spaces its word gaps
+     tabular too, which opens up the check names if applied wider. */
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-4xl);
+  line-height: var(--line-height-s);
+  white-space: nowrap;
+}
+
+/* A bare table: no rules, no header row. */
+[data-tool="color-pairing"] .tool-checks {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+[data-tool="color-pairing"] .tool-checks th,
+[data-tool="color-pairing"] .tool-checks td {
+  padding: 0 var(--space-xs);
+  font-size: var(--font-s);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-l);
+  text-align: left;
+  white-space: nowrap;
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+}
+
+[data-tool="color-pairing"] .tool-checks th:first-child,
+[data-tool="color-pairing"] .tool-checks td:first-child {
+  padding-left: 0;
+}
+
+[data-tool="color-pairing"] .tool-checks td:last-child {
+  padding-right: 0;
+  text-align: right;
+}
+
+/* The info button sits beside its check's name (owner, 2026-11-09), as
+   the Format Library's layer rows put it beside the layer's name. */
+[data-tool="color-pairing"] .tool-checks th .tool-check-note {
+  margin-inline-start: var(--space-xs);
+}
+
+/* The header row carries only hidden text, so it takes no height. */
+[data-tool="color-pairing"] .tool-checks thead th {
+  padding: 0;
+}
+
+/* A check's note is a Dropdown content panel behind its info button
+   (owner, 2026-11-09). The dock clips what crosses its sides, so the note
+   is anchored to the whole check row rather than the button, and spans it.
+   The panel's text wraps; the table's cells do not. */
+[data-tool="color-pairing"] .tool-checks tbody tr {
+  position: relative;
+}
+
+[data-tool="color-pairing"] .tool-checks .tool-check-note {
+  position: static;
+}
+
+/* The Contrast section is pinned and its body scrolls on its own, which
+   clips a note opened from the last checks. While one is open the body
+   lets it hang over the section below (tools.css raises the section).
+   Matches tools.css's pinned-body rule (Docks) so it outranks it. On a
+   window short enough for the body to be scrolled, opening a note resets
+   that scroll: an accepted cost, as the body rarely scrolls. */
+[data-tool="color-pairing"] .tool-canvas > .tool-dock > .tool-panels.accordion > .tool-panel[data-pinned] .tool-panel-body:has(.tool-check-note.is-open) {
+  overflow: visible;
+}
+
+[data-tool="color-pairing"] .tool-checks .tool-check-note > .dropdown-menu {
+  left: 0;
+  right: 0;
+  width: auto;
+  max-width: none;
+  white-space: normal;
+  text-align: left;
+}
+
+/* The stamp: the page's text colour as the ground, its background as the
+   word. Fixed, not the pair: the result is the word and the mark, and the
+   dock is not painted in the pair. */
+[data-tool="color-pairing"] .tool-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-s);
+  border-radius: var(--radius-detail);
+  background-color: var(--text-primary);
+  color: var(--background-primary);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-m);
+}
+[data-tool="color-pairing"] .tool-stamp-mark {
+  --icon-size: var(--color-pairing-stamp-icon);
+  display: none;
+}
+
+[data-tool="color-pairing"] .tool-stamp[data-result="pass"] .tool-stamp-mark[data-mark="pass"],
+[data-tool="color-pairing"] .tool-stamp[data-result="fail"] .tool-stamp-mark[data-mark="fail"] {
+  display: inline-flex;
+}
+
+/* ------ STYLE: COLOUR GRIDS ------ */
+
+/* Swap sits in the Style header as a .tool-panel-action, where a section
+   reset sits (tools.css, Section reset). */
+
+/* The pairs and both grids, one size container, so 100cqi below is the
+   section's content width. A wrapper inside the body, not the body itself:
+   size containment makes a stacking context, and on the body that would
+   trap the chips' tooltips under the next section. */
+[data-tool="color-pairing"] .tool-colours {
+  container: tool-colours / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+/* The chip size and hue-column gap, declared once for every grid in the
+   section so their columns line up: one chip per hue across the width, never
+   under --color-pairing-chip-min or over --color-pairing-chip-max. Set on
+   the children: 100cqi resolves against the nearest size container.
+   --color-pairing-hues is the brand's hue count: color-pairing.js sets it on
+   the tool from bdColor.HUES (brand.json colours.hues). Nine, the engine's,
+   until it runs. */
+[data-tool="color-pairing"] {
+  --color-pairing-hues: 9;
+  /* The narrow grid's rows: a row per hue and the off tones'. Set beside
+     the count by color-pairing.js, as a whole number: calc() as a repeat()
+     count or a grid line isn't safe in every engine. */
+  --color-pairing-narrow-rows: 10;
+}
+
+[data-tool="color-pairing"] .tool-colours > * {
+  --chip-colour-size: clamp(var(--color-pairing-chip-min), calc((100cqi - (var(--color-pairing-hues) - 1) * var(--color-pairing-chip-gap)) / var(--color-pairing-hues)), var(--color-pairing-chip-max));
+  --chip-colour-check: calc(var(--chip-colour-size) / 2);
+  --color-pairing-col-gap: clamp(var(--color-pairing-chip-gap), calc((100cqi - var(--color-pairing-hues) * var(--chip-colour-size)) / (var(--color-pairing-hues) - 1)), var(--color-pairing-col-gap-max));
+}
+
+[data-tool="color-pairing"] .tool-colour-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+/* -- Colour grids --
+   .tool-chips is the grid; the chip group inside it takes every
+   row and column as a subgrid, so its chips land on the same tracks. The
+   group stays a real box: display: contents would be simpler and is
+   still dropped from the accessibility tree by some engines.
+
+   A column per hue, a row per step, darkest at the top, then the extra row
+   for the off tones and the custom colour. The DOM is hue by hue either
+   way, so the arrow keys walk one hue before the next. */
+[data-tool="color-pairing"] .tool-chips {
+  --color-pairing-cols: var(--color-pairing-hues);
+  --color-pairing-rows: 5;
+  display: grid;
+  grid-template-columns: repeat(var(--color-pairing-cols), var(--chip-colour-size));
+  grid-template-rows: repeat(var(--color-pairing-rows), var(--chip-colour-size));
+  column-gap: var(--color-pairing-col-gap);
+  row-gap: var(--color-pairing-chip-gap);
+}
+
+[data-tool="color-pairing"] .tool-chip-group {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  grid-template-columns: subgrid;
+  grid-template-rows: subgrid;
+}
+
+[data-tool="color-pairing"] .tool-chip {
+  grid-column: var(--hue);
+  grid-row: var(--step);
+}
+
+[data-tool="color-pairing"] .tool-chip[data-row="extra"] {
+  grid-column: var(--pos);
+  grid-row: 5;
+}
+
+/* -- Pairs: split chips --
+   The system's split chip (data-split, cms/chip.md): the darker of the two
+   colours is --chip-fill, the lighter --chip-fill-end. The script assigns
+   them; nothing here paints. A column per hue on the grids' chip size and
+   gap, so every row lines up with the hue columns; more pairs take more rows.
+   The hue count, not auto-fill: the gap is worked out so exactly that many
+   fill the width, and auto-fill can round it down by one. */
+[data-tool="color-pairing"] .tool-pairs {
+  display: grid;
+  grid-template-columns: repeat(var(--color-pairing-hues), var(--chip-colour-size));
+  column-gap: var(--color-pairing-col-gap);
+  row-gap: var(--color-pairing-chip-gap);
+}
+
+/* 20rem is nine chips at the 2rem floor and eight gaps, 9 x 2rem + 8 x
+   0.25rem: kept in step with --color-pairing-chip-min and -chip-gap by
+   hand, because a container query cannot read a custom property. Below it
+   — a 320px phone, where the dock stacks under the preview — the grid turns
+   a quarter, a row per hue, at full size, spread across the section. It is
+   the engine's nine-hue width: a brand with fewer hues turns a little sooner
+   than it needs to, which still fits. */
+@container tool-colours (inline-size < 20rem) {
+  [data-tool="color-pairing"] .tool-chips {
+    --color-pairing-cols: 4;
+    --color-pairing-rows: var(--color-pairing-narrow-rows);
+    --chip-colour-size: var(--color-pairing-chip-max);
+    --chip-colour-check: calc(var(--chip-colour-size) / 2);
+    column-gap: var(--color-pairing-chip-gap);
+    justify-content: space-between;
+  }
+
+  [data-tool="color-pairing"] .tool-pairs {
+    --chip-colour-size: var(--color-pairing-chip-max);
+    --chip-colour-check: calc(var(--chip-colour-size) / 2);
+    grid-template-columns: repeat(auto-fill, var(--chip-colour-size));
+    justify-content: space-between;
+  }
+
+  [data-tool="color-pairing"] .tool-chip {
+    grid-column: var(--step);
+    grid-row: var(--hue);
+  }
+
+  [data-tool="color-pairing"] .tool-chip[data-row="extra"] {
+    grid-row: var(--color-pairing-narrow-rows);
+  }
+}
+
+/* The picker and hex field under each grid, and its error line. */
+[data-tool="color-pairing"] .tool-custom {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+[data-tool="color-pairing"] .tool-custom > .form-error {
+  margin: 0;
+}
+
+/* ------ EXPORT ------ */
+
+/* The CSS readout, the section's width, never resized sideways. The face
+   and ground are .tool-code (tools.css). */
+[data-tool="color-pairing"] .tool-css-field {
+  width: 100%;
+}
+
+/* -- Forced colours --
+   The chips keep their paint, with the bento (above): a grid of flattened
+   swatches offers no choice. The core chip flattens every colour swatch to
+   Canvas in this mode, so the paint is restated here, one class higher; the
+   selected chip keeps the system's Highlight ring. The dock toggle sits on
+   painted cells the OS no longer repaints, so it carries its own system
+   ground, or its system ink could vanish on a pale cell — and once the dock
+   is folded away it is the only way back. */
+@media (forced-colors: active) {
+  [data-tool="color-pairing"] .chip[data-variant="colour"].tool-chip .chip-swatch {
+    background-color: var(--chip-fill);
+  }
+
+  [data-tool="color-pairing"] .chip[data-variant="colour"][data-split].tool-chip .chip-swatch {
+    background-image: linear-gradient(to right, transparent 50%, var(--chip-fill-end) 50%);
+  }
+
+  [data-tool="color-pairing"] .chip[data-variant="colour"][data-split].tool-chip .chip-swatch:dir(rtl) {
+    background-image: linear-gradient(to left, transparent 50%, var(--chip-fill-end) 50%);
+  }
+
+  [data-tool="color-pairing"] .tool-specimen .tool-dock-toggle {
+    border: var(--border-s) solid ButtonText;
+    background-color: ButtonFace;
+    color: ButtonText;
+  }
+
+  [data-tool="color-pairing"] .tool-specimen .tool-dock-toggle:focus-visible {
+    outline-color: Highlight;
+  }
+}

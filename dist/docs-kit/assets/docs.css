@@ -1850,10 +1850,15 @@ body.sidebar-collapsed .site-sidebar .sidebar-nav-section-toggle[data-tooltip]::
    would outgrow the height the subsection's pin offset is calculated from.
    Subsection labels keep wrapping: a taller subsection row only overlaps
    its own links a little, and truncating would hide text from readers on
-   large type (WCAG 1.4.4). Below 25em nothing pins, so labels wrap again. */
+   large type (WCAG 1.4.4). Below 25em nothing pins, so labels wrap again.
+   The toggle's line-height is 1, so the hidden overflow would clip a
+   descender ("g" in Settings): the padding gives it room and the negative
+   margin takes it back, so the row stays the height the pin expects. */
 @media not all and (max-height: 25em) {
   .sidebar-nav-section-toggle > span:not(.sidebar-nav-toggle-icon, .svg-icn) {
     min-inline-size: 0;
+    padding-block: 0.2em;
+    margin-block: -0.2em;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -2583,7 +2588,7 @@ body[data-role="guest"] .header-search-btn {
  * lays itself out, so it has nothing to cover the header with and keeps the
  * component's default flow. docked-header.js puts the component's .is-covered
  * state on once the cover hides the header completely, so it stops painting
- * and its drawing stops playing. barba-init.js holdStickyElements pins the docked
+ * and its drawing stops playing. The router's holdStickyElements (barba-docs.js) pins the docked
  * header through a page transition along with every other sticky element,
  * but only while some of it is in view: once the cover has passed over it,
  * pinning it would leave it live under the leaving page (isCoveredDockedHeader). */
@@ -3524,6 +3529,32 @@ main > .page-header:has(~ .docs-content-grid) ~ .page-nav {
    .login-* rules that lived here were retired when auth/login.html and
    auth/account.html moved onto it. Only page chrome remains below. */
 
+/* --- No-JavaScript sign-out (noscriptSignOut in generate-docs.js) --- */
+
+/* With no JavaScript the header and its account menu never draw, so the
+   sign-out link stands in a bar of its own where the header would be */
+.noscript-account {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-s) var(--space-m);
+  border-bottom: var(--site-header-border);
+  background: var(--background-primary);
+}
+
+/* A public page's reader is likely signed out: no Sign out to offer */
+body[data-access="public"] .noscript-account {
+  display: none;
+}
+
+/* --- Bare pages (cms/generator/template-bare.html) --- */
+
+/* The skip link lands on main (tabindex="-1"), which takes focus to move the
+   reader into the page, not to be operated: a ring round the whole page
+   reads as a selected control. The next Tab shows the ring on a real one. */
+main.page-content[tabindex="-1"]:focus {
+  outline: none;
+}
+
 /* --- Login Page (standalone /auth/login.html) --- */
 
 .login-page {
@@ -3565,6 +3596,12 @@ main > .page-header:has(~ .docs-content-grid) ~ .page-nav {
 .locked-panel-title > span,
 .locked-panel-description > span {
   display: none;
+}
+
+/* The not-installed page's app name: the Worker swaps it for the name, and
+   at the page's own address the stand-in shows */
+.locked-panel-title > [data-not-installed-app] {
+  display: inline;
 }
 
 .locked-panel[data-locked-level="owner"] #locked-ask {
@@ -4618,4 +4655,35 @@ a.search-result.search-see-all:hover {
   .search-page .search-filters::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* =========================================================================
+   Logo spec figure (cms/logo-spec.md)
+   =========================================================================
+ * A brand logo drawn with its Layout Spec on a guide page, by logo-spec.js
+ * from the logo manifest, so a clear-space figure comes from the same data
+ * as the Logo Tool.
+ *
+ *   .logo-spec                 the figure (its frame: .border .border-faded)
+ *     .logo-spec-stage         the drawing, in the text colour
+ *     .logo-spec-caption       X and the clear space, written by the script
+ */
+
+.logo-spec {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+  margin: 0;
+  padding: var(--space-xl);
+  color: var(--text-primary);
+}
+
+.logo-spec-stage svg {
+  display: block;
+  width: 100%;
+  max-height: 24rem;
+}
+
+.logo-spec[data-logo-spec-state="failed"] .logo-spec-caption {
+  color: var(--status-danger);
 }

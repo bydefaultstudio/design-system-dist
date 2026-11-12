@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.1 */
+/* @bydefaultstudio/design-system v8.0.0 */
 export { Dialog } from './dialog.mjs';
 export type { DialogProps, DialogHideSource } from './dialog.mjs';
 
@@ -38,6 +38,8 @@ export type { ToastType } from './toast.mjs';
 
 export { Rating } from './rating.mjs';
 export type { RatingProps } from './rating.mjs';
+export { Slider } from './slider.mjs';
+export type { SliderProps } from './slider.mjs';
 export { Breadcrumb } from './breadcrumb.mjs';
 export type { BreadcrumbProps, BreadcrumbItem } from './breadcrumb.mjs';
 

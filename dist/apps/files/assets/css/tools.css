@@ -1,0 +1,1891 @@
+/* ------ TOOL STYLES ------ */
+
+/*
+  No .bar-container rules here. The bar's content
+  column is owned by docs-site.css §1 and §1B; an unscoped selector in a tool
+  stylesheet reaches every page that loads it, which is all of them.
+*/
+
+/* ====================================================================
+   TOOL CANVAS
+   The one shape a full-space tool takes: bar, preview, panels, footer.
+   Documented in cms/tool-canvas.md; the bar's own rules are cms/bar.md.
+   New tools are built on docks (Docks, below). Band has had no tool since
+   2026-10-05 and its rules wait to be removed (ROADMAP); the Sidebar
+   layout was removed on 2026-10-13 once its last two tools moved to the
+   end dock.
+
+     .tool-canvas
+       .bar[data-sticky]
+         .bar-content > h1.tool-canvas-title[data-priority="pinned"]
+       .tool-preview[data-ground]
+       .tool-panels
+         section.tool-panel[data-column="end"]
+           .tool-panel-header > h2.tool-panel-title
+           .tool-panel-body
+       .tool-footer
+
+   Two scroll modes, and the width AND height of the window decide which.
+   Below 960px wide or 760px tall the page scrolls: the bar docks under the
+   site header, the preview flows past, the panels stack at their natural
+   height. From 960×760 the canvas is the window: fixed height, the bar
+   pinned, and each panel body scrolling on its own. Height is in the test
+   because a 1280×720 laptop has under 600px beneath the header and bar, and
+   panels that scroll inside that are slivers. tool-canvas.js makes a body
+   that actually overflows focusable, so the keyboard can scroll it.
+
+   Every value here was lifted from world-clock.css and color-pairing.css,
+   which carried the same shell separately (ROADMAP, "Tool CSS repeats
+   itself"). Layer app: every consumer is a By Default OS tool.
+   ==================================================================== */
+
+:root {
+  /* The bar's rendered height at the default density, from its own tokens
+     (design-system.css §41): one control, the padding above and below, and
+     its bottom rule. For anything that docks under the bar — a sticky
+     preview, a scroll margin — so no tool rebuilds the sum. Default density
+     only: the two presets re-point --bar-padding-y on the .bar element,
+     which :root never sees, and regular is a fixed --bar-height besides. No
+     tool uses either. docs-site.css carries the same sum for
+     --scroll-offset; it is docs-site layer and cannot read this one. */
+  --tool-bar-height: calc(var(--bar-control-height) + (2 * var(--bar-padding-y)) + var(--border-s));
+  /* The preview's floor. 16rem at most, less on a short window, and never
+     under 12rem: a preview that grew with the window pushed the panels down
+     for nothing. A tool re-points it on its own .tool-preview. */
+  --tool-preview-height: clamp(12rem, 30vh, 16rem);
+  /* The column a data-width="fixed" panel takes side by side; its sibling
+     fills the rest. Wide enough for a settings panel's fields, chips and a
+     button pair on one line. A tool re-points it on its own .tool-panels. */
+  --tool-panel-width: 28rem;
+  /* Every colour chip in every tool's dock: tool-colour's rows, Colour
+     Pairing's grids (their ceiling) and Layout Specs' palette. One size,
+     so a swatch reads the same from tool to tool. */
+  --tool-colour-chip-size: 2.25rem;
+  /* Artwork grounds and their inks. Fixed in both site themes: a preview
+     shows the artwork's own ground, not the page's, or it lies about the
+     file. No semantic token names a near-white or near-black that does not
+     flip with the theme, so the palette is read here, once, and every tool
+     reads these. */
+  --tool-ground-light: var(--off-white);
+  --tool-ground-dark: var(--neutral-990);
+  --tool-ink-on-light: var(--off-black);
+  --tool-ink-on-dark: var(--off-white);
+  /* The checkerboard: "nothing behind this". Fixed greys, identical in light
+     and dark, or it stops being the convention. ToolPreview.syncInk
+     (tool-canvas.js, CHECKER_DARK_TILE) measures text against the darker
+     tile, so change both together. */
+  --tool-checker-light: #ffffff;
+  --tool-checker-dark: #e0e0e0;
+  --tool-checker: conic-gradient(var(--tool-checker-dark) 25%, var(--tool-checker-light) 0 50%, var(--tool-checker-dark) 0 75%, var(--tool-checker-light) 0);
+}
+
+/* -- Shell --
+   Page-scroll mode is the default: a column at least the window tall, so a
+   short tool's footer still sits at the bottom. No overflow property here —
+   an overflow value would make the shell the scrollport and unstick the bar
+   from the window. */
+.tool-canvas {
+  display: flex;
+  flex-direction: column;
+  /* vh first as the fallback: a browser without dvh (Safari before 15.4)
+     drops the second line and keeps the first. dvh because on a phone vh
+     ignores the retracting browser chrome. */
+  min-height: calc(100vh - var(--top-nav-height));
+  min-height: calc(100dvh - var(--top-nav-height));
+}
+
+/* -- Preview --
+   The band under the bar: the thing being made, centred, at a capped
+   height. Its bottom edge is the same faded rule that divides the panels
+   and closes the footer: one rule weight across the canvas. */
+.tool-preview {
+  /* The captions' and the note's fade; ToolPreview.syncInk reads it. */
+  --tool-preview-caption-fade: 0.8;
+
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tool-preview-height);
+  padding: var(--space-xl);
+  background-color: var(--background-secondary);
+  border-bottom: var(--border-s) solid var(--border-faded);
+}
+
+/* Taller, for a tool whose artwork is the point (a logo, a code, a
+   drawing, a signature): 40vh between 16 and 26rem while the dock is
+   stacked under it. Docked, the preview runs the full height (Docks,
+   placed) and that rule outranks this one. */
+.tool-preview[data-size="tall"] {
+  --tool-preview-height: clamp(16rem, 40vh, 26rem);
+}
+
+/* A panel title takes focus when a keyboard selection sends the reader to
+   it (the Icon Library's and the Asset Library's Details); without this the
+   ring is the UA's, drawn or not by browser. */
+.tool-panel-title:focus-visible {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: var(--focus-offset);
+}
+
+/* The hidden attribute, restated at the weight .is-hidden uses. A tool
+   shows and hides by the attribute, and many of the elements it hides carry
+   a class that sets display — a .button, a flex column, a row drawn with
+   display: contents — which the attribute's own display: none loses to.
+   Each tool had been restating it per element; this is the one rule.
+   !important also defeats hidden="until-found", which no tool uses. */
+.tool-canvas [hidden] {
+  display: none !important;
+}
+
+/* Grounds. light and dark are the non-flipping pair: a preview of artwork
+   shows the artwork's own ground in either site theme, or it lies about the
+   file. The checkerboard is the universal "nothing behind this" — fixed greys
+   for the same reason, and it has to read identically in light and dark or
+   it stops being the convention. Its tiles are --tool-checker-light and
+   -dark (:root, above), not --background-white, so the pair is one fixed
+   thing. 24px because the code it shows is rarely under that. */
+.tool-preview[data-ground="light"] {
+  background-color: var(--tool-ground-light);
+}
+
+.tool-preview[data-ground="dark"] {
+  background-color: var(--background-black);
+}
+
+.tool-preview[data-ground="checker"] {
+  background-color: var(--tool-checker-light);
+  background-image: var(--tool-checker);
+  background-size: 24px 24px;
+}
+
+/* The same three grounds for any element inside a canvas that carries
+   data-ground — a thumbnail, a figure, a preview's picture — so a tool
+   never copies the checkerboard. The greys are the band's, above; change
+   both together. The preview rules above could fold into these.
+
+   Each sets --ground-ink, the colour for anything drawn on the ground (a
+   type icon, a badge), and --overlay-crop-mask, so a Layer Stack crop
+   masks in the ground's own colour and reads as not there. A ground does not follow the site theme, so its ink
+   cannot either: the same two primitives and the same reasoning as
+   --tool-preview-ink (Preview corners, below), which could read this one. */
+.tool-canvas [data-ground="light"] {
+  --overlay-crop-mask: var(--tool-ground-light);
+  --ground-ink: var(--tool-ink-on-light);
+  background-color: var(--tool-ground-light);
+}
+
+.tool-canvas [data-ground="dark"] {
+  --overlay-crop-mask: var(--background-black);
+  --ground-ink: var(--tool-ink-on-dark);
+  background-color: var(--background-black);
+}
+
+.tool-canvas [data-ground="checker"] {
+  --overlay-crop-mask: var(--tool-checker-light);
+  --ground-ink: var(--tool-ink-on-light);
+  background-color: var(--tool-checker-light);
+  background-image: var(--tool-checker);
+  background-size: 24px 24px;
+}
+
+/* Fill: a preview whose artwork paints the whole band — Colour Pairing's
+   bento, the pair edge to edge — and carries its own inset. No padding, at
+   any width, and the one child stretches to fill the band; the artwork keeps
+   its own padding clear of the dock toggle in the corner (Docks, below,
+   reserves no row for it). (0,2,0), so it outranks the stacked padding. */
+.tool-preview[data-fit="fill"] {
+  align-items: stretch;
+  padding: 0;
+}
+
+/* -- Preview corners --
+   A preview band that carries its own readouts (data-layout="corners"): one
+   grid cell, four layers. The stage fills it and holds the artwork; the
+   details — what the file is — sit top left; the options — switches that
+   change only what the band shows — top right; the scale note at the foot,
+   centred. The stage keeps a corner's width clear on BOTH sides and the
+   note's line clear top and bottom, so the artwork is centred on the band
+   and never runs under any of them. The width is reserved, not measured:
+   the note follows the artwork's scale, so a measured width would feed back
+   into the space the artwork gets. On a narrow content area the corners
+   take a row of their own above the artwork (below).
+
+   The ground changes with the artwork's colour, so the ink does too. One ink
+   and one paper feed everything on the band — captions, details, labels,
+   notes and the mono toggles. The tool's script sets data-preview-ink from
+   the ground, and ToolPreview.syncInk (tool-canvas.js) sets the pair inline
+   to the artwork's own colour wherever that reads as text on the ground.
+   Fixed in both site themes, like the grounds: the band is the artwork's,
+   not the page's. Logo Tool and Icon Library. */
+.tool-preview[data-layout="corners"] {
+  --tool-preview-ink: var(--tool-ink-on-light);
+  --tool-preview-paper: var(--tool-ground-light);
+  --tool-preview-corner-width: 10rem;
+  --toggle-mono-ink: var(--tool-preview-ink);
+  --toggle-mono-paper: var(--tool-preview-paper);
+  --input-focus: var(--tool-preview-ink);
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  align-items: stretch;
+  justify-content: stretch;
+  height: var(--tool-preview-height);
+  padding: var(--space-l);
+  color: var(--tool-preview-ink);
+}
+
+.tool-preview[data-layout="corners"][data-preview-ink="light"] {
+  --tool-preview-ink: var(--tool-ink-on-dark);
+  --tool-preview-paper: var(--tool-ground-dark);
+}
+
+/* The box the artwork fits in. height: 100% of its grid area rather than a
+   stretch: Chromium does not treat a stretched grid item's height as
+   definite for its children, so an artwork's max-height: 100% resolved to
+   nothing and a tall one drew at full size, out of the band. A percentage of
+   the grid area is definite. The padding is the corners' and the note's
+   reservation. */
+.tool-stage {
+  display: flex;
+  grid-area: 1 / 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  padding: var(--space-3xl) calc(var(--tool-preview-corner-width) + var(--space-l));
+}
+
+/* -- Artwork --
+   The thing a tool makes, drawn in the stage at its own export size and
+   scaled down to fit when it does not: a logo, a QR code, a cleaned SVG.
+   The script gives only --tool-artwork-width (the true width, in px) and
+   --tool-artwork-ratio (width over height); the width is then the smallest
+   of three, the true width, the stage's width and the stage's height times
+   the ratio, and the height follows from the ratio. So it fits both axes at
+   once and never changes shape (max-width plus max-height cannot: when both
+   bind, each axis clamps on its own, and the Logo Tool's avatar measured
+   504 x 755). data-fill drops the true width, so it is as large as the
+   stage allows; vector artwork loses nothing scaled up. The stage becomes
+   a size container so cqw and cqh are its content box. Where cq units are
+   missing it fits the width only: a declaration holding var() is never
+   dropped at parse time, so the fallback is the default and the cq rule
+   the @supports one. Lifted from three copies, one of which had the
+   fallback the wrong way round (2026-10-13). */
+.tool-stage:has(> .tool-artwork) {
+  container-type: size;
+}
+
+.tool-artwork {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(var(--tool-artwork-width, 100%), 100%);
+  height: auto;
+  aspect-ratio: var(--tool-artwork-ratio, 1);
+}
+
+.tool-artwork[data-fill] {
+  width: 100%;
+}
+
+@supports (width: 1cqw) {
+  .tool-artwork {
+    width: min(var(--tool-artwork-width, 100%), 100cqw, 100cqh * var(--tool-artwork-ratio, 1));
+  }
+
+  .tool-artwork[data-fill] {
+    width: min(100cqw, 100cqh * var(--tool-artwork-ratio, 1));
+  }
+}
+
+/* The two corners. A fixed width rather than a hug — the stage reserves
+   it — so a long name wraps instead of growing into the artwork. Later in
+   source than the stage, so they paint above it in the shared cell; a
+   positioned .tool-artwork would paint over them, but the stage's padding
+   keeps it clear of the corners wherever cq units fit it. */
+.tool-details,
+.tool-options {
+  display: flex;
+  flex-direction: column;
+  grid-area: 1 / 1;
+  align-self: start;
+  width: var(--tool-preview-corner-width);
+  max-width: 100%;
+}
+
+/* Top left: what the file is, a line a fact. A step below the switches'
+   labels — facts to read, not controls. */
+.tool-details {
+  justify-self: start;
+  gap: var(--space-xs);
+  font-size: var(--font-xs);
+  line-height: var(--line-height-m);
+}
+
+.tool-details > p {
+  margin: 0;
+}
+
+.tool-details > p:empty {
+  display: none;
+}
+
+/* Top right: switches, right-aligned on the side they sit on. Each is a
+   .tool-option — the switch, then the note that says why it is
+   disabled. */
+.tool-options {
+  justify-self: end;
+  align-items: flex-end;
+  gap: var(--space-s);
+  text-align: right;
+}
+
+.tool-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2xs);
+}
+
+/* Faded only under the same measured gate as the captions: an adopted ink
+   that clears AA at full strength can fall under it at 80%. */
+.tool-note {
+  margin: 0;
+  font-size: var(--font-s);
+  color: var(--tool-preview-ink);
+}
+
+.tool-preview[data-caption-fade] .tool-note {
+  opacity: var(--tool-preview-caption-fade);
+}
+
+.tool-note:empty,
+.tool-note[hidden] {
+  display: none;
+}
+
+.tool-options .form-toggle label {
+  color: var(--tool-preview-ink);
+}
+
+/* The component fades a disabled switch's label to --text-faded, which is
+   the page's ink and vanishes on a dark ground; fade the band's own. */
+.tool-options .form-toggle:has(> input:disabled) label {
+  color: color-mix(in srgb, var(--tool-preview-ink) 55%, transparent);
+}
+
+/* Bottom centre: whether the artwork is shown at its real size. */
+.tool-scale {
+  grid-area: 1 / 1;
+  align-self: end;
+  justify-self: center;
+  margin: 0;
+  font-size: var(--check-label-font);
+  line-height: var(--line-height-m);
+  white-space: nowrap;
+}
+
+.tool-scale:empty {
+  display: none;
+}
+
+/* A corner's title is a caption on the artwork, not a panel title: the
+   label scale, uppercase, the way Colour Pairing captions its preview. The
+   options' is an h2, so the outline keeps it; the details' is a paragraph,
+   because a panel already owns that heading. The body face and none of the
+   heading margins. Faded like Pairing's captions, and only where the faded
+   ink still clears AA on the ground: ToolPreview.syncInk measures it and
+   sets data-caption-fade on the band. */
+.tool-caption {
+  margin: 0;
+  color: var(--tool-preview-ink);
+  font-family: inherit;
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
+  line-height: var(--label-leading);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.tool-preview[data-caption-fade] .tool-caption {
+  opacity: var(--tool-preview-caption-fade);
+}
+
+/* Keyed on the docs content area's width (the main-content container), not
+   the window's: the sidebar opens and closes on its own, so a window width
+   says nothing about how much room the band has. Below 700px of content the
+   reservation on both sides would leave the artwork too little, so the
+   corners take a row of their own above it, side by side, each hugging its
+   contents and taking at most half; the stage keeps only the note's
+   reservation at its foot. */
+@container main-content (max-width: 699.98px) {
+  .tool-preview[data-layout="corners"] {
+    grid-template: auto minmax(0, 1fr) / minmax(0, 1fr);
+    row-gap: var(--space-m);
+    padding: var(--space-m);
+  }
+
+  .tool-stage {
+    grid-area: 2 / 1;
+    padding: 0 0 var(--space-xl);
+  }
+
+  .tool-details,
+  .tool-options {
+    width: auto;
+    max-width: calc(50% - var(--space-s));
+  }
+
+  .tool-scale {
+    grid-area: 2 / 1;
+  }
+}
+
+/* -- Panels --
+   A grid taking the rest of the height: one column, two up from 769px, a
+   faded rule between. Clipped sideways only, so a tooltip on a chip at the
+   edge cannot widen the page while open dropdowns still rise over the rows
+   above. */
+.tool-panels {
+  display: grid;
+  flex: 1 0 auto;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  background-color: var(--background-primary);
+  overflow-x: clip;
+}
+
+/* The header and body carry all the padding — the panel has none and no
+   gap — so the header's bottom edge is exactly where a scrolling body
+   starts, and the rule it draws when scrolled (below) sits on that seam
+   rather than floating in a gap. They carry the inline padding too, so a
+   scrolling body's scrollbar sits at the panel's edge and not inside its
+   padding. No bottom padding: in fixed mode the body scrolls to the
+   panel's foot, rather than stopping short of it above an empty strip. */
+.tool-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tool-panel + .tool-panel {
+  border-top: var(--border-s) solid var(--border-faded);
+}
+
+/* A panel holding an open dropdown rises over the next one down, so its
+   panel is never cut by a sibling that comes later in the grid. z-index 7:
+   one over a docked section's sticky header (6, Docks), which belongs to
+   the next section and would otherwise paint over a panel hanging into it
+   (found 2026-11-09 with the Format Library's layer notes). */
+.tool-panel:has(.dropdown.is-open) {
+  position: relative;
+  z-index: 7;
+}
+
+/* And a docked section lets an open dropdown show past its bottom edge: the
+   accordion clips its inner box so it can animate its height, which would
+   cut off a panel opened from the section's last row. */
+.tool-panel .accordion-inner:has(.dropdown.is-open) {
+  overflow: visible;
+}
+
+/* Title and its info dropdown on one row. The header holds the room above
+   the body (--space-l), which the panel's gap used to.
+
+   .is-scrolled on the panel (tool-canvas.js) means content is passing under
+   the header: the rule appears then and only then. It is drawn by the row
+   directly above the body — the header, or a tool's own fixed row between
+   the two (Icon Library's filters) — since that is the seam the content
+   passes under. An inset shadow, not a border, so it costs no height and
+   the body does not shift by a pixel as it appears. Forced colours drop
+   shadows, and the header is still set off by the title above the
+   controls. */
+.tool-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-m);
+  padding: var(--space-xl) var(--space-xl) var(--space-l);
+}
+
+.tool-panel.is-scrolled > :has(+ .tool-panel-body, + .accordion-content) {
+  box-shadow: inset 0 calc(var(--border-s) * -1) 0 var(--border-faded);
+}
+
+.tool-panel-title,
+.tool-canvas-title {
+  margin: 0;
+  font-size: var(--font-l);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-m);
+  letter-spacing: var(--letter-spacing-xs);
+}
+
+/* -- Section reset --
+   A button in a panel's header that puts that panel's settings back to
+   their defaults, and nothing else; Reset all in the bar's menu is the
+   start-over. Always there, disabled while the panel is at its defaults,
+   so it sits in the same place on every visit. The tool decides what
+   "changed" means and keeps the disabled state; tool-canvas.js carries the
+   click to the tool and the focus off a button that has just disabled
+   itself.
+
+   In a Band panel the header is a row, so the button sits at its end. In a
+   section the row is the heading's own button, which cannot hold another,
+   so the reset is its sibling, laid over the row just before the chevron:
+   the chevron's 24px (the Accordion's own size) and a gap in from the
+   row's inline padding. */
+.tool-panel-heading {
+  margin: 0;
+}
+
+.tool-panel-action {
+  flex: 0 0 auto;
+}
+
+/* z-index 11: one over the heading button's own 10 (design-system.css,
+   Accordion), which spans the row and would otherwise take the click. Local:
+   the sticky header is already a stacking context. */
+.tool-panel.accordion-item > .tool-panel-header > .tool-panel-action {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: calc(var(--accordion-padding-x) + 24px + var(--space-s));
+  z-index: 11;
+  transform: translateY(-50%);
+}
+
+/* A disabled .button takes no pointer (design-system.css), so the tooltip
+   never showed at the defaults and a click fell through to the heading
+   behind it and closed the section. A disabled button still fires no
+   click, so taking the pointer back only restores the hover and the
+   tooltip. */
+.tool-panel-action:disabled {
+  pointer-events: auto;
+  cursor: default;
+}
+
+/* The pointer is back for the tooltip only: no hover wash, which would
+   say the button can be pressed. */
+.tool-panel-action:disabled:hover {
+  background-color: transparent;
+}
+
+/* The tool's name, as the page's h1, leading the bar. Pinned there
+   (data-priority="pinned"), so bar.js never moves it into the overflow;
+   the bar is one row, so a name too long for a narrow window truncates
+   rather than wrapping. Same type as the panel titles under it. */
+.tool-canvas-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* -- Colour --
+   The tools' one colour control, built by tool-colour.js into a
+   div.tool-colour (cms/tool-canvas.md, Colour): a caption, the brand palette
+   as colour chips, then the picker and hex field that always show the chosen
+   value, and its error line. A Pairs row is the same shape with split chips
+   and no field. Chips at the Icon Library's size, smaller than the
+   component's default: a palette row beside a column of controls. */
+.tool-colour {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+.tool-colour > .form-error {
+  margin: 0;
+}
+
+.tool-colour .chip-group {
+  --chip-colour-size: var(--tool-colour-chip-size);
+  --chip-colour-check: calc(var(--chip-colour-size) / 2);
+}
+
+/* None: the checkerboard, the same "nothing behind this" as the preview's
+   ground (Grounds, above), and its check reads as on white. */
+.chip[data-none] {
+  --chip-fill: var(--tool-checker-light);
+}
+
+.chip[data-none] .chip-swatch {
+  background-image: var(--tool-checker);
+  background-size: 12px 12px;
+}
+
+/* -- Hints --
+   Every note under a control in a section — what it means, why it is
+   disabled, the note behind an ⓘ — is .form-hint, so help reads the same
+   in every tool. The section's gap spaces it, so no margin of its own, and
+   an empty one (a note a script fills) takes no gap. Never a live region:
+   those collapse without display: none (The actions). */
+.tool-panel-body .form-hint {
+  margin: 0;
+}
+
+.tool-panel-body .form-hint:empty {
+  display: none;
+}
+
+/* A note that is also the section's status region (role="status")
+   collapses without display: none. A region absent from the accessibility
+   tree when its text is written does not announce, and unhiding it after
+   is not a content change. So it is clipped, out of flow (a collapsed
+   item in flow still spends its gap), with .visually-hidden's
+   declarations, until text arrives and :empty stops matching. Write it
+   with '' to clear, never ' ': :empty also matches whitespace only. */
+.tool-panel-body .form-hint[role="status"]:empty {
+  display: block;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* -- Code --
+   Any field that holds code — a pasted SVG, a cleaned result, an embed
+   snippet, the CSS for a pair, a signature's HTML — on the code block's
+   ground (design-system.css §23, pre), in the mono face at the small size.
+   One class so every tool's code reads as code, the same everywhere. Its
+   height is its rows and it never resizes (owner, 2026-10-13): the field
+   is a readout or an input of a known size, not a place to make room. */
+.tool-code {
+  font-family: var(--font-quaternary);
+  font-size: var(--font-s);
+  background-color: var(--background-secondary);
+  resize: none;
+}
+
+/* -- Size --
+   An export size: a number field and a row of presets, in the Export
+   section of every tool whose file has a pixel size (cms/tool-canvas.md,
+   The export panel). The field and the presets share a line while both fit
+   and wrap to two when they do not, so no breakpoint has to guess the
+   panel's width. The presets' grow factor dwarfs the field's: on a shared
+   line the presets take the spare width and the field keeps its own; alone
+   on a line, each takes the whole of it, and the field's input grows with
+   it so the number sits centred. A size that matches no preset leaves no
+   segment checked. Lifted from the Logo Tool's width row when the Icon
+   Library and the QR Code Generator took the same control (2026-10-04). */
+.tool-size {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-s);
+}
+
+.tool-size > .number-input {
+  flex: 1 1 auto;
+}
+
+.tool-size > .number-input input[type="number"] {
+  flex: 1 1 auto;
+}
+
+.tool-size > .segmented-control {
+  flex: 999 1 auto;
+}
+
+/* The bottom padding is the body's, not the panel's: inside the scroll
+   container in fixed mode, so the last control scrolls clear of the
+   panel's foot rather than the scroll stopping above an empty strip; and
+   stacked, it is the room between one panel's last control and the rule
+   over the next. */
+/* Positioned so the body is the containing block of anything absolute in
+   it. A scrolling body that is not clips only what is positioned against
+   something inside it: a .visually-hidden label in a long list escaped,
+   sat at its place below the fold and made the whole page scroll by the
+   overflow (Artwork Layers, now Layout Specs, 2026-10-02). */
+.tool-panel-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-l);
+  padding-inline: var(--space-xl);
+  padding-bottom: var(--space-xl);
+  min-width: 0;
+}
+
+/* The ring a scrolling body gets once tool-canvas.js makes it focusable.
+   Inset, because the body's box runs to the panel's edge and an outset ring
+   would be clipped by the neighbour. */
+.tool-panel-body:focus-visible {
+  outline: var(--border-m) solid var(--border-control);
+  outline-offset: calc(var(--border-m) * -1);
+}
+
+/* -- Filters --
+   The bar of filters over a collection: a search, then whatever narrows it
+   (categories, a row of chips or tags). A column on one inset line, which
+   a full-bleed child (a search band, a scroller) reaches past with the
+   inset as its own padding. The inset narrows with the panels' padding
+   when stacked (Stacked, below). Each tool sets its own gap, padding and
+   rule on [data-tool]; the inset is the shared part. */
+.tool-filters {
+  --tool-filters-inset: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+.tool-filters > * {
+  min-width: 0;
+}
+
+/* -- Browse --
+   A collection to browse, laid out as the Asset Library first drew it
+   (owner's Figma, 2026-10-08; owner, 2026-10-07): the work is a column on
+   the page surface, the filters over it (a full-width search band on its
+   own faint ground, then the rest on the inset line, one rule under them),
+   then the region the grid scrolls in, four tiles across at most. Shared
+   by the Asset Library and the Format Library (2026-11-09, Format Library
+   list row 7); each keeps only what is its own on [data-tool]. Scoped to
+   .tool-work, so a tool with a search but no browse column (the Icon
+   Library) keeps its own layout. */
+.tool-preview.tool-work {
+  position: relative;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 0;
+  background-color: var(--background-primary);
+}
+
+.tool-work .tool-filters {
+  gap: var(--space-m);
+  padding: 0 var(--tool-filters-inset) var(--space-m);
+  border-bottom: var(--border-s) solid var(--border-faded);
+}
+
+.tool-work .tool-search {
+  margin-inline: calc(-1 * var(--tool-filters-inset));
+  padding-inline: var(--tool-filters-inset);
+  background-color: var(--bg-faded-3);
+  border-bottom: var(--border-s) solid var(--border-faded);
+}
+
+/* The search row: the field opened out, its box gone, the text at the
+   large size and the icon on the inset line. Tokens only (§17 Rule 3); the
+   input ground goes too, since dark mode lifts it into a slab light mode
+   does not have. The band is the field's edge, so the band carries the
+   focus ring, inside its own edges; on the inset field it would cut
+   across the search icon. */
+.tool-work .tool-search .field {
+  --input-background: transparent;
+  --field-border: transparent;
+  --field-radius: 0;
+  --field-padding-x: 0;
+  --field-font: var(--font-2xl);
+  --field-icon-size: var(--icon-size-m);
+  --field-focus-outline: none;
+}
+
+.tool-work .tool-search:focus-within {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-width) * -1);
+}
+
+/* From nothing, not its natural width: at the large size a 20-character
+   input is wider than a phone's field. Never narrower than the words. */
+.tool-work .tool-search .field > input {
+  flex: 1 1 0;
+  min-width: 12ch;
+}
+
+/* The fixed box the grid scrolls in, from 960px; stacked, the page scrolls
+   and the region grows with the grid. The scroller is a column, so its
+   gap spaces the head, the message and the grid. */
+.tool-work .tool-region {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.tool-work .tool-browse {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-xl);
+}
+
+/* The count reads as the grid's heading: the large size, from its utility
+   class, at the medium weight. */
+.tool-work .tool-count {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+@container main-content (min-width: 960px) {
+  .tool-work .tool-region {
+    overflow: hidden;
+  }
+
+  .tool-work .tool-browse {
+    overflow-y: auto;
+  }
+}
+
+/* Four across at most: a column is never narrower than 11rem (8.5rem
+   stacked) and never narrower than a quarter of the row, so a wide window
+   gives the tiles the room rather than a fifth column. auto-fill, not
+   auto-fit: three results keep their column width. The gap is wide
+   enough for a tile's focus ring to sit in the gutter. */
+.tool-work .tool-files {
+  --tool-grid-gap: var(--space-m);
+  --tool-grid-min: 11rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(var(--tool-grid-min), calc((100% - 3 * var(--tool-grid-gap)) / 4)), 1fr));
+  gap: var(--space-l) var(--tool-grid-gap);
+  touch-action: manipulation;
+}
+
+@media (max-width: 768px) {
+  .tool-work .tool-browse {
+    padding: var(--space-l);
+  }
+
+  .tool-work .tool-files {
+    --tool-grid-min: 8.5rem;
+  }
+}
+
+/* -- Scroller --
+   Moved to the engine as .scroller (design-system.css §28, scroller.js),
+   now that the glossary uses it too (2026-10-16). */
+
+/* -- Selected --
+   The name of what is chosen, first in its details. A keyboard selection
+   may move focus to it, so it clears the sticky bar when focus() scrolls
+   it into view, and draws a ring in the ink of whatever it sits on, since
+   the ground under it may be dark in either site theme. */
+.tool-selected {
+  scroll-margin-top: var(--scroll-offset);
+}
+
+.tool-selected:focus-visible {
+  outline: var(--focus-width) solid currentColor;
+  outline-offset: var(--focus-offset);
+}
+
+/* -- Details --
+   The facts about what is chosen: a dl of rows, each a div holding its dt
+   and dd. The label sits left in the secondary ink, the value right at
+   medium weight, a faint rule under every row (the Tool / Formats board,
+   Website file 20612:6873, owner 2026-11-09). A long value wraps ragged
+   inside its own column; the label never gives up its width to it. Used by
+   the Format Library's Spec and the Asset Library's File details.
+   A row's own [hidden] still wins: only shown rows are laid out. */
+.tool-meta {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-size: var(--font-xs);
+  line-height: var(--body-leading);
+}
+
+.tool-meta > div:not([hidden]) {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-l);
+  padding-block: var(--space-s);
+  border-bottom: var(--border-s) solid var(--border-faded);
+}
+
+/* The system's prose dl sets an italic semi-bold term and an indented
+   definition; a details row is plainer than that. */
+.tool-meta dt {
+  flex: none;
+  font-size: inherit;
+  font-style: normal;
+  font-weight: var(--font-weight-regular);
+  color: var(--text-secondary);
+}
+
+.tool-meta dd {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  text-align: end;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* A value that is a group of tags lines up on the right like the text. */
+.tool-meta dd .tag-group {
+  justify-content: flex-end;
+}
+
+/* -- Tile --
+   One thing to pick in a grid of them: an icon, a logo, a layer type, a
+   template. A bordered box, its contents centred, the border darkening
+   under the pointer. Selected is the ring in the ink, the Book cover's
+   (owner, 2026-10-13: a ring, not the inverted pair, so the picture stays
+   fully visible), read from aria-current on a button or a checked radio
+   inside a label, which is then stretched invisibly over the tile as its
+   hit area. data-shape="square" keeps it square; data-variant="bare"
+   drops the border at rest, for a dense grid where a hundred outlines
+   would be noise. A tile focused by script clears the sticky bar. */
+.tool-tile {
+  --tool-tile-border: var(--border-faded);
+  --tool-tile-border-hover: var(--border-control);
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  padding: var(--space-s);
+  border: var(--border-s) solid var(--tool-tile-border);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  text-align: center;
+  cursor: pointer;
+  scroll-margin-top: var(--scroll-offset);
+}
+
+.tool-tile[data-shape="square"] {
+  aspect-ratio: 1 / 1;
+}
+
+.tool-tile[data-variant="bare"] {
+  --tool-tile-border: transparent;
+  --tool-tile-border-hover: transparent;
+}
+
+.tool-tile .svg-icn {
+  --icon-trim: 0;
+}
+
+.tool-tile > input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tool-tile:hover {
+  border-color: var(--tool-tile-border-hover);
+  background-color: var(--background-faded);
+}
+
+/* After hover, so a selected tile stays selected under the pointer. */
+.tool-tile:is([aria-current="true"], :has(> input:checked)) {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 var(--border-s) var(--text-primary);
+}
+
+/* One more pixel out than the system's offset, past the selected ring's
+   shadow, so a focused selected tile still shows a gap between the two. */
+.tool-tile:focus-visible,
+.tool-tile:has(> input:focus-visible) {
+  outline: var(--focus-width) solid var(--input-focus);
+  outline-offset: calc(var(--focus-offset) + var(--border-s));
+}
+
+/* Forced colours drop the shadow and repaint a transparent border, so the
+   selected ring becomes a wider Highlight border and a bare tile's border
+   takes the ground. The outline stays focus's alone, so a tile that is
+   both focused and selected shows both. */
+@media (forced-colors: active) {
+  .tool-tile[data-variant="bare"] {
+    --tool-tile-border: Canvas;
+    --tool-tile-border-hover: Canvas;
+  }
+
+  .tool-tile:is([aria-current="true"], :has(> input:checked)) {
+    border-width: var(--focus-width);
+    border-color: Highlight;
+  }
+}
+
+/* -- Empty --
+   What a tool shows instead of its work when there is nothing to work on:
+   a missing manifest, an empty library, a browser that blocks the engine.
+   An icon, an optional title and the message, centred in whatever space
+   the work would have taken. The tool swaps it in with [hidden] and a
+   state class on its own region; the message names the problem and the
+   way out (CLAUDE.md §16, descriptive empty states). One look for every
+   tool, lifted from three near-identical copies (2026-10-13). [hidden] is
+   the canvas's own rule (Shell). */
+.tool-empty {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-m);
+  padding: var(--space-2xl);
+  text-align: center;
+}
+
+.tool-empty .svg-icn {
+  --icon-size: var(--icon-size-xl);
+  --icon-trim: 0;
+  color: var(--text-faded);
+}
+
+.tool-empty p {
+  max-width: 42ch;
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.tool-empty .tool-empty-title {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* -- Footer --
+   The readout strip: a URL, a filename, a status. The same faded rule as
+   the panels' — the strip is part of the canvas, not a frame around it
+   (the owner's call, 2026-10-01; it opened as --border-primary). Contents
+   wrap rather than truncate. */
+.tool-footer {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2xs) var(--space-l);
+  padding: var(--space-s) var(--space-xl);
+  border-top: var(--border-s) solid var(--border-faded);
+  background-color: var(--background-primary);
+  font-size: var(--font-xs);
+}
+
+/* -- Two up --
+   The row stretches to the panels' full height, so the rule between them
+   runs to the footer instead of stopping under the shorter panel.
+
+   Source order is the stacked order — the order a phone meets the panels
+   and the order the keyboard walks them, which have to agree (WCAG 1.3.2,
+   2.4.3). Where the panel that comes first when stacked belongs on the
+   right when side by side — the settings beside a long list — it carries
+   data-column="end" and is placed in the second column; its sibling
+   auto-places into the first. The rule between them then sits on the
+   placed panel, not on the DOM's second one. */
+@media (min-width: 769px) {
+  .tool-panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: stretch;
+  }
+
+  .tool-panel + .tool-panel,
+  .tool-panel[data-column="end"] {
+    border-top: 0;
+    border-left: var(--border-s) solid var(--border-faded);
+  }
+
+  .tool-panel[data-column="end"] {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .tool-panel[data-column="end"] + .tool-panel {
+    border-left: 0;
+  }
+
+  /* A fixed panel: its column is --tool-panel-width and its sibling's takes
+     the rest, so the list or the artwork beside a settings panel gets the
+     room the form does not need. Sized on the grid, not the panel — a
+     max-width on the panel would leave an empty strip in its column that
+     the sibling cannot fill. Keyed on which side it sits, which
+     data-column="end" already decides. */
+  .tool-panels:has(> .tool-panel[data-column="end"][data-width="fixed"]) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, var(--tool-panel-width));
+  }
+
+  .tool-panels:has(> .tool-panel:not([data-column="end"])[data-width="fixed"]) {
+    grid-template-columns: minmax(0, var(--tool-panel-width)) minmax(0, 1fr);
+  }
+
+  /* A panel across both columns — a third under the two. Its rule is on
+     top, as when stacked, not on the left. */
+  .tool-panel[data-full-width] {
+    grid-column: 1 / -1;
+    border-top: var(--border-s) solid var(--border-faded);
+    border-left: 0;
+  }
+}
+
+/* -- Stacked --
+   Inline padding narrows with the bar's own (§41). */
+@media (max-width: 768px) {
+  .tool-panel-header,
+  .tool-panel-body,
+  .tool-footer {
+    padding-inline: var(--space-l);
+  }
+
+  .tool-preview {
+    padding: var(--space-m);
+  }
+
+  .tool-filters {
+    --tool-filters-inset: var(--space-l);
+  }
+}
+
+/* -- Fixed mode --
+   The canvas is the window. overflow-y auto rather than hidden, so if the
+   fixed parts alone outgrow the window the shell still scrolls and the bar
+   stays reachable (cms/bar.md, Accessibility); the bar then docks at the
+   shell's own top, not under a header it is no longer scrolling beneath.
+   Every link in the chain declares min-height: 0, because a flex or grid
+   item's default minimum is its content and a body that cannot shrink
+   cannot scroll. */
+@media (min-width: 960px) and (min-height: 760px) {
+  .tool-canvas {
+    height: calc(100vh - var(--top-nav-height));
+    height: calc(100dvh - var(--top-nav-height));
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .tool-canvas .bar {
+    --bar-top: 0px;
+  }
+
+  .tool-panels {
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .tool-panel {
+    min-height: 0;
+  }
+
+  .tool-panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+/* -- Dock sections --
+   An end dock's .tool-panels.accordion: sections that open and close
+   (cms/accordion.md, multi mode), the column scrolling as one. A flex
+   column rather than Band's grid, so fixed mode's grid-template-rows has
+   nothing to squash. The Accordion's own top rule
+   goes, through its token — the preview's or the bar's rule already sits
+   there — and its items keep their bottom rule, which divides the sections. */
+/* scroll-padding keeps a control that focus scrolls into view clear of
+   the stuck section header (WCAG 2.4.11): the header's height — its
+   padding twice and the title's line — and a little room. */
+.tool-dock > .tool-panels.accordion {
+  --accordion-padding-x: var(--space-xl);
+  --accordion-padding-y: var(--space-l);
+  --accordion-border-top: none;
+  scroll-padding-block-start: calc(var(--accordion-padding-y) * 2 + var(--font-l) * var(--line-height-m) + var(--space-s));
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* A section is the accordion item: none of Band's rules (the header
+   button and the body carry the padding, as in Band). */
+.tool-dock > .tool-panels.accordion > .tool-panel {
+  flex: 0 0 auto;
+  min-height: auto;
+  border-top: 0;
+  border-left: 0;
+}
+
+/* The last section, open, runs to the foot of the column: nothing is under
+   it, so it takes the spare height rather than closing on a rule that
+   floats over an empty strip. The rule over the actions, or the column's
+   own end, is its edge. Closed, it keeps its rule: the section ends there
+   and the strip under it is the column's. */
+.tool-dock > .tool-panels.accordion > .tool-panel.is-open:last-child {
+  flex-grow: 1;
+  border-bottom: 0;
+}
+
+/* The header is the row: the heading's button, which spans it, and a
+   section reset over it where the section has one (Section reset, above);
+   on older sections an h2 holding the button alone.
+   It sticks to the column's top while its section scrolls under it, on the
+   column's own ground so the content passing under is covered; the rule
+   under it comes from .is-scrolled, as in Band. Sticky inside its accordion
+   item, so the next section's header pushes it out rather than stacking.
+   z-index 6: one over .accordion-content's own 5 (design-system.css,
+   Accordion), which would otherwise paint the content over it. */
+.tool-dock > .tool-panels.accordion .tool-panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: block;
+  margin: 0;
+  padding: 0;
+  background-color: var(--background-primary);
+}
+
+/* The body never scrolls on its own here — the column does. */
+.tool-dock > .tool-panels.accordion .tool-panel-body {
+  overflow: visible;
+}
+
+/* The column's ring once tool-canvas.js makes it focusable. Inset, as the
+   bodies' is: outset, it would be clipped by the canvas's edge on the right
+   and covered by the actions below. */
+.tool-dock > .tool-panels.accordion:focus-visible {
+  outline: var(--border-m) solid var(--border-control);
+  outline-offset: calc(var(--border-m) * -1);
+}
+
+/* -- Dock toggle --
+   Folds a dock away. In the preview's bottom-right corner, the one the
+   corners layout leaves free, in the band's ink so it reads on any ground.
+   Both icons are in the markup and the state picks one, as the site
+   sidebar's toggle does. */
+/* .button in the dock toggle's selector: the transparent variant sets
+   --button-color itself at (0,2,0), and a bare .tool-dock-toggle lost to
+   it, so the toggle took the page's ink whatever the ground showed. */
+.tool-preview .button.tool-dock-toggle {
+  --button-color: var(--tool-preview-ink, var(--text-primary));
+  display: inline-flex;
+  position: absolute;
+  inset-block-end: var(--space-m);
+  inset-inline-end: var(--space-m);
+  z-index: 1;
+}
+
+.tool-dock-toggle[aria-expanded="true"] .svg-icn[data-icon="sidebar-right-open"],
+.tool-dock-toggle[aria-expanded="false"] .svg-icn[data-icon="sidebar-right-close"] {
+  display: none;
+}
+
+/* -- Actions --
+   The tool's verbs and their error line, where they never sit in a closed
+   section: the foot of the end dock, and, with data-actions="pinned", the
+   bottom of the window when stacked (Docks). Reset is not here; it stays
+   in the bar's menu. */
+/* position: relative so a live region collapsed out of flow inside it (an
+   empty error line, clipped absolute) is placed in the strip — inside the
+   canvas's scroll box — and not against an ancestor outside it, where it
+   stretched the document on a short window and scrolled the page as well. */
+.tool-actions {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+  padding: var(--space-l) var(--space-xl);
+  border-top: var(--border-s) solid var(--border-faded);
+  background-color: var(--background-primary);
+}
+
+/* The error line over the verbs is a .form-error with no margin of its
+   own: the strip's gap spaces it. */
+.tool-actions > .form-error {
+  margin: 0;
+}
+
+/* Every alert line on a tool collapses while empty WITHOUT display:none.
+   A live region absent from the accessibility tree when its text is
+   written does not announce, so it is clipped instead, out of flow so it
+   spends no gap, and the rule drops the instant text arrives. Clear it
+   with '', never ' ': :empty does not match whitespace. Same declarations
+   as .visually-hidden (design-system.css section 10). */
+.tool-canvas .form-error[role="alert"]:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* The verbs grow to fill the row and never break their own label — a
+   two-line "Download SVG" reads as a fault. Sized by content rather than
+   halved, so the longer label takes the room it needs. */
+.tool-actions > .button-group > .button {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+
+/* -- Docks, wide: pinned section -- */
+@container main-content (min-width: 960px) {
+  /* -- Pinned section --
+     A section with data-pinned sticks to the column's top, at most
+     --tool-panel-pinned-max of the column's height (40% unless the tool
+     re-points it), and past that its body scrolls inside it. The sections
+     under it scroll beneath, so a long list never pushes what follows it
+     out of reach. Wide only: stacked, the page is the one scroller, where
+     two would leave slivers. Closed,
+     the pinned section is its header and the rest take the height.
+
+     The headers under it stick at its foot, not the column's top, and
+     focus scrolls a control clear of it: tool-canvas.js measures it into
+     --tool-panels-pinned-size while it sticks. */
+  .tool-canvas > .tool-dock > .tool-panels.accordion > .tool-panel[data-pinned] {
+    position: sticky;
+    top: 0;
+    z-index: 7;
+    display: flex;
+    flex-direction: column;
+    max-height: var(--tool-panel-pinned-max, 40%);
+    background-color: var(--background-primary);
+  }
+
+  .tool-canvas > .tool-dock > .tool-panels.accordion > .tool-panel[data-pinned] > .accordion-content {
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+
+  .tool-canvas > .tool-dock > .tool-panels.accordion > .tool-panel[data-pinned] .accordion-inner {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tool-canvas > .tool-dock > .tool-panels.accordion > .tool-panel[data-pinned] .tool-panel-body {
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* A control focus scrolls to the foot keeps the body's own padding
+       under it, rather than sitting on the section's rule. */
+    scroll-padding-block-end: var(--space-xl);
+  }
+
+  .tool-canvas > .tool-dock > .tool-panels.accordion > .tool-panel[data-pinned] .tool-panel-body:focus-visible {
+    outline: var(--border-m) solid var(--border-control);
+    outline-offset: calc(var(--border-m) * -1);
+  }
+
+  .tool-canvas > .tool-dock > .tool-panels.accordion:has(> .tool-panel[data-pinned]) {
+    scroll-padding-block-start: calc(var(--tool-panels-pinned-size, 0px) + var(--accordion-padding-y) * 2 + var(--font-l) * var(--line-height-m) + var(--space-s));
+  }
+
+  .tool-canvas > .tool-dock > .tool-panels.accordion:has(> .tool-panel[data-pinned]) > .tool-panel:not([data-pinned]) > .tool-panel-header {
+    top: var(--tool-panels-pinned-size, 0px);
+  }
+}
+
+/* Corners beside an end dock. The corners take a row of their own below
+   700px of PREVIEW (Preview corners, above), but that query reads the
+   content area — and beside the dock the preview is --tool-panel-width
+   narrower. 1147.98px is 700px plus 448px — the DEFAULT 28rem only. A
+   container query cannot read var(), so a tool that re-points
+   --tool-panel-width gets corners calibrated to 28rem; give it its own
+   query if that matters. Not while the dock
+   is folded, when the preview is the content area again. The
+   declarations repeat the 700px block's, because a container query cannot
+   share one block between two conditions. */
+@container main-content (min-width: 960px) and (max-width: 1147.98px) {
+  .tool-canvas:has(> .tool-dock[data-edge="end"]:not(.is-collapsed, .is-hidden)) > .tool-preview[data-layout="corners"] {
+    grid-template: auto minmax(0, 1fr) / minmax(0, 1fr);
+    row-gap: var(--space-m);
+    padding: var(--space-m);
+  }
+
+  .tool-canvas:has(> .tool-dock[data-edge="end"]:not(.is-collapsed, .is-hidden)) .tool-stage {
+    grid-area: 2 / 1;
+    padding: 0 0 var(--space-xl);
+  }
+
+  .tool-canvas:has(> .tool-dock[data-edge="end"]:not(.is-collapsed, .is-hidden)) .tool-details,
+  .tool-canvas:has(> .tool-dock[data-edge="end"]:not(.is-collapsed, .is-hidden)) .tool-options {
+    width: auto;
+    max-width: calc(50% - var(--space-s));
+  }
+
+  .tool-canvas:has(> .tool-dock[data-edge="end"]:not(.is-collapsed, .is-hidden)) .tool-scale {
+    grid-area: 2 / 1;
+  }
+}
+
+/* -- Stacked --
+   Inline padding narrows with the panels' own below 769px. */
+@media (max-width: 768px) {
+  /* The strip can be pinned (data-actions), taking its pixels from the dock, so
+     the pair keeps to one row on a 375px phone: the buttons' own padding and
+     gap step down through their tokens. Below that they wrap to two rows,
+     whole. */
+  .tool-actions {
+    padding-inline: var(--space-l);
+  }
+
+  /* On the buttons, not the strip: .button declares its own tokens, so a
+     value set on an ancestor never reaches it. */
+  .tool-actions > .button-group > .button {
+    --button-padding-x: var(--space-s);
+    --button-gap: var(--space-xs);
+  }
+
+  .tool-dock > .tool-panels.accordion {
+    --accordion-padding-x: var(--space-l);
+  }
+}
+
+/* -- Docks --
+   A dock holds a tool's panels against one edge of the preview, and the
+   canvas builds its grid from which docks it has: there is no layout name
+   to pick. The preview takes whatever space the docks leave. The map on
+   the Tool Canvas doc (cms/tool-canvas.md, Docks) explains the model;
+   Band above is the same idea written before it.
+
+     .tool-canvas
+       .bar
+       .tool-preview > … button.tool-dock-toggle[aria-controls][data-edge]
+       .tool-dock[data-edge="end"]
+         .tool-panels.accordion[data-accordion="multi"]   sections, scrolling as one
+         .tool-actions                                    the verbs, at its foot
+       .tool-dock[data-edge="bottom"]#id
+         .tool-panels > section.tool-panel                a row of panels
+       .tool-footer
+
+   end     — a --tool-panel-width column on the right, the bar to the
+             footer. Collapsed, it is gone and the preview takes its width.
+   bottom  — under the preview, its panels side by side from 769px.
+             Collapsed, each panel keeps its header, a strip that says what
+             is there, and the preview takes the height.
+
+   A dock no toggle names is pinned: always in view. Placement keys on the
+   content area (the main-content container), at 960px, because the site
+   sidebar changes it on its own. Below it
+   the docks stack in source order, which is the phone's and the keyboard's,
+   under Band's page-scroll rules. From it the canvas is the window and each
+   dock scrolls its own panels. */
+.tool-dock {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background-color: var(--background-primary);
+}
+
+.tool-dock + .tool-dock {
+  border-top: var(--border-s) solid var(--border-faded);
+}
+
+.tool-dock[data-edge="end"].is-collapsed {
+  display: none;
+}
+
+/* Pinned verbs, an opt-in per tool: data-actions="pinned" on an end dock
+   keeps its .tool-actions on screen while the dock is stacked under the
+   preview, stuck to the window's foot as the page scrolls, where a thumb
+   reaches them (what the retired Sidebar layout did, owner 2026-10-13). Without
+   it the verbs sit at the dock's end and scroll with it. From 960px the
+   dock is a column and its foot is the window's either way. Over the
+   sections' sticky headers (z-index 6). Only on a window 32rem tall or
+   more: on a phone held sideways, or at 400% zoom, the site header, the
+   bar and the verbs would leave almost nothing between them (WCAG 1.4.10),
+   so the verbs scroll there. tool-canvas.js measures them while they stick
+   into --tool-actions-size, and every control in the dock keeps that much
+   clear when focus scrolls it into view, so the verbs never cover it
+   (2.4.11); the top margin clears the site header and the bar. */
+@container main-content (max-width: 959.98px) {
+  @media (min-height: 32rem) {
+    .tool-dock[data-actions="pinned"] > .tool-actions {
+      position: sticky;
+      bottom: 0;
+      z-index: 7;
+    }
+
+    .tool-dock[data-actions="pinned"] > .tool-panels :is(a[href], button, input, select, textarea, [tabindex]) {
+      scroll-margin-block: var(--scroll-offset, 0px) calc(var(--tool-actions-size, 6rem) + var(--space-s));
+    }
+  }
+}
+
+/* A collapsed bottom dock keeps each panel's header, padded evenly as a
+   strip. Everything under it goes: display: none, so nothing hidden stays
+   in the tab order. */
+.tool-dock[data-edge="bottom"].is-collapsed .tool-panel > :not(.tool-panel-header) {
+  display: none;
+}
+
+.tool-dock[data-edge="bottom"].is-collapsed .tool-panel-header {
+  padding-block: var(--space-l);
+}
+
+/* A bottom dock's panels share one row in equal columns, however many there
+   are — none of Band's two-column template. An end dock's stack in one
+   column, with the stacked rule between them: the dock is 28rem, and two
+   up in it would halve a single section (the Asset Library's details did,
+   2026-10-07). The accordion column is a flex column and ignores both. */
+@media (min-width: 769px) {
+  .tool-dock[data-edge="bottom"] > .tool-panels {
+    grid-template-columns: none;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+  }
+
+  .tool-dock[data-edge="end"] > .tool-panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tool-dock[data-edge="end"] > .tool-panels > .tool-panel + .tool-panel {
+    border-top: var(--border-s) solid var(--border-faded);
+    border-left: 0;
+  }
+}
+
+/* The dock toggle: the look and corner above, naming one
+   dock in aria-controls. Its icon points at the dock it controls: down at a
+   bottom dock always, down at an end dock while that dock is stacked under
+   the preview, right once it is a column. */
+.tool-canvas:has(> .tool-dock) > .tool-preview {
+  position: relative;
+}
+
+.tool-dock-toggle .svg-icn {
+  transform: rotate(90deg);
+}
+
+/* A preview without corners reserves the toggle's row at its foot, as the
+   stage's padding does on a corners band (Preview corners, above), so the
+   artwork — an image scaled to the band, a card that scrolls — never runs
+   under the button. */
+.tool-canvas:has(> .tool-dock) > .tool-preview:not([data-layout="corners"], [data-fit="fill"]):has(> .tool-dock-toggle) {
+  padding-bottom: var(--space-3xl);
+}
+
+/* The toggle reads --tool-preview-ink, which a corners band sets from its
+   ground. A band without corners on one of the fixed grounds sets it the
+   same way, or the page's ink — white in dark mode — vanishes on the
+   checkerboard and the light ground. A band on the site's own surface keeps
+   the page's ink, which is right there. */
+.tool-preview:not([data-layout="corners"]):is([data-ground="light"], [data-ground="checker"]) {
+  --tool-preview-ink: var(--tool-ink-on-light);
+}
+
+.tool-preview:not([data-layout="corners"])[data-ground="dark"] {
+  --tool-preview-ink: var(--tool-ink-on-dark);
+}
+
+/* -- Viewer --
+   The chosen item shown large over a browsing tool's work (the Asset
+   Library's files, the Formats tool's formats): a non-modal <dialog> over
+   the filter row and the grid while the dock beside it stays live, so the
+   overlay needs no details of its own. Lifted from asset-library.css on
+   2026-11-01 so both tools share it; each tool styles only what it puts on
+   the stage. Three rows — a bar, the file on its ground, a foot that collapses
+   when it has nothing to show — on the page surface, not a wash (owner,
+   2026-10-07). Opened with show(), so no top layer and no ::backdrop. */
+.tool-canvas .tool-viewer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--text-primary);
+  background-color: var(--background-primary);
+}
+
+.tool-canvas .tool-viewer[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  animation: tool-viewer-fade var(--duration-xs) var(--ease-out);
+}
+
+@keyframes tool-viewer-fade {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-canvas .tool-viewer[open] {
+    animation-duration: var(--duration-2xs);
+  }
+}
+
+/* Narrow, the same element fills the window under the site header and
+   carries the verbs the off-screen dock would have. */
+.tool-canvas .tool-viewer[data-narrow] {
+  position: fixed;
+  top: var(--site-header-height);
+  /* One above the sticky bar, which it has to cover. */
+  z-index: calc(var(--z-bar) + 1);
+  height: auto;
+  /* A scroll that reaches the end of the viewer's own panels stops there,
+     rather than running on into the page behind it. */
+  overscroll-behavior: contain;
+}
+
+.tool-canvas .tool-viewer-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-m);
+  padding: var(--space-s) var(--space-m) var(--space-s) var(--space-l);
+  background-color: var(--background-primary);
+  border-bottom: var(--border-s) solid var(--border-faded);
+}
+
+.tool-canvas .tool-viewer-heading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tool-canvas .tool-viewer-title {
+  margin: 0;
+  font-size: var(--font-m);
+  line-height: var(--line-height-s);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-canvas .tool-viewer-position {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.tool-canvas .tool-viewer-close {
+  flex: 0 0 auto;
+}
+
+/* The stage: the file at its largest fit, on its ground, with room for the
+   arrows either side. */
+.tool-canvas .tool-viewer-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: var(--space-xl) var(--space-3xl);
+}
+
+/* The arrows are filled buttons — ink on paper, which reads on any ground
+   and keeps the system's own hover and press; a disabled end keeps focus
+   (aria-disabled, never disabled) and fades. Centred with translate, not
+   transform: the button's press is transform: scale(), which would replace
+   a transform here and drop the arrow half its height on every click. */
+.tool-canvas .tool-viewer-nav {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  --button-radius: var(--radius-full);
+}
+
+.tool-canvas .tool-viewer-nav[data-direction="-1"] {
+  left: var(--space-m);
+}
+
+.tool-canvas .tool-viewer-nav[data-direction="1"] {
+  right: var(--space-m);
+}
+
+/* A disabled end is the Button's own aria-disabled state, faded whole:
+   re-inking it would paint faded ink on the filled ground and leave an
+   empty disc. */
+
+.tool-canvas .tool-viewer-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-s);
+  padding: var(--space-s) var(--space-l);
+  background-color: var(--background-primary);
+  border-top: var(--border-s) solid var(--border-faded);
+}
+
+.tool-canvas .tool-viewer-foot:not(:has(> :not([hidden]))) {
+  display: none;
+}
+
+.tool-canvas .tool-viewer-foot > .form-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* While a viewer is open the site's back-to-top button would sit over its
+   foot on a phone, and it would scroll a page the viewer covers. (0,3,1),
+   so it beats the button's own .is-visible. */
+body:has(.tool-viewer[open]) .back-to-top-wrapper {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* A disabled end of the viewer's arrows, in forced colours. */
+@media (forced-colors: active) {
+  .tool-canvas .tool-viewer-nav[aria-disabled="true"] {
+    color: GrayText;
+  }
+}
+
+/* -- Docks, placed -- */
+@container main-content (min-width: 960px) {
+  .tool-canvas:has(> .tool-dock) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "bar" "preview" "bottom" "footer";
+    height: calc(100vh - var(--top-nav-height));
+    height: calc(100dvh - var(--top-nav-height));
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .tool-canvas:has(> .tool-dock[data-edge="end"]:not(.is-collapsed, .is-hidden)) {
+    grid-template-columns: minmax(0, 1fr) var(--tool-panel-width);
+    grid-template-areas: "bar bar" "preview end" "bottom end" "footer footer";
+  }
+
+  /* An open bottom dock takes the spare height; the preview keeps its own
+     (--tool-preview-height), as on Band. Never under 16rem: placement
+     reads the content's width, not the window's height, and a panel's
+     header and a filter row take half of that before its body starts, so
+     on a short window the canvas scrolls rather than squeezing the body to
+     a sliver. */
+  .tool-canvas:has(> .tool-dock[data-edge="bottom"]:not(.is-collapsed)) {
+    grid-template-rows: auto auto minmax(16rem, 1fr) auto;
+  }
+
+  .tool-canvas:has(> .tool-dock) > .bar {
+    --bar-top: 0px;
+    grid-area: bar;
+  }
+
+  .tool-canvas:has(> .tool-dock) > .tool-preview {
+    grid-area: preview;
+    min-height: 0;
+  }
+
+  /* With nothing open under it, the preview runs the full height of its
+     column, and the rule under it would double the footer's. */
+  .tool-canvas:has(> .tool-dock):not(:has(> .tool-dock[data-edge="bottom"]:not(.is-collapsed))) > .tool-preview {
+    height: 100%;
+  }
+
+  .tool-canvas:has(> .tool-dock):not(:has(> .tool-dock[data-edge="bottom"])) > .tool-preview {
+    border-bottom: 0;
+  }
+
+  .tool-canvas > .tool-dock[data-edge="end"] {
+    grid-area: end;
+    min-height: 0;
+    border-left: var(--border-s) solid var(--border-faded);
+  }
+
+  .tool-canvas > .tool-dock[data-edge="bottom"] {
+    grid-area: bottom;
+    min-height: 0;
+    border-top: 0;
+  }
+
+  .tool-canvas:has(> .tool-dock) > .tool-footer {
+    grid-area: footer;
+  }
+
+  /* A tool's own empty state is the one other child the canvas takes: it
+     stands in the preview's place, which the tool hides with the docks
+     while there is nothing to show. A hidden end dock (.is-hidden) frees
+     its column, as a collapsed one does. Anything else — a status line, a
+     toast host — goes inside the preview or a dock, never beside them. */
+  .tool-canvas:has(> .tool-dock) > :not(.bar, .tool-preview, .tool-dock, .tool-footer) {
+    grid-area: preview;
+  }
+
+  /* Every link in the chain can shrink, so the scroller is bounded: the
+     sections column in an end dock, each panel body in a bottom dock. */
+  .tool-dock > .tool-panels {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .tool-dock[data-edge="bottom"] > .tool-panels {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .tool-dock[data-edge="bottom"] .tool-panel {
+    min-height: 0;
+  }
+
+  .tool-dock[data-edge="bottom"] .tool-panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .tool-dock > .tool-actions {
+    flex: 0 0 auto;
+  }
+
+  .tool-dock-toggle[data-edge="end"] .svg-icn {
+    transform: none;
+  }
+}
+
+/* ====================================================================
+   LAYER STACK BRIDGE
+   The layer engine's paint is foundation (design-system.css §54). What is
+   here maps the tools' own ground switch onto the engine's ink hook: a
+   preview band on a dark ground (data-preview-ink="light", tools.css, The
+   preview) lifts the overlay hues as [data-layer-stack-ink="light"] does.
+   The four values must match that rule in design-system.css §54; the
+   duplicate goes when every tool also sets data-layer-stack-ink beside
+   data-preview-ink (ROADMAP, Layout Specs).
+   ==================================================================== */
+
+.tool-preview[data-preview-ink="light"] {
+  --overlay-zone: var(--purple-light);
+  --overlay-zone-opacity: 0.3;
+  --overlay-zone-outline-opacity: 0.75;
+  --overlay-grid: var(--blue-light);
+}
+
+/* Guides: a fixed spec drawn over a tool's own preview as an <svg> the
+   engine builds (the Icon Library's Guides, the Logo Tool's Safe zone).
+   It fills its positioned host exactly, so it scales with the drawing, and
+   never takes the pointer. Preview only: no file carries it. */
+.tool-guides {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Download lock (download-lock.js). A Download the reader cannot take keeps
+   its place and its words: the lock icon takes the download icon's place,
+   the control mutes to the disabled opacity, and the pointer stays, where
+   a disabled button loses it (design-system.css), so the tooltip can say
+   why and a press can go to the way in. No hover ink and no press scale,
+   which would say the button can be pressed. Keyed on data-download, which
+   every tool's Download verb carries; the level is the container's
+   data-download-access. The lock is always in the markup and shown only
+   on .is-locked, as the Book's cover lock is. */
+[data-download] > .svg-icn[data-icon="lock"] {
+  display: none;
+}
+
+[data-download].is-locked > .svg-icn[data-icon="lock"] {
+  display: flex;
+}
+
+[data-download].is-locked > .svg-icn[data-icon="download"] {
+  display: none;
+}
+
+.button[data-download].is-locked {
+  opacity: var(--opacity-disabled);
+  pointer-events: auto;
+  cursor: not-allowed;
+}
+
+.button[data-download].is-locked:hover {
+  --button-color: var(--text-primary);
+}
+
+.button[data-download].is-locked:active {
+  transform: none;
+}

@@ -1,0 +1,345 @@
+
+      <!--
+        A tool on the shared canvas, built from docks (cms/tool-canvas.md,
+        Docks), in the Side panels layout: the bar, the code filling the
+        preview, the controls docked on the right in three sections —
+        Settings, Style and Export — and the two verbs pinned at the dock's
+        foot. The toggle in
+        the preview's corner folds the dock away so the code takes the canvas.
+        No footer and no page header: the canvas is the page, and every
+        readout has a home on the preview or in a section.
+
+        The bar names the tool. Copy link and Reset all are permanent
+        residents of the overflow menu (data-priority="menu"), so the trailing
+        cluster is the menu and the close. The exit is last: build-time
+        contract.
+
+        The sections are the tools' shared three (the owner's grouping,
+        2026-10-04; cms/tool-canvas.md). What the code carries and how it is
+        built — content, error correction, module radius, quiet zone — is
+        Settings. How it looks — the colours (pairs, foreground, background
+        with None) and the logo — is Style. What the file is — its format, pixel size and name — is
+        Export. The preview only shows: its two switches, Transparent and
+        Fill, change what the band shows and nothing in any file (the owner's
+        call, 2026-10-04: "the preview is to show the artwork").
+      -->
+      <div class="tool-canvas" id="qr-code">
+
+        <div class="bar" data-sticky="true">
+          <div class="bar-container">
+            <div class="bar-content">
+              <h1 class="tool-canvas-title" data-priority="pinned">QR Code Generator</h1>
+
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item js-copy-url">{{icon:link}}<span>Copy link</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" id="qr-code-reset">{{icon:refresh}}<span>Reset all</span></button>
+              </div>
+              <!-- Feedback: opens the shared dialog (cms/chrome/feedback-dialog.html) -->
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="share">{{icon:chat}}<span>Share feedback</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="problem">{{icon:warning}}<span>Report a problem</span></button>
+              </div>
+            </div><!-- /.bar-content -->
+            <div class="bar-actions">
+              <div class="dropdown bar-overflow" hidden>
+                <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
+                <div class="dropdown-menu is-right"></div>
+              </div>
+              <a class="bar-close" data-page-close aria-label="Back to Tools">{{icon:close-large}}</a>
+            </div>
+          </div>
+        </div>
+
+        <!--
+          The code as the file draws it, at its export size and scaled down
+          to fit the stage, or as large as the stage allows while Fill is on.
+          Its ground is the light one, the brand's off-white, while the code
+          has a background; with none, whichever of the light and dark
+          grounds the fill stands out on, so a pale code never vanishes; the
+          checkerboard while Transparent is on (qr-code.js, pickGround).
+
+          Top left, Details: what the file is, and whether it scans. The
+          lines are rewritten on every render, so they are not live regions;
+          the scan result is the one status region, because it is the answer
+          a reader waits for. At the foot, the scale note. Top right, the
+          Preview group. All of it takes the ink that reads on the ground, the
+          code's own colour where it clears AA (tool-canvas.js, syncInk).
+        -->
+        <div class="tool-preview" data-size="tall" data-layout="corners" id="qr-code-preview">
+          <div class="tool-stage">
+            <canvas class="tool-artwork" id="qr-code-canvas" width="512" height="512" role="img" aria-label="QR code preview"></canvas>
+          </div>
+
+          <div class="tool-details">
+            <p class="tool-caption">Details</p>
+            <p id="qr-code-detail-content"></p>
+            <p id="qr-code-detail-size"></p>
+            <p id="qr-code-detail-grid"></p>
+            <p id="qr-code-detail-ec"></p>
+            <!-- Blanked while hidden, so the next result is a text change
+                 the region announces, not only a display change. -->
+            <div class="tool-verdict" role="status">
+              <span class="badge is-hidden" id="qr-code-scan-badge" data-color="success"></span>
+              <span class="tool-verdict-hint is-hidden" id="qr-code-scan-hint"></span>
+            </div>
+          </div>
+
+          <p class="tool-scale" id="qr-code-scale-note"></p>
+
+          <section class="tool-options" aria-labelledby="qr-code-preview-heading">
+            <h2 class="tool-caption" id="qr-code-preview-heading">Preview</h2>
+            <!-- The checkerboard behind the code, to see where the file is
+                 empty: the whole band when it has no background, round the
+                 edge when it has one. Preview only. -->
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="qr-code-transparent" role="switch">
+                <label for="qr-code-transparent">Transparent</label>
+              </div>
+            </div>
+            <!-- The code as large as the stage allows instead of at its export
+                 size, for inspecting the modules. The scale note keeps saying
+                 how far it is enlarged. Preview only. -->
+            <div class="tool-option">
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" id="qr-code-fill" role="switch">
+                <label for="qr-code-fill">Fill screen</label>
+              </div>
+            </div>
+          </section>
+
+          <!-- Folds the dock away (tool-canvas.js), and the preview takes its
+               width. The name stays "Controls"; aria-expanded carries the
+               state. Last in the preview, in the free bottom-right corner;
+               data-edge points the icon at the dock. -->
+          <button class="button tool-dock-toggle" data-variant="transparent" data-icon-only data-edge="end" type="button" aria-controls="qr-code-dock" aria-expanded="true" aria-label="Controls">
+            {{icon:sidebar-right-close}}{{icon:sidebar-right-open}}
+          </button>
+        </div>
+
+        <!-- The sections scroll as one column (tool-canvas.js adds the tab
+             stop while it overflows), and the verbs sit under them. Every
+             section starts open. Settings first: a phone meets the content
+             before the look and the export. -->
+        <div class="tool-dock" data-edge="end" id="qr-code-dock">
+          <div class="tool-panels accordion" data-accordion="multi" id="qr-code-panels" role="group" aria-label="QR Code Generator controls">
+
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="qr-code-settings-heading" aria-expanded="true" aria-controls="qr-code-settings-section">
+                  <span class="tool-panel-title">Settings</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+              <!-- Puts error correction, radius and quiet zone back to their
+                   defaults. The content and its type are the reader's
+                   work and stay; Reset all in the bar's menu clears them. -->
+              <button class="button tool-panel-action" data-variant="transparent" data-icon-only type="button" id="qr-code-settings-reset" data-reset="settings" aria-label="Reset Settings" data-tooltip="Reset Settings" data-tooltip-position="left" disabled>{{icon:refresh}}</button>
+            </div>
+            <div class="accordion-content" id="qr-code-settings-section" role="region" aria-labelledby="qr-code-settings-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <!-- URL / Text decides how the field is read: URL adds
+                   https:// when the scheme is left off, Text encodes exactly
+                   what was typed. The field's caption, placeholder and note
+                   follow the mode (qr-code.js, syncMode). data-sample is what
+                   the empty preview shows. Notes, not toggletips: nothing
+                   pops out of a section (cms/tool-canvas.md, Section reset). -->
+              <fieldset data-variant="bare">
+                <legend data-variant="caption" id="qr-code-mode-label">Content type</legend>
+                <div class="segmented-control" data-variant="faded" id="qr-code-mode">
+                  <label class="segmented-control-option"><input type="radio" name="qr-code-mode" value="url" checked><span>URL</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="qr-code-mode" value="text"><span>Text</span></label>
+                </div>
+              </fieldset>
+
+              <div class="block gap-s">
+                <label data-variant="caption" for="qr-code-input" id="qr-code-input-label">URL</label>
+                <textarea id="qr-code-input" placeholder="Type your URL" data-sample="{{brand:website}}" rows="3" inputmode="url" spellcheck="false" aria-describedby="qr-code-input-note qr-code-error"></textarea>
+                <p class="form-hint" id="qr-code-input-note">https:// is added when you leave it off.</p>
+                <p class="form-error" id="qr-code-error" role="alert"></p>
+              </div>
+
+              <!-- While the logo is on every level is disabled, and the note
+                   says why in place of the levels' meaning: a tooltip would
+                   be clipped by the section. -->
+              <fieldset data-variant="bare" aria-describedby="qr-code-ec-note">
+                <legend data-variant="caption" id="qr-code-ec-label">Error correction</legend>
+                <div class="segmented-control" data-variant="faded" id="qr-code-ec">
+                  <label class="segmented-control-option"><input type="radio" name="qr-code-ec" value="L"><span>L</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="qr-code-ec" value="M"><span>M</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="qr-code-ec" value="Q"><span>Q</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="qr-code-ec" value="H" checked><span>H</span></label>
+                </div>
+                <p class="form-hint" id="qr-code-ec-note"></p>
+              </fieldset>
+
+              <div class="slider" data-unit="%">
+                <div class="slider-header">
+                  <label class="slider-label" for="qr-code-radius">Module radius</label>
+                  <span class="slider-value">0%</span>
+                </div>
+                <div class="slider-control">
+                  <input class="slider-input" type="range" id="qr-code-radius" min="0" max="50" value="0" step="1">
+                </div>
+              </div>
+
+              <div class="slider" data-stops>
+                <div class="slider-header">
+                  <label class="slider-label" for="qr-code-quiet-zone">Quiet zone</label>
+                  <span class="slider-value">2</span>
+                </div>
+                <div class="slider-control">
+                  <input class="slider-input" type="range" id="qr-code-quiet-zone" min="0" max="8" value="2" step="1" aria-describedby="qr-code-quiet-zone-note">
+                </div>
+                <p class="form-hint" id="qr-code-quiet-zone-note">In modules. Print asks for 4.</p>
+              </div>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="qr-code-style-heading" aria-expanded="true" aria-controls="qr-code-style-section">
+                  <span class="tool-panel-title">Style</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+              <!-- Puts the colours, the background and the logo back to
+                   their defaults. -->
+              <button class="button tool-panel-action" data-variant="transparent" data-icon-only type="button" id="qr-code-style-reset" data-reset="style" aria-label="Reset Style" data-tooltip="Reset Style" data-tooltip-position="left" disabled>{{icon:refresh}}</button>
+            </div>
+            <div class="accordion-content" id="qr-code-style-section" role="region" aria-labelledby="qr-code-style-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <!-- The brand's avatar at the centre, in the fill colour, at a
+                   fixed 22% of the code's width (qr-code.js LOGO_RATIO). On,
+                   it locks error correction to H. Disabled, with the reason
+                   in its note, when the brand manifest has no avatar. -->
+              <div class="block gap-s">
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" role="switch" id="qr-code-logo" aria-describedby="qr-code-logo-note">
+                  <label for="qr-code-logo">Logo</label>
+                </div>
+                <p class="form-hint" id="qr-code-logo-note">The brand avatar at the centre. Locks error correction to H.</p>
+              </div>
+
+              <!-- The tools' one colour control (tool-colour.js; cms/tool-canvas.md,
+                   Colour), built into these mounts at init: a Pairs row that
+                   sets both colours, then Foreground and Background, each the
+                   brand palette with a picker and hex field. Background's
+                   None chip is the file's: the PNG keeps an alpha channel and
+                   the SVG drops its background rectangle. The preview's
+                   Transparent switch only shows it. The contrast line
+                   measures the pair; a scanner reads that step. -->
+              <div id="qr-code-pairs"></div>
+              <div id="qr-code-fg"></div>
+              <div id="qr-code-bg"></div>
+              <p class="form-hint" id="qr-code-contrast"></p>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="qr-code-export-heading" aria-expanded="true" aria-controls="qr-code-export-section">
+                  <span class="tool-panel-title">Export</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+            </div>
+            <div class="accordion-content" id="qr-code-export-section" role="region" aria-labelledby="qr-code-export-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <!-- Two short formats, both in view: the radio-backed faded
+                   segmented control, named by its caption. -->
+              <fieldset data-variant="bare">
+                <legend data-variant="caption" id="qr-code-format-label">Export as</legend>
+                <div class="segmented-control" data-variant="faded" id="qr-code-format">
+                  <label class="segmented-control-option"><input type="radio" name="qr-code-format" value="png" checked><span>PNG</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="qr-code-format" value="svg"><span>SVG</span></label>
+                </div>
+              </fieldset>
+
+              <!-- The code's square in pixels: the export's size, so it sits
+                   beside the format it matters to (tools.css, Size). A value
+                   outside the range or between steps is corrected when the
+                   field is left, so it always shows the size that will be
+                   written; a size that matches no preset leaves none checked. -->
+              <div class="block gap-s">
+                <label data-variant="caption" for="qr-code-size" id="qr-code-size-label">Size (px)</label>
+                <div class="tool-size">
+                  <div class="number-input" role="group">
+                    <button class="number-input-btn" data-number-decrement type="button" aria-label="Decrease size">&minus;</button>
+                    <input type="number" id="qr-code-size" value="512" min="128" max="2048" step="64" inputmode="numeric" aria-describedby="qr-code-size-note">
+                    <button class="number-input-btn" data-number-increment type="button" aria-label="Increase size">+</button>
+                  </div>
+                  <div class="segmented-control" data-variant="faded" id="qr-code-sizes" role="radiogroup" aria-label="Size presets">
+                    <label class="segmented-control-option"><input type="radio" name="qr-code-size-preset" value="256"><span>256</span></label>
+                    <label class="segmented-control-option"><input type="radio" name="qr-code-size-preset" value="512" checked><span>512</span></label>
+                    <label class="segmented-control-option"><input type="radio" name="qr-code-size-preset" value="1024"><span>1024</span></label>
+                    <label class="segmented-control-option"><input type="radio" name="qr-code-size-preset" value="2048"><span>2048</span></label>
+                  </div>
+                </div>
+                <p class="form-hint" id="qr-code-size-note">128 to 2048, in steps of 64. An SVG scales to any size.</p>
+              </div>
+
+              <!-- What you are about to get, before the act: a read-only field
+                   the script rewrites on every render, so not a live region.
+                   Read-only keeps it in the tab order; its copy button is the
+                   keyboard's route to it (cms/field.md, Action). -->
+              <div class="block gap-s">
+                <label data-variant="caption" for="qr-code-filename">File name</label>
+                <div class="field">
+                  <input type="text" id="qr-code-filename" readonly spellcheck="false" autocomplete="off">
+                  <button class="field-action copy-btn" type="button" data-clipboard-target="#qr-code-filename">
+                    <span class="copy-btn-default">{{icon:copy}}<span class="visually-hidden">Copy file name</span></span>
+                    <span class="copy-btn-copied">{{icon:check}}<span class="visually-hidden">Copied!</span></span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          </div>
+
+          <!--
+            The verbs, pinned at the dock's foot, each naming the format it
+            makes. The format word is a span the script rewrites inside the
+            button's own text, so the name follows it with no aria-label to
+            override Copy's "Copied!" swap. Both stay disabled until there is
+            something to encode.
+
+            Copy for SVG is copy-button.js's job: the script keeps data-copy
+            filled with the markup. For PNG data-copy is empty, copy-button.js
+            bails, and the script puts the image on the clipboard instead.
+          -->
+          <div class="tool-actions">
+            <p class="form-error" id="qr-code-export-error" role="alert"></p>
+            <div class="button-group">
+              <button class="button" type="button" id="qr-code-download" data-download disabled>
+                {{icon:download}}{{icon:lock}}<span>Download <span id="qr-code-download-format">PNG</span></span>
+              </button>
+              <button class="button copy-btn" data-variant="outline" type="button" id="qr-code-copy" data-copy="" disabled>
+                <span class="copy-btn-default">{{icon:copy}}<span>Copy <span id="qr-code-copy-format">PNG</span></span></span>
+                <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>

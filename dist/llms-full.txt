@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v7.5.1 -->
+<!-- @bydefaultstudio/design-system v8.0.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 7.5.1 (package)**
+**Version: 8.0.0 (package)**
 
 ## Getting the System
 
@@ -1035,6 +1035,23 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--toggle-mono-paper` | `var(--selected-text)` |  |
 | **Dialog tokens** | | |
 | `--dialog-max-width` | `560px` |  |
+| `--slider-height` | `var(--space-xl)` |  |
+| `--slider-height-compact` | `var(--space-2xl)` |  |
+| `--slider-track` | `var(--bg-faded-10)` |  |
+| `--slider-fill` | `var(--text-primary)` |  |
+| **What sits on the fill: the thumb, filled stops, Compact text.** | | |
+| `--slider-on-fill` | `var(--background-primary)` |  |
+| `--slider-radius` | `var(--radius-full)` |  |
+| `--slider-thumb-color` | `var(--slider-on-fill)` |  |
+| `--slider-thumb-ring` | `var(--slider-fill)` |  |
+| `--slider-fill-trim` | `0.5` |  |
+| `--slider-thumb-radius` | `var(--radius-full)` |  |
+| `--slider-thumb-inset-block` | `var(--space-2xs)` |  |
+| `--slider-thumb-inset-inline` | `var(--space-2xs)` |  |
+| **How far the thumb reaches past the track, top and bottom together.** | | |
+| `--slider-thumb-overhang` | `0px` |  |
+| `--slider-stop-size` | `var(--space-xs)` |  |
+| `--slider-tick-length` | `var(--space-s)` |  |
 | **Rating tokens** | | |
 | `--rating-size` | `1.5rem` |  |
 | **Swatch tokens** | | |
@@ -1449,7 +1466,7 @@ Colors are organised into two layers: **primitive tokens** (raw values) and **se
 
 ## Brand Palette
 
-The core brand colors that define the project identity. The engine ships neutral defaults; each brand sets its own values in `cms/brands/<brand>/assets/theme.css`, and the swatches below render the active brand's values (By Default, instance 0, on this site).
+The core brand colors that define the project identity. The engine ships neutral defaults; each brand sets its own values in its theme file (`brandCssPath`), and the swatches below render the active brand's values (By Default's, on this site).
 
 ### Accent Colors
 
@@ -2475,7 +2492,7 @@ element.animate(
 );
 ```
 
-This is the pattern the docs site's own page transitions use — see `assets/js/barba-init.js`, which reads the motion tokens from CSS custom properties at runtime.
+This is the pattern the docs site's own page transitions use — see the kit's router, `barba-docs.js`, which reads the motion tokens from CSS custom properties at runtime.
 
 ### In GSAP
 
@@ -2648,6 +2665,7 @@ Every interactive component must include:
 | Copy Button | `.copy-btn` | Yes (`copy-button.js`) | `copy-button.md` |
 | Breadcrumb | `.breadcrumb` | No | `breadcrumb.md` |
 | Tabs | `.tabs`, `.tab` | Yes (`tabs.js`) | `tabs.md` |
+| Slider | `.slider`, `.slider-input` | Yes (`slider.js`: fill, readout, stops) | `slider.md` |
 | Progress | `.progress-bar`, `.progress-ring` | No | `progress.md` |
 | Tooltip | `[data-tooltip]` | No | `tooltip.md` |
 | Toast | `.toast` | Yes (`toast.js`) | `toast.md` |
@@ -4330,14 +4348,14 @@ Every function is a `window` global. A page with no router needs none of them: o
 
 ### The router contract
 
-On this site `assets/js/barba-init.js` drives the engine from its hooks rather than from `bd:after-nav`, because that event fires inside a container that is still `position: absolute` and still transforming, and a scroll reveal set up there would measure the transition layout. Each call sits where the layout it needs is true:
+The kit's router (`barba-docs.js`, on every site) drives the engine from its hooks rather than from `bd:after-nav`. The engine registers itself as the router's `motion` option when it loads, before the router (`window.bdBarbaOptions.motion`: `freeze`, `out`, `in`, `show`, `land` and `reducedMotion`, the `bdAnimateConfig.reducedMotion` switch), so the router names no module. Each call sits where the layout it needs is true:
 
 | Hook | Call | Why there |
 |---|---|---|
 | `beforeLeave` | `bdAnimateFreeze(current)` | Entrances still playing on the leaving page finish at once: one ending mid-transition would clear the inline translate that holds a docked bar in place. The leave hook scrolls to 0 under the page; a trigger left live would rewind. Never a revert here: the page is on screen for the whole slide, and a revert restores "no inline opacity", which the guard reads as hidden |
 | `leave`, first | `bdAnimateOut(current)` | The page is still in flow and scrolled. After the scroll reset the container sits at the top with no transform until the slide's first keyframe |
 | `enter`, start | `bdAnimateIn(next, { arriving, offset })` | The cascade starts `--motion-page-content-offset` of the way into the slide (halfway), with the on-screen reveals in it, so content settles with the page (`arriving` is false for a fragment link). Entrances are `gsap.set` and `gsap.to` on children of a translating container, relative. The on-screen check measures once, before the slide starts, when the container sits where it will land |
-| `after` | `bdAnimateCleanup()`, `bdAnimateInit(next)`, a guarded refresh | The old container is out of the document, so its context reverts unseen; the new one is in flow with no transform, so the reveals measure the real layout |
+| `after`, after `bd:after-nav` | `bdAnimateCleanup()`, `bdAnimateInit(next)`, a guarded refresh | The old container is out of the document, so its context reverts unseen; the new one is in flow with no transform, so the reveals measure the real layout. After `bd:after-nav`, so reveals see what the modules have just built |
 
 A `ScrollTrigger.refresh()` is only ever run when triggers exist: with none there is nothing to measure, and a refresh briefly forces `scroll-behavior: auto` on the root. On a page with triggers a fragment landing is instant rather than smooth, because the refresh records and restores the scroll position around its measurements and would cut the glide short.
 
@@ -9774,16 +9792,17 @@ This variant shipped in 6.0 as `data-variant="thumb"`. That name still works —
 
 ## Slider
 
-`input[type="range"]` is styled with design system tokens. Use `.slider-wrapper` for a labelled slider with live value display. See the [Slider](slider.html) docs for full details.
+A slider picks a value from a range, with its label and value always in view. See the [Slider](slider.html) docs for the layouts, styles, stops and scale.
 
 ```html
-<div class="slider-wrapper">
+<div class="slider" data-unit="%">
   <div class="slider-header">
-    <label for="opacity">Opacity</label>
-    <span class="slider-value" id="opacity-val">75%</span>
+    <label class="slider-label" for="opacity">Opacity</label>
+    <span class="slider-value">75%</span>
   </div>
-  <input type="range" id="opacity" min="0" max="100" value="75"
-    oninput="document.getElementById('opacity-val').textContent = this.value + '%'">
+  <div class="slider-control">
+    <input class="slider-input" type="range" id="opacity" min="0" max="100" value="75">
+  </div>
 </div>
 ```
 
@@ -9944,7 +9963,7 @@ The customizable select picker reuses `--dropdown-background`, `--dropdown-borde
 | `.segmented-control-option input[type="radio"]` | The invisible radio, stretched over its label as the hit area |
 | `.segmented-control-option:has(input:disabled)` | Disabled segment: `--input-disabled-text` at half opacity, not-allowed cursor |
 | `.segmented-control[data-size="small"]`, `.form-group[data-size="small"]`, `fieldset[data-size="small"]` | Small: re-points the `--segmented-*` size tokens, inherited by every segment inside |
-| `.slider-wrapper` | Labelled slider container |
+| `.slider` | Slider: label and value, track, optional stops and scale. Full reference on the [Slider](slider.html) page |
 | `.number-input` | Stepper wrapper: flex, border |
 | `.number-input-btn` | Increment/decrement button |
 | `.number-input[data-size="small"]`, `.form-group[data-size="small"]`, `fieldset[data-size="small"]` | Small: the field's small height, no block padding, `--font-xs` |
@@ -11414,7 +11433,7 @@ The script never touches the icon. The visual swap — `eye-off` while hidden, `
 
 The listener sits on the document and resolves the target on each click, so it never holds a reference to a button. A toggle rendered at load, swapped in by a Barba transition, or injected by a script afterward all behave identically, and there is no re-initialisation step.
 
-`window.initPasswordToggle` is exposed because an exported init is part of the module contract — a consumer bundling this file rather than loading it with a `<script>` tag needs an entry point. It is guarded, so calling it twice binds nothing twice. It is deliberately **not** registered in `bd-site-init.js` and does not need to be: a delegated listener installs itself once and no navigation removes it. `dropdown.js` and `dialog.js` are absent from that dispatcher for the same reason.
+`window.initPasswordToggle` is exposed because an exported init is part of the module contract — a consumer bundling this file rather than loading it with a `<script>` tag needs an entry point. It is guarded, so calling it twice binds nothing twice. It needs no start on each page transition, unlike an app that starts itself on `bd:after-nav`: a delegated listener installs itself once and no navigation removes it. `dropdown.js` and `dialog.js` work the same way.
 
 This replaced a version that queried every toggle at load and bound each one directly. On a Barba site that shape is a trap: head scripts do not re-run on navigation, so a toggle worked on a full page load and was inert when the same page was reached by clicking a link — see `js-code-structure.md`.
 
@@ -12102,7 +12121,7 @@ Sticky is the default. Scroll the frame below — the header stays, and `data-st
 
 Everything in the end slot is an existing component. The header adds no new controls.
 
-On the docs site the end slot is four equal squares — contact, search, theme, account — each an icon-only action (`data-icon-only`, `aria-label`), sized to the 44px target minimum by §40 so an icon and an avatar sit in the same box. `nav.js` emits them; the account menu is emitted **hidden and empty**, and `assets/js/header-account.js` fills the avatars, the name and the email from the session and reveals it. A page served signed out — login, support, access denied — keeps the slot hidden: nothing says "sign in" there, because on those pages that is the page.
+On the docs site the end slot is four equal squares — contact, search, theme, account — each an icon-only action (`data-icon-only`, `aria-label`), sized to the 44px target minimum by §40 so an icon and an avatar sit in the same box. `nav.js` emits them; the account menu is emitted **hidden and empty**, and `assets/js/header-account.js` fills the avatars, the name and the email from the session and reveals it. A page served signed out (sign-in, Contact us) keeps the slot hidden: nothing says "sign in" there, because on those pages that is the page.
 
 ### Account dropdown
 
@@ -12336,44 +12355,127 @@ This section documents how the component is built. For usage, see the sections a
 
 ### Slider
 
-Sliders style the native `<input type="range">` element with design system tokens. They support labels, live value display, and disabled states.
+A slider sets a value by dragging along a range, with the label and value always on show. The `.slider` class wraps a native `input[type="range"]`; `data-layout`, `data-variant`, `data-stops`, `data-unit` and `data-values` on the wrapper set how it looks and reads, and `slider.js` keeps the fill and readout in step with the thumb.
 
 ---
 
-## Tokens
+## Anatomy
 
-| Token | Default | Purpose |
-|-------|---------|---------|
-| `var(--slider-track-height)` | `4px` | Track height |
-| `var(--slider-thumb-size)` | `18px` | Thumb diameter |
-| `var(--slider-track-background)` | `var(--background-darker)` | Track fill |
-| `var(--slider-fill)` | `var(--text-primary)` | Active fill colour |
-| `var(--slider-thumb-background)` | `var(--text-primary)` | Thumb colour |
-| `var(--slider-thumb-border)` | `var(--background-primary)` | Thumb border |
-| `var(--slider-radius)` | `var(--radius-full)` | Track corner radius |
+| Axis | Mechanism | Example |
+|---|---|---|
+| Layout | `data-layout` on `.slider` | `data-layout="compact"` — label and value inside the track |
+| Style | `--slider-*` tokens in `theme.css`; `data-variant` for one slider | `data-variant="needle"` — a tall needle on a faded fill |
+| Stops | `data-stops` on `.slider` | Empty: one per step. `data-stops="5"`: five |
+| Unit | `data-unit` on `.slider` | `data-unit="%"` — "60%" in the readout and to a screen reader |
+| Presets | `data-values` on `.slider` | `data-values="128,256,512"` — the readout shows the preset, not its index |
+| Scale | `.slider-scale` after the control; `data-variant="labels"` on it | End labels and ticks, or one label per stop |
+| State | `.is-filled`, `.is-active` on a stop | Set by `slider.js`: a stop under the fill; the stop under the thumb |
+
+The parts: `.slider-header` holds `.slider-label` (a `<label>`) and `.slider-value` (a `<span>`); `.slider-control` holds `.slider-input`. The slider reads the `--slider-*` tokens in `:root`.
 
 ---
 
 ## Basic usage
 
 ```html
-<input type="range" min="0" max="100" value="50">
+<div class="slider" data-unit="%">
+  <div class="slider-header">
+    <label class="slider-label" for="opacity">Opacity</label>
+    <span class="slider-value">60%</span>
+  </div>
+  <div class="slider-control">
+    <input class="slider-input" type="range" id="opacity" min="0" max="100" value="60">
+  </div>
+</div>
 ```
 
 ---
 
-## With label and live value
+## Styles
 
-Use `.slider-wrapper`, `.slider-header`, and `.slider-value` for a labelled slider with live value display.
+Three thumbs. A brand picks one as its house style in `theme.css`, and every slider follows; `data-variant` puts one slider in another style.
+
+| Style | Looks like |
+|-------|------------|
+| Pill | A round thumb at the end of a solid fill. The engine's house style |
+| Square | A solid fill with a short bar inside its end |
+| Needle | A faded fill with a tall ink needle crossing the track |
+
+To make Needle the house style, set its tokens once in `theme.css`:
+
+```css
+:root {
+  --slider-track: var(--bg-faded-5);
+  --slider-fill: var(--bg-faded-10);
+  --slider-on-fill: var(--text-primary);
+  --slider-radius: var(--radius-control);
+  --slider-thumb-size: var(--space-xs);
+  --slider-thumb-color: var(--text-primary);
+  --slider-thumb-ring: transparent;
+  --slider-fill-trim: 0;
+  --slider-thumb-inset-block: 0px;
+  --slider-thumb-inset-inline: 0px;
+  --slider-thumb-overhang: var(--space-s);
+}
+```
+
+Square is the same idea: `--slider-track: var(--bg-faded-5)`, `--slider-radius: var(--radius-control)`, `--slider-thumb-ring: transparent`, `--slider-fill-trim: 0`, `--slider-thumb-size: var(--space-l)`, `--slider-thumb-inset-block: calc(var(--space-s) / 2)` and `--slider-thumb-inset-inline: calc((var(--space-l) - var(--border-l)) / 2)`. The `[data-variant]` rules in `design-system.css` hold each style's full set.
+
+---
+
+## Compact layout
+
+`data-layout="compact"` moves the label and value inside the track, which grows from `--slider-height` to `--slider-height-compact` to hold them. Where the fill passes under a word, that part of the word turns to the fill's contrasting colour; over the thumb it stays ink.
 
 ```html
-<div class="slider-wrapper">
-  <div class="slider-header">
-    <label for="opacity">Opacity</label>
-    <span class="slider-value" id="opacity-val">75%</span>
+<div class="slider" data-layout="compact"> … </div>
+```
+
+Keep a Compact label to one or two words: the words have the track's width and no more. The label sits on the input, so a tap on it sets the value there. Compact is a layout, not a size: `data-density="compact"` makes controls smaller and leaves the slider's layout alone.
+
+---
+
+## Stops
+
+`data-stops` draws a dot for each value the thumb can land on; the input's `step` is what makes it snap. Leave the attribute empty to draw one stop per step, or give a count of 2 or more. When the step does not divide the range, the last stop sits on the last value the thumb can reach.
+
+```html
+<div class="slider" data-stops>
+  …
+  <input class="slider-input" type="range" min="0" max="5" step="1" value="2">
+</div>
+```
+
+---
+
+## Scale
+
+A scale sits under the track. **End labels** say what each end means, and the ticks between them are a ruler to judge distance by, not steps. **Tick labels** (`data-variant="labels"`) put one label under each stop, for a stepped slider only. The scale is `aria-hidden`. slider.js speaks a tick label for you (see Accessibility); when the end labels carry meaning, say it to a screen reader too: a hidden sentence linked with `aria-describedby`.
+
+```html
+<input class="slider-input" type="range" id="warmth" min="0" max="100" aria-describedby="warmth-ends">
+…
+<div class="slider-scale" aria-hidden="true">
+  <span class="slider-end">Cool</span>
+  <span class="slider-ticks"></span>
+  <span class="slider-end">Warm</span>
+</div>
+<span class="visually-hidden" id="warmth-ends">Cool at 0, Warm at 100</span>
+```
+
+Set `--slider-tick-count` on `.slider-ticks` to change the number of gaps (20 by default).
+
+### Presets that are not evenly spaced
+
+A range input is linear, so 128, 256, 512, 1024 and 2048 cannot share one track as numbers. Make the input a range of indexes and give the presets in `data-values`: the readout and `aria-valuetext` show the preset, and each stop takes its label.
+
+```html
+<div class="slider" data-stops data-values="128,256,512,1024,2048" data-unit=" px">
+  …
+  <input class="slider-input" type="range" min="0" max="4" step="1" value="2">
+  <div class="slider-scale" data-variant="labels" aria-hidden="true">
+    <span>128</span><span>256</span><span>512</span><span>1024</span><span>2048</span>
   </div>
-  <input type="range" id="opacity" min="0" max="100" value="75"
-    oninput="document.getElementById('opacity-val').textContent = this.value + '%'">
 </div>
 ```
 
@@ -12381,30 +12483,117 @@ Use `.slider-wrapper`, `.slider-header`, and `.slider-value` for a labelled slid
 
 ## Disabled
 
+A disabled slider fades as a whole, label and value with it, and the input refuses the pointer and the keyboard.
+
 ```html
-<input type="range" min="0" max="100" value="30" disabled>
+<input class="slider-input" type="range" min="0" max="100" value="30" disabled>
 ```
 
 ---
 
-## Accessibility notes
+## Choosing a slider
 
-- The native `<input type="range">` is announced by screen readers automatically
-- Always pair with a `<label>` or `aria-label`
-- The `min`, `max`, `step`, and `value` attributes are exposed to assistive technology
+What the number is decides the slider, more than where it goes.
+
+| The value | Use | Example |
+|-----------|-----|---------|
+| A free percentage or amount | Default layout, no stops | Opacity, blur |
+| A small count of whole numbers | Stops on | Quiet zone 0 to 5 |
+| A short list of evenly spaced presets | Stops and tick labels | Icon size 16, 24, 32, 40, 48 |
+| Presets that are not evenly spaced | An index range, `data-values`, stops and tick labels | Export size 128 to 2048 |
+| A value with no unit | End labels that name each end | Warmth: Cool to Warm |
+| A value that must be exact | The slider plus a number field | A pixel size someone types |
 
 ---
 
-## Do / Don't
+## JavaScript
+
+`assets/js/slider.js` keeps the slider in step with its input. It sets `--slider-value` for the fill, writes the value (or the `data-values` preset) and `data-unit` into `.slider-value` and into `aria-valuetext`, and draws the stops, redrawing them when `min`, `max`, `step` or `data-stops` change. Without it the input still works; the fill and readout stay where the markup put them.
+
+Code that changes `input.value` itself, such as a reset button, calls `window.syncSlider(input)` afterwards, because setting the value fires no event. So does code that changes the scale's words, `data-unit` or `data-values`. A form's own reset is picked up.
+
+---
+
+## Accessibility
+
+- The track is a native `input[type="range"]`: arrow keys, Page Up and Down, Home and End all work, and its value is announced.
+- The visible `<label>` names the input, in both layouts. Never drop it.
+- With `data-unit` or `data-values`, `aria-valuetext` carries what the readout shows, so "60%" or "512 px" is read rather than the raw number.
+- The scale is `aria-hidden`, so a labelled scale (`data-variant="labels"`) reaches the input through `aria-valuetext`. On a tick whose label says more than the value, it is the label alone ("Medium") when every value the thumb can reach has a label and there is no unit or preset; otherwise the label and the readout ("Medium, 24 px"), so the number is never lost. Between ticks it is the readout. The React `tickLabels` prop does the same.
+- An `aria-valuetext` in your markup is yours: slider.js never changes it. It marks the text it writes with `data-slider-valuetext`.
+- The readout is a plain `<span>`, not an `<output>`: an `<output>` is a live region, and the value would be spoken twice on every step.
+- End labels are `aria-hidden` too. When they carry meaning, link a hidden sentence with `aria-describedby`, as the Scale section shows.
+- Focus draws the standard focus ring round the input. In forced colours the track edge, the thumb and the stops are drawn in system colours.
+
+---
+
+## Usage rules
 
 **Do:**
-- Use sliders for continuous values (volume, opacity, price range)
-- Show the current value with `.slider-value` for clarity
-- Use `step` to control precision
+- Use the default layout unless the space is tight
+- Keep the label and value visible on every slider
+- Turn stops on when only some values are allowed
+- Label each stop when the values are not evenly spaced
 
 **Don't:**
-- Don't use sliders for precise numeric entry. Use a number input instead
-- Don't use sliders without a visible label or value indicator
+- Don't use Compact with stops: the dots crowd the words on the track
+- Don't use Compact for a value that lives near either end: the thumb sits on the label at the start and on the value at the end
+- Don't put free ticks and stops on one slider. If values snap, the stops are the ruler
+- Don't use a slider alone for a value that has to be exact
+
+---
+
+## CSS reference
+
+This section documents how the component is built. For usage, see the sections above.
+
+### Tokens
+
+| Token | Default | What it controls |
+|-------|---------|------------------|
+| `--slider-height` | `var(--space-xl)` | Track height |
+| `--slider-height-compact` | `var(--space-2xl)` | Track height in Compact |
+| `--slider-track` | `var(--bg-faded-10)` | Track colour |
+| `--slider-fill` | `var(--text-primary)` | Fill colour |
+| `--slider-on-fill` | `var(--background-primary)` | Filled stops and Compact text over the fill |
+| `--slider-radius` | `var(--radius-full)` | Track corners |
+| `--slider-thumb-size` | not set: the track's height | The thumb's box, which every position is measured from |
+| `--slider-thumb-color` | `var(--slider-on-fill)` | The thumb's paint |
+| `--slider-thumb-ring` | `var(--slider-fill)` | The edge round the thumb's paint; on a pill it rounds the fill's end |
+| `--slider-fill-trim` | `0.5` | How much of the thumb's box the painted fill stops short of |
+| `--slider-thumb-radius` | `var(--radius-full)` | The thumb's corners |
+| `--slider-thumb-inset-block` | `var(--space-2xs)` | Space above and below the paint inside the box |
+| `--slider-thumb-inset-inline` | `var(--space-2xs)` | Space either side of the paint inside the box |
+| `--slider-thumb-overhang` | `0px` | How far the thumb reaches past the track |
+| `--slider-stop-size` | `var(--space-xs)` | Stop diameter |
+| `--slider-tick-length` | `var(--space-s)` | Tick length on `.slider-ticks` |
+| `--slider-tick-count` | `20` | Gaps between ticks, set on `.slider-ticks` |
+
+Worked out on `.slider` and not for setting: `--slider-thumb-width`, `--slider-thumb-height`, `--slider-fill-to`, `--slider-direction` and `--slider-value`, which `slider.js` sets.
+
+### Selectors
+
+| Selector | Purpose |
+|----------|---------|
+| `.slider` | The component: a grid of header, control and scale |
+| `.slider[data-variant="pill"]`, `[data-variant="square"]`, `[data-variant="needle"]` | One slider in a given style, re-pointing the `--slider-*` tokens |
+| `.slider[data-layout="compact"]` | Header laid over the track |
+| `.slider:dir(rtl)` | The fill and the stops run from the right |
+| `.slider-header`, `.slider-label`, `.slider-value` | Label and value; the value takes the far end |
+| `.slider-control`, `.slider-input` | The track and its native input |
+| `.slider-stop.is-filled`, `.slider-stop.is-active` | A stop under the fill; the stop under the thumb (hidden) |
+| `.slider-scale`, `.slider-ticks` | The scale row and its ruler |
+| `.slider-scale[data-variant="labels"]` | One label per stop |
+| `.slider-wrapper` | Deprecated: the old markup, kept until the next major |
+
+`data-stops`, `data-unit` and `data-values` are read by `slider.js` and have no CSS of their own; `.slider-end` names an end label and takes the scale's styling.
+
+### Key rules
+
+- The fill is a gradient on the track that stops at `--slider-fill-to`, the thumb's far edge: native thumbs travel from half their width in, so every position is `thumb / 2 + value × (track − thumb)`.
+- One thumb rule draws all three styles: the thumb's colour is painted inside a border of the two insets. On a pill that border is the fill's colour, and the fill stops at the thumb's centre, so the fill ends in a round cap.
+- Compact text uses `background-clip: text` with a gradient that turns at the same edges as the fill and the thumb, limited to the track's height.
+- A bare `input[type="range"]` keeps its own simpler styling, and its rules never reach `.slider-input`.
 
 ### Swatch
 

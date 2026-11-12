@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.1 */
+/* @bydefaultstudio/design-system v8.0.0 */
 /**
  * @bydefaultstudio/design-system/react — Tier 2 React adapters.
  *
@@ -33,3 +33,4 @@ export { Breadcrumb } from './breadcrumb.mjs';
 export { CellInput } from './cell-input.mjs';
 export { ChipGroup } from './chip.mjs';
 export { DatePicker } from './date-picker.mjs';
+export { Slider } from './slider.mjs';

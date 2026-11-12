@@ -1,0 +1,341 @@
+
+      <!--
+        A tool on the shared canvas, built from docks (cms/tool-canvas.md,
+        Docks), in the Side panels layout: the bar, the plan in the preview,
+        the controls docked on the right, and the one verb, Copy table,
+        pinned at the dock's foot. The toggle in the preview's corner folds
+        the dock away so the table takes the canvas, for sharing a screen.
+        No footer and no page header: the canvas is the page.
+
+        The sections are the tool's own: Campaign (what is planned, at what
+        rate, the fees and the partner, in pairs side by side), Months (the
+        breakdown, a switch with the fields it reveals) and Saved plans.
+        There is no Style, and no Export: the one verb has no format, size
+        or name to choose, so it sits in .tool-actions alone. Campaign and
+        Months have their own reset; Reset all is in the bar's menu.
+
+        The preview shows the figures, and the month table only while the
+        breakdown is on: off, the figures are the statement. Copy table
+        copies the month table, or the statement the figures show. The
+        months are typed in the dock (Custom), never in the preview, so the
+        table is read-only. Everything in the preview is written by
+        cpm-calculator.js from one computation, so the figures and the table
+        cannot disagree.
+      -->
+      <div class="tool-canvas" id="cpm-calculator">
+
+        <div class="bar" data-sticky="true">
+          <div class="bar-container">
+            <div class="bar-content">
+              <h1 class="tool-canvas-title" data-priority="pinned">CPM Calculator</h1>
+
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item js-copy-url">{{icon:link}}<span>Copy link</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" id="cpm-calculator-reset">{{icon:refresh}}<span>Reset all</span></button>
+              </div>
+              <!-- Feedback: opens the shared dialog (cms/chrome/feedback-dialog.html) -->
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="share">{{icon:chat}}<span>Share feedback</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="problem">{{icon:warning}}<span>Report a problem</span></button>
+              </div>
+            </div><!-- /.bar-content -->
+            <div class="bar-actions">
+              <div class="dropdown bar-overflow" hidden>
+                <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
+                <div class="dropdown-menu is-right"></div>
+              </div>
+              <a class="bar-close" data-page-close aria-label="Back to Tools">{{icon:close-large}}</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- The plan. The sheet is a column: the header line, the figures
+             and the split stay put, and the table area under them is the
+             one scroller from 960px, so its header, total row and month
+             column can stick. The script makes each scroller a tab stop
+             while it overflows. The status region is here, clipped, so the
+             dock folding away never takes it out of the tree. -->
+        <div class="tool-preview" id="cpm-calculator-preview">
+          <div class="tool-sheet" id="cpm-calculator-sheet" data-scroll-label="Plan">
+            <h2 class="visually-hidden">Plan</h2>
+            <p class="tool-heading" id="cpm-calculator-heading"></p>
+            <dl class="tool-figures" id="cpm-calculator-figures"></dl>
+            <div class="tool-split is-hidden" id="cpm-calculator-split">
+              <p class="tool-split-title" id="cpm-calculator-split-title">Where the spend goes</p>
+              <!-- The bar is a picture of the legend under it, which says the
+                   same in text, so it is hidden from assistive technology. -->
+              <div class="tool-split-bar" id="cpm-calculator-split-bar" aria-hidden="true"></div>
+              <ul class="tool-split-legend" id="cpm-calculator-split-legend" aria-labelledby="cpm-calculator-split-title"></ul>
+            </div>
+            <div class="tool-table-wrap" id="cpm-calculator-table-wrap" data-scroll-label="Plan table">
+              <table class="table tool-table" id="cpm-calculator-table"></table>
+            </div>
+            <!-- The plan's own error (fees above the CPM) is announced here,
+                 in the preview, because a folded section is inert and the
+                 CPM that causes it is often typed in another section. -->
+            <p class="form-error" id="cpm-calculator-plan-error" role="alert"></p>
+          </div>
+          <p class="visually-hidden" role="status" id="cpm-calculator-status"></p>
+
+          <!-- Folds the dock away (tool-canvas.js), and the preview takes its
+               width. The name stays "Controls"; aria-expanded carries the
+               state. data-edge points the icon at the dock. -->
+          <button class="button tool-dock-toggle" data-variant="transparent" data-icon-only data-edge="end" type="button" aria-controls="cpm-calculator-dock" aria-expanded="true" aria-label="Controls">
+            {{icon:sidebar-right-close}}{{icon:sidebar-right-open}}
+          </button>
+        </div>
+
+        <div class="tool-dock" data-edge="end" id="cpm-calculator-dock">
+          <div class="tool-panels accordion" data-accordion="multi" id="cpm-calculator-panels" role="group" aria-label="CPM Calculator controls">
+
+          <!-- Campaign: everything the plan is made of, in one section —
+               what is planned and at what rate, the fees, the partner.
+               Values that belong together sit side by side as other tools
+               lay out X and Y: the currency symbol is an affix inside the
+               box, the caption above it. Plan by decides which quantity is
+               typed; the other is worked out and shown in the preview. Each
+               optional part is a switch over the field it reveals, so the
+               next Tab lands in the field just shown. -->
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="cpm-calculator-campaign-heading" aria-expanded="true" aria-controls="cpm-calculator-campaign-section">
+                  <span class="tool-panel-title">Campaign</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+              <!-- Puts everything here back, except the partner's name: typed
+                   content is the reader's work. -->
+              <button class="button tool-panel-action" data-variant="transparent" data-icon-only type="button" id="cpm-calculator-campaign-reset" data-reset="campaign" aria-label="Reset Campaign" data-tooltip="Reset Campaign" data-tooltip-position="left" disabled>{{icon:refresh}}</button>
+            </div>
+            <div class="accordion-content" id="cpm-calculator-campaign-section" role="region" aria-labelledby="cpm-calculator-campaign-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <fieldset data-variant="bare">
+                <legend data-variant="caption" id="cpm-calculator-by-label">Plan by</legend>
+                <div class="segmented-control" data-variant="faded" id="cpm-calculator-by">
+                  <label class="segmented-control-option"><input type="radio" name="cpm-calculator-by" value="spend" checked><span>Spend</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="cpm-calculator-by" value="impressions"><span>Impressions</span></label>
+                </div>
+              </fieldset>
+
+              <!-- The planned quantity and the rate, a pair. Only one of
+                   Spend and Impressions shows. -->
+              <div class="block gap-s">
+                <div class="grid cols-2">
+                  <div class="block gap-s" id="cpm-calculator-spend-field">
+                    <label data-variant="caption" for="cpm-calculator-spend">Spend</label>
+                    <div class="field">
+                      <span class="field-affix" data-role="symbol" aria-hidden="true">£</span>
+                      <input type="number" id="cpm-calculator-spend" min="0" step="any" inputmode="decimal" value="300000">
+                    </div>
+                  </div>
+                  <div class="block gap-s is-hidden" id="cpm-calculator-impressions-field">
+                    <label data-variant="caption" for="cpm-calculator-impressions">Impressions</label>
+                    <input type="number" id="cpm-calculator-impressions" min="0" step="1" inputmode="numeric" value="20000000">
+                  </div>
+                  <div class="block gap-s">
+                    <label data-variant="caption" for="cpm-calculator-cpm">CPM</label>
+                    <div class="field">
+                      <span class="field-affix" data-role="symbol" aria-hidden="true">£</span>
+                      <input type="number" id="cpm-calculator-cpm" min="0" step="any" inputmode="decimal" value="15">
+                    </div>
+                  </div>
+                </div>
+                <p class="form-hint is-hidden" id="cpm-calculator-spend-hint">The sum of the months. Switch Spread to Even to set a total.</p>
+                <p class="form-hint is-hidden" id="cpm-calculator-impressions-hint">The sum of the months. Switch Spread to Even to set a total.</p>
+                <p class="form-error" id="cpm-calculator-cpm-error" role="alert"></p>
+              </div>
+
+              <fieldset data-variant="bare" aria-describedby="cpm-calculator-currency-hint">
+                <legend data-variant="caption" id="cpm-calculator-currency-label">Currency</legend>
+                <div class="segmented-control" data-variant="faded" id="cpm-calculator-currency">
+                  <label class="segmented-control-option"><input type="radio" name="cpm-calculator-currency" value="GBP" checked aria-describedby="cpm-calculator-currency-hint"><span>GBP (£)</span></label>
+                  <label class="segmented-control-option"><input type="radio" name="cpm-calculator-currency" value="USD"><span>USD ($)</span></label>
+                </div>
+                <p class="form-hint" id="cpm-calculator-currency-hint">Changes the symbol only. Amounts are not converted.</p>
+              </fieldset>
+
+              <!-- The two fees, a pair: each column is a switch and, under
+                   it, its rate. The columns hold their place, so a fee that
+                   is off leaves a gap rather than moving the other. -->
+              <div class="block gap-s">
+                <div class="grid cols-2">
+                  <div class="block gap-s">
+                    <div class="form-toggle" data-variant="mono">
+                      <input type="checkbox" role="switch" id="cpm-calculator-creative">
+                      <label for="cpm-calculator-creative">Creative fee</label>
+                    </div>
+                    <div class="field is-hidden" id="cpm-calculator-creative-field">
+                      <span class="field-affix" data-role="symbol" aria-hidden="true">£</span>
+                      <input type="number" id="cpm-calculator-creative-cpm" min="0" step="any" inputmode="decimal" value="1" aria-label="Creative fee CPM" aria-describedby="cpm-calculator-fees-error">
+                      <span class="field-affix" aria-hidden="true">CPM</span>
+                    </div>
+                  </div>
+                  <div class="block gap-s">
+                    <div class="form-toggle" data-variant="mono">
+                      <input type="checkbox" role="switch" id="cpm-calculator-hosting">
+                      <label for="cpm-calculator-hosting">Ad hosting fee</label>
+                    </div>
+                    <div class="field is-hidden" id="cpm-calculator-hosting-field">
+                      <span class="field-affix" data-role="symbol" aria-hidden="true">£</span>
+                      <input type="number" id="cpm-calculator-hosting-cpm" min="0" step="any" inputmode="decimal" value="1" aria-label="Ad hosting fee CPM" aria-describedby="cpm-calculator-fees-error">
+                      <span class="field-affix" aria-hidden="true">CPM</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- The fee fields' description while fees outrun the CPM. Not
+                     an alert: the preview's plan error line announces it. -->
+                <p class="form-error is-hidden" id="cpm-calculator-fees-error"></p>
+              </div>
+
+              <!-- The partner: a switch over a pair, the name and the share.
+                   Net is what is left, read out under the share. -->
+              <div class="block gap-s">
+                <div class="form-toggle" data-variant="mono">
+                  <input type="checkbox" role="switch" id="cpm-calculator-partner">
+                  <label for="cpm-calculator-partner">Partner share</label>
+                </div>
+                <div class="grid cols-2 is-hidden" id="cpm-calculator-partner-fields">
+                  <div class="block gap-s">
+                    <label data-variant="caption" for="cpm-calculator-partner-name">Name</label>
+                    <input type="text" id="cpm-calculator-partner-name" placeholder="Vogue" autocomplete="off">
+                  </div>
+                  <div class="block gap-s">
+                    <label data-variant="caption" for="cpm-calculator-share">Share</label>
+                    <div class="field">
+                      <input type="number" id="cpm-calculator-share" min="0" max="100" step="any" inputmode="decimal" value="70" aria-describedby="cpm-calculator-net-share">
+                      <span class="field-affix" aria-hidden="true">%</span>
+                    </div>
+                    <p class="form-hint" id="cpm-calculator-net-share">Net 30%</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          <!-- Months: off, the plan is one total. On, the total is spread
+               across the months — evenly, or typed month by month here
+               (Custom), when the total is their sum. Start and Length are
+               a pair; the months are pairs too, written by the script. -->
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="cpm-calculator-months-heading" aria-expanded="true" aria-controls="cpm-calculator-months-section">
+                  <span class="tool-panel-title">Months</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+              <button class="button tool-panel-action" data-variant="transparent" data-icon-only type="button" id="cpm-calculator-months-reset" data-reset="months" aria-label="Reset Months" data-tooltip="Reset Months" data-tooltip-position="left" disabled>{{icon:refresh}}</button>
+            </div>
+            <div class="accordion-content" id="cpm-calculator-months-section" role="region" aria-labelledby="cpm-calculator-months-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <div class="form-toggle" data-variant="mono">
+                <input type="checkbox" role="switch" id="cpm-calculator-monthly">
+                <label for="cpm-calculator-monthly">Monthly breakdown</label>
+              </div>
+
+              <div class="block gap-l is-hidden" id="cpm-calculator-months-fields">
+                <div class="grid cols-2">
+                  <div class="block gap-s">
+                    <label data-variant="caption" for="cpm-calculator-start">Start month</label>
+                    <select id="cpm-calculator-start"></select>
+                  </div>
+                  <div class="block gap-s">
+                    <label data-variant="caption" for="cpm-calculator-length" id="cpm-calculator-length-label">Length (months)</label>
+                    <div class="number-input" role="group">
+                      <button class="number-input-btn" data-number-decrement type="button" aria-label="Fewer months">&minus;</button>
+                      <input type="number" id="cpm-calculator-length" value="12" min="1" max="24" step="1" inputmode="numeric">
+                      <button class="number-input-btn" data-number-increment type="button" aria-label="More months">+</button>
+                    </div>
+                  </div>
+                </div>
+
+                <fieldset data-variant="bare" aria-describedby="cpm-calculator-spread-hint">
+                  <legend data-variant="caption" id="cpm-calculator-spread-label">Spread</legend>
+                  <div class="segmented-control" data-variant="faded" id="cpm-calculator-spread">
+                    <label class="segmented-control-option"><input type="radio" name="cpm-calculator-spread" value="even" checked><span>Even</span></label>
+                    <label class="segmented-control-option"><input type="radio" name="cpm-calculator-spread" value="custom"><span>Custom</span></label>
+                  </div>
+                  <p class="form-hint" id="cpm-calculator-spread-hint">Even splits the total across the months. Custom lets you type each month.</p>
+                </fieldset>
+
+                <!-- Custom: a field per month, two to a row. Rebuilt only when
+                     the months, the start or the quantity change, so a field
+                     being typed in keeps its focus. -->
+                <div class="block gap-s is-hidden" id="cpm-calculator-month-values-block">
+                  <div class="grid cols-2" id="cpm-calculator-month-values" role="group" aria-label="Months"></div>
+                  <p class="form-error" id="cpm-calculator-months-error" role="alert"></p>
+                </div>
+              </div>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          <!-- Saved plans: content, so no reset and closed by default. Saves
+               stay in this browser (localStorage). One inline confirmation
+               serves Replace and Delete; its verb is rewritten for each. -->
+          <div class="tool-panel accordion-item">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="cpm-calculator-saved-heading" aria-expanded="false" aria-controls="cpm-calculator-saved-section">
+                  <span class="tool-panel-title">Saved plans</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+            </div>
+            <div class="accordion-content" id="cpm-calculator-saved-section" role="region" aria-labelledby="cpm-calculator-saved-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <div class="block gap-s">
+                <label data-variant="caption" for="cpm-calculator-save-name">Name this plan</label>
+                <div class="tool-save-row">
+                  <input type="text" id="cpm-calculator-save-name" placeholder="Q4 Vogue" autocomplete="off" aria-describedby="cpm-calculator-save-error">
+                  <button type="button" class="button" data-variant="outline" id="cpm-calculator-save">Save</button>
+                </div>
+                <p class="form-error" id="cpm-calculator-save-error" role="alert"></p>
+                <div class="tool-confirm is-hidden" id="cpm-calculator-confirm">
+                  <p class="form-hint" id="cpm-calculator-confirm-text"></p>
+                  <div class="button-group">
+                    <button type="button" class="button" data-size="small" id="cpm-calculator-confirm-replace" aria-describedby="cpm-calculator-confirm-text">Replace</button>
+                    <button type="button" class="button" data-variant="outline" data-size="small" id="cpm-calculator-confirm-cancel">Cancel</button>
+                  </div>
+                </div>
+              </div>
+
+              <p class="form-hint" id="cpm-calculator-saves-empty">Plans you save stay in this browser.</p>
+              <ul class="tool-saves" id="cpm-calculator-saves" aria-label="Saved plans"></ul>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          </div>
+
+          <!-- The one verb, pinned at the dock's foot. It copies the one
+               table the preview shows, as text for a spreadsheet and as a
+               table for a document. Its own handler in cpm-calculator.js,
+               not copy-button.js: it writes text/html as well. -->
+          <div class="tool-actions">
+            <p class="form-error" id="cpm-calculator-copy-error" role="alert"></p>
+            <div class="button-group">
+              <button type="button" class="button copy-btn" id="cpm-calculator-copy">
+                <span class="copy-btn-default">{{icon:copy}}<span>Copy table</span></span>
+                <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>

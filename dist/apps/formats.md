@@ -1,0 +1,21 @@
+---
+title: "Format Library"
+description: "Every platform format in one place: search or filter by platform, ratio and type, switch its layers on and off, read its spec and download its artwork."
+author: "Studio"
+section: "Tools"
+layer: "app"
+type: "tool"
+order: 5
+status: "stable"
+access: "public"
+downloadAccess: "public"
+brand: "internal"
+sidebar: "collapsed"
+version: "1.4.0"
+package: "formats"
+guide: "formats-docs.md"
+embed: "/tools/formats-embed.html"
+needs: "tools, tool-canvas, layer-stack, format-card, tool-grid, download-lock"
+scripts: "assets/js/formats.js"
+styles: "assets/css/formats.css"
+---

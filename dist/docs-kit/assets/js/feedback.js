@@ -18,15 +18,16 @@
  * This module opens and closes the dialog itself; it reads no
  * data-dialog-open / data-dialog-close. dialog.js still owns the backdrop and
  * Escape because the dialog carries .dialog. Hub and Email are never sent from
- * here: the server writes them (worker/notion-config.js).
+ * here: the server writes them (worker/notion-config.js). The follow-up switch
+ * is on the engine home's dialog only (PC-9): without it, no Follow-up is sent.
  *
- * @version 3.2.0
+ * @version 3.5.0
  * @author By Default
  */
 (function () {
   'use strict';
 
-  console.log('feedback.js v3.2.0 loaded');
+  console.log('feedback.js v3.5.0 loaded');
 
   //
   //------- Configuration -------//
@@ -111,10 +112,24 @@
     return (text || document.title || '').slice(0, 200);
   }
 
-  function getContext(source) {
+  // The page without its query or fragment, which can carry a token or an
+  // address. The service strips them too, for a copy that still sends them.
+  function getPageAddress() {
+    return (window.location.origin + window.location.pathname).slice(0, MAX_TEXT);
+  }
+
+  // The page as it stands now. The dialog takes this when it opens, so a send
+  // names the page it came from: on Back or Forward the router closes the
+  // dialog after the address bar has already moved to the next page.
+  function getPage() {
+    return { address: getPageAddress(), title: getPageTitle() };
+  }
+
+  function getContext(source, page) {
+    var from = page || getPage();
     return {
-      'Page': window.location.href.slice(0, MAX_TEXT),
-      'Page title': getPageTitle(),
+      'Page': from.address,
+      'Page title': from.title,
       'Source': source,
       'Device': getDevice(),
       'Browser': getBrowser(),
@@ -145,8 +160,8 @@
   }
 
   // A thumbs up or down with no dialog: one entry, titled as the old form did.
-  function submitVerdict(helpful) {
-    var fields = getContext('Footer');
+  function submitVerdict(helpful, page) {
+    var fields = getContext('Footer', page);
     fields['Feedback'] = helpful === 'Yes' ? 'Helpful' : 'Not helpful';
     fields['Helpful'] = helpful;
     return submit(fields, '');
@@ -220,7 +235,9 @@
   }
 
   function updateFollowUpHint() {
-    q('#feedback-follow-up-hint').textContent = q('#feedback-follow-up').checked ? COPY.hintOn : COPY.hintOff;
+    var toggle = q('#feedback-follow-up');
+    var hint = q('#feedback-follow-up-hint');
+    if (toggle && hint) hint.textContent = toggle.checked ? COPY.hintOn : COPY.hintOff;
   }
 
   // The controls an error can be about, so it is tied to the one that failed
@@ -277,6 +294,7 @@
       helpful: counted ? null : config.helpful,
       fromFooter: config.fromFooter,
       section: section,
+      page: getPage(),
       sent: false
     };
 
@@ -321,12 +339,13 @@
 
     var topic = getTopic();
     var text = q('.feedback-textarea').value.trim().slice(0, MAX_TEXT);
-    var fields = getContext(state.source);
+    var fields = getContext(state.source, state.page);
     fields['Feedback'] = text || topic;
     fields['Topic'] = topic;
     // The optional "stopping me working" switch, for a bug only (a checkbox in Notion).
     if (topic === TOPIC_BROKEN) fields['Impact'] = q('#feedback-impact').checked;
-    fields['Follow-up'] = q('#feedback-follow-up').checked;
+    var followUp = q('#feedback-follow-up');
+    if (followUp) fields['Follow-up'] = followUp.checked;
     if (state.helpful) fields['Helpful'] = state.helpful;
 
     // aria-disabled and a busy flag, so a focused Send keeps focus.
@@ -364,7 +383,7 @@
     state = null;
     if (!closing || closing.sent || !closing.helpful) return;
     if (closing.section) closing.section.dataset.feedbackCounted = '1';
-    submitVerdict(closing.helpful).catch(function (err) {
+    submitVerdict(closing.helpful, closing.page).catch(function (err) {
       console.error('[Feedback] ' + closing.helpful + ' not recorded:', err);
       if (closing.section) delete closing.section.dataset.feedbackCounted;
     });
@@ -443,8 +462,11 @@
     initFeedback();
   }
 
-  // barba-init.js calls this after every page swap. Everything is delegated
-  // from the document, so there is nothing per page to bind; it stays as the
-  // documented hook.
+  // Self-registered on bd:after-nav (engine parity C3): the router names no
+  // module. Everything is delegated from the document and the dialog sits
+  // outside the page container, so after the first call it is a guarded
+  // no-op. It stays registered so the module keeps the contract every other
+  // module keeps (cms/js-code-structure.md).
+  document.addEventListener('bd:after-nav', initFeedback);
   window.bdInitFeedback = initFeedback;
 })();

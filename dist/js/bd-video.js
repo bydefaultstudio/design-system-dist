@@ -1,11 +1,15 @@
-/* @bydefaultstudio/design-system v7.5.1 */
+/* @bydefaultstudio/design-system v8.0.0 */
 /**
  * Script Purpose: Configurable video player — play/pause, scrubber, mute, fullscreen, keyboard shortcuts, timed cues
  * Author: By Default
  * Created: 2026-04-12
- * Version: 0.8.1
- * Last Updated: 2026-09-19
+ * Version: 0.9.1
+ * Last Updated: 2026-11-11
  *
+ * 0.9.0 — starts and stops itself on bd:after-nav and bd:before-nav (engine
+ *         parity C3), so no router has to name it; a deferred autoplay on a
+ *         player built during bd:after-nav plays at once, since the event it
+ *         would wait for is the one already being dispatched
  * 0.8.1 — auto-hide keys on :focus-visible, not activeElement, so clicking a
  *         control no longer pins the chrome open; keyboard focus re-shows it,
  *         and a blocked pass re-arms instead of retiring the timer for good
@@ -201,6 +205,19 @@ function dispatch(root, name, detail) {
   root.dispatchEvent(new CustomEvent(name, { bubbles: true, detail: detail }));
 }
 
+// A cue's link: a page transition where the router takes it, else a full
+// load. barba.go() never asks the router's prevent rule, so a cue to a bare
+// page (no container) asks it here first (window.bdRouterPrevents).
+function followCue(href) {
+  var routed = typeof barba !== "undefined" && barba.go;
+  var prevented = typeof window.bdRouterPrevents === "function" && window.bdRouterPrevents(href);
+  if (routed && !prevented) {
+    barba.go(href);
+  } else {
+    window.location.href = href;
+  }
+}
+
 //
 //------- Player Instance -------//
 //
@@ -233,8 +250,8 @@ function initPlayerInstance(video) {
   // `autoplay` attribute and left a data-bd-deferred-autoplay marker (resumed on
   // bd:after-nav by the Barba sync block below). Treat that marker as equivalent
   // to live autoplay so the muted preview state restores on every arrival, not just
-  // cold load. NOTE: this relies on afterEnter running initBdVideo before it dispatches
-  // bd:after-nav — keep that order.
+  // cold load. A router that calls initBdVideo before it dispatches bd:after-nav
+  // leaves the play to that event; a build during the event plays at once (below).
   var isPreview = video.muted && (video.autoplay || video.hasAttribute("data-bd-deferred-autoplay"));
   var previewExitAt = 0;
   // Viewport auto-pause: true only while WE soft-paused an offscreen video, so the
@@ -1010,20 +1027,12 @@ function initPlayerInstance(video) {
           // Exit fullscreen first, then navigate
           document.addEventListener("fullscreenchange", function onFsExit() {
             video.pause();
-            if (typeof barba !== "undefined" && barba.go) {
-              barba.go(href);
-            } else {
-              window.location.href = href;
-            }
+            followCue(href);
           }, { once: true });
           document.exitFullscreen();
         } else {
           video.pause();
-          if (typeof barba !== "undefined" && barba.go) {
-            barba.go(href);
-          } else {
-            window.location.href = href;
-          }
+          followCue(href);
         }
       });
 
@@ -1106,7 +1115,14 @@ function initPlayerInstance(video) {
   // transition timeline has completed — the exact "transition finished" beat
   // that the page animations also key off.
 
-  if (video.hasAttribute("data-bd-deferred-autoplay")) {
+  if (video.hasAttribute("data-bd-deferred-autoplay") && arrivalInProgress) {
+    // Built by the self-registered bd:after-nav handler below: a listener
+    // added during a dispatch never hears that dispatch, and this one IS the
+    // "transition finished" beat, so play now.
+    video.removeAttribute("data-bd-deferred-autoplay");
+    video.play().catch(function () {});
+    syncPausedState();
+  } else if (video.hasAttribute("data-bd-deferred-autoplay")) {
     var transitionWatchdog = setTimeout(function fallback() {
       video.removeAttribute("data-bd-deferred-autoplay");
       video.play().catch(function () {});
@@ -1255,12 +1271,13 @@ function initBdVideo(scope) {
   players.forEach(initPlayerInstance);
 }
 
-// Expose for studio-barba.js to call after each navigation
+// Exposed for a router that calls it itself (studio-barba.js). Idempotent per
+// player (data-bd-init), so a second call from bd:after-nav is a no-op.
 window.initBdVideo = initBdVideo;
 
 // Disconnect every live viewport observer before a Barba nav-away, so they don't fire
 // against a detaching container or accumulate across navigations. Called from the Barba
-// `before` hook in studio-barba.js, beside cleanupThumbHover(). Idempotent.
+// `before` hook in studio-barba.js, and on bd:before-nav below. Idempotent.
 // Invariant: this disconnects ALL instances, relying on every pause-offscreen player
 // living inside the swapped Barba container (so it's torn down and re-created together).
 // The only consumer today (home hero) is inside page-wrapper, which Barba swaps. If a
@@ -1279,6 +1296,27 @@ function cleanupBdVideo() {
   instanceListeners.length = 0;
 }
 window.cleanupBdVideo = cleanupBdVideo;
+
+// True while the bd:after-nav handler below builds the arriving page's
+// players, for the deferred-autoplay sync in initPlayerInstance.
+var arrivalInProgress = false;
+
+// Self-registered (engine parity C3): the kit router names no module. Stop
+// before a page leaves, start on the page that arrives. Registered when this
+// file loads, so it runs before any later module's bd:after-nav listener:
+// gallery.js binds its exclusivity and preload budget to the players this
+// builds, and loads after this file.
+document.addEventListener("bd:before-nav", function stopOnLeave() {
+  cleanupBdVideo();
+});
+document.addEventListener("bd:after-nav", function startOnArrival(event) {
+  arrivalInProgress = true;
+  try {
+    initBdVideo(event.detail && event.detail.container);
+  } finally {
+    arrivalInProgress = false;
+  }
+});
 
 // Wait for DOM before initializing. The listener wraps the call rather than
 // being initBdVideo itself: a listener is handed the Event, which would arrive

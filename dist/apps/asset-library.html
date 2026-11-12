@@ -1,0 +1,315 @@
+
+      <!--
+        A tool on the shared canvas (cms/tool-canvas.md), with one difference
+        from its siblings: the grid IS the work. There is no large preview
+        standing over a list — the preview region holds the filters and the
+        tiles, filling the canvas (data-fit="fill"), and the chosen file's
+        details sit in the end dock, pinned: no toggle names it, so it never
+        hides, and the verbs sit at its foot. The preview overlay mounts
+        inside the grid region, covering only the grid, so the dock stays
+        live beside it.
+
+        The bar names the tool. Copy link and Reset are permanent residents
+        of the overflow menu (data-priority="menu"), so the trailing cluster
+        is the menu and the close. The exit is last: build-time contract.
+      -->
+      <!-- data-download-guests="none": the files come from /files/, which no
+           guest grant reaches, so download-lock.js locks a guest here. -->
+      <div class="tool-canvas" data-download-guests="none">
+
+        <div class="bar" data-sticky="true">
+          <div class="bar-container">
+            <div class="bar-content">
+              <h1 class="tool-canvas-title" data-priority="pinned">Asset Library</h1>
+
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item js-copy-url">{{icon:link}}<span>Copy link to this view</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" id="al-reset">{{icon:refresh}}<span>Reset</span></button>
+              </div>
+              <!-- Feedback: opens the shared dialog (cms/chrome/feedback-dialog.html) -->
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="share">{{icon:chat}}<span>Share feedback</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="problem">{{icon:warning}}<span>Report a problem</span></button>
+              </div>
+            </div><!-- /.bar-content -->
+            <div class="bar-actions">
+              <!-- On the bar, never demoted, as Layout Specs' New spec. Add new
+                   is the owner's placeholder for adding files from the page
+                   (2026-10-07, scoped later); until then By Default adds them
+                   through the build, so it opens the guide's steps. -->
+              <a class="button" data-variant="faded" href="/tools/asset-library-docs.html#adding-a-file">{{icon:add}}<span class="tool-add-label">Add new</span></a>
+              <div class="dropdown bar-overflow" hidden>
+                <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
+                <div class="dropdown-menu is-right"></div>
+              </div>
+              <a class="bar-close" data-page-close aria-label="Back to Tools">{{icon:close-large}}</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- The work: what narrows the set, then the files. The filters stay
+             put while the grid scrolls under them (wide), or the page scrolls
+             (narrow). Search comes first and does most of the work: a word
+             the library knows (dark, svg, logos) becomes a filter, shown as
+             a removable tag at the end of the field with every other filter
+             that is on. Under it, four categories as tabs: Type, Format,
+             Project, Tag, drawn as four boxed buttons rather than
+             underlined tabs (owner, 2026-10-08) but keyboarded as tabs by
+             tabs.js. The open one shows its options on one row, each a
+             filter tag with how many files it would show; any option in a
+             row matches, and every row must (owner's Figma, 2026-10-08,
+             asset-library-plan.md §10). The script builds the tabs, so a
+             category with nothing to offer never gets one, and tabs.js
+             binds them only once they exist. -->
+        <div class="tool-preview tool-work" data-fit="fill">
+          <div class="tool-filters">
+            <search class="tool-search" aria-label="Files">
+              <div class="field" data-size="large">
+                <div class="field-icon">{{icon:search}}</div>
+                <input type="search" id="al-search" aria-label="Search files by name, project or tag" aria-describedby="al-applied-summary" aria-controls="al-grid" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Search files">
+                <div class="tag-group tool-applied" id="al-applied" role="group" aria-label="Filters on" hidden></div>
+                <button type="button" class="field-clear" aria-label="Clear search">{{icon:close}}</button>
+                <span class="visually-hidden" id="al-applied-summary"></span>
+              </div>
+            </search>
+            <div class="tool-categories" id="al-categories"></div>
+            <div class="scroller" id="al-panel-type" role="tabpanel" aria-labelledby="al-tab-type" hidden>
+              <div class="tag-group" id="al-row-type"></div>
+            </div>
+            <div class="scroller" id="al-panel-format" role="tabpanel" aria-labelledby="al-tab-format" hidden>
+              <div class="tag-group" id="al-row-format"></div>
+            </div>
+            <div class="scroller" id="al-panel-project" role="tabpanel" aria-labelledby="al-tab-project" hidden>
+              <div class="tag-group" id="al-row-project"></div>
+            </div>
+            <div class="scroller" id="al-panel-tag" role="tabpanel" aria-labelledby="al-tab-tag" hidden>
+              <div class="tag-group" id="al-row-tag"></div>
+            </div>
+          </div>
+
+          <!-- The region is the box the grid scrolls in; the scroller inside
+               it is what moves. The grid is one tab stop with a roving
+               tabindex; the tiles are built from the manifest at init. -->
+          <div class="tool-region" id="al-region">
+            <div class="tool-browse" id="al-scroller">
+
+            <!-- Over the files and scrolling with them: the count at the
+                 start, a live region written straight at init and debounced
+                 after, and the view at the end, grid or list, remembered on
+                 this browser. Each option is named and tooltipped in the same
+                 words; the tooltips open below, inside the scroller, which
+                 would clip one above. -->
+            <div class="tool-head">
+              <p class="tool-count text-size-l text-secondary" id="al-count" aria-live="polite"></p>
+              <div class="segmented-control tool-view" data-variant="faded" id="al-view" role="radiogroup" aria-label="View">
+                <label class="segmented-control-option" data-tooltip="Grid view" data-tooltip-position="bottom"><input type="radio" name="al-view" value="grid" checked>{{icon:grid}}<span class="visually-hidden">Grid view</span></label>
+                <label class="segmented-control-option" data-tooltip="List view" data-tooltip-position="bottom"><input type="radio" name="al-view" value="list">{{icon:rows}}<span class="visually-hidden">List view</span></label>
+              </div>
+            </div>
+
+            <div class="callout is-hidden" data-type="info" id="al-no-match">
+              <div class="callout-title" id="al-no-match-title">No file matches that search</div>
+              <p class="callout-description" id="al-no-match-text">Search looks at titles, projects and tags. Try one word, such as banner or logo.</p>
+              <div class="callout-actions"><button type="button" class="button" data-variant="outline" data-size="small" id="al-no-match-action">Clear search</button></div>
+            </div>
+
+            <div class="tool-files" id="al-grid" role="group" aria-label="Files" aria-describedby="al-grid-keys"></div>
+            <p class="visually-hidden" id="al-grid-keys">Arrow keys choose a file. Enter opens it large.</p>
+
+            <!-- Shown instead of the grid when the library is empty or the
+                 manifest is missing. -->
+            <div class="tool-empty" id="al-empty" hidden>
+              {{icon:folder-open}}
+              <p class="tool-empty-title" data-empty-title></p>
+              <p data-empty-message></p>
+            </div>
+            </div><!-- /.tool-browse -->
+
+
+            <!-- The file-type icons a tile shows when it has no picture
+                 (a zip, a failed thumbnail), the category icons the filter
+                 tags carry (a format's kind, folder for a project, tag for a
+                 tag), and the open-full hint every tile carries, the
+                 preview's close-full in reverse. Templates, cloned by the script;
+                 nothing here renders. -->
+            <template id="al-icons">
+              <div data-icon="close">{{icon:close}}</div>
+              <div data-icon="file-image">{{icon:file-image}}</div>
+              <div data-icon="file-video">{{icon:file-video}}</div>
+              <div data-icon="file-font">{{icon:file-font}}</div>
+              <div data-icon="file-pdf">{{icon:file-pdf}}</div>
+              <div data-icon="file-audio">{{icon:file-audio}}</div>
+              <div data-icon="folder-zip">{{icon:folder-zip}}</div>
+              <div data-icon="file-doc">{{icon:file-doc}}</div>
+              <div data-icon="file">{{icon:file}}</div>
+              <div data-icon="external-link">{{icon:external-link}}</div>
+              <div data-icon="folder">{{icon:folder}}</div>
+              <div data-icon="tag">{{icon:tag}}</div>
+              <div data-icon="open-full">{{icon:open-full}}</div>
+            </template>
+          </div>
+
+          <!-- The preview: the chosen file shown large over the work — the
+               filter row and the grid — while the dock beside it keeps every
+               detail and verb. A tile opens it with one click. A non-modal
+               <dialog> opened with show() — not the Dialog component, whose
+               showModal() would inert the dock and read a click on Download
+               as a backdrop close. Keys live on the element: Escape returns
+               to the tile, the arrows move the selection and the dock
+               follows. Narrow, the same element fills the window and carries
+               its own foot. -->
+          <dialog class="tool-viewer" id="al-preview" aria-labelledby="al-preview-title" aria-describedby="al-preview-position">
+            <div class="tool-viewer-bar">
+              <div class="tool-viewer-heading">
+                <h2 class="tool-viewer-title" id="al-preview-title"></h2>
+                <p class="tool-viewer-position text-size-s" id="al-preview-position"></p>
+              </div>
+              <button class="button tool-viewer-close" data-variant="transparent" data-icon-only type="button" id="al-preview-close" aria-label="Back to files">{{icon:close-full}}</button>
+            </div>
+            <div class="tool-viewer-stage" id="al-preview-stage">
+              <img class="tool-viewer-img" id="al-preview-img" data-ground="light" alt="" hidden>
+              <div class="tool-viewer-fallback" id="al-preview-fallback" hidden>
+                <span class="svg-icn" data-icon="file" aria-hidden="true"></span>
+                <p>Preview unavailable</p>
+              </div>
+            </div>
+            <button class="button tool-viewer-nav" data-icon-only type="button" id="al-preview-prev" data-direction="-1" aria-label="Previous file" aria-disabled="true">{{icon:chevron-left-large}}</button>
+            <button class="button tool-viewer-nav" data-icon-only type="button" id="al-preview-next" data-direction="1" aria-label="Next file" aria-disabled="true">{{icon:chevron-right-large}}</button>
+            <div class="tool-viewer-foot">
+              <p class="form-error" id="al-preview-error" role="alert" hidden></p>
+              <a class="button" data-variant="outline" id="al-preview-open" href="" target="_blank" rel="noopener" data-barba-prevent hidden>{{icon:open-full}}<span>Open <span id="al-preview-open-format">PDF</span><span class="visually-hidden"> (opens in a new tab)</span></span></a>
+              <a class="button" id="al-preview-download" href="" download data-download data-barba-prevent hidden>{{icon:download}}{{icon:lock}}<span>Download</span></a>
+              <!-- Narrow only, mirroring the dock, which is inert under the
+                   preview: an open font's link out, a paid font's licence. -->
+              <a class="button" id="al-preview-licence-link" href="" target="_blank" rel="noopener" data-barba-prevent hidden>{{icon:external-link}}<span>Get it from <span id="al-preview-licence-foundry"></span><span class="visually-hidden"> (opens in a new tab)</span></span></a>
+              <button class="button" type="button" id="al-preview-licence-about" data-dialog-open="al-licence-dialog" hidden>{{icon:info-circled}}<span>About the licence</span></button>
+              <button class="button copy-btn" data-variant="outline" type="button" id="al-preview-copy" data-copy="" hidden>
+                <span class="copy-btn-default">{{icon:link}}<span>Copy link</span></span>
+                <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
+              </button>
+            </div>
+          </dialog>
+
+          <!-- The tool's one live region: what the preview announces — the
+               file, "5 of 24", a failed download. Outside the region and the
+               dialog, because both go inert and an inert live region is
+               silent. -->
+          <p class="visually-hidden" role="status" id="al-status"></p>
+        </div>
+
+        <!-- Pinned on the right: the chosen file — what it is, which
+             rendition, its name — and the verbs at the foot. First in source
+             after the work, which is where a phone meets it: on a phone a tap
+             opens the preview instead, and the preview carries the verbs. -->
+        <div class="tool-dock" data-edge="end">
+          <!-- Two panes (owner, 2026-10-07): the file's name and note, which
+               stay put, then its details, which scroll on their own when
+               they outgrow the dock. -->
+          <div class="tool-panels tool-file-panels" id="al-panels">
+            <section class="tool-panel" aria-labelledby="al-detail-title">
+              <div class="tool-panel-header">
+                <!-- The chosen file's name; the section's label and the
+                     Download's description. -->
+                <h2 class="tool-panel-title tool-selected" id="al-detail-title">Details</h2>
+              </div>
+              <div class="tool-panel-body tool-file-details">
+                <p class="text-secondary" id="al-nothing">Pick a file to download it.</p>
+                <p id="al-description" hidden></p>
+                <!-- A font the library shows but never hands out: open (free,
+                     fetched where it lives) or paid. The script sets the line. -->
+                <p class="text-size-s text-secondary" id="al-licence" hidden></p>
+              </div>
+            </section>
+
+            <!-- The facts, stacked: a row only when it has a value. -->
+            <section class="tool-panel tool-facts" id="al-detail" aria-labelledby="al-facts-title" hidden>
+              <div class="tool-panel-header">
+                <h2 class="tool-panel-title" id="al-facts-title">File details</h2>
+              </div>
+              <div class="tool-panel-body">
+                <dl class="tool-meta" id="al-meta">
+                  <div><dt>Type</dt><dd id="al-type-line"></dd></div>
+                  <div><dt>Format</dt><dd id="al-format-line"></dd></div>
+                  <div id="al-size-row" hidden><dt>Size</dt><dd id="al-size"></dd></div>
+                  <div id="al-dimensions-row" hidden><dt>Dimensions</dt><dd id="al-dimensions"></dd></div>
+                  <div id="al-pages-row" hidden><dt>Pages</dt><dd id="al-pages"></dd></div>
+                  <div id="al-family-row" hidden><dt>Family</dt><dd id="al-family"></dd></div>
+                  <div id="al-projects-row" hidden><dt>Projects</dt><dd id="al-projects-line"></dd></div>
+                  <div id="al-tags-row" hidden><dt>Tags</dt><dd><div class="tag-group" id="al-tags"></div></dd></div>
+                  <div><dt>Added</dt><dd id="al-added"></dd></div>
+                </dl>
+              </div>
+            </section>
+          </div>
+
+          <div class="tool-actions">
+            <p class="form-error" id="al-error" role="alert"></p>
+            <!-- Download reads the same for every file and gives the
+                 asset's one file; the Format row above says what that is. It
+                 is a real link (download attribute) so the browser saves it,
+                 but the script asks the Worker first with a HEAD: an expired
+                 session would otherwise save the login page. Open in … stands
+                 in for a link asset, Get it from … for an open font, and
+                 About the licence for a paid one. -->
+            <div class="button-group">
+              <a class="button" id="al-download" href="" download data-download data-barba-prevent aria-describedby="al-detail-title" aria-disabled="true">{{icon:download}}{{icon:lock}}<span>Download</span></a>
+              <a class="button" id="al-open" href="" target="_blank" rel="noopener" data-barba-prevent aria-describedby="al-detail-title" hidden>{{icon:external-link}}<span>Open in <span id="al-open-source"></span><span class="visually-hidden"> (opens in a new tab)</span></span></a>
+              <a class="button" id="al-licence-link" href="" target="_blank" rel="noopener" data-barba-prevent hidden>{{icon:external-link}}<span>Get it from <span id="al-licence-foundry"></span><span class="visually-hidden"> (opens in a new tab)</span></span></a>
+              <button class="button" type="button" id="al-licence-about" data-dialog-open="al-licence-dialog" aria-describedby="al-detail-title" hidden>{{icon:info-circled}}<span>About the licence</span></button>
+            </div>
+            <div class="button-group">
+              <button class="button copy-btn" data-variant="outline" type="button" id="al-copy-link" data-copy="" aria-describedby="al-detail-title" disabled>
+                <span class="copy-btn-default">{{icon:link}}<span>Copy link</span></span>
+                <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- The licence notice for a licensed file the library hands out (a
+           font not under an open licence). Its Download opens this first
+           and starts only from Accept (asset-library.js, needsLicence). It
+           sits outside the dock, beside About the licence, because the
+           dock goes inert under the preview on a phone, where the preview's
+           own Download is the one that opens it. data-static so a stray
+           press on the backdrop does not read as agreement. Generic words for now: every licensed file
+           the library hands out is covered by them. -->
+      <dialog id="al-licence-accept-dialog" class="dialog" data-static aria-labelledby="al-licence-accept-title" aria-describedby="al-licence-accept-text">
+        <div class="dialog-header">
+          <h2 class="dialog-title" id="al-licence-accept-title">Licensed to {{brand:organisation}}</h2>
+          <button class="button close-btn" type="button" data-icon-only data-size="small" data-dialog-close aria-label="Close">{{icon:close}}</button>
+        </div>
+        <div class="dialog-body">
+          <p id="al-licence-accept-text">The files in this download are licensed to {{brand:organisation}}, for {{brand:organisation}} work only. Keep them on the machines that do that work. Do not share them, upload them to another service, or pass them to a client or a supplier; send them to the foundry instead. Delete your copy when the work ends.</p>
+        </div>
+        <div class="dialog-footer">
+          <button class="button" data-variant="faded" type="button" data-dialog-close>Cancel</button>
+          <button class="button" type="button" id="al-licence-accept" data-dialog-close autofocus>Accept and download</button>
+        </div>
+      </dialog>
+
+      <!-- A paid font's licence (owner, 2026-10-26: an open font links
+           straight out; only a paid one gets a dialog). The script fills the
+           title, the next step and the foundry link for the selected font. -->
+      <dialog id="al-licence-dialog" class="dialog" aria-labelledby="al-licence-dialog-title">
+        <div class="dialog-header">
+          <h2 class="dialog-title" id="al-licence-dialog-title">A paid font</h2>
+          <button class="button close-btn" type="button" data-icon-only data-size="small" data-dialog-close aria-label="Close">{{icon:close}}</button>
+        </div>
+        <div class="dialog-body">
+          <p>Its licence covers this brand's own work, so the font file is not offered here.</p>
+          <p id="al-licence-dialog-next"></p>
+        </div>
+        <div class="dialog-footer">
+          <button class="button" data-variant="faded" type="button" data-dialog-close autofocus>Close</button>
+          <a class="button" id="al-licence-dialog-link" href="" target="_blank" rel="noopener" data-barba-prevent hidden>{{icon:external-link}}<span>License from <span id="al-licence-dialog-foundry"></span><span class="visually-hidden"> (opens in a new tab)</span></span></a>
+        </div>
+      </dialog>
+
+      {{asset-manifest}}

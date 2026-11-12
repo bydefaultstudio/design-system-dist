@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v7.5.1 */
+/* @bydefaultstudio/design-system v8.0.0 */
 /**
  * gate-entry.mjs - createGate(), the access gate as one factory
  * (levels-groups-plan.md Phase 3, D21). Shipped as
@@ -6,15 +6,19 @@
  * with its own page map, domains and routes, and exports what it returns:
  *
  *   import { createGate } from '@bydefaultstudio/design-system/worker';
- *   import { ACCESS_NAV, PAGE_ACCESS, SECTIONS, SOURCE_PAGES } from './page-access.mjs';
+ *   import { ACCESS_NAV, NOT_INSTALLED, PAGE_ACCESS, SECTIONS, SOURCE_PAGES } from './page-access.mjs';
  *   export default createGate({ name, pages: PAGE_ACCESS, sections: SECTIONS,
- *     sources: SOURCE_PAGES, accessNav: ACCESS_NAV, hosts: ['example.com'],
+ *     sources: SOURCE_PAGES, accessNav: ACCESS_NAV, notInstalled: NOT_INSTALLED,
+ *     hosts: ['example.com'],
  *     routes: { public: [...], gated: [...] } });
  *
- * The engine owns sign-in (/api/auth/*), the session, the page check, the
- * locked page, hidden navigation, the People API (/api/people/*) and the
- * Content-Security-Policy report endpoint (POST /api/csp-report, public; turn
- * it off with cspReport: false). The site owns everything else, as routes:
+ * The engine owns sign-in (/api/auth/*), the sign-out link (GET
+ * /auth/sign-out), the session, the page check, the locked page, hidden
+ * navigation, the People API (/api/people/*) and the Content-Security-Policy
+ * report endpoint (POST /api/csp-report, public; turn it off with
+ * cspReport: false). Its pages sit at fixed addresses on every site
+ * (engine-paths.mjs): loginPath and lockedPath are deprecated and warn at
+ * start-up when they differ. The site owns everything else, as routes:
  *
  *   routes.public  [{ match(pathname), handle(request, env, ctx, url) }]
  *                  asked before the gate, open to everyone (a form endpoint,
@@ -24,16 +28,37 @@
  *                  no page map, which the gate treats as team pages.
  *   movedTo        (pathname) => newPathname | null, for pages that moved:
  *                  answered with a 301 after the session question only.
+ *   apps           APPS from page-access.mjs: the installed apps whose routes
+ *                  the engine mounts, the Image Placeholder's public /image
+ *                  (with the brand's primary logo) and the Asset Library's
+ *                  gated /files/ (R2 binding LIBRARY, and `library`: the
+ *                  index and level from library-index.mjs). A site's own
+ *                  route for the same path is asked first.
+ *   forms          { relay: 'https://…/api/forms/relay' }: the form
+ *                  service (C2). Mounts POST /api/submit-form, public, which
+ *                  checks the origin and, for feedback, the session, then
+ *                  forwards the form signed with the SITE_KEY secret
+ *                  (forms-forward.mjs). A site's own route is asked first.
+ *   report         { to: 'https://…/api/fleet/report' }: the fleet
+ *                  dashboard (F1). Once per deployment, on the site's own
+ *                  domains, sends /os.json with the deployment's id and time
+ *                  (the CF_VERSION_METADATA binding), signed with SITE_KEY,
+ *                  in the background (fleet-report.mjs). Off, with one log
+ *                  line, without the binding or the key.
  *
  * Static assets reach here too: wrangler.jsonc sets run_worker_first, so
  * the session decides what reaches the asset layer (access-plan.md §4.2).
  */
-import { AUTH_BASE_PATH, guestScopes, handleAuth } from './auth.js';
+import { AUTH_BASE_PATH, guestScopes, handleAuth, handleSignOutLink } from './auth.js';
 import { PEOPLE_BASE_PATH, handlePeople } from './people.js';
-import { embeddableHeaders, hasSessionCookie, isConflictCopyPath, isEmbeddablePath, isPublicPath, privateHeaders, servesLanding } from './gate.mjs';
+import { SIGN_OUT_LINK, embeddableHeaders, hasSessionCookie, isConflictCopyPath, isEmbeddablePath, isPublicPath, notInstalledFor, privateHeaders, servesLanding } from './gate.mjs';
 import { requireSession } from './session.js';
 import { CSP_REPORT_PATH, handleCspReport } from './csp-report.js';
 import { hideForReader, isHtml } from './hidden-nav.mjs';
+import { handleImage } from './image.js';
+import { handleLibrary } from './library.js';
+import { SUBMIT_FORM_PATH, formsOption, handleFormsForward } from './forms-forward.mjs';
+import { createReporter, reportOption } from './fleet-report.mjs';
 import { SITE, configureSite } from './site.mjs';
 
 function checkRoutes(list, kind) {
@@ -114,8 +139,60 @@ async function hiddenNav(request, env, url, response, gated, reader, sessionCook
   return isEmbeddablePath(url.pathname) ? embeddableHeaders(cut) : cut;
 }
 
+/**
+ * The search indexes (C1) are gated like every page, and always private, so
+ * no shared cache ever holds a gated page's text. Pagefind's chunks carry a
+ * content hash in their names, so a reader keeps them for an hour rather
+ * than downloading the index on every hard load; every other index file
+ * (pagefind.js, its worker and wasm, symbols.json) changes under the same
+ * name on a deploy, so it is revalidated each time, which costs a 304. No
+ * Vary: Cookie: the session cookie is re-issued every few minutes, which
+ * would empty the cache, and sign-out clears it (Clear-Site-Data).
+ */
+const SEARCH_INDEX_PREFIXES = ['/pagefind/', '/search-index/'];
+const HASHED_INDEX = /^\/pagefind\/(?:fragment|index|filter)\//;
+function searchIndexCache(response, pathname) {
+  if ((response.status !== 200 && response.status !== 304) || !SEARCH_INDEX_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return response;
+  const out = new Response(response.body, response); // the asset layer's headers can be immutable
+  out.headers.set('Cache-Control', HASHED_INDEX.test(pathname) ? 'private, max-age=3600' : 'private, no-cache');
+  out.headers.delete('Vary');
+  return out;
+}
+
+/**
+ * The not-installed page for one app (PB-4), at the app's own address, with
+ * 404 so nothing indexes it. Its links are cut like any page's under hidden
+ * navigation. If the build never shipped the page, the 404 stands in words.
+ */
+async function notInstalledResponse(request, env, url, name, reader, sessionCookies) {
+  let page;
+  try {
+    page = await env.ASSETS.fetch(new Request(new URL(SITE.notInstalledPath, url.origin), { method: 'GET' }));
+  } catch {
+    page = null;
+  }
+  if (!page || page.status !== 200) {
+    if (page && page.body) page.body.cancel();
+    return privateHeaders(new Response(`${name} isn't part of this site.`, { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }), sessionCookies);
+  }
+  let body = null;
+  if (request.method === 'HEAD') page.body?.cancel();
+  else body = notInstalledFor(await page.text(), name);
+  const out = new Response(body, { status: 404, headers: page.headers });
+  out.headers.delete('Content-Length');
+  out.headers.delete('ETag'); // one template, a body per app
+  if (SITE.accessNav === 'hidden') return hiddenNav(request, env, url, out, true, reader, sessionCookies);
+  return privateHeaders(out, sessionCookies);
+}
+
 export function createGate(options = {}) {
   configureSite(options);
+  // The Image Placeholder answers everyone, so it draws only a logo anyone
+  // may fetch: a mark behind the gate (BlackDoctor's /media/) is not drawn
+  if (SITE.apps.imageLogo && !isPublicPath(SITE.apps.imageLogo)) {
+    console.warn(`Image placeholder: the logo ${SITE.apps.imageLogo} is behind the gate, so images draw without it. Serve the mark from a public path such as /assets/.`);
+    configureSite({ ...options, apps: { ...options.apps, imageLogo: null } });
+  }
   const routes = options.routes || {};
   const publicRoutes = checkRoutes(routes.public, 'public');
   const gatedRoutes = checkRoutes(routes.gated, 'gated');
@@ -123,11 +200,23 @@ export function createGate(options = {}) {
   // On unless a site says no. It only ever writes a log line (csp-report.js),
   // so a site with no policy pointing at it loses nothing by having it.
   const cspReport = options.cspReport !== false;
+  const forms = formsOption(options.forms);
+  const reporter = createReporter(reportOption(options.report));
 
   return {
     async fetch(request, env, ctx) {
       const url = new URL(request.url);
       const { pathname } = url;
+
+      // This deployment's version report (F1), sent in the background once.
+      // Never allowed to cost a reader their page.
+      if (reporter) {
+        try {
+          reporter(request, env, ctx, url);
+        } catch (err) {
+          console.error('fleet report: skipped', err);
+        }
+      }
 
       // Sign-in endpoints first: they must never sit behind the gate they serve.
       if (pathname.startsWith(`${AUTH_BASE_PATH}/`)) {
@@ -149,6 +238,22 @@ export function createGate(options = {}) {
         if (route.match(pathname)) return route.handle(request, env, ctx, url);
       }
 
+      // The sign-out link (PD-3): public, since a reader with no session is
+      // simply sent to the login page. It signs out only a navigation the
+      // reader made (auth.js). After the site's own routes, so a site that still
+      // answers the path itself keeps it until it moves.
+      if (pathname === SIGN_OUT_LINK) return handleSignOutLink(request, env, ctx);
+
+      // The form service's site half (C2): public, since the access form is
+      // the doorbell. Feedback asks for the session inside the handler.
+      if (forms && pathname === SUBMIT_FORM_PATH) return handleFormsForward(request, env, url, forms);
+
+      // The Image Placeholder's generator, public, while the app is installed
+      // (B4): off, the path is an ordinary missing page behind the gate.
+      if (SITE.apps.installed.includes('image-placeholder') && (pathname === '/image' || pathname.startsWith('/image/'))) {
+        return handleImage(url, env, { logoPath: SITE.apps.imageLogo });
+      }
+
       // Where browsers post Content-Security-Policy violations: public, so a
       // signed-out visitor on the login page reports too. After the site's
       // own public routes, so a site that handles the path itself keeps it.
@@ -167,6 +272,19 @@ export function createGate(options = {}) {
         const target = new URL(url);
         target.pathname = moved;
         return privateHeaders(Response.redirect(target.toString(), 301), gate.setCookies);
+      }
+
+      // ── An app this site doesn't install (PB-4) ──
+      //
+      // Its address is on no page map, so the page gate would call it an
+      // owner page and lock it. Asked with the session question only, as for
+      // a moved page: signed out still gets the login, and a signed-in reader
+      // learns the app exists and whom to ask for it.
+      const notInstalledName = (request.method === 'GET' || request.method === 'HEAD') ? SITE.notInstalled.get(pathname) : undefined;
+      if (notInstalledName !== undefined) {
+        const gate = await requireSession(request, env, url, null);
+        if (gate.deny) return gate.deny;
+        return notInstalledResponse(request, env, url, notInstalledName, gate.reader, gate.setCookies);
       }
 
       // ── The gate (access-plan.md §4.2, §13.4; permissions-plan.md §4.3) ──
@@ -217,6 +335,12 @@ export function createGate(options = {}) {
         if (route.match(pathname)) return route.handle(request, env, ctx, url, { reader, setCookies: sessionCookies });
       }
 
+      // The Asset Library's files from R2 (binding LIBRARY), after the gate,
+      // while the app is installed (B4). Never falls through to the assets.
+      if (SITE.apps.installed.includes('asset-library') && pathname.startsWith('/files/')) {
+        return handleLibrary(request, env, url, sessionCookies, reader, SITE.library);
+      }
+
       // Directory-index resolution.
       //
       // assets.html_handling is "none" so that /web/button.html is served at
@@ -242,8 +366,8 @@ export function createGate(options = {}) {
       // Everything else: hand back to the asset layer, which applies _redirects
       // and returns the 404 for genuinely unknown paths.
       const assetResponse = await env.ASSETS.fetch(request);
-      if (SITE.accessNav === 'hidden') return hiddenNav(request, env, url, assetResponse, gated, reader, sessionCookies);
-      if (gated) return privateHeaders(assetResponse, sessionCookies);
+      if (SITE.accessNav === 'hidden') return searchIndexCache(await hiddenNav(request, env, url, assetResponse, gated, reader, sessionCookies), pathname);
+      if (gated) return searchIndexCache(privateHeaders(assetResponse, sessionCookies), pathname);
       return isEmbeddablePath(pathname) ? embeddableHeaders(assetResponse) : assetResponse;
     },
   };

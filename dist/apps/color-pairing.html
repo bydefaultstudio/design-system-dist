@@ -1,0 +1,326 @@
+      <!--
+        A tool on the shared canvas, built from docks (cms/tool-canvas.md,
+        Docks), in the Side panels layout: the bar, the pair painted across
+        the whole preview, the controls docked on the right, and the one verb
+        pinned at the dock's foot. The toggle in the preview's corner folds
+        the dock away so the pair takes the canvas. No footer and no page
+        header: the canvas is the page.
+
+        The bar names the tool. Copy link and Reset are permanent residents
+        of the overflow menu (data-priority="menu"), so the trailing cluster
+        is the menu and the close. Reset, not "Reset all": no section carries
+        a reset of its own, because Style is the only one that holds a choice
+        and its reset would be this one. The exit is last: build-time
+        contract.
+
+        The sections: Contrast first and pinned (cms/tool-canvas.md, Pinned
+        section), because the verdict is the answer and has to stay in view
+        while the reader works through Style below it. Style holds the
+        choice: the brand's pairs, then each side's colour grid, then Swap.
+        Export holds the CSS the pair is written as, and Copy CSS copies it.
+        No Settings: the tool has nothing that is not the pair.
+      -->
+      <div class="tool-canvas" id="color-pairing">
+
+        <div class="bar" data-sticky="true">
+          <div class="bar-container">
+            <div class="bar-content">
+              <h1 class="tool-canvas-title" data-priority="pinned">Colour Pairing</h1>
+
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item js-copy-url">{{icon:link}}<span>Copy link</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" id="color-pairing-reset">{{icon:refresh}}<span>Reset</span></button>
+              </div>
+              <!-- Feedback: opens the shared dialog (cms/chrome/feedback-dialog.html) -->
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="share">{{icon:chat}}<span>Share feedback</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="problem">{{icon:warning}}<span>Report a problem</span></button>
+              </div>
+            </div><!-- /.bar-content -->
+            <div class="bar-actions">
+              <div class="dropdown bar-overflow" hidden>
+                <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
+                <div class="dropdown-menu is-right"></div>
+              </div>
+              <a class="bar-close" data-page-close aria-label="Back to Tools">{{icon:close-large}}</a>
+            </div>
+          </div>
+        </div>
+
+        <!--
+          The preview: four cells, no gaps, the pair painted in a
+          checkerboard. Top left and bottom right are the pair as chosen,
+          text on background; top right and bottom left are the same pair
+          inverted, so every seam is a change of colour and no rule is needed
+          between them. Each cell is a specimen for a row of the checks: the
+          title and the ampersand are large text, the body copy, the button's
+          label and the paragraph are normal text, the icons are graphics.
+          The colours arrive as custom properties the script sets on the
+          canvas (color-pairing.css, Bento).
+
+          The specimens are for the eye: the bento is aria-hidden and holds
+          nothing focusable, and everything it shows is in the Contrast
+          section as text. The status sentence stays outside it — a live
+          region under aria-hidden announces nothing — and says the pair and
+          its verdict whenever the pair changes, the dock open or not.
+        -->
+        <div class="tool-preview tool-specimen" data-fit="fill" id="color-pairing-preview">
+          <p class="visually-hidden" role="status" id="color-pairing-status"></p>
+
+          <div class="tool-bento" id="color-pairing-bento" aria-hidden="true">
+            <div class="tool-cell" data-cell="title">
+              <p class="tool-cell-title">Contrast decides who gets to read this.</p>
+              <p class="tool-cell-body">Most of a page is read at this size. If this line holds, the page holds.</p>
+              <!-- A span, not a button: a button that does nothing is a dead
+                   tab stop. .button styles any element. -->
+              <span class="button">Start a project</span>
+            </div>
+            <div class="tool-cell" data-cell="glyph" data-variant="inverted">
+              <p class="tool-glyph" id="color-pairing-glyph">&amp;</p>
+            </div>
+            <div class="tool-cell" data-cell="icons" data-variant="inverted">
+              <div class="tool-icons">
+                {{icon:accessibility-circled}}
+                {{icon:book}}
+                {{icon:cog}}
+                {{icon:download}}
+                {{icon:file-doc}}
+                {{icon:logout}}
+              </div>
+            </div>
+            <div class="tool-cell" data-cell="paragraph">
+              <p class="tool-cell-text">Contrast is the difference in light between text and what sits behind it. WCAG measures it as a ratio, from 1:1 for none to 21:1 for black on white. Body text needs 4.5:1; large text and graphics need 3:1.</p>
+            </div>
+          </div>
+
+          <!-- Folds the dock away (tool-canvas.js), and the pair takes its
+               width. The name stays "Controls"; aria-expanded carries the
+               state. Last in the preview, in its bottom-right corner, over
+               whichever cell sits there: its ink is set per layout
+               (color-pairing.css, Toggle ink). -->
+          <button class="button tool-dock-toggle" data-variant="transparent" data-icon-only data-edge="end" type="button" aria-controls="color-pairing-dock" aria-expanded="true" aria-label="Controls">
+            {{icon:sidebar-right-close}}{{icon:sidebar-right-open}}
+          </button>
+        </div>
+
+        <!-- The sections scroll as one column under the pinned Contrast
+             (tool-canvas.js adds the tab stop while it overflows), and the
+             verb sits under them. Every section starts open. -->
+        <div class="tool-dock" data-edge="end" id="color-pairing-dock">
+          <div class="tool-panels accordion" data-accordion="multi" id="color-pairing-panels" role="group" aria-label="Colour Pairing controls">
+
+          <!--
+            Contrast: the ratio, then every check against its real
+            threshold. Pinned, so it stays in view while Style scrolls under
+            it. Each result cell carries the bar the script compares against
+            in data-min, and its stamp is a word and a mark, never colour
+            alone.
+
+            The notes open in place, a row under the check they explain:
+            nothing pops out of a section, because .accordion-inner clips it
+            (cms/tool-canvas.md). Each note's button sits in its own cell, so
+            it is not read out with every cell the row header heads.
+          -->
+          <div class="tool-panel accordion-item is-open" data-pinned>
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="color-pairing-contrast-heading" aria-expanded="true" aria-controls="color-pairing-contrast-section">
+                  <span class="tool-panel-title">Contrast</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+            </div>
+            <div class="accordion-content" id="color-pairing-contrast-section" role="region" aria-labelledby="color-pairing-contrast-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <dl class="tool-ratio-row">
+                <dt>Ratio</dt>
+                <dd class="tool-ratio"><span id="color-pairing-ratio" aria-hidden="true">&ndash;</span><span class="visually-hidden" id="color-pairing-ratio-spoken"></span></dd>
+              </dl>
+
+              <table class="tool-checks" id="color-pairing-checks">
+                <caption class="visually-hidden">WCAG 2 contrast checks</caption>
+                <!-- The header row stays in table flow and hides its text
+                     instead: a visually-hidden thead is absolutely
+                     positioned, which blockifies the row group and loses
+                     the column headers in some engines. -->
+                <thead>
+                  <tr><th scope="col"><span class="visually-hidden">Check</span></th><th scope="col"><span class="visually-hidden">Minimum</span></th><th scope="col"><span class="visually-hidden">Result</span></th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">AA Normal<div class="dropdown tool-check-note" data-placement="bottom-start"><button class="dropdown-trigger button" type="button" data-variant="transparent" data-icon-only data-size="xsmall" aria-expanded="false" aria-label="About AA normal text">{{icon:info-circled}}</button><div class="dropdown-menu" data-variant="panel" tabindex="-1"><p class="text-size-s">Body text: anything under 24px, or under 19px bold. WCAG 1.4.3.</p></div></div></th>
+                    <td>4.5:1</td>
+                    <td><span class="tool-stamp" data-min="4.5"><span class="tool-stamp-text">&ndash;</span><span class="tool-stamp-mark" data-mark="pass" aria-hidden="true">{{icon:check}}</span><span class="tool-stamp-mark" data-mark="fail" aria-hidden="true">{{icon:close}}</span></span></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">AAA Normal<div class="dropdown tool-check-note" data-placement="bottom-start"><button class="dropdown-trigger button" type="button" data-variant="transparent" data-icon-only data-size="xsmall" aria-expanded="false" aria-label="About AAA normal text">{{icon:info-circled}}</button><div class="dropdown-menu" data-variant="panel" tabindex="-1"><p class="text-size-s">The enhanced level for the same text. Worth meeting for long reading. WCAG 1.4.6.</p></div></div></th>
+                    <td>7:1</td>
+                    <td><span class="tool-stamp" data-min="7"><span class="tool-stamp-text">&ndash;</span><span class="tool-stamp-mark" data-mark="pass" aria-hidden="true">{{icon:check}}</span><span class="tool-stamp-mark" data-mark="fail" aria-hidden="true">{{icon:close}}</span></span></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">AA Large<div class="dropdown tool-check-note" data-placement="bottom-start"><button class="dropdown-trigger button" type="button" data-variant="transparent" data-icon-only data-size="xsmall" aria-expanded="false" aria-label="About AA large text">{{icon:info-circled}}</button><div class="dropdown-menu" data-variant="panel" tabindex="-1"><p class="text-size-s">Text from 24px, or from 19px bold: headlines and display type. WCAG 1.4.3.</p></div></div></th>
+                    <td>3:1</td>
+                    <td><span class="tool-stamp" data-min="3"><span class="tool-stamp-text">&ndash;</span><span class="tool-stamp-mark" data-mark="pass" aria-hidden="true">{{icon:check}}</span><span class="tool-stamp-mark" data-mark="fail" aria-hidden="true">{{icon:close}}</span></span></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">AAA Large<div class="dropdown tool-check-note" data-placement="bottom-start"><button class="dropdown-trigger button" type="button" data-variant="transparent" data-icon-only data-size="xsmall" aria-expanded="false" aria-label="About AAA large text">{{icon:info-circled}}</button><div class="dropdown-menu" data-variant="panel" tabindex="-1"><p class="text-size-s">The enhanced level for large text. WCAG 1.4.6.</p></div></div></th>
+                    <td>4.5:1</td>
+                    <td><span class="tool-stamp" data-min="4.5"><span class="tool-stamp-text">&ndash;</span><span class="tool-stamp-mark" data-mark="pass" aria-hidden="true">{{icon:check}}</span><span class="tool-stamp-mark" data-mark="fail" aria-hidden="true">{{icon:close}}</span></span></td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Graphics<div class="dropdown tool-check-note" data-placement="bottom-start"><button class="dropdown-trigger button" type="button" data-variant="transparent" data-icon-only data-size="xsmall" aria-expanded="false" aria-label="About graphics">{{icon:info-circled}}</button><div class="dropdown-menu" data-variant="panel" tabindex="-1"><p class="text-size-s">Icons, chart marks, input borders and focus rings need 3:1 against what sits beside them. WCAG 1.4.11.</p></div></div></th>
+                    <td>3:1</td>
+                    <td><span class="tool-stamp" data-min="3"><span class="tool-stamp-text">&ndash;</span><span class="tool-stamp-mark" data-mark="pass" aria-hidden="true">{{icon:check}}</span><span class="tool-stamp-mark" data-mark="fail" aria-hidden="true">{{icon:close}}</span></span></td>
+                  </tr>
+                </tbody>
+              </table>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          <!--
+            Style: the pair. The brand's pairs first, the quickest way to a
+            good one; then a grid per side, each one radiogroup of colour
+            chips built by the script hue by hue, so the arrow keys walk one
+            hue before the next, and laid out as a column per hue. Under each
+            grid, the picker and the hex field always show that side's colour
+            and take one outside the palette: the picker applies as it moves,
+            the field when it is left or Enter is pressed (the same as
+            tool-colour.js). Swap is in the section's header.
+          -->
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="color-pairing-style-heading" aria-expanded="true" aria-controls="color-pairing-style-section">
+                  <span class="tool-panel-title">Style</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+              <!-- Swap acts on the whole section, so it sits in its header
+                   where a section reset would: laid over the row before the
+                   chevron, icon only, named by its label and tooltip. -->
+              <button class="button tool-panel-action" data-variant="transparent" data-icon-only type="button" id="color-pairing-swap" aria-label="Swap colours" data-tooltip="Swap colours" data-tooltip-position="left">{{icon:swap}}</button>
+            </div>
+            <div class="accordion-content" id="color-pairing-style-section" role="region" aria-labelledby="color-pairing-style-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <!-- The chip size and the hue-column gap are worked out from
+                   this wrapper's width (color-pairing.css, Colour grids),
+                   so the pairs and both grids share their columns. -->
+              <div class="tool-colours" id="color-pairing-colours">
+
+                <fieldset data-variant="bare" aria-describedby="color-pairing-pairs-none">
+                  <legend data-variant="caption">Pairs</legend>
+                  <div class="tool-pairs" id="color-pairing-pairs"></div>
+                  <p class="form-hint is-hidden" id="color-pairing-pairs-none">This brand has no recommended pairs yet.</p>
+                </fieldset>
+
+                <div class="tool-colour-group">
+                  <fieldset data-variant="bare">
+                    <legend data-variant="caption">Foreground</legend>
+                    <div class="tool-chips">
+                      <div class="tool-chip-group" id="color-pairing-fg-grid"></div>
+                    </div>
+                  </fieldset>
+                  <div class="tool-custom" data-side="fg">
+                    <div class="field">
+                      <input type="color" class="tool-custom-picker" aria-label="Foreground picker" value="#1f1f1f">
+                      <input type="text" class="tool-custom-hex" id="color-pairing-fg-hex" maxlength="7" size="7" autocomplete="off" spellcheck="false" aria-label="Foreground hex">
+                      <button type="button" class="field-action copy-btn" data-clipboard-target="#color-pairing-fg-hex">
+                        <span class="copy-btn-default">{{icon:copy}}<span class="visually-hidden">Copy foreground hex</span></span>
+                        <span class="copy-btn-copied">{{icon:check}}<span class="visually-hidden">Copied!</span></span>
+                      </button>
+                    </div>
+                    <p class="form-error" role="alert" id="color-pairing-fg-error" data-message="Use a hex colour, like 1F1F1F or #1F1F1F."></p>
+                  </div>
+                </div>
+
+                <div class="tool-colour-group">
+                  <fieldset data-variant="bare">
+                    <legend data-variant="caption">Background</legend>
+                    <div class="tool-chips">
+                      <div class="tool-chip-group" id="color-pairing-bg-grid"></div>
+                    </div>
+                  </fieldset>
+                  <div class="tool-custom" data-side="bg">
+                    <div class="field">
+                      <input type="color" class="tool-custom-picker" aria-label="Background picker" value="#fafafa">
+                      <input type="text" class="tool-custom-hex" id="color-pairing-bg-hex" maxlength="7" size="7" autocomplete="off" spellcheck="false" aria-label="Background hex">
+                      <button type="button" class="field-action copy-btn" data-clipboard-target="#color-pairing-bg-hex">
+                        <span class="copy-btn-default">{{icon:copy}}<span class="visually-hidden">Copy background hex</span></span>
+                        <span class="copy-btn-copied">{{icon:check}}<span class="visually-hidden">Copied!</span></span>
+                      </button>
+                    </div>
+                    <p class="form-error" role="alert" id="color-pairing-bg-error" data-message="Use a hex colour, like FAFAFA or #FAFAFA."></p>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Filled by the script only when a brand leaves palette
+                   tokens undefined or unreadable. -->
+              <p class="form-hint is-hidden" id="color-pairing-skipped"></p>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          <!--
+            Export: the pair as the system spells it, in a read-only field
+            the script rewrites on every render, so not a live region. Copy
+            CSS, at the dock's foot, copies what it shows.
+          -->
+          <div class="tool-panel accordion-item is-open">
+            <div class="tool-panel-header">
+              <h2 class="tool-panel-heading">
+                <button type="button" class="accordion-header" id="color-pairing-export-heading" aria-expanded="true" aria-controls="color-pairing-export-section">
+                  <span class="tool-panel-title">Export</span>{{icon:chevron-down}}
+                </button>
+              </h2>
+            </div>
+            <div class="accordion-content" id="color-pairing-export-section" role="region" aria-labelledby="color-pairing-export-heading">
+            <div class="accordion-inner">
+            <div class="tool-panel-body">
+
+              <div class="block gap-s">
+                <label data-variant="caption" for="color-pairing-css">CSS</label>
+                <textarea class="tool-css-field tool-code" id="color-pairing-css" rows="2" readonly spellcheck="false"></textarea>
+              </div>
+
+            </div>
+            </div>
+            </div>
+          </div>
+
+          </div>
+
+          <!--
+            The verb, pinned at the dock's foot. copy-button.js reads the
+            readout through data-clipboard-target, so a copy made straight
+            after a change never takes the previous pair.
+          -->
+          <div class="tool-actions">
+            <div class="button-group">
+              <button type="button" class="button copy-btn" id="color-pairing-copy-css" data-clipboard-target="#color-pairing-css">
+                <span class="copy-btn-default">{{icon:copy}}<span>Copy CSS</span></span>
+                <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shown when nothing can be measured: the script hides the
+             preview and the dock, and this takes the preview's place. -->
+        <div class="tool-empty-wrap padding-global top-small is-hidden" id="color-pairing-empty-wrap">
+          <p id="color-pairing-empty">This browser will not let the tool read colour values, so it cannot measure a pair. Open this page in another browser, or turn off fingerprinting protection for this site. Every colour is also on the <a href="/tools/color-palette.html">Colour Palette</a>.</p>
+        </div>
+
+      </div>

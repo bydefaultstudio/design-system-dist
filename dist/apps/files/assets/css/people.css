@@ -1,0 +1,76 @@
+/* =====================================================================
+   PEOPLE - the admin tool at /docs/people.html (permissions-plan.md §5)
+   App layer (CLAUDE.md §17): By Default OS's own tool, never shipped with
+   the system. The tables, dialogs, section headers, badges and form
+   primitives are the design system's; this file only places what no utility
+   says - a person cell, the form's own rhythm, the dialog footer's two ends.
+   ===================================================================== */
+
+/* A person: avatar, then name over email. The badges wrap under the text on
+   a narrow cell rather than pushing the column wider. */
+.people-person {
+  display: flex;
+  align-items: center;
+  gap: var(--space-m);
+  min-width: 14rem;
+}
+
+.people-person-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.people-person-name {
+  font-weight: var(--font-weight-medium);
+}
+
+.people-person-email {
+  word-break: break-all;
+}
+
+.people-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+}
+
+/* The form owns the spacing between its groups, as .login-form does: the
+   gap here, and no margin on the groups, so the two never add up. */
+.people-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-l);
+}
+
+.people-form .form-group,
+.people-form .form-check {
+  margin-bottom: 0;
+}
+
+.people-form legend {
+  margin-bottom: var(--space-xs);
+}
+
+/* The error lines are in the DOM from first paint and empty at rest, the
+   login page's pattern (design-system.css §46), and take no space until
+   they speak, so the form's gap does not open around nothing. */
+.people-form .form-error:empty,
+.people-load-error:empty {
+  display: none;
+}
+
+.people-edit-email {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-xs) var(--space-m);
+  margin: 0;
+}
+
+/* In the edit dialogs the destructive actions sit at the footer's start and
+   the save at its end; on a narrow screen the footer wraps them. */
+.people-edit-side {
+  margin-inline-end: auto;
+}

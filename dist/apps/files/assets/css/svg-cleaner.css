@@ -1,0 +1,60 @@
+/* ------ SVG CLEANER STYLES ------ */
+/*
+  Layer: app. A tool on the shared canvas (tools.css, Tool canvas;
+  cms/tool-canvas.md), built from docks: the shell, the bar, the preview and
+  its corners, the checkerboard, the end dock, its sections and the pinned
+  actions all come from tools.css. What is left here is the tool's own: the
+  drawing on the stage, the empty line in its place, and the code fields.
+  Classes name the component, never the tool (tool-<noun>,
+  cms/tool-canvas.md Naming), and every rule is scoped to
+  [data-tool="svg-cleaner"] because this file loads on every page (extraStylesheets,
+  cms/docs.config.js), so an unscoped rule here reaches all of them.
+
+  No .bar-container rules here: the bar's content column belongs to
+  docs-site.css §1.
+*/
+
+/* -- Preview --
+   A tall preview (tools.css, data-size="tall"): the drawing is the point
+   of the tool. */
+
+/* -- Frame --
+   The frame is a .tool-artwork (tools.css): the SVG's own box at its own
+   size, scaled down to fit the stage. Fill screen drops the own size; a
+   24px icon at 24px is a speck. The drawing fills the frame, so the
+   artboard outline drawn over it sits on the box. */
+[data-tool="svg-cleaner"] .tool-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The artboard: the box's edge as a dotted line in the band's ink, which
+   the frame inherits from the band. Preview only. */
+[data-tool="svg-cleaner"] .tool-artwork[data-artboard]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: var(--border-s) dotted currentColor;
+  pointer-events: none;
+}
+
+/* The empty line, where the drawing goes: in the band's ink, which reads
+   on the checkerboard in either site theme, and faded under the same
+   measured gate as the band's captions (tools.css, Preview corners). */
+[data-tool="svg-cleaner"] .tool-placeholder {
+  margin: 0;
+  color: var(--tool-preview-ink);
+  text-align: center;
+}
+
+[data-tool="svg-cleaner"] .tool-preview[data-caption-fade] .tool-placeholder {
+  opacity: var(--tool-preview-caption-fade);
+}
+
+/* -- Code --
+   Tall enough to read a path, and never resized sideways — the field's
+   width is the section's. The face and ground are .tool-code (tools.css). */
+[data-tool="svg-cleaner"] .tool-code {
+  min-height: 12rem;
+}
