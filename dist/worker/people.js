@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.1.1 */
+/* @bydefaultstudio/design-system v8.2.0 */
 /**
  * people.js - the People API (permissions-plan.md §5): the list, invites,
  * roles, groups and removal, so adding a person never needs a terminal.

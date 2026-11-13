@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.1.1 */
+/* @bydefaultstudio/design-system v8.2.0 */
 /**
  * hidden-nav.mjs - per-reader navigation for `accessNav: 'hidden'`
  * (levels-groups-plan.md D19, §3.3).

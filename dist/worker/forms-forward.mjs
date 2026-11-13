@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.1.1 */
+/* @bydefaultstudio/design-system v8.2.0 */
 /**
  * forms-forward.mjs - the site's half of the form service
  * (engine-parity-phase-c.md, C2). Engine code: ships with createGate().

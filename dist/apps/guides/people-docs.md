@@ -97,6 +97,24 @@ Everything a row carries is in its **Edit** dialog: role, groups, end date, demo
 
 ---
 
+## Page levels decide who opens what
+
+**Page levels**, under the groups, lists every section and its pages with the level each one opens at: Public, Team, Admin or Owner. A section's level is a floor: every page in it opens at that level or higher, and a page already above it stays where it is. A page's own setting beats its section's. **Back to code** and **Back to section** remove a setting, so the target opens at the level its source declares again.
+
+A change goes through three steps, and nobody's access moves until the last:
+
+1. **Staged.** Picking a level stages it. Only you see it, marked **Staged**, and **Undo** takes it back. **Discard** drops every change you have staged.
+2. **Applied.** **Review and apply** lists each change with who can open the page afterwards. Applying it asks for a build of the site; the change shows **Waits for build** until that build is live.
+3. **Live.** The build bakes the new level into the page, the sidebar and search at once, so they never disagree. Everyone keeps their current access until then.
+
+When the site has a build trigger set up, the notice above the sections says when the build was asked for, and **Try again** asks for another if one did not finish. Without a trigger, applied changes go live at the next deploy. A page that has to close at once is a code change for a developer, not a Settings change.
+
+If someone else changed the same page after you staged yours, applying stops and says so, and nothing is overwritten: stage it again from what the list shows now.
+
+An admin changes levels between Public, Team and Admin. An admin never sets Owner, never changes a page that is or will be at Owner, and never lowers or resets a section that holds an owner page; an owner page shows only as a count. Only the pages of the listed sections can change: the sign-in, Ask for access and locked pages, the home page, search and everything under Settings are fixed.
+
+---
+
 ## One table admits everyone
 
 The list is the `allowed_email` table in the deployment's D1 database: the row admits a person, says what they are, how long for, and whether they are a demo account. Groups are three small tables beside it. A person's role is copied onto their user record at every sign-in and re-read from the list at every cookie rebuild, so the two cannot drift for longer than five minutes. The People page is the only thing that writes any of it.

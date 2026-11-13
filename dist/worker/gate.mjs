@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.1.1 */
+/* @bydefaultstudio/design-system v8.2.0 */
 /**
  * gate.mjs — the pure half of the access gate: route lists and predicates.
  *
@@ -169,7 +169,7 @@ export function isConflictCopyPath(pathname) {
   return /(?: |%20)\d+(?:\.[a-z0-9]+)?(?:\/|$)/i.test(pathname);
 }
 
-function isUnmappedSectionPage(pathname, pages, sections) {
+export function isUnmappedSectionPage(pathname, pages = SITE.pages, sections = SITE.sections) {
   if (!pathname.endsWith('.html') || pages.has(pathname)) return false;
   const section = sectionOf(pathname);
   return section !== '' && Object.prototype.hasOwnProperty.call(sections, section);

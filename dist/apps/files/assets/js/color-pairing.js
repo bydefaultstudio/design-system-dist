@@ -9,13 +9,18 @@
  * self-registers on DOMContentLoaded and bd:after-nav, scoped to the incoming
  * container, and exposes window.initColorPairing for a console or a host that
  * holds a container of its own.
- * @version 3.2.0
+ * @version 3.3.1
  */
 
 (function () {
   'use strict';
 
-  var VERSION = '3.2.0';
+  // The engine's words in this site's locale: bd-locale.js, which the docs
+  // kit writes and loads first on a site that isn't en-GB. Without it, the
+  // words as written.
+  function L(text) { return window.bdLocale ? window.bdLocale.text(text) : text; }
+
+  var VERSION = '3.3.1';
   console.log('[Colour Pairing] v' + VERSION + ' loaded');
 
   //
@@ -241,6 +246,8 @@
   // replaceState calls in 30 seconds. The throw is caught as well as avoided.
   function writeHash() {
     hashTimer = null;
+    // Both callers check first; this keeps the write safe on its own.
+    if (!el || !isOwnPage(el.root)) return;
     var next = '#' + stateToHash();
     if (window.location.hash === next) return;
     try {
@@ -257,11 +264,13 @@
   // wire time, not when the write is scheduled: keyboard input stays live on
   // the leaving container for the whole transition, and a write armed then
   // would stamp the destination and pass its own check.
-  // The router (barba-docs.js) marks the leaving container data-bd-role="leave" as the
-  // leave starts, which also covers a move to the same path with a new query.
+  // The query is stamped too: Barba fetches before the router marks the
+  // leaving container data-bd-role="leave", so a link to this same page with a
+  // new query moves the address while the container is still unmarked.
   function isOwnPage(root) {
-    return !!el && el.root === root && window.location.pathname === el.path
-      && root.getAttribute('data-bd-role') !== 'leave';
+    return !!el && el.root === root && window.location.pathname === el.ownPath
+      && window.location.search === el.ownSearch
+      && !root.closest('[data-bd-role="leave"]');
   }
 
   function updateHash() {
@@ -438,10 +447,11 @@
   }
 
   // Split chips, one radio per recommended pair; choosing one sets both
-  // sides. The darker colour always takes the start half and the selected
-  // ring, whichever of the two is the text, so a row of pairs reads
-  // dark-to-light the same way throughout. The name keeps the pair's own
-  // order, text on background.
+  // sides. The chip shows the pair in its own order, text on the start half
+  // and background on the end, so it reads the way its name does and a pair
+  // and its reverse look different. The selected ring is set apart from that
+  // order: --chip-ring takes the darker colour (light theme), --chip-ring-dark
+  // the lighter (dark theme). A tie in luminance goes to the text.
   function buildPairings() {
     var groupName = 'color-pairing-pairs-' + groupSeq;
     el.pairs.textContent = '';
@@ -451,9 +461,11 @@
       var bg = palette[pair.bg];
       var darker = fg.lum <= bg.lum ? fg : bg;
       var lighter = darker === fg ? bg : fg;
-      var cell = makeChip(groupName, 'pair', String(index), darker.css);
+      var cell = makeChip(groupName, 'pair', String(index), fg.css);
       cell.root.setAttribute('data-split', '');
-      cell.root.style.setProperty('--chip-fill-end', lighter.css);
+      cell.root.style.setProperty('--chip-fill-end', bg.css);
+      cell.root.style.setProperty('--chip-ring', darker.css);
+      cell.root.style.setProperty('--chip-ring-dark', lighter.css);
       cell.root.setAttribute('data-tooltip', fg.label + ' on ' + bg.label);
       var ratio = window.bdColor.contrastRatio(fg, bg);
       cell.name.textContent = fg.label + ' on ' + bg.label + ', ' + window.bdColor.truncate2(ratio) + ' to 1';
@@ -920,7 +932,8 @@
     cells = {};
     pairCells = [];
     el = found;
-    el.path = window.location.pathname;
+    el.ownPath = window.location.pathname;
+    el.ownSearch = window.location.search;
     groupSeq += 1;
 
     if (!window.bdColor.isCanvasTrustworthy()) {
@@ -935,7 +948,7 @@
     if (Object.keys(scan.map).length < 2) {
       showEmpty(
         'This brand defines fewer than two of the palette tokens, so there is nothing to pair. Set the palette in the brand theme, then reload this page.',
-        { before: 'Every colour it does define is on the', href: '/tools/color-palette.html', text: 'Colour Palette', after: '.' });
+        { before: L('Every colour it does define is on the'), href: '/tools/color-palette.html', text: L('Colour Palette'), after: '.' });
       console.warn('[Colour Pairing] init: fewer than two palette tokens resolved');
       return;
     }

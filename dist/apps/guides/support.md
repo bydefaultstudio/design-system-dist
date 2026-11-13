@@ -25,12 +25,12 @@ scripts: "access-support-form.js"
     <div class="container-s">
       <div class="block gap-l">
 
-        <div class="block gap-s">
+        <div class="block gap-s" data-hide-on-success>
           <h1 data-text-wrap="balance">Contact us</h1>
           <p>Request access, report an issue, or ask a question. We'll get back to you as soon as we can.</p>
         </div>
 
-        <div class="access-support-form" data-turnstile-sitekey="{{brand:turnstileSiteKey}}" data-support-email="{{brand:supportEmail}}"></div>
+        <div class="access-support-form" data-turnstile-sitekey="{{brand:turnstileSiteKey}}" data-support-email="{{brand:supportEmail}}"><template data-icon="warning">{{icon:warning}}</template><template data-icon="check-circled">{{icon:check-circled}}</template></div>
 
       </div>
     </div>

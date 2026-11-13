@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.1.1 */
+/* @bydefaultstudio/design-system v8.2.0 */
 /**
  * site.mjs - what the access gate needs to know about the site it guards
  * (levels-groups-plan.md Phase 3, D21).
@@ -69,6 +69,15 @@ export const SITE = {
   sourcePrefix: '/cms/',
   /** Overrides for the sign-in emails' literal tokens (email-template.mjs EMAIL_TOKENS): a client's own type and colour. */
   emailTokens: Object.freeze({}),
+  /**
+   * The level settings the LAST build baked in (page-access.mjs APPLIED_LEVELS):
+   * { pages: Map<path, level>, sections: Map<folder, level> } (D27). The Levels
+   * API compares the applied D1 rows against these to tell which changes still
+   * wait for a build. The gate never reads them: it reads the baked levels.
+   */
+  appliedLevels: Object.freeze({ pages: new Map(), sections: new Map() }),
+  /** When the last build read the level settings from D1 (unix seconds), 0 when it read none. */
+  levelsReadAt: 0,
 };
 
 function fail(message) {
@@ -177,6 +186,7 @@ export function configureSite(options = {}) {
   const sourcePrefix = onePath(options.sourcePrefix, 'sourcePrefix', '/cms/');
   if (!sourcePrefix.endsWith('/')) fail('`sourcePrefix` must end with /');
   const emailTokens = emailTokenMap(options.emailTokens, EMAIL_TOKEN_NAMES);
+  const appliedLevels = normaliseApplied(options.appliedLevels);
 
   SITE.name = typeof options.name === 'string' && options.name.trim() ? options.name.trim() : SITE.name;
   SITE.pages = options.pages;
@@ -196,5 +206,27 @@ export function configureSite(options = {}) {
   SITE.library = library;
   SITE.sourcePrefix = sourcePrefix;
   SITE.emailTokens = emailTokens;
+  SITE.appliedLevels = appliedLevels;
+  SITE.levelsReadAt = Number.isFinite(options.levelsReadAt) && options.levelsReadAt > 0 ? Math.floor(options.levelsReadAt) : 0;
   return SITE;
+}
+
+/**
+ * The baked level settings as two Maps. page-access.mjs writes APPLIED_LEVELS
+ * as `{ pages: {...}, sections: {...} }` (plain objects, so the generated file
+ * stays data); a site with no settings source writes empty objects. Anything
+ * malformed collapses to empty rather than failing the gate - a wrong applied
+ * snapshot only mislabels pending in the UI, never opens a page.
+ */
+function normaliseApplied(value) {
+  const pages = new Map();
+  const sections = new Map();
+  if (value && typeof value === 'object') {
+    const src = value;
+    if (src.pages instanceof Map) for (const [k, v] of src.pages) pages.set(k, v);
+    else if (src.pages && typeof src.pages === 'object') for (const [k, v] of Object.entries(src.pages)) pages.set(k, v);
+    if (src.sections instanceof Map) for (const [k, v] of src.sections) sections.set(k, v);
+    else if (src.sections && typeof src.sections === 'object') for (const [k, v] of Object.entries(src.sections)) sections.set(k, v);
+  }
+  return Object.freeze({ pages, sections });
 }

@@ -18,13 +18,18 @@
  * built, so a brand that re-points them re-skins every tool at once. Reading
  * and contrast maths are color-core.js's (window.bdColor), which must load
  * first. A library: binds nothing, has no init. Exposes window.ToolColour.
- * @version 1.8.0
+ * @version 1.9.0
  */
 
 (function () {
   'use strict';
 
-  var VERSION = '1.8.0';
+  // The engine's words in this site's locale: bd-locale.js, which the docs
+  // kit writes and loads first on a site that isn't en-GB. Without it, the
+  // words as written.
+  function L(text) { return window.bdLocale ? window.bdLocale.text(text) : text; }
+
+  var VERSION = '1.9.0';
   console.log('[Tool Colour] v' + VERSION + ' loaded');
 
   /* The tools' palette, in this order: the two neutrals, the brown ramp, then
@@ -69,7 +74,7 @@
     return base.concat(ordered);
   }
 
-  var ERROR_MESSAGE = 'Use a hex colour, like 1F1F1F or #1F1F1F.';
+  var ERROR_MESSAGE = L('Use a hex colour, like 1F1F1F or #1F1F1F.');
 
   // The brand copy and check icons, inline: the hex field's copy button is
   // built here, after docgen has expanded the page's {{icon:…}} tokens.
@@ -419,9 +424,12 @@
   /* A row of pair chips above a two-colour tool's roles; choosing one sets
      both. The tool's own pairs come first, then the brand's tool pairs
      (toolPairs), less any the tool already has. Each chip is
-     split — the darker colour on the start half, because the selected ring
-     is drawn in it — names its pair in words, with the verdict when the pair
-     fails, and shows the name as a tooltip.
+     split in the pair's own order — foreground on the start half, background
+     on the end — so it reads the way its name does, and a pair and its
+     reverse look different. The selected ring is set apart from that order:
+     --chip-ring takes the darker of the two (light theme) and --chip-ring-dark
+     the lighter (dark theme). Each chip names its pair in words, with the
+     verdict when the pair fails, and shows the name as a tooltip.
        opts.id, opts.label  as create()
        opts.pairs     [{ id, label, fg: "#RRGGBB", bg: "#RRGGBB" }]
        opts.min       the contrast a pair must clear (3 or 4.5)
@@ -456,10 +464,12 @@
       + '<legend data-variant="caption" id="' + labelId + '">' + escapeHtml(opts.label || 'Pairs') + '</legend>'
       + '<div class="chip-group">'
       + list.map(function (pair) {
-        var darkFirst = contrastRatio(pair.fg, '#000000') <= contrastRatio(pair.bg, '#000000');
-        var start = darkFirst ? pair.fg : pair.bg;
-        var end = darkFirst ? pair.bg : pair.fg;
-        return '<label class="chip" data-variant="colour" data-split data-tooltip="' + escapeHtml(pair.label) + '" style="--chip-fill: ' + start + '; --chip-fill-end: ' + end + '">'
+        // Darker against black means closer to it. A tie goes to fg, which
+        // only decides which ring a pair of equal luminance draws.
+        var fgDarker = contrastRatio(pair.fg, '#000000') <= contrastRatio(pair.bg, '#000000');
+        var darker = fgDarker ? pair.fg : pair.bg;
+        var lighter = fgDarker ? pair.bg : pair.fg;
+        return '<label class="chip" data-variant="colour" data-split data-tooltip="' + escapeHtml(pair.label) + '" style="--chip-fill: ' + pair.fg + '; --chip-fill-end: ' + pair.bg + '; --chip-ring: ' + darker + '; --chip-ring-dark: ' + lighter + '">'
           + '<input type="radio" name="' + opts.id + '" value="' + escapeHtml(pair.id) + '">'
           + '<span class="chip-swatch" aria-hidden="true"></span>'
           + '<span class="visually-hidden">' + escapeHtml(pair.label)

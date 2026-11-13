@@ -2,12 +2,14 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 const { readIconAliases } = require('./icon-aliases');
 const assetLibrary = require('./asset-library');
 const formatRegistry = require('./formats');
 const formatCard = require('./format-card');
 const siteMap = require('./site-map');
 const brandFile = require('./brand');
+const locale = require('./locale');
 const appsRegistry = require('./apps');
 const osJson = require('./os-json');
 // The engine's own version, from the package this generator ships in, so a
@@ -93,6 +95,9 @@ const CONFIG = {
   retiredSections: userConfig.retiredSections || {},
   filenameOverrides: userConfig.filenameOverrides || {},
   indexCards: userConfig.indexCards || null,
+  // The home page's own header: a function ({ title, description }) => HTML,
+  // used in place of the standard page header. The strings arrive escaped.
+  indexHeader: typeof userConfig.indexHeader === 'function' ? userConfig.indexHeader : null,
   logoHtml: userConfig.logoHtml || null,
   contactHref: userConfig.contactHref || null,
   contactLabel: userConfig.contactLabel || 'Contact',
@@ -373,7 +378,12 @@ function indexLevel(folder) {
   const level = sectionLevel(folder);
   // Never below team: a public section's index stays behind the sign-in, as
   // it always was, since it lists that section's team and admin pages too.
-  return level && LEVEL_RANK[level] > LEVEL_RANK.team ? level : 'team';
+  let base = level && LEVEL_RANK[level] > LEVEL_RANK.team ? level : 'team';
+  // D27: a page override on the index, or a section floor, raises it; still
+  // never below team (validateLevelSet enforces the same).
+  const over = overlayLevel(`/${folder}/index.html`, base);
+  const eff = over === undefined ? base : over;
+  return LEVEL_RANK[eff] < LEVEL_RANK.team ? 'team' : eff;
 }
 
 // Pages whose level came from a section default, listed at the end of a full
@@ -389,10 +399,19 @@ let navSourceHtml = '';
  * `label` names the page in the build's report of defaulted levels.
  */
 function ownOrSectionAccess(ownAccess, folder, label) {
-  if (ownAccess !== undefined && ownAccess !== null && ownAccess !== '') return ownAccess;
-  const level = sectionLevel(folder);
-  if (level !== undefined) levelsFromSection.push(`${label} -> ${level} (sectionAccess.${folder})`);
-  return level;
+  let value;
+  if (ownAccess !== undefined && ownAccess !== null && ownAccess !== '') {
+    value = ownAccess;
+  } else {
+    const level = sectionLevel(folder);
+    if (level !== undefined) levelsFromSection.push(`${label} -> ${level} (sectionAccess.${folder})`);
+    value = level;
+  }
+  // D27: a Settings row raises or lowers the level the build bakes. Returns the
+  // code value untouched when no row touches this target, so an untouched site
+  // is byte-for-byte unchanged.
+  const over = overlayLevel(label, value);
+  return over === undefined ? value : over;
 }
 
 function validateSectionAccess() {
@@ -403,17 +422,164 @@ function validateSectionAccess() {
   }
 }
 
+/* ------ Level settings from Settings (levels-groups-plan.md D27) ------ */
+
+// The settings a reader changed from Settings > People (one row per section or
+// page), applied by the build so the sidebar, search, cards, the link-level
+// check, hidden mode and page-access.mjs all use the FINAL level. The source is
+// chosen once, logged, and never touches the network unless LEVELS_FROM_D1 is
+// set in the build command:
+//
+//   LEVELS_FROM_D1=1  reads the live D1 table with `wrangler d1 execute` (the
+//                     Workers Builds build command sets it; needs the db name
+//                     in docs.config.js accessDb or the LEVELS_DB env var)
+//   LEVELS_FILE=path  reads a JSON file, for tests and for a committed fallback
+//   neither           no settings: every page builds at its code level
+//
+// The duplication of the level maths here (not an import of worker/levels-core)
+// is deliberate: the generator ships to consumers without a worker/, the same
+// reason normaliseLevel is duplicated. A protected target or an unknown/invalid
+// row is warned and skipped, never a crash.
+const LEVEL_DOOR_PAGES = new Set(['/auth/login.html', '/locked.html', '/support.html']);
+function isProtectedLevelTarget(kind, target) {
+  if (kind === 'section') return target === 'settings' || target === '';
+  return LEVEL_DOOR_PAGES.has(target) || target === '/index.html' || target.startsWith('/settings/');
+}
+function levelFolderOf(pathname) {
+  const m = /^\/([a-z0-9-]+)\/[^/]+$/.exec(pathname || '');
+  return m ? m[1] : '';
+}
+function maxLevelName(a, b) {
+  return LEVEL_RANK[a] >= LEVEL_RANK[b] ? a : b;
+}
+
+function loadLevelSettingsSource() {
+  const pages = new Map();
+  const sections = new Map();
+  let raw = null;
+  let origin = 'none';
+  try {
+    if (process.env.LEVELS_FROM_D1 === '1') {
+      const db = process.env.LEVELS_DB || CONFIG.accessDb;
+      if (!db) {
+        console.error('❌ LEVELS_FROM_D1=1 but no database is named. Set accessDb in docs.config.js (or LEVELS_DB). The build stops so no applied level is dropped.');
+        process.exit(1);
+      } else {
+        const out = execSync(`npx wrangler d1 execute ${db} --remote --json --command "SELECT kind, target, level FROM level_setting"`, { encoding: 'utf8' });
+        raw = out;
+        origin = `D1 (${db})`;
+      }
+    } else if (process.env.LEVELS_FILE) {
+      raw = fs.readFileSync(path.resolve(ROOT, process.env.LEVELS_FILE), 'utf8');
+      origin = `file (${process.env.LEVELS_FILE})`;
+    } else if (CONFIG.levelsFallback) {
+      const p = path.resolve(ROOT, CONFIG.levelsFallback);
+      if (fs.existsSync(p)) { raw = fs.readFileSync(p, 'utf8'); origin = `fallback (${CONFIG.levelsFallback})`; }
+    }
+  } catch (error) {
+    // Fail closed. Building at code levels would silently drop every applied
+    // level: a page raised in Settings would reopen and go back into search.
+    // Stopping leaves the last good deploy live, at the levels it already has.
+    console.error(`❌ Level settings: could not read ${origin === 'none' ? 'the level settings' : origin} — ${error.message}. The build stops so no applied level is dropped; the site stays at its current levels.`);
+    process.exit(1);
+  }
+  if (raw === null) return { pages, sections, origin };
+  const rows = parseLevelRows(raw);
+  if (rows === null) {
+    console.error(`❌ Level settings: ${origin} was not valid JSON. The build stops so no applied level is dropped; the site stays at its current levels.`);
+    process.exit(1);
+  }
+  for (const row of rows) {
+    if (!ACCESS_LEVELS.includes(row.level)) { console.warn(`⚠️  Level setting skipped (bad level ${JSON.stringify(row.level)}): ${row.kind} ${row.target}`); continue; }
+    if (row.kind !== 'section' && row.kind !== 'page') { console.warn(`⚠️  Level setting skipped (bad kind): ${JSON.stringify(row.kind)}`); continue; }
+    if (isProtectedLevelTarget(row.kind, row.target)) { console.warn(`⚠️  Level setting skipped (protected target): ${row.kind} ${row.target}`); continue; }
+    (row.kind === 'section' ? sections : pages).set(row.target, row.level);
+  }
+  return { pages, sections, origin };
+}
+
+// Accepts either the wrangler `d1 execute --json` shape (an array whose first
+// result has `.results`), or a plain array of rows, or an object
+// { pages: {path: level}, sections: {folder: level} }.
+function parseLevelRows(raw) {
+  let data;
+  try { data = JSON.parse(raw); } catch { return null; }
+  if (Array.isArray(data) && data.length && data[0] && Array.isArray(data[0].results)) data = data[0].results;
+  if (Array.isArray(data)) return data.map((r) => ({ kind: r.kind, target: String(r.target || '').trim().toLowerCase(), level: r.level }));
+  const rows = [];
+  if (data && typeof data === 'object') {
+    for (const [target, level] of Object.entries(data.pages || {})) rows.push({ kind: 'page', target: String(target).trim().toLowerCase(), level });
+    for (const [target, level] of Object.entries(data.sections || {})) rows.push({ kind: 'section', target: String(target).trim().toLowerCase(), level });
+  }
+  return rows;
+}
+
+const LEVEL_SETTINGS = loadLevelSettingsSource();
+// When the settings were read (unix seconds), written to page-access.mjs as
+// LEVELS_READ_AT only when they came from D1, so a local build stays
+// byte-for-byte stable. Settings compares it with the last build request.
+const LEVELS_READ_AT = LEVEL_SETTINGS.origin.startsWith('D1') ? Math.floor(Date.now() / 1000) : 0;
+// Each overlaid page's code level, filled by overlayLevel (D27).
+const CODE_LEVELS = new Map();
+
+/**
+ * The build level for a target after the Settings overlay (D27), or undefined
+ * when no setting touches it — so a site with no settings builds byte-for-byte
+ * as before. Page setting beats section floor beats code; the floor only
+ * raises. Protected targets are never overlaid.
+ */
+function overlayLevel(label, codeValue) {
+  const pathname = String(label).startsWith('/') ? String(label) : '/' + label;
+  // The level the code gives, before any Settings row: page-access.mjs carries
+  // it as `code` where it differs, so the Worker can work out what an applied
+  // but unbuilt change will bake (levels-core.mjs projectedLevel).
+  CODE_LEVELS.set(pathname, normaliseLevel(codeValue));
+  if (isProtectedLevelTarget('page', pathname)) return undefined;
+  const folder = levelFolderOf(pathname);
+  const hasPage = LEVEL_SETTINGS.pages.has(pathname);
+  const floor = LEVEL_SETTINGS.sections.get(folder);
+  if (!hasPage && !floor) return undefined;
+  let base = hasPage ? LEVEL_SETTINGS.pages.get(pathname) : normaliseLevel(codeValue);
+  if (floor) base = maxLevelName(base, floor);
+  return base;
+}
+
+/** The effective build level for a path given its code level, applying any Settings row. */
+function effectiveBuildLevel(pathname, codeLevel) {
+  const over = overlayLevel(pathname, codeLevel);
+  return over === undefined ? normaliseLevel(codeLevel) : over;
+}
+
 // The brand settings file (config: brandManifest; brand.js). Read, upgraded
 // and validated once, here: a file that fails stops the build with every
 // problem listed. ROOT_MANIFEST is its chrome view (name, fonts, favicons,
 // OG image); BRAND is the whole file, for the runtime files and the checks.
 // docs.config.js keys are the fallback for projects without one.
 const ROOT_MANIFEST_PATH = CONFIG.brandManifest ? path.resolve(ROOT, CONFIG.brandManifest) : null;
+// Project icons (config: iconsDir), falling back to the chrome icons bundled
+// with the shipped docs-kit. Without either, pages build but icon slots warn.
+// Set before the brand file loads: its icons.close must name one of these.
+const ICONS_DIR = CONFIG.iconsDir
+  ? path.resolve(ROOT, CONFIG.iconsDir)
+  : path.join(KIT_ASSETS, 'icons');
 // The version brand.json is written at, before any upgrade in memory: what
 // /os.json reports as `brand`, so an old file shows on the fleet dashboard.
 let BRAND_FILE_VERSION = null;
 const BRAND = ROOT_MANIFEST_PATH ? loadSiteBrand(ROOT_MANIFEST_PATH) : null;
 const ROOT_MANIFEST = BRAND ? brandFile.chromeManifest(BRAND) : null;
+// The spelling of the engine's own words (brand.json wording.locale,
+// locale.js): en-GB, as the engine is written, unless the brand says
+// otherwise. Only engine-owned sources convert (isEngineSource); the site's
+// own pages never do.
+const LOCALE = BRAND ? brandFile.wording(BRAND).locale : locale.LOCALES[0];
+const CONVERT_LOCALE = LOCALE !== locale.LOCALES[0];
+// The runtime half, for the tool scripts' L() helpers: written, and loaded
+// first on every page, only when the engine's words convert
+const LOCALE_SCRIPT = 'assets/js/bd-locale.js';
+// A site's own copy of an engine page is its own words, kept as written
+const LOCALE_NOTE = CONVERT_LOCALE ? ` (not converted to ${LOCALE})` : '';
+// Every page's <html lang>: the locale once it is set, plain "en" as before
+const HTML_LANG = CONVERT_LOCALE ? LOCALE : 'en';
 
 function loadSiteBrand(file) {
   const tokens = brandFile.definedTokens([
@@ -422,7 +588,7 @@ function loadSiteBrand(file) {
       ? path.resolve(ROOT, CONFIG.brandCssPath) : null,
   ]);
   try {
-    const { brand, from } = brandFile.loadBrand(file, { root: ROOT, tokens });
+    const { brand, from } = brandFile.loadBrand(file, { root: ROOT, tokens, icons: brandFile.iconSet(ICONS_DIR, ROOT) });
     BRAND_FILE_VERSION = from;
     if (from < brandFile.BRAND_VERSION) {
       console.warn(`⚠️  ${path.relative(ROOT, file)} is version ${from}. Run npx bd-brand upgrade to rewrite it as version ${brandFile.BRAND_VERSION}.`);
@@ -433,6 +599,20 @@ function loadSiteBrand(file) {
     console.error(`\n❌ ${err.message}\n`);
     process.exit(1);
   }
+}
+
+/** The close icon the page bar and the feedback dialog draw (brand.json icons.close). */
+function closeIconHtml() {
+  return getIcon(brandFile.closeIcon(BRAND));
+}
+
+/**
+ * {{close-icon}}: the brand's close icon, where an HTML source draws the
+ * page's close (a tool bar's bar-close, the feedback dialog's close). Not
+ * {{icon:close-large}}, which stays that icon whatever the brand sets.
+ */
+function expandCloseIcon(html) {
+  return html.replace(/\{\{close-icon\}\}/g, () => closeIconHtml());
 }
 
 // The apps: every one the package ships and the site writes, and the ones
@@ -452,7 +632,7 @@ if (!INSTALL.legacy) {
   CONFIG.assetLibrary = INSTALL.installed.includes('asset-library');
   for (const slug of INSTALL.installed) {
     const overrides = APP_REGISTRY.apps.get(slug).overrides;
-    if (overrides.length) console.log(`ℹ️  ${slug}: this site's own ${overrides.join(' and ')} replace${overrides.length === 1 ? 's' : ''} the package's.`);
+    if (overrides.length) console.log(`ℹ️  ${slug}: this site's own ${overrides.join(' and ')} replace${overrides.length === 1 ? 's' : ''} the package's${LOCALE_NOTE}.`);
   }
 }
 
@@ -507,7 +687,7 @@ if (GUIDES.errors.length) {
   console.error(`\n❌ The app guides can't be resolved:\n${GUIDES.errors.map((e) => `  - ${e}`).join('\n')}\n`);
   process.exit(1);
 }
-for (const guide of GUIDES.overridden) console.log(`ℹ️  ${guide}: this site's own guide replaces the package's.`);
+for (const guide of GUIDES.overridden) console.log(`ℹ️  ${guide}: this site's own guide replaces the package's${LOCALE_NOTE}.`);
 
 // The pages of sections this site doesn't install, to the section's name (D14)
 const OFF_SECTION_PAGES = new Map();
@@ -515,6 +695,48 @@ const OFF_SECTION_PAGES = new Map();
 /** Where a cms page's source is: the site's cms/, or a guide the package ships. */
 function docSource(filename) {
   return GUIDES.sources.get(filename) || path.join(DOCS_DIR, filename);
+}
+
+/**
+ * Whether a page source is the engine's own words: a file outside this
+ * site's cms/ (a guide or an app the package ships). The site's own pages,
+ * and its own copies of the engine's, are never converted to its locale.
+ * On the engine's own repo every source is in cms/, so nothing is.
+ */
+function isEngineSource(file) {
+  const real = (p) => (fs.existsSync(p) ? fs.realpathSync(p) : path.resolve(p));
+  const rel = path.relative(real(DOCS_DIR), real(file));
+  return rel.startsWith('..') || path.isAbsolute(rel);
+}
+
+// Headings by page source, for a page whose headings the locale changed:
+// every heading in order, [converted text, original text] (locale.markdown)
+const PAGE_HEADING_IDS = new Map();
+
+/**
+ * A page source as the build reads it: the file as written, or, for an
+ * engine source on a site whose locale isn't en-GB, with the engine's words
+ * converted (locale.js). Converted before any {{...}} expands, so a value
+ * the site fills ({{brand:organisation}}) is never touched. Every page
+ * source is read through here, so a title reads the same in the page, the
+ * sidebar, the cards and the not-installed page.
+ */
+function readPageSource(file) {
+  const source = fs.readFileSync(file, 'utf8');
+  if (!CONVERT_LOCALE || !isEngineSource(file)) return source;
+  const { content, headingIds } = locale.page(source, file.endsWith('.html') ? 'html' : 'markdown');
+  if (headingIds.some(([now, was]) => now !== was)) PAGE_HEADING_IDS.set(path.resolve(file), headingIds);
+  return content;
+}
+
+/** The heading ids a converted page source keeps (readPageSource), or null. */
+function pageHeadingIds(file) {
+  return PAGE_HEADING_IDS.get(path.resolve(file)) || null;
+}
+
+/** Copy the generator writes into a page, in the site's locale. */
+function engineWords(text) {
+  return CONVERT_LOCALE ? locale.text(text) : text;
 }
 
 /** Every page source in cms/, plus the package's guides, less uninstalled apps' guides. */
@@ -645,11 +867,8 @@ function fontHeadHtml(manifest, navBase) {
 
 //------- Icon Map -------//
 
-// Project icons (config: iconsDir), falling back to the chrome icons bundled
-// with the shipped docs-kit. Without either, pages build but icon slots warn.
-const ICONS_DIR = CONFIG.iconsDir
-  ? path.resolve(ROOT, CONFIG.iconsDir)
-  : path.join(KIT_ASSETS, 'icons');
+// ICONS_DIR is set beside the brand file's loading, which checks its close
+// icon against the folder.
 let ICON_MAP = {};
 
 // Numbers as SVG path data actually writes them: optional sign, optional
@@ -1191,7 +1410,7 @@ function loadFormatRegistry() {
 function writeFormatsEmbed() {
   const platforms = loadFormatRegistry();
   if (!platforms.length) return;
-  const html = formatCard.renderEmbedPage({ platforms, getIcon, themeLink: brandCssLink('/') });
+  const html = formatCard.renderEmbedPage({ platforms, getIcon, themeLink: brandCssLink('/'), lang: HTML_LANG, localeScript: CONVERT_LOCALE ? `/${LOCALE_SCRIPT}` : null });
   const out = path.join(OUTPUT_DIR, formatCard.EMBED_PATH);
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, html);
@@ -2032,9 +2251,11 @@ function mapLinesOutsideFences(markdown, fn) {
 }
 
 /**
- * Convert markdown to HTML using marked
+ * Convert markdown to HTML using marked. `headingIds` is the locale's list
+ * of the page's headings in order, [converted text, original text]
+ * (readPageSource), for an engine page on a site whose locale isn't en-GB.
  */
-function markdownToHtml(markdown, source = 'a cms/*.md page') {
+function markdownToHtml(markdown, source = 'a cms/*.md page', headingIds = null) {
   // Configure marked options
   marked.setOptions({
     gfm: true, // GitHub Flavored Markdown
@@ -2099,13 +2320,31 @@ function markdownToHtml(markdown, source = 'a cms/*.md page') {
   // Add IDs to headings for anchor links
   html = markSearchIgnoredBlocks(html);
 
+  const headingSlug = (text) => text.toLowerCase()
+    .replace(/&[#\w]+;/g, '') // Drop escaped entities: "don&#39;t" → "dont", not "don39t"
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .trim();
+  // A heading the locale converted keeps the id of its original text, so
+  // #colour still lands on "Color" and every link to it holds. Matched in
+  // order, unchanged headings included, so a "Color" written as such keeps
+  // its own id beside a converted "Colour". A heading's {{brand:key}} is
+  // filled first, as the rendered heading's is.
+  const keptIds = (headingIds || []).map(([now, was]) => [
+    headingSlug(expandBrandTokens(now, source)), headingSlug(expandBrandTokens(was, source)),
+  ]);
+  let nextHeading = 0;
+
   html = html.replace(/<h([1-6])>([^<]+)<\/h[1-6]>/g, (match, level, text) => {
-    const id = text.toLowerCase()
-      .replace(/&[#\w]+;/g, '') // Drop escaped entities: "don&#39;t" → "dont", not "don39t"
-      .replace(/[^\w\s-]/g, '') // Remove special characters
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .replace(/-+/g, '-') // Replace multiple hyphens with single
-      .trim();
+    const slug = headingSlug(text);
+    let id = slug;
+    for (let i = nextHeading; i < keptIds.length; i++) {
+      if (keptIds[i][0] !== slug) continue;
+      id = keptIds[i][1];
+      nextHeading = i + 1;
+      break;
+    }
 
     return `<h${level} id="${id}">${text}</h${level}>`;
   });
@@ -2936,6 +3175,18 @@ function tocDropdown(tableOfContents) {
 /**
  * Generate index page HTML
  */
+/**
+ * The home header a site supplies (config: indexHeader). It stands in for the
+ * standard page header, so it owes the page what that one gives it: an h1.
+ */
+function renderIndexHeader() {
+  const html = CONFIG.indexHeader({ title: SITE_HTML.name, description: SITE_HTML.description });
+  if (typeof html !== 'string' || !/<h1[\s>]/i.test(html)) {
+    throw new Error('indexHeader must return the home header as an HTML string that holds the page\'s <h1>');
+  }
+  return html;
+}
+
 function generateIndexPage(template, filesBySection) {
   let cards = '';
 
@@ -3035,7 +3286,11 @@ function generateIndexPage(template, filesBySection) {
     assetBase: '',
     title: 'Home',
     description: SITE_HTML.description,
-    header: buildPageHeaderHtml({ title: SITE_HTML.name, subtitle: SITE_HTML.description }),
+    // A site can supply its own home header (config: indexHeader). It must
+    // carry the page's h1, as the standard header does.
+    header: CONFIG.indexHeader
+      ? renderIndexHeader()
+      : buildPageHeaderHtml({ title: SITE_HTML.name, subtitle: SITE_HTML.description }),
     content: indexContent,
     access,
     sectionSlug: 'home',
@@ -3515,7 +3770,7 @@ function claimedOsIllustrations() {
   if (claimedOsIllustrationsCache) return claimedOsIllustrationsCache;
   const claimed = new Set((CONFIG.indexCards || []).map(c => c.osIllustration).filter(Boolean));
   for (const filename of docFilenames()) {
-    const { frontmatter } = parseFrontmatter(fs.readFileSync(docSource(filename), 'utf8'));
+    const { frontmatter } = parseFrontmatter(readPageSource(docSource(filename)));
     const art = pageOsIllustration(frontmatter, { filename });
     if (art.osIllustration) claimed.add(art.osIllustration);
   }
@@ -3644,7 +3899,7 @@ function buildBar({ crumbs, closeHref, closeLabel, mdHref = null, width = 'docs'
             </div>
           </div>
           <a href="${closeHref}" class="bar-close" data-page-close aria-label="Back to ${closeLabel}">
-            ${getIcon('close-large')}
+            ${closeIconHtml()}
           </a>
         </div>
       </div>
@@ -3800,7 +4055,7 @@ function buildComponentUsage(file) {
   const stylesPart = hasOwnCss
     ? `This component's styles ship as \`dist/css/${cssName}\` — copy it into the product's served assets and link it after \`design-system.css\`.`
     : isHeadless
-      ? `This component ships no CSS — it is behaviour only.`
+      ? engineWords(`This component ships no CSS — it is behaviour only.`)
       : `This component's styles ship in \`design-system.css\`.`;
 
   // A component whose behaviour leans on another module (Swatch's copy
@@ -3816,7 +4071,7 @@ function buildComponentUsage(file) {
   const externalPart = external ? ` It also needs ${external.label}, loaded before it.` : '';
   const includes = (external ? external.scripts : []).concat(scripts);
   const jsPart = hasJs
-    ? `${stylesPart} Its behaviour ships as ${shipsAs} — copy ${scripts.length > 1 ? 'them' : 'it'} into the product's served assets and include ${scripts.length > 1 ? 'each' : 'it'} once per page.${externalPart}
+    ? `${stylesPart} ${engineWords('Its behaviour')} ships as ${shipsAs} — copy ${scripts.length > 1 ? 'them' : 'it'} into the product's served assets and include ${scripts.length > 1 ? 'each' : 'it'} once per page.${externalPart}
 
 \`\`\`html
 ${includes.map((name) => `<script src="assets/js/${name}" defer></script>`).join('\n')}
@@ -3947,7 +4202,7 @@ function generateGlossaryPages(template, glossary, level) {
     // No section, like a Showcase post: the glossary is one page with its
     // entries under it, not a docs section a guest is granted.
     pageAccess.set(`/${GLOSSARY_FOLDER}/${entry.slug}.html`, {
-      level,
+      level: effectiveBuildLevel(`/${GLOSSARY_FOLDER}/${entry.slug}.html`, level),
       section: '',
       type: 'doc',
       title: entry.title,
@@ -4077,7 +4332,8 @@ function uiScriptPath(fileName) {
 }
 
 /**
- * The scripts a bare page loads after nav.js: dropdown.js (the header's
+ * The scripts a bare page loads after nav.js: the locale's runtime, on a
+ * site whose locale isn't en-GB (bd-locale.js), dropdown.js (the header's
  * menus), the brand's settings, then the page's own, by file name in its
  * `scripts:` frontmatter. A name is the site's UI script of that name, or
  * one of the access gate's own files (apps.js GATE_FILES); anything else
@@ -4088,6 +4344,7 @@ function bareScriptTags(file, navBase) {
   const source = `cms/${file.filename}`;
   const srcs = [];
   const take = (src) => { if (src && !srcs.includes(src)) srcs.push(src); };
+  if (CONVERT_LOCALE) take(LOCALE_SCRIPT);
   take(uiScriptPath('dropdown.js'));
   if (BRAND) take(CONFIG.brandOutputs.themeConfig);
   const gateFiles = CONFIG.accessGate ? [...appsRegistry.GATE_FILES.everyPage, ...appsRegistry.GATE_FILES.pages] : [];
@@ -4201,7 +4458,7 @@ function generatePage(file, template, pageOrder, sidebarOrderMap = {}, subsectio
   // shorthand for their chevrons.
   let htmlContent = type.body === 'html'
     ? expandHtmlBody(content, file)
-    : markdownToHtml(content + buildComponentUsage(file), `cms/${file.filename}`);
+    : markdownToHtml(content + buildComponentUsage(file), `cms/${file.filename}`, file.headingIds);
 
   // Apply drop cap to first paragraph if enabled in frontmatter
   if (frontmatter.dropcap === 'true') {
@@ -5661,6 +5918,22 @@ function writeThemeConfig() {
 }
 
 /**
+ * assets/js/bd-locale.js: the engine's words in this site's locale, for the
+ * tool scripts' L() helpers (locale.js runtimeSource). Written on every run
+ * for a site whose locale isn't en-GB, since every page loads it; on an
+ * en-GB site a copy an earlier build left is removed, so nothing stale ships.
+ */
+function writeLocaleScript() {
+  const out = path.join(OUTPUT_DIR, LOCALE_SCRIPT);
+  if (CONVERT_LOCALE) {
+    writeBrandRuntimeFile(LOCALE_SCRIPT, locale.runtimeSource(LOCALE, ENGINE_VERSION));
+  } else if (fs.existsSync(out) && fs.readFileSync(out, 'utf8').startsWith(locale.RUNTIME_BANNER)) {
+    fs.unlinkSync(out);
+    console.log(`🗑️  Removed: ${LOCALE_SCRIPT} (the site is en-GB)`);
+  }
+}
+
+/**
  * Fail a client site's build when a page it just wrote shows By Default's
  * name or addresses (failure scenario 11). The engine's own test keeps them
  * out of the package (scripts/verify-engine-wording.js); this catches a
@@ -5710,10 +5983,25 @@ function assertNotListedTwice(engineFiles, siteFiles, listName) {
 }
 
 /**
+ * A standalone page an app ships as a file (World Clock's embed), in the
+ * site's locale: its words converted, its lang set, and the locale's
+ * runtime loaded before its first script, so the scripts it runs read it.
+ */
+function localisedAppPage(rel, html) {
+  const depth = rel.split('/').length - 1;
+  const src = `${'../'.repeat(depth)}${LOCALE_SCRIPT}`;
+  let out = locale.html(html).replace(/<html lang="en"/, `<html lang="${HTML_LANG}"`);
+  const first = out.replace(/<!--[\s\S]*?-->/g, (c) => ' '.repeat(c.length)).search(/<script\b/);
+  if (first !== -1) out = `${out.slice(0, first)}<script src="${src}"></script>\n  ${out.slice(first)}`;
+  return out;
+}
+
+/**
  * On a site built from the package, copy the installed apps' files to the
  * same paths they have in the engine. A file the site already has there,
  * with different bytes, is its own old copy: the build stops and says to
- * delete it, rather than overwrite a file the site committed.
+ * delete it, rather than overwrite a file the site committed. A page among
+ * them is written in the site's locale (localisedAppPage).
  */
 function copyAppFiles() {
   if (INSTALL.legacy) return;
@@ -5738,7 +6026,8 @@ function copyAppFiles() {
       continue;
     }
     fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.copyFileSync(src, dest);
+    if (CONVERT_LOCALE && rel.endsWith('.html')) fs.writeFileSync(dest, localisedAppPage(rel, fs.readFileSync(src, 'utf8')));
+    else fs.copyFileSync(src, dest);
     written.push(rel);
   }
   if (clashes.length) {
@@ -5850,21 +6139,55 @@ function writePageAccess() {
  * NOT_INSTALLED maps the address of each app this site doesn't install, and
  * its guide's, to the app's name: the Worker answers them with the
  * not-installed page and a 404 (createGate notInstalled).
+ *
+ * APPLIED_LEVELS is the Settings level rows this build read and baked in (D27):
+ * { pages: {path: level}, sections: {folder: level} }. The Levels API compares
+ * the applied D1 rows against it to tell which changes still wait for a build.
+ * Empty when the build read no settings source. A page a row moved carries its
+ * code level as "code", so the API can work out what the next build bakes.
+ * LEVELS_READ_AT is when this build read the rows from D1 (unix seconds), 0
+ * when it read none: a change applied after it waits for the next build.
  */
 `;
-  const lines = entries.map(([p, e]) => `  [${JSON.stringify(p)}, { level: ${JSON.stringify(e.level)}, section: ${JSON.stringify(e.section)}, type: ${JSON.stringify(e.type)}, title: ${JSON.stringify(e.title)} }],`);
+  // `code` only where a Settings row moved the page off its code level, so a
+  // site with no settings writes this file byte-for-byte as before.
+  const codeField = (p, e) => (CODE_LEVELS.has(p) && CODE_LEVELS.get(p) !== e.level ? `, code: ${JSON.stringify(CODE_LEVELS.get(p))}` : '');
+  const lines = entries.map(([p, e]) => `  [${JSON.stringify(p)}, { level: ${JSON.stringify(e.level)}${codeField(p, e)}, section: ${JSON.stringify(e.section)}, type: ${JSON.stringify(e.type)}, title: ${JSON.stringify(e.title)} }],`);
   const sources = [...sourcePages.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   const body = `export const ACCESS_NAV = ${JSON.stringify(CONFIG.accessNav)};\n\n`
     + `export const SECTIONS = Object.freeze(${JSON.stringify(sections)});\n\n`
     + `export const PAGE_ACCESS = new Map([\n${lines.join('\n')}\n]);\n\n`
     + `export const SOURCE_PAGES = new Map([\n${sources.map(([s, p]) => `  [${JSON.stringify(s)}, ${JSON.stringify(p)}],`).join('\n')}\n]);\n\n`
     + `export const APPS = Object.freeze(${JSON.stringify(installedAppsForWorker())});\n\n`
-    + `export const NOT_INSTALLED = new Map([${[...notInstalledAddresses()].map(([a, n]) => `\n  [${JSON.stringify(a)}, ${JSON.stringify(n)}],`).join('')}\n]);\n`;
+    + `export const NOT_INSTALLED = new Map([${[...notInstalledAddresses()].map(([a, n]) => `\n  [${JSON.stringify(a)}, ${JSON.stringify(n)}],`).join('')}\n]);\n\n`
+    + `export const APPLIED_LEVELS = Object.freeze(${JSON.stringify(appliedLevelsForWorker(sections))});\n\n`
+    + `export const LEVELS_READ_AT = ${LEVELS_READ_AT};\n`;
   fs.writeFileSync(path.join(workerDir, 'page-access.mjs'), banner + body);
   console.log(`📄 Generated: worker/page-access.mjs (${entries.length} pages: ${ACCESS_LEVELS.map((level) => `${counts[level]} ${level}`).join(', ')})`);
   if (levelsFromSection.length) {
     console.log(`🔐 ${levelsFromSection.length} page level(s) from sectionAccess:\n${levelsFromSection.map((line) => `   ${line}`).join('\n')}`);
   }
+  const applied = LEVEL_SETTINGS.pages.size + LEVEL_SETTINGS.sections.size;
+  console.log(`🔧 Level settings: ${applied ? `${applied} row(s) applied from ${LEVEL_SETTINGS.origin}` : `none (source: ${LEVEL_SETTINGS.origin})`}`);
+}
+
+// The Settings rows this build applied, for APPLIED_LEVELS. Plain objects so
+// the generated file stays data; worker/site.mjs reads them back into Maps. A
+// row whose page or section the build never wrote is warned and dropped here -
+// the page map is complete by now, which it was not when LEVEL_SETTINGS loaded,
+// so this is where an unknown target is finally caught (never a crash).
+function appliedLevelsForWorker(sectionFolderMap) {
+  const pages = {};
+  const sections = {};
+  for (const [k, v] of [...LEVEL_SETTINGS.pages.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
+    if (!pageAccess.has(k)) { console.warn(`⚠️  Level setting skipped (unknown page): ${k}`); continue; }
+    pages[k] = v;
+  }
+  for (const [k, v] of [...LEVEL_SETTINGS.sections.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
+    if (!Object.prototype.hasOwnProperty.call(sectionFolderMap, k)) { console.warn(`⚠️  Level setting skipped (unknown section): ${k}`); continue; }
+    sections[k] = v;
+  }
+  return { pages, sections };
 }
 
 /**
@@ -6278,7 +6601,7 @@ function notInstalledAddresses() {
     const m = app.manifest;
     if (INSTALL.installed.includes(slug) || m.status === 'draft' || m.package === 'internal') continue;
     // An app the site doesn't install can't stop its build: a bad token keeps the slug
-    const title = app.frontmatter.title || slug;
+    const title = parseFrontmatter(readPageSource(app.md)).frontmatter.title || slug;
     const tokens = siteTokens();
     const name = title.replace(/\{\{brand:([a-zA-Z]+)\}\}/g, (match, key) => (Object.prototype.hasOwnProperty.call(tokens, key) ? tokens[key] : slug));
     const section = app.frontmatter.section || 'Tools';
@@ -6287,7 +6610,7 @@ function notInstalledAddresses() {
     if (m.guide) {
       const source = [path.join(DOCS_DIR, m.guide), path.join(APP_REGISTRY.guidesDir, m.guide)].find((f) => fs.existsSync(f));
       if (source) {
-        const guide = deriveOutputPath(m.guide, parseFrontmatter(fs.readFileSync(source, 'utf8')).frontmatter.section);
+        const guide = deriveOutputPath(m.guide, parseFrontmatter(readPageSource(source)).frontmatter.section);
         out.set(`/${guide.folder ? `${guide.folder}/` : ''}${guide.htmlName}`, name);
       }
     }
@@ -6460,7 +6783,7 @@ function generateSourceDirPages(template, {
     const slug = filename.replace(/\.md$/, '');
     const bodyPath = bodyPathOf(slug);
 
-    const parsed = parseFrontmatter(fs.readFileSync(mdPathOf(filename), 'utf8'));
+    const parsed = parseFrontmatter(readPageSource(mdPathOf(filename)));
     const frontmatter = parsed.frontmatter;
     // An app's title and description can name the brand too ({{brand:key}}),
     // so an engine app's meta tags read as the site's own
@@ -6509,12 +6832,12 @@ function generateSourceDirPages(template, {
       if (!fs.existsSync(bodyPath)) {
         throw new Error(`cms/${dirName}/${filename} declares type "${type.name}", which needs a ${slug}.html body`);
       }
-      body = fs.readFileSync(bodyPath, 'utf8').trimEnd();
+      body = readPageSource(bodyPath).trimEnd();
     } else {
       if (fs.existsSync(bodyPath)) {
         throw new Error(`cms/${dirName}/${slug}.html is ignored — type "${type.name}" takes its body from the markdown`);
       }
-      body = markdownToHtml(parsed.content);
+      body = markdownToHtml(parsed.content, undefined, pageHeadingIds(mdPathOf(filename)));
     }
 
     const section = frontmatter.section || defaultSection;
@@ -6549,7 +6872,7 @@ function generateSourceDirPages(template, {
     // raw SVG, which is how these files accumulated it in the first place.
     let content = fillPageClose(body, upHref);
     if (type.body === 'html') {
-      content = content.replace(/\{\{icon:([a-z0-9-]+)\}\}/g, (match, name) => getIcon(name));
+      content = expandCloseIcon(content.replace(/\{\{icon:([a-z0-9-]+)\}\}/g, (match, name) => getIcon(name)));
       // {{brand:key}}: the brand's own name and addresses (brand.js
       // brandTokens), so an app page never carries one brand's copy. An
       // unknown key or a site with no brand.json fails here, by name.
@@ -6955,7 +7278,7 @@ function generateShowcasePages(template) {
     order: 0,
   }));
   console.log(`📄 Generated: showcase/index.html (${published.length} of ${assets.length} posts published)`);
-  pageAccess.set('/showcase/index.html', { level: 'public', section: '', type: 'page', title: 'Showcase' });
+  pageAccess.set('/showcase/index.html', { level: effectiveBuildLevel('/showcase/index.html', 'public'), section: '', type: 'page', title: 'Showcase' });
 
   for (const asset of published) {
     const { slug, data } = asset;
@@ -6989,7 +7312,7 @@ function generateShowcasePages(template) {
       order: 1,
     }));
     console.log(`📄 Generated: showcase/${slug}.html`);
-    pageAccess.set(`/showcase/${slug}.html`, { level: 'public', section: '', type: 'page', title: data.title });
+    pageAccess.set(`/showcase/${slug}.html`, { level: effectiveBuildLevel(`/showcase/${slug}.html`, 'public'), section: '', type: 'page', title: data.title });
   }
 }
 
@@ -7099,7 +7422,10 @@ function applyTemplateChrome(rawTemplate) {
   assertNotListedTwice(engineScripts, [...(CONFIG.uiScripts || []), ...CONFIG.extraScripts], 'extraScripts or uiScripts');
   assertNotListedTwice(engineStyles, CONFIG.extraStylesheets, 'extraStylesheets');
   let styleLinks = [...engineStyles, ...CONFIG.extraStylesheets].map(href => `<link rel="stylesheet" href="${nav(href)}">`).join('\n    ');
-  const uiScriptTags = [...uiScripts, ...engineScripts].map(src => `<script src="${nav(src)}" defer></script>`).join('\n    ');
+  // The locale's runtime first, so every script that shows the engine's
+  // words finds window.bdLocale as it loads
+  const localeScripts = CONVERT_LOCALE ? [LOCALE_SCRIPT] : [];
+  const uiScriptTags = [...localeScripts, ...uiScripts, ...engineScripts].map(src => `<script src="${nav(src)}" defer></script>`).join('\n    ');
   let extraScriptTags = CONFIG.extraScripts.map(src => `<script src="${nav(src)}" defer></script>`).join('\n    ');
   const highlightTag = `<script src="${nav(CONFIG.highlightJs)}"></script>`;
 
@@ -7275,16 +7601,19 @@ async function generateDocs() {
   // resolve the site name — every page (root and brand) carries the suffix
   let template = applyTemplateChrome(fs.readFileSync(TEMPLATE_FILE, 'utf8'))
     .replaceAll('{{SITE_NAME}}', () => SITE_HTML.name)
-    .replace('{{NOSCRIPT_SIGN_OUT}}', () => noscriptSignOut());
+    .replace('{{NOSCRIPT_SIGN_OUT}}', () => noscriptSignOut())
+    .replace('{{HTML_LANG}}', () => HTML_LANG);
 
-  // Pre-process template icon placeholders
-  template = template.replace(/\{\{icon:([a-z0-9-]+)\}\}/g, (match, name) => getIcon(name));
+  // Pre-process template icon placeholders, the feedback dialog's close among
+  // them ({{close-icon}})
+  template = expandCloseIcon(template.replace(/\{\{icon:([a-z0-9-]+)\}\}/g, (match, name) => getIcon(name)));
 
   // The bare template, after the docs one: it shares the docs CSS link and
   // the UI scripts' paths that applyTemplateChrome resolved
   const bareTemplate = fs.readFileSync(BARE_TEMPLATE_FILE, 'utf8')
     .replace('{{DOCS_CSS}}', () => `<link rel="stylesheet" href="${CHROME.docsCssHref}">`)
-    .replaceAll('{{SITE_NAME}}', () => SITE_HTML.name);
+    .replaceAll('{{SITE_NAME}}', () => SITE_HTML.name)
+    .replace('{{HTML_LANG}}', () => HTML_LANG);
 
   console.log('✅ Template loaded');
 
@@ -7332,7 +7661,7 @@ async function generateDocs() {
 
   for (const filename of markdownFiles) {
     const filePath = docSource(filename);
-    const content = fs.readFileSync(filePath, 'utf8');
+    const content = readPageSource(filePath);
     const parsed = parseFrontmatter(content);
     // Merge folder defaults — page frontmatter wins
     const frontmatter = { ...cmsDefaults, ...parsed.frontmatter };
@@ -7477,7 +7806,9 @@ async function generateDocs() {
       // Site-absolute hrefs, for a root page served at other URLs - see
       // generatePage's navBase. Only a filenameOverrides entry can ask.
       base: FILENAME_OVERRIDES[filename] && FILENAME_OVERRIDES[filename].base ? FILENAME_OVERRIDES[filename].base : null,
-      content: markdownContent
+      content: markdownContent,
+      // The ids an engine page's converted headings keep (readPageSource)
+      headingIds: pageHeadingIds(filePath)
     };
 
     // Root pages (an explicit filenameOverrides entry with folder: '') are
@@ -7533,7 +7864,7 @@ async function generateDocs() {
     const appSection = app.section || 'Tools';
     const appFolder = SECTION_FOLDERS[appSection] || appSection.toLowerCase();
     const own = app.access !== undefined && app.access !== null && app.access !== '' ? app.access : sectionLevel(appFolder);
-    linkLevels.set(`/${appFolder}/${slug}.html`, normaliseLevel(own));
+    linkLevels.set(`/${appFolder}/${slug}.html`, effectiveBuildLevel(`/${appFolder}/${slug}.html`, own));
   }
 
   console.log(`📂 Found sections: ${Object.keys(filesBySection).join(', ')}`);
@@ -7745,6 +8076,9 @@ async function generateDocs() {
   fs.mkdirSync(path.dirname(navJsPath), { recursive: true });
   fs.writeFileSync(navJsPath, navJs);
   console.log('📄 Generated: assets/js/nav.js');
+
+  // The locale's runtime, which every page loads first when it isn't en-GB
+  writeLocaleScript();
 
   // The brand's two runtime files, from brand.json: full builds only
   if (!isSingleFile) {

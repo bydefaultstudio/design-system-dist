@@ -71,7 +71,7 @@ scripts: "cell-input.js, auth-login.js"
              decoration.
              aria-label carries the accessible name and BEGINS WITH the visible
              label's words (WCAG 2.5.3), so speech input can say what it sees. -->
-        <div class="cell-input" data-format="6" data-mode="digits" data-full-width>
+        <div class="cell-input" data-format="6" data-mode="digits">
           <label class="cell-input-cells" for="login-code" aria-hidden="true"></label>
           <input type="text" id="login-code" name="code" aria-label="Enter the 6-digit code" inputmode="numeric"
                  autocomplete="one-time-code" autocorrect="off" autocapitalize="none" spellcheck="false"

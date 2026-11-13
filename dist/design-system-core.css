@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.1.1 */
+/* @bydefaultstudio/design-system v8.2.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK: CORE
    The foundation, type, buttons, basic forms and simple components.
@@ -530,6 +530,12 @@
   --button-min-height: auto;
   --button-min-height-small: auto;
   --button-min-height-xsmall: auto;
+  /* A button in a compact container (56. DENSITY). Its own token, not
+     Small's: a brand that holds its Small buttons to 48px still wants a
+     compact dock at the compact row height. It reads the compact field
+     height, 36px, so a dock's buttons and fields share one row height and
+     a brand that moves --field-height-s moves both. */
+  --button-min-height-compact: var(--field-height-s);
 
   /* -- Field tokens -- */
   /* The metrics every text control reads, bare or wrapped in .field. A size,
@@ -3457,10 +3463,17 @@ fieldset[data-size="small"],
 
 /* A small track leaves no legible room for the word; the knob position
    carries the state on its own, as it does on every other toggle. With no
-   word the extra length has no job, so a small mono track is plain width. */
+   word the extra length has no job, so a small mono track is plain width.
+   The small track sizes are restated on the input, where they are already
+   inherited, so they also out-rank compact density's mono track (56.
+   DENSITY), which sits on the input too: a small mono toggle in a compact
+   dock stays small. */
 .form-toggle[data-variant="mono"][data-size="small"] input[type="checkbox"],
 .form-toggle[data-variant="mono"] input[type="checkbox"][data-size="small"],
 :is(.form-group, fieldset)[data-size="small"] .form-toggle[data-variant="mono"] input[type="checkbox"] {
+  --toggle-width: 28px;
+  --toggle-height: var(--space-l);
+  --toggle-knob-size: 10px;
   --toggle-mono-extra-width: 0px;
 }
 
@@ -3473,18 +3486,22 @@ fieldset[data-size="small"],
 
 /* -- Forced colours --
    The track and the knob are background colours, which the mode flattens to
-   Canvas, and the mono word is gone at the small size and under compact
-   density, so nothing carried the state. The system pair paints it: a
-   CanvasText knob on a Canvas track, and a HighlightText knob on a Highlight
-   track when checked, with forced-color-adjust: none on the parts that
-   paint, the answer the segmented control gives its selected segment. The
-   mono variant's own selectors are repeated so its colours yield too. */
+   Canvas, so nothing carried the state. The system pair paints it: a
+   CanvasText knob on a Canvas track, and a HighlightText knob on a
+   Highlight track when checked, with forced-color-adjust: none on the parts
+   that paint, the answer the segmented control gives its selected segment.
+   The mono variant's own selectors are repeated so its colours yield too.
+   Its ON / OFF word (::before, shown at the regular size and under compact
+   density) takes its colour from the input, and forced-color-adjust: none
+   stops the mode mapping it, so the input names the word's colour too, the
+   same system colour as the knob: CanvasText off, HighlightText on. */
 @media (forced-colors: active) {
   .form-toggle input[type="checkbox"],
   .form-toggle[data-variant="mono"] input[type="checkbox"] {
     forced-color-adjust: none;
     background-color: Canvas;
     border-color: CanvasText;
+    color: CanvasText;
   }
 
   .form-toggle input[type="checkbox"]::after,
@@ -3497,6 +3514,7 @@ fieldset[data-size="small"],
   .form-toggle[data-variant="mono"] input[type="checkbox"]:checked {
     background-color: Highlight;
     border-color: Highlight;
+    color: HighlightText;
   }
 
   .form-toggle input[type="checkbox"]:checked::after,
@@ -4428,7 +4446,14 @@ hr.xl {
  * 44px floor holds with no second rule. The values are the Small rules'
  * values (the field sizes above, the small checks, .button[data-size=
  * "small"], and the segmented and number-input Small rules); keep them in
- * step.
+ * step. Two values are compact's own, and both say why below: a button's
+ * floor, --button-min-height-compact, and the mono toggle, which keeps its
+ * state word on a 20px track where Small drops the word. Every compact height (field,
+ * segmented, number input, dropdown trigger and, through its token, the
+ * button) reads --field-height-s, so the dock has one row height.
+ *
+ * The tool docks carry it (data-edge="end", cms/apps/), on the dock itself so
+ * its pinned .tool-actions are compact too, not only its panels.
  *
  * Only tokens are declared on the container, so a data-size on a control or
  * a nearer ancestor still wins, by inheritance rather than specificity. The
@@ -4459,6 +4484,7 @@ hr.xl {
     --toggle-width: 28px;
     --toggle-height: var(--space-l);
     --toggle-knob-size: 10px;
+    --toggle-mono-extra-width: 10px;
     --segmented-height: var(--field-height-s);
     --segmented-font: var(--font-xs);
     --segmented-padding-y: 0;
@@ -4471,7 +4497,7 @@ hr.xl {
     --button-padding-y: var(--space-m);
     --button-padding-x: var(--space-l);
     --button-text-size: var(--font-xs);
-    --button-min-size: var(--button-min-height-small);
+    --button-min-size: var(--button-min-height-compact);
   }
 
   /* A dropdown trigger has no small size of its own and declares its padding
@@ -4485,15 +4511,32 @@ hr.xl {
     min-height: var(--field-height-s);
   }
 
-  /* The mono toggle's state word and the extra track length that holds it
-     are matched by data-size selectors above; a small track has no room for
-     the word, so compact drops both the same way. */
-  [data-density="compact"]:not(.bar) .form-toggle[data-variant="mono"] input[type="checkbox"] {
-    --toggle-mono-extra-width: 0px;
+  /* A compact mono toggle keeps its ON / OFF word, where data-size="small"
+     drops it: a dock is read at a glance, and the word is how it reads. It
+     needs a taller track than the 16px small one to hold the word at a
+     size that reads, so it takes its own, between Small and the default:
+     20px tall, a 14px knob, a 36px plain width, and the word at --font-3xs
+     (10px), the smallest step on the type scale and the regular word's
+     size. The track's length is the plain width plus
+     --toggle-mono-extra-width, 10px on the container above rather than the
+     root 6px, so 46px: the slot past the knob holds the word with air
+     either side. Checkboxes and plain toggles keep the Small values the
+     container sets.
+     The sizes sit on the input, with the container in :where(), so the
+     rule is (0,3,1): it ties with the mono input rule and wins by source
+     order, and every mono Small rule (0,4,1 and up, which restates the
+     small track on the input) out-ranks it. A mono toggle that carries
+     data-size="small", or sits in a small .form-group or fieldset, stays at
+     16px and drops the word: a nearer size wins, as it does for every
+     other compact value. */
+  :where([data-density="compact"]:not(.bar)) .form-toggle[data-variant="mono"] input[type="checkbox"] {
+    --toggle-width: 36px;
+    --toggle-height: 20px;
+    --toggle-knob-size: 14px;
   }
 
   [data-density="compact"]:not(.bar) .form-toggle[data-variant="mono"] input[type="checkbox"]::before {
-    content: none;
+    font-size: var(--font-3xs);
   }
 }
 

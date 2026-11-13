@@ -74,7 +74,8 @@
     return state.root.querySelector('#' + id);
   }
 
-  var dateFormat = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  // Dates in the site's locale (bd-locale.js), en-GB without it
+  var dateFormat = new Intl.DateTimeFormat((window.bdLocale && window.bdLocale.tag) || 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
   function formatDate(ms) {
     return dateFormat.format(new Date(ms));

@@ -27,12 +27,17 @@
  *   data-on    which shown switches start on; absent for the registry's
  *              own starting state (Artwork and App screen)
  *
- * @version 1.0.0
+ * @version 1.3.1
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.3.0';
+  // The engine's words in this site's locale: bd-locale.js, which the docs
+  // kit writes and loads first on a site that isn't en-GB. Without it, the
+  // words as written.
+  function L(text) { return window.bdLocale ? window.bdLocale.text(text) : text; }
+
+  var VERSION = '1.3.1';
   console.log('[format-card] v' + VERSION + ' loaded');
 
   var SELECTOR = '[data-format-card]';
@@ -85,7 +90,7 @@
      tooltips do not open on touch and partners check specs on phones. */
   var LAYER_INFO = {
     artwork: 'Your artwork, as it downloads. Export with every other layer off: they are a guide, not part of the file you post.',
-    'safe-area': 'Where text and logos are seen in every view. Green is fine. A green cross marks its middle when it sits off-centre: centre a logo on the cross, not on the file. It is off in the Profile grid view, where the grid crops the file anyway.',
+    'safe-area': L('Where text and logos are seen in every view. Green is fine. A green cross marks its middle when it sits off-centre: centre a logo on the cross, not on the file. It is off in the Profile grid view, where the grid crops the file anyway.'),
     'app-screen': 'What the app shows on top while the post plays or opens: names, buttons, captions, the reply bar. Anything the screen trims away is masked out.',
     'profile-grid': 'How the file looks as a tile on a profile: the pin, Reel or carousel icon, the view count. The tile is cropped as the grid crops it, so Safe area is off in this view.',
     profile: 'How the file looks in its circle: the corners are masked out, as the app shows it.',

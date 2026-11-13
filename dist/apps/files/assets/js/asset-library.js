@@ -23,12 +23,17 @@
  * and moving it with the arrows moves the selection. The arrows in the
  * grid move it too (tool-grid.js, shared with the Icon Library).
  *
- * @version 3.7.0
+ * @version 3.7.1
  */
 (function () {
   'use strict';
 
-  var VERSION = '3.7.0';
+  // The engine's words in this site's locale: bd-locale.js, which the docs
+  // kit writes and loads first on a site that isn't en-GB. Without it, the
+  // words as written.
+  function L(text) { return window.bdLocale ? window.bdLocale.text(text) : text; }
+
+  var VERSION = '3.7.1';
 
   // Who a reader tells when something breaks, and who adds the files: the
   // brand's organisation (brand.json wording.organisation, else its name),
@@ -1067,13 +1072,28 @@
     if (previewOpen) renderPreview();
   }
 
-  // Barba pushes the next page's address while this grid is still
-  // attached, so a write still waiting checks the path has not moved.
+  // writeUrl checks the page is still this one when the timer fires.
   function settleUrl() {
-    var path = window.location.pathname;
     urlTimer = window.setTimeout(function writeSettledUrl() {
-      if (window.location.pathname === path && el.grid && el.grid.isConnected) writeUrl();
+      writeUrl();
     }, URL_DEBOUNCE_MS);
+  }
+
+  // Barba pushes the destination URL synchronously inside go(), well before
+  // the transition ends, and the leaving container stays live for its slide.
+  // A search, filter or selection that settles in that window would write
+  // its query onto the page the reader has just moved to. The path is
+  // stamped at init, not when a write is scheduled: input stays live on the
+  // leaving container for the whole transition, and a write armed then would
+  // stamp the destination and pass its own check. The query is stamped too,
+  // and moved on by this tool's own writes only: a link to this same page
+  // with another query moves the address before the router marks the
+  // leaving container data-bd-role="leave" (Barba fetches first), so any
+  // query this tool did not write means the reader is leaving.
+  function isOwnPage() {
+    return !!el.root && el.root.isConnected && window.location.pathname === el.ownPath
+      && window.location.search === el.ownSearch
+      && !el.root.closest('[data-bd-role="leave"]');
   }
 
   function manifestKit(id) {
@@ -1179,7 +1199,7 @@
     var paidFont = asset.licence === 'link-only';
     var linkOnly = openFont || paidFont;
     el.licence.hidden = !linkOnly;
-    el.licence.textContent = openFont ? 'Free under an open font licence.' : paidFont ? 'A paid font, so the file is not offered here.' : '';
+    el.licence.textContent = openFont ? L('Free under an open font licence.') : paidFont ? 'A paid font, so the file is not offered here.' : '';
     el.licenceLink.hidden = !openFont;
     if (!el.licenceLink.hidden) el.licenceLink.href = asset.licenceUrl;
     else el.licenceLink.removeAttribute('href');
@@ -1584,6 +1604,7 @@
   // there, and replacing it with null breaks Forward after the next Back.
   function writeUrl() {
     if (!window.URL || !history.replaceState) return;
+    if (!isOwnPage()) return;
     var next = new URL(window.location.href);
     var set = function (key, value) {
       if (value) next.searchParams.set(key, value);
@@ -1600,6 +1621,7 @@
     if (next.href === window.location.href) return;
     try {
       history.replaceState(history.state, '', next.href);
+      el.ownSearch = window.location.search;
     } catch (error) {
       console.warn('[asset-library] the browser refused a history write; the URL is stale', error);
     }
@@ -1643,6 +1665,8 @@
   function resolveElements(root) {
     el = {
       root: root,
+      ownPath: window.location.pathname,   // the address this tool may write to (isOwnPage)
+      ownSearch: window.location.search,
       canvas: root.querySelector('.tool-canvas'),
       bar: root.querySelector('.bar'),
       filters: root.querySelector('.tool-filters'),

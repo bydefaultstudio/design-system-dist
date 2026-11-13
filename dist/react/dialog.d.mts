@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.1.1 */
+/* @bydefaultstudio/design-system v8.2.0 */
 import * as React from 'react';
 
 /** `detail.source` on a guarded close: what asked the surface to close. */

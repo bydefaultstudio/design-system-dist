@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.1.1 */
+/* @bydefaultstudio/design-system v8.2.0 */
 /**
  * gate-entry.mjs - createGate(), the access gate as one factory
  * (levels-groups-plan.md Phase 3, D21). Shipped as
@@ -51,7 +51,7 @@
  */
 import { AUTH_BASE_PATH, guestScopes, handleAuth, handleSignOutLink } from './auth.js';
 import { PEOPLE_BASE_PATH, handlePeople } from './people.js';
-import { SIGN_OUT_LINK, embeddableHeaders, hasSessionCookie, isConflictCopyPath, isEmbeddablePath, isPublicPath, notInstalledFor, privateHeaders, servesLanding } from './gate.mjs';
+import { ENGINE_PATHS, SIGN_OUT_LINK, embeddableHeaders, hasSessionCookie, isConflictCopyPath, isEmbeddablePath, isNavigation, isPublicPath, isUnmappedSectionPage, notInstalledFor, privateHeaders, servesLanding } from './gate.mjs';
 import { requireSession } from './session.js';
 import { CSP_REPORT_PATH, handleCspReport } from './csp-report.js';
 import { hideForReader, isHtml } from './hidden-nav.mjs';
@@ -59,6 +59,7 @@ import { handleImage } from './image.js';
 import { handleLibrary } from './library.js';
 import { SUBMIT_FORM_PATH, formsOption, handleFormsForward } from './forms-forward.mjs';
 import { createReporter, reportOption } from './fleet-report.mjs';
+import { LEVELS_BASE_PATH, handleLevels } from './levels-api.js';
 import { SITE, configureSite } from './site.mjs';
 
 function checkRoutes(list, kind) {
@@ -185,6 +186,92 @@ async function notInstalledResponse(request, env, url, name, reader, sessionCook
   return privateHeaders(out, sessionCookies);
 }
 
+/**
+ * The not-found page, at the address that has no page, with 404. Only ever
+ * for a signed-in reader's page load: a signed-out visitor meets the sign-in
+ * page at every gated address and so never learns whether a path exists
+ * (access-plan.md §12.7), and a fetch or a Barba request keeps the bare 404
+ * (Barba then loads the address in full, and lands here). If the build never
+ * shipped the page, the asset layer's own 404 stands.
+ */
+async function notFoundResponse(request, env, url, fallback, reader, sessionCookies) {
+  let page;
+  try {
+    page = await env.ASSETS.fetch(new Request(new URL(ENGINE_PATHS.notFound, url.origin), { method: 'GET' }));
+  } catch {
+    page = null;
+  }
+  if (!page || page.status !== 200) {
+    if (page && page.body) page.body.cancel();
+    return fallback;
+  }
+  fallback.body?.cancel();
+  if (request.method === 'HEAD') page.body?.cancel();
+  const out = new Response(request.method === 'HEAD' ? null : page.body, { status: 404, headers: page.headers });
+  out.headers.delete('ETag');
+  if (SITE.accessNav === 'hidden') return hiddenNav(request, env, url, out, true, reader, sessionCookies);
+  return privateHeaders(out, sessionCookies);
+}
+
+/**
+ * Whether a signed-in reader was refused an address inside a section that has
+ * no file at all: a mistyped link, which deserves the not-found page rather
+ * than Locked. An unknown file in a section is refused unseen, because it may
+ * be a stray copy of an admin page (gate.mjs UNMAPPED_PAGE_ENTRY), so this
+ * only asks the asset layer whether something is there, with a HEAD, and
+ * never serves it. Anything but a 404 keeps the refusal. A signed-out
+ * visitor never gets here: their refusal is the login, not a 403.
+ */
+async function isMissingSectionPage(request, env, url, target, gate) {
+  if (gate.deny.status !== 403 || !gate.reader) return false;
+  if (request.method !== 'GET' && request.method !== 'HEAD') return false;
+  if (!isNavigation(request.headers) || !isUnmappedSectionPage(target)) return false;
+  try {
+    const probe = await env.ASSETS.fetch(new Request(new URL(target, url.origin), { method: 'HEAD' }));
+    probe.body?.cancel();
+    return probe.status === 404;
+  } catch {
+    return false;
+  }
+}
+
+/** Whether a 404 from the asset layer should become the not-found page. */
+function wantsNotFound(request, response, gated, reader) {
+  return response.status === 404 && gated && !!reader
+    && (request.method === 'GET' || request.method === 'HEAD')
+    && isNavigation(request.headers);
+}
+
+const ERROR_TEXT = 'Something went wrong on our side. Try again in a moment.';
+
+/**
+ * The answer when answering a request threw: the error page for a page load,
+ * a short JSON error for a fetch, both 500 and never cached. It reads nothing
+ * but the static page, and anything that fails here falls back to plain
+ * words, so a broken session, database or route can never leave a reader on
+ * Cloudflare's own error screen. The cause goes to the log, never the page.
+ */
+async function errorResponse(request, env, url) {
+  const headers = { 'Cache-Control': 'private, no-store' };
+  if (!isNavigation(request.headers)) {
+    return new Response(JSON.stringify({ error: ERROR_TEXT }), { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } });
+  }
+  try {
+    const page = await env.ASSETS.fetch(new Request(new URL(ENGINE_PATHS.error, url.origin), { method: 'GET' }));
+    if (page.status === 200) {
+      const out = new Response(request.method === 'HEAD' ? null : page.body, { status: 500, headers: page.headers });
+      if (request.method === 'HEAD') page.body?.cancel();
+      out.headers.set('Cache-Control', 'private, no-store');
+      out.headers.delete('ETag');
+      return out;
+    }
+    page.body?.cancel();
+  } catch {
+    // The asset layer is what failed: the words below still reach the reader.
+  }
+  return new Response(ERROR_TEXT, { status: 500, headers: { ...headers, 'Content-Type': 'text/plain; charset=utf-8' } });
+}
+
 export function createGate(options = {}) {
   configureSite(options);
   // The Image Placeholder answers everyone, so it draws only a logo anyone
@@ -204,7 +291,22 @@ export function createGate(options = {}) {
   const reporter = createReporter(reportOption(options.report));
 
   return {
+    // Every request goes through answer(); anything it throws or rejects
+    // becomes the error page rather than Cloudflare's own error screen. A
+    // failure inside a body that is already streaming (the hidden-nav
+    // rewriter, an R2 download) cannot be caught here: the response has
+    // started, so the reader gets a cut-off page, as before.
     async fetch(request, env, ctx) {
+      try {
+        return await answer(request, env, ctx);
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'gate.failed', path: safePath(request.url), error: String(error && error.message) }));
+        return errorResponse(request, env, new URL(request.url));
+      }
+    },
+  };
+
+  async function answer(request, env, ctx) {
       const url = new URL(request.url);
       const { pathname } = url;
 
@@ -335,6 +437,9 @@ export function createGate(options = {}) {
         if (gate.deny && servesLanding(resolved, request.method, gate.deny.status, request.headers.get('cookie'))) {
           return landingResponse(request, env, url, gate.deny);
         }
+        if (gate.deny && await isMissingSectionPage(request, env, url, resolved, gate)) {
+          return notFoundResponse(request, env, url, gate.deny, gate.reader, gate.setCookies);
+        }
         if (gate.deny) return gate.deny;
         sessionCookies = gate.setCookies;
         reader = gate.reader;
@@ -345,6 +450,17 @@ export function createGate(options = {}) {
       // Gated by omission like /files/: no page map entry, so the session check
       // has run and `reader` is in hand. The handler answers an admin and refuses
       // everyone else; it never falls through to the asset layer.
+      // ── The Levels API (D27) ──
+      //
+      // Under /api/people/levels, so it is matched BEFORE the People API's
+      // broader /api/people/ prefix. Gated by omission like the People API: the
+      // session has run and `reader` is in hand. An admin or owner reads and
+      // sets section and page levels; everyone else is refused inside the
+      // handler. `ctx` carries the background rebuild trigger.
+      if (pathname === LEVELS_BASE_PATH || pathname.startsWith(`${LEVELS_BASE_PATH}/`)) {
+        return handleLevels(request, env, url, reader, sessionCookies, ctx);
+      }
+
       if (pathname.startsWith(PEOPLE_BASE_PATH)) {
         return handlePeople(request, env, url, reader, sessionCookies);
       }
@@ -386,9 +502,16 @@ export function createGate(options = {}) {
       // Everything else: hand back to the asset layer, which applies _redirects
       // and returns the 404 for genuinely unknown paths.
       const assetResponse = await env.ASSETS.fetch(request);
+      if (wantsNotFound(request, assetResponse, gated, reader)) {
+        return notFoundResponse(request, env, url, privateHeaders(assetResponse, sessionCookies), reader, sessionCookies);
+      }
       if (SITE.accessNav === 'hidden') return searchIndexCache(await hiddenNav(request, env, url, assetResponse, gated, reader, sessionCookies), pathname);
       if (gated) return searchIndexCache(privateHeaders(assetResponse, sessionCookies), pathname);
       return isEmbeddablePath(pathname) ? embeddableHeaders(assetResponse) : assetResponse;
-    },
-  };
+  }
+}
+
+/** The path for the log line, never the query (it can carry an address or a code). */
+function safePath(href) {
+  try { return new URL(href).pathname; } catch { return ''; }
 }

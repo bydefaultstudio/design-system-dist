@@ -84,6 +84,12 @@ A file the catalog names that the bucket does not hold fails the build, as does 
 
 Removing an asset from the catalog revokes its download on the next deploy, whatever the bucket still holds.
 
+To clear what it left in the bucket, run `npm run asset-library:build -- --prune` once the catalog change is merged into `main` and deployed. A delete is immediate and the live site keeps serving the old catalog until the next deploy, so pruning any earlier deletes files people can still download. Prune lists every file the lock still records that no asset lists, with the objects each would lose, and deletes nothing. Run it again with `--prune --yes` to delete them and drop those files from `lock.json`, then commit the lock and deploy.
+
+`--yes` refuses unless `catalog.json` and `lock.json` have no uncommitted changes and match `origin/main`'s after a fetch, and refuses when the fetch fails. A listing runs anywhere and warns when those checks fail. An `ASSET_LIBRARY_BUCKET` override is printed at the top, and `--yes` refuses unless it names the bucket `docs.config.js` names.
+
+Prune needs no drop folder while the lock is current. A lock an older pipeline wrote is refused: run the full build first, on the machine that holds `library/`. Prune keeps any object a listed file still uses (a renamed file shares its old path's objects, and a thumbnail goes with its original), never touches a key the build did not write, and keeps a file in the lock when one of its deletes fails, so the next run tries again. It refuses to run while the catalog is missing, empty, or out of step with the lock.
+
 ---
 
 ## Where things live

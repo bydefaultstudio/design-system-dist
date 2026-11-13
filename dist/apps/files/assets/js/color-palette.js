@@ -8,13 +8,13 @@
  * in the address hash. Loaded globally; self-registers on DOMContentLoaded and
  * bd:after-nav, scoped to the incoming container, and exposes
  * window.initColorPalette for a console or a host with a container of its own.
- * @version 1.4.0
+ * @version 1.4.1
  */
 
 (function () {
   'use strict';
 
-  var VERSION = '1.3.0';
+  var VERSION = '1.4.1';
   console.log('[Colour Palette] v' + VERSION + ' loaded');
 
   var TOOL_SELECTOR = '[data-tool="color-palette"]';
@@ -285,7 +285,23 @@
   // Replaced, not pushed: a view is a setting, not a page, so Back still
   // leaves the tool. All is the default and writes no hash at all.
   // history.state is carried through, because Barba keeps its payload there.
+  //
+  // Barba pushes the destination URL synchronously inside go(), well before
+  // the transition ends, and the leaving container stays live for its slide,
+  // so a view change then would write #view= onto the page the reader has
+  // just moved to, or strip the hash it lands on. The path and query are
+  // stamped at init, not at the change; this tool writes only the hash, so a
+  // changed query means a link to this same page has moved the address
+  // before the router marks the leaving container data-bd-role="leave"
+  // (Barba fetches first).
+  function isOwnPage() {
+    return !!el && el.root.isConnected && window.location.pathname === el.ownPath
+      && window.location.search === el.ownSearch
+      && !el.root.closest('[data-bd-role="leave"]');
+  }
+
   function writeViewHash(view) {
+    if (!isOwnPage()) return;
     var next = view === DEFAULT_VIEW
       ? window.location.pathname + window.location.search
       : '#' + VIEW_KEY + '=' + view;
@@ -374,6 +390,8 @@
     }
     root.dataset.colorPaletteInit = 'true';
     el = found;
+    el.ownPath = window.location.pathname;
+    el.ownSearch = window.location.search;
 
     var bdColor = window.bdColor;
     var lists = paletteLists(bdColor);

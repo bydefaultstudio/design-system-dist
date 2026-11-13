@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v8.1.1 -->
+<!-- @bydefaultstudio/design-system v8.2.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 8.1.1 (package)**
+**Version: 8.2.0 (package)**
 
 ## Getting the System
 
@@ -1011,6 +1011,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--button-min-height` | `auto` |  |
 | `--button-min-height-small` | `auto` |  |
 | `--button-min-height-xsmall` | `auto` |  |
+| `--button-min-height-compact` | `var(--field-height-s)` |  |
 | **Field tokens** | | |
 | `--field-height` | `var(--target-min)` |  |
 | `--field-height-s` | `2.25rem` |  |
@@ -5884,7 +5885,7 @@ Where the floor does not reach:
 - **Text variant.** It has no box, so no floor. A text button with a `data-size` takes that size's floor, as it takes that size's padding (see [Text](#text)), so a standalone text action that needs the target takes a `data-size`.
 - **The bar, the header action and the Layout Specs info button.** Each holds a fixed height of its own, so a button there ignores the floor.
 - **The close on a dialog or drawer.** It takes the small floor whatever `data-size` the markup carries, as it takes one padding.
-- **Compact density.** A default button in a `data-density="compact"` container takes the small floor, as it takes the small padding.
+- **Compact density.** A default button in a `data-density="compact"` container takes the small padding but its own floor, `--button-min-height-compact`, 36px by default: the compact row height, so a brand that holds Small buttons to 48px keeps its compact docks at 36px. See [Density](/foundations/density.html).
 
 ---
 
@@ -6170,8 +6171,9 @@ These three are declared on `:root`, not on `.button`, so a brand's `theme.css` 
 | Token | Default | What it controls |
 |---|---|---|
 | `--button-min-height` | `auto` | Minimum height of a default-size button |
-| `--button-min-height-small` | `auto` | Minimum height of `data-size="small"`, and of a button in compact density |
+| `--button-min-height-small` | `auto` | Minimum height of `data-size="small"` |
 | `--button-min-height-xsmall` | `auto` | Minimum height of `data-size="xsmall"` |
+| `--button-min-height-compact` | `var(--field-height-s)` (36px) | Minimum height of a button in a `data-density="compact"` container |
 
 ### Selectors
 
@@ -6853,20 +6855,25 @@ An unselected chip draws no mark at all, pass or fail. The judgement appears on 
 
 ### Two colours in one chip
 
-A chip can stand for a pair outright and show both colours. `data-split` paints `--chip-fill` on the start half and `--chip-fill-end` on the end half. Put the darker of the two in `--chip-fill`: the selected ring is drawn in it, and a pale ring vanishes against the ground. On the dark theme the ring swaps to `--chip-fill-end` for the same reason.
+A chip can stand for a pair outright and show both colours. `data-split` paints `--chip-fill` on the start half and `--chip-fill-end` on the end half. Show the pair in its own order: for text on a background, the text in `--chip-fill` and the background in `--chip-fill-end`, so the swatch reads the way its name does and a pair and its reverse are two different chips.
+
+The selected ring does not follow that order. Set `--chip-ring` to the darker of the two, which draws the ring on the light theme, and `--chip-ring-dark` to the lighter, which draws it on the dark theme: a pale ring vanishes against a light page and a dark one sinks into a dark page. Left unset they fall back to `--chip-fill` and `--chip-fill-end`, so a chip that puts its darker colour first still gets the right ring. And because a pair can be two pale colours, the ring is darkened on the light theme, or lightened on the dark, until it clears 3:1 against the ground: `--chip-ring-luminance-max` and `--chip-ring-luminance-min` are the bounds, as bare numbers from 0 to 1 (`0.28`, not `28%`). They are registered as `<number>`, so a value of any other type is ignored and the default stands. A browser without relative colour syntax draws the ring as set.
+
+A split chip that is selected and disabled keeps its ring on both themes. With no mark, the ring is the only thing showing a locked-in answer. Until 2026-11-13 the light theme dropped it, as it does for a single-colour chip, while the dark theme kept it.
 
 The mark is dropped — a check straddling two fills never read clearly on either — so the ring alone says which pair is chosen. That means `data-contrast` does nothing on a split chip: it cannot show pass or fail, so show the verdict somewhere the reader can see it (Colour Pairing stamps it on the preview band) and carry it in the hidden label as before. The paint works on a bare `.chip-swatch` too, as `data-contrast` does.
 
 ```html
 <label class="chip" data-variant="colour" data-split
-       style="--chip-fill: var(--purple-dark); --chip-fill-end: var(--yellow-lighter)">
+       style="--chip-fill: var(--yellow-lighter); --chip-fill-end: var(--purple-dark);
+              --chip-ring: var(--purple-dark); --chip-ring-dark: var(--yellow-lighter)">
   <input type="radio" name="pairing" value="yellow-purple">
   <span class="chip-swatch" aria-hidden="true"></span>
   <span class="visually-hidden">Yellow on purple — passes contrast</span>
 </label>
 ```
 
-Colour Pairing's Pairings panel is a group of these, one per pairing the brand lists, with the script deciding which colour is the darker.
+Colour Pairing's Pairs and every tool's Pairs row are groups of these, one per pairing the brand lists, with the script deciding which colour is the darker and setting the ring tokens from it.
 
 ### The swatch works outside a chip
 
@@ -7007,7 +7014,11 @@ Clearing is a DOM change, and assistive technology does not listen to DOM events
 | `--chip-swatch-border-width` | `var(--border-s)` | That hairline's width |
 | `--chip-colour-check` | `1.5rem` | Mark size |
 | `--chip-fill` | `var(--background-faded)` | The colour a colour chip shows. Set per chip |
-| `--chip-fill-end` | `var(--chip-fill)` | The second colour of a split chip, on the end half |
+| `--chip-fill-end` | `var(--chip-fill)` | The second colour of a split chip, on the end half. For a text-and-ground pair, the ground |
+| `--chip-ring` | `var(--chip-fill)` | A selected split chip's ring on the light theme: the pair's darker colour. Set per chip |
+| `--chip-ring-dark` | `var(--chip-fill-end)` | A selected split chip's ring on the dark theme: the pair's lighter colour. Set per chip |
+| `--chip-ring-luminance-max` | `0.28` | The ring's ceiling on the light theme, as relative luminance (a bare number from 0 to 1): darker colours pass through, paler ones are darkened to it. 3.18:1 on white |
+| `--chip-ring-luminance-min` | `0.16` | The ring's floor on the dark theme: paler colours pass through, darker ones are lightened to it. 3.28:1 on `#1f1f1f`. Re-tune both if the ground moves. Both are bare numbers from 0 to 1 |
 | `--chip-mark` | check icon | The mark drawn when selected. `data-contrast="fail"` swaps it for a cross |
 | `--chip-check-ink` | computed | The mark's ink, flipped from `--chip-fill`'s brightness |
 
@@ -7028,7 +7039,8 @@ Clearing is a DOM change, and assistive technology does not listen to DOM events
 | `.chip-swatch[data-contrast="fail"]` | Swaps the mark for a cross |
 | `.chip[data-variant="colour"]:has(input:checked)` | Ring in the fill's own colour; reveals the mark |
 | `.chip[data-variant="colour"][data-split]`, `.chip-swatch[data-split]` | Two colours, `--chip-fill` on the start half and `--chip-fill-end` on the end; no mark, so `data-contrast` is inert. Mirrored for RTL with `:dir(rtl)` |
-| `[data-theme="dark"] .chip[data-split]:has(input:checked)` | The ring takes the end colour on the dark theme, where the darker fill would sink into the page. Named again for `.chip-group.is-error` and under forced colours |
+| `.chip[data-variant="colour"][data-split]:has(input:checked)` | The ring in `--chip-ring`, falling back to `--chip-fill`, held under `--chip-ring-luminance-max`. Out-ranks the disabled rule, so a selected and disabled split chip keeps its ring |
+| `[data-theme="dark"] .chip[data-split]:has(input:checked)` | The ring in `--chip-ring-dark` on the dark theme, falling back to `--chip-fill-end`, held over `--chip-ring-luminance-min`. Both ring rules are named again for `.chip-group.is-error` and under forced colours |
 | `.chip-group.is-error .chip[data-variant="colour"]:has(input:checked)` | Names the winner over the group error, as the base does |
 
 ### Key rules
@@ -9658,7 +9670,7 @@ The 16px track is under the 24px minimum target, so the label carries it, as it 
 
 ### Mono toggle
 
-A tool's preview carries the brand colour, so its controls should not. Add `data-variant="mono"` and the toggle is drawn in two colours with no accent: off is a light track with a dark knob and a heavier `--border-m` border, and on swaps them. The state word, ON or OFF, sits in the space the knob leaves free, and the track is 6px longer than a plain toggle so the word has room on both sides. It is hidden from screen readers, because `role="switch"` already announces the state. Height, knob and the `<label>` are unchanged, and it composes with `.is-label-right`, `disabled` and `data-size="small"`. At the small size the word drops out, because a 16px track leaves no legible room for it, and the track goes back to the plain width.
+A tool's preview carries the brand colour, so its controls should not. Add `data-variant="mono"` and the toggle is drawn in two colours with no accent: off is a light track with a dark knob and a heavier `--border-m` border, and on swaps them. The state word, ON or OFF, sits in the space the knob leaves free, and the track is 6px longer than a plain toggle so the word has room on both sides. It is hidden from screen readers, because `role="switch"` already announces the state. Height, knob and the `<label>` are unchanged, and it composes with `.is-label-right`, `disabled` and `data-size="small"`. At the small size the word drops out, because at the regular ratio a 16px track sets it under 7px, and the track goes back to the plain width. A compact container ([Density](/foundations/density.html)) keeps the word, on a mono track of its own, 46 × 20px with a 14px knob and the word at `--font-3xs`, because a tool's dock is where the word earns its place.
 
 ```html
 <div class="form-toggle" data-variant="mono">
@@ -9687,8 +9699,10 @@ Re-point these to re-skin the toggle; never override the rules themselves. The s
 The knob travel distance is derived from the first four, so changing the track
 width or knob size keeps the checked position correct without further edits.
 `data-size="small"` re-points the first three to `28px`, `var(--space-l)` and
-`10px`, in the same rule as the check tokens. The offset stays at
-`var(--space-2xs)`, which centres the knob at both sizes.
+`10px`, in the same rule as the check tokens; a mono toggle restates them on
+its input, so a compact container's mono track (`36px`, `20px`, `14px`) does
+not out-rank a small one. The offset stays at `var(--space-2xs)`, which
+centres the knob at both sizes.
 
 ### Reduced motion
 
@@ -10520,7 +10534,7 @@ It is **one real input** behind the cells, never one input per cell: that is wha
 
 Notifications have dedicated places. **Errors live under the field** — every one, including offline and rate-limit, because that is where the reader is: a `.form-error` line directly under the cells, a `warning` icon and a short sentence ("Incorrect code. Try again."). That line is both the field's description (`aria-describedby`, alongside the subtitle) and the live region that announces it (`role="alert"`), so it is rendered from first paint and **empty at rest**, never hidden — a region revealed from `display: none` at announce time is not reliably read — and the icon is cloned in with the message and removed with it, so the description is never stale. **Confirmations live at the top of the card** ("Code sent. Check your email.") in the shared `role="status"` region. Nothing is said twice. Clear the field **before** painting the verdict: clearing dispatches the change event that resets the invalid state, so a verdict painted first is gone before the frame is drawn.
 
-The block takes `data-full-width` so the field is the same width as the email field on the pane before it, and the cells share the email field's corner (both read `--field-radius`): switching panes must not change what a field looks like. The label names the shape — "Enter the 6-digit code" — and the subtitle carries the address on its own line, so the reader can check where the code went without reading a sentence around it. Recovery is one line, not two buttons: a muted lead-in with the action inline (`.login-hint`), and changing address on its own line below.
+The block sits at its own width, centred under the label (`.login-form .cell-input` aligns it), not stretched to the email field's: six cells at their natural size read as a code to copy, where stretched cells read as a field to fill. The cells share the email field's corner (both read `--field-radius`), so switching panes keeps the same look of a field. The label names the shape — "Enter the 6-digit code" — and the subtitle carries the address on its own line, so the reader can check where the code went without reading a sentence around it. Recovery is one line, not two buttons: a muted lead-in with the action inline (`.login-hint`), and changing address on its own line below.
 
 ```html
 <div class="form-group">

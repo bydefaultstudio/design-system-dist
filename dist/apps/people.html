@@ -41,7 +41,7 @@
                 <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
                 <div class="dropdown-menu is-right"></div>
               </div>
-              <a class="bar-close" data-page-close aria-label="Back to Settings">{{icon:close-large}}</a>
+              <a class="bar-close" data-page-close aria-label="Back to Settings">{{close-icon}}</a>
             </div>
           </div>
         </div>
@@ -106,6 +106,46 @@
                 </table>
               </div>
               <p class="text-secondary" id="people-groups-empty" hidden>No groups yet. Add one to give guests their pages.</p>
+            </section>
+
+            <!--
+              Page levels (levels-groups-plan.md D27): what each section and page
+              opens at. The shell only; assets/js/levels.js fills #levels-sections
+              from /api/people/levels. A change is staged first (only this
+              reader sees it), applied through the dialog below, then goes live
+              with the next build: the gate only ever reads built levels.
+            -->
+            <section class="block gap-l" aria-labelledby="levels-heading" id="levels">
+              <div class="section-header">
+                <div class="block gap-xs">
+                  <h2 class="section-header-title" id="levels-heading">Page levels</h2>
+                  <p class="text-secondary" data-text-wrap="pretty">What each section and page opens at. A change is staged until you apply it, then goes live with the next build of the site.</p>
+                </div>
+              </div>
+
+              <!-- This reader's staged changes. Hidden until there are any. -->
+              <div class="callout" data-type="info" id="levels-staged" hidden>
+                <p class="callout-title" id="levels-staged-text"></p>
+                <div class="callout-actions">
+                  <button type="button" class="button" data-variant="faded" data-size="small" id="levels-discard">Discard</button>
+                  <button type="button" class="button" data-size="small" id="levels-apply-open">Review and apply</button>
+                </div>
+              </div>
+
+              <!-- Applied changes still waiting for a build. Hidden until there are any. -->
+              <div class="callout" data-type="warning" id="levels-pending" hidden>
+                <p class="callout-description" id="levels-pending-text"></p>
+                <div class="callout-actions">
+                  <button type="button" class="button" data-variant="outline" data-size="small" id="levels-build-now" hidden>Try again</button>
+                </div>
+              </div>
+
+              <p class="form-error levels-load-error" id="levels-load-error" role="alert"></p>
+              <p class="visually-hidden" id="levels-status" role="status"></p>
+
+              <div class="block" id="levels-sections" aria-busy="true"></div>
+              <template id="levels-caret">{{icon:chevron-right}}</template>
+              <p class="text-secondary" id="levels-empty" hidden>No sections to show.</p>
             </section>
 
           </div>
@@ -265,6 +305,25 @@
 
         <!-- One confirmation for the two destructive actions. The copy is
              filled per action; Cancel takes focus so Enter does nothing. -->
+        <!-- Apply staged level changes: the list names what each one does to
+             who can open the page, since that is what to check before it
+             goes live. Filled by assets/js/levels.js. -->
+        <dialog id="levels-apply" class="dialog" aria-labelledby="levels-apply-title" aria-describedby="levels-apply-when">
+          <div class="dialog-header">
+            <h2 class="dialog-title" id="levels-apply-title">Apply level changes</h2>
+            <button class="button close-btn" type="button" data-icon-only data-size="small" data-dialog-close aria-label="Close">{{icon:close}}</button>
+          </div>
+          <div class="dialog-body block gap-m">
+            <ul class="levels-apply-list" id="levels-apply-list"></ul>
+            <p class="text-secondary" id="levels-apply-when"></p>
+            <p class="form-error" id="levels-apply-error" role="alert"></p>
+          </div>
+          <div class="dialog-footer">
+            <button type="button" class="button" data-variant="faded" data-dialog-close autofocus>Cancel</button>
+            <button type="button" class="button" id="levels-apply-go">Apply</button>
+          </div>
+        </dialog>
+
         <dialog id="people-confirm" class="dialog" aria-labelledby="people-confirm-title">
           <div class="dialog-header">
             <h2 class="dialog-title" id="people-confirm-title">Remove this person?</h2>

@@ -112,10 +112,39 @@
   gap: var(--space-xs);
   /* The tooltip bubble is opacity: 0, not display: none, so its box exists
      at every moment and the last column's hangs past the panel's edge. clip,
-     not hidden: it never creates a scroll container, and the clip margin is
-     wide enough that an edge tile's tooltip is still drawn in full. */
+     not hidden: it never creates a scroll container. clip cuts at the
+     padding edge and the outer columns sit flush with the grid's sides, so
+     the grid keeps --focus-reach of padding inline and gives it back with
+     the margin: the tiles do not move, only the clip edge does. Not
+     overflow-clip-margin, which Chrome ignores when only one axis clips and
+     Safari does not support. A long name on an edge column would be cut
+     here, so those bubbles align to the tile's outer edge (below). */
   overflow-x: clip;
-  overflow-clip-margin: 8rem;
+  padding-inline: var(--focus-reach);
+  margin-inline: calc(var(--focus-reach) * -1);
+}
+
+/* The first and last column's name bubbles, marked by the script from the
+   grid's column count at the moment (icon-library.js markTooltipEdges):
+   flush with the tile's outer edge and running inward, rather than centred
+   and hanging past the clip. Only the anchor moves; the bubble keeps the
+   tooltip's own look and its rise (design-system.css §21). */
+[data-tool="icon-library"] .tool-tile[data-tooltip-edge="start"]::before {
+  left: 0;
+  transform: none;
+}
+
+[data-tool="icon-library"] .tool-tile[data-tooltip-edge="end"]::before {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+/* The body has no top padding (the header above it carries that), and from
+   960px it scrolls, so its top edge clips: room there for the first row's
+   ring. */
+[data-tool="icon-library"] .tool-browse {
+  padding-block-start: var(--focus-reach);
 }
 
 /* Empty state swaps via a state class: the grid and the callout leave

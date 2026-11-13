@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.1.1 */
+/* @bydefaultstudio/design-system v8.2.0 */
 /**
  * people-core.mjs - the pure half of the People API (permissions-plan.md §5).
  *

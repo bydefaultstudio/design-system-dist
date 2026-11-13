@@ -81,3 +81,85 @@
 [data-tool="people"] .table-scroll[data-loading] {
   min-height: var(--space-6xl);
 }
+
+/* -- Page levels (levels-groups-plan.md D27) --
+   A section is a row, its name and count at the start and its control at the
+   end, over a body of page rows laid out the same way. The rows only place
+   things; the segmented controls, buttons, badges and callouts are the
+   system's. */
+.levels-section {
+  padding-block: var(--space-s);
+}
+
+.levels-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-s) var(--space-m);
+}
+
+.levels-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+  padding-block-start: var(--space-s);
+  padding-inline-start: var(--space-xl);
+}
+
+/* display: flex above would beat the hidden attribute: a closed section stays closed. */
+.levels-section-body[hidden] {
+  display: none;
+}
+
+.levels-row-title,
+.levels-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-s);
+  min-width: 0;
+}
+
+.levels-row-title {
+  overflow-wrap: anywhere;
+}
+
+/* The section name is a heading for navigation by heading; it takes the
+   button's type, not the heading scale. */
+.levels-heading {
+  margin: 0;
+  font: inherit;
+}
+
+.levels-section-name {
+  font-weight: var(--font-weight-medium);
+}
+
+/* The chevron points right when closed and down when open. */
+.levels-caret {
+  transition: transform var(--duration-xs) var(--ease-out);
+}
+
+.levels-expand[aria-expanded="true"] .levels-caret {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .levels-caret {
+    transition: none;
+  }
+}
+
+.levels-load-error:empty {
+  display: none;
+}
+
+/* The apply dialog's list: one change per item, the name first. */
+.levels-apply-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+  margin: 0;
+  padding-inline-start: var(--space-l);
+}

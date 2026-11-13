@@ -139,13 +139,21 @@
         }
       }
     },
+    "icons": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "close": { "$ref": "#/definitions/id", "description": "The icon the page bar's close and the feedback dialog's close draw, by its name in the site's icon set. Defaults to close-large." }
+      }
+    },
     "wording": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "organisation": { "allOf": [{ "$ref": "#/definitions/plainText" }], "maxLength": 100, "description": "The owner named in app copy. Defaults to name." },
         "website": { "allOf": [{ "$ref": "#/definitions/https" }, { "not": { "pattern": "/$" } }], "description": "The organisation's own public website, which can differ from the site's url. Defaults to url." },
-        "supportEmail": { "type": "string", "pattern": "^[^\\s@<>\"]+@[^\\s@<>\"]+\\.[^\\s@<>\"]+$", "description": "The address a reader writes to when a form can't send, named in the Ask for access form's error. Left out, the error names none." }
+        "supportEmail": { "type": "string", "pattern": "^[^\\s@<>\"]+@[^\\s@<>\"]+\\.[^\\s@<>\"]+$", "description": "The address a reader writes to when a form can't send, named in the Ask for access form's error. Left out, the error names none." },
+        "locale": { "enum": ["en-GB", "en-US"], "description": "The spelling of the engine's own words: its guides, app pages and tool labels, and the page's lang. Left out, en-GB, as the engine is written. The site's own pages are never converted." }
       }
     },
     "access": {

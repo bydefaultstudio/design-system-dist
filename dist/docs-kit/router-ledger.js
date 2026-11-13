@@ -259,6 +259,11 @@ module.exports = {
     init: "initPeople",
     note: "the People page (admin); scoped to [data-tool=\"people\"], idempotent on its init stamp; dialogs and dropdowns inside are dialog.js's and dropdown.js's delegated ones",
   },
+  "levels.js": {
+    strategies: ["self-registered"],
+    init: "initLevels",
+    note: "the Page levels list on the People page (D27); scoped to [data-tool=\"people\"] #levels, idempotent on its init stamp; re-renders keep focus on the control the reader used",
+  },
   "download-lock.js": {
     strategies: ["delegated","self-registered"],
     note: "the tools' download lock: one capture click listener on the document catches a locked Download before the tool's handler; the locks are re-applied on bd:session and on bd:after-nav scoped to the arriving container, so the leaving one is never swept",

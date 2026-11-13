@@ -8,7 +8,7 @@
 var WorldClockCore = (function () {
   'use strict';
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.1.1';
   var intervalId = null;
   var rootEl = null;
   var currentOptions = null;
@@ -38,14 +38,18 @@ var WorldClockCore = (function () {
 
   function formatTime(date, timezone, showSeconds) {
     try {
+      // A 24-hour clock in every locale: hourCycle, not hour12, which en-US
+      // reads as h24 and shows midnight as 24:00
       var opts = {
         timeZone: timezone,
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false
+        hourCycle: 'h23'
       };
       if (showSeconds) { opts.second = '2-digit'; }
-      return new Intl.DateTimeFormat('en-GB', opts).format(date);
+      // The site's locale (bd-locale.js), en-GB without it
+      var tag = (window.bdLocale && window.bdLocale.tag) || 'en-GB';
+      return new Intl.DateTimeFormat(tag, opts).format(date);
     } catch (e) {
       return showSeconds ? '--:--:--' : '--:--';
     }

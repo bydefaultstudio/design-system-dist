@@ -86,7 +86,9 @@ function addressOf(sitePath) {
 //   support.md        Ask for access, a bare page anyone can reach (PD-4)
 //   locked.md         what a signed-in reader meets at a page their account
 //                     can't open, served by the Worker at that page's address
-// The last three are the access gate's door, built only where it is on
+//   not-found.md      what a signed-in reader meets at an address with no page
+//   error.md          what anyone meets when the Worker fails to answer
+// The last five are served by the access gate's Worker, built only where it is on
 // (`gate`). Pages the Worker serves at other pages' addresses take
 // site-absolute links (`base`).
 const NOT_INSTALLED_PAGE = 'not-installed.md';
@@ -96,6 +98,8 @@ const ENGINE_PAGES = {
   'auth-login.md': { ...addressOf(ENGINE_PATHS.login), standalone: true, gate: true },
   'support.md': { ...addressOf(ENGINE_PATHS.support), standalone: true, gate: true },
   'locked.md': { ...addressOf(ENGINE_PATHS.locked), base: '/', standalone: true, gate: true },
+  'not-found.md': { ...addressOf(ENGINE_PATHS.notFound), base: '/', standalone: true, gate: true },
+  'error.md': { ...addressOf(ENGINE_PATHS.error), base: '/', standalone: true, gate: true },
 };
 
 /**

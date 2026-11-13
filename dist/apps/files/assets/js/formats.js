@@ -22,12 +22,17 @@
  * 1.1.0: the Layers panel lists the top of the stack first, Artwork last
  * (owner, 2026-11-09); the registry keeps the draw order.
  *
- * @version 1.4.0
+ * @version 1.4.1
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.4.0';
+  // The engine's words in this site's locale: bd-locale.js, which the docs
+  // kit writes and loads first on a site that isn't en-GB. Without it, the
+  // words as written.
+  function L(text) { return window.bdLocale ? window.bdLocale.text(text) : text; }
+
+  var VERSION = '1.4.1';
 
   // Who a reader tells when something breaks, and who adds the files: the
   // brand's organisation (brand.json wording.organisation, else its name),
@@ -601,9 +606,9 @@
     var estimated = numbers.some(function isEstimate(n) { return n.source === 'estimated'; });
     var published = numbers.length && numbers.every(function isRule(n) { return n.source === 'platform-rule'; });
     var trust = estimated ? trustText('estimated', item) : published ? trustText('platform-rule', item) : '';
-    if (s.shape === 'circle') return s.d.value + ' px circle, centred' + trust;
+    if (s.shape === 'circle') return s.d.value + L(' px circle, centred') + trust;
     var text = s.w.value + ' × ' + s.h.value + ' px';
-    return (f.safeAreaCentre ? text + ', centred at ' + f.safeAreaCentre.x + ', ' + f.safeAreaCentre.y : text + ', centred') + trust;
+    return (f.safeAreaCentre ? text + L(', centred at ') + f.safeAreaCentre.x + ', ' + f.safeAreaCentre.y : text + L(', centred')) + trust;
   }
 
   function list(lines) {

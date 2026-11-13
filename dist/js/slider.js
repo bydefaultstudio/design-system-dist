@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.1.1 */
+/* @bydefaultstudio/design-system v8.2.0 */
 /**
  * Slider component — keeps the painted fill, the readout and the stops in
  * step with a native range input.

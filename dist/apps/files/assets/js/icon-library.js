@@ -42,12 +42,17 @@
  * 1.5.0: the grid's keys come from tool-grid.js, shared with the Asset
  * Library, and selection follows them: the arrows change the preview, not
  * only the focus. A click focuses the tile, so the arrows carry on from it.
- * @version 1.6.3
+ * @version 1.6.5
  */
 (function () {
   'use strict';
 
-  var VERSION = '1.6.3';
+  // The engine's words in this site's locale: bd-locale.js, which the docs
+  // kit writes and loads first on a site that isn't en-GB. Without it, the
+  // words as written.
+  function L(text) { return window.bdLocale ? window.bdLocale.text(text) : text; }
+
+  var VERSION = '1.6.5';
   console.log('[icon-library] v' + VERSION + ' loaded');
 
   var ROOT_SELECTOR = '[data-tool="icon-library"]';
@@ -88,6 +93,7 @@
   var sizeMin = SIZE_MIN;
   var sizeMax = SIZE_MAX;
   var previewObserver = null;
+  var gridObserver = null;
   var filterTimer = null;
   var urlTimer = null;
   var pointerTile = null;    // the tile a pointer went down on, until its click
@@ -299,6 +305,37 @@
       else el.search.focus();
     }
     scheduleCountUpdate(visibleIcons.length);
+    markTooltipEdges();
+  }
+
+  // A tile's name bubble is centred under it, so on the first and last
+  // column a long name hangs past the grid, which clips sideways
+  // (icon-library.css, Grid). Those columns' bubbles align to the tile's
+  // outer edge instead and run inward. The columns are the grid's at this
+  // moment, so the marks follow the filter and the width.
+  function markTooltipEdges() {
+    if (!el.grid || !window.ToolGrid || !window.ToolGrid.columnCount) return;
+    var columns = window.ToolGrid.columnCount(el.grid);
+    visibleIcons.forEach(function markEdge(icon, index) {
+      var column = index % columns;
+      var edge = column === 0 ? 'start' : (column === columns - 1 ? 'end' : '');
+      if (edge) icon.tile.setAttribute('data-tooltip-edge', edge);
+      else icon.tile.removeAttribute('data-tooltip-edge');
+    });
+  }
+
+  // The column count changes with the grid's width, which the filter never
+  // sees: a window resize, the dock opening or closing.
+  function observeGrid() {
+    if (typeof ResizeObserver === 'undefined' || !el.grid) return;
+    var lastWidth = -1;
+    gridObserver = new ResizeObserver(function onGridResize(entries) {
+      var width = Math.round(entries[0].contentRect.width);
+      if (width === lastWidth) return;
+      lastWidth = width;
+      markTooltipEdges();
+    });
+    gridObserver.observe(el.grid);
   }
 
   // The title carries the whole failure, the query and the category it was
@@ -440,11 +477,9 @@
     if (silent) return;
     window.clearTimeout(urlTimer);
     if (quiet) {
-      // The path is checked first: Barba pushes the next page's address
-      // while this grid is still attached, and ?icon= must not land on it.
-      var path = window.location.pathname;
+      // writeUrl checks the page is still this one when the timer fires.
       urlTimer = window.setTimeout(function writeSettledUrl() {
-        if (window.location.pathname === path && el.grid && el.grid.isConnected) writeUrl(params.selected);
+        writeUrl(params.selected);
       }, URL_DEBOUNCE_MS);
       return;
     }
@@ -465,13 +500,32 @@
   // null breaks Forward after the next Back. One write per selection; arrow
   // moves are written once they settle (URL_DEBOUNCE_MS), and replaceState
   // adds no history entry, so arrowing leaves nothing to step back through.
+  // Barba pushes the destination URL synchronously inside go(), well before
+  // the transition ends, and the leaving container stays live for its slide,
+  // so a selection that settles then would put ?icon= on the page the reader
+  // has just moved to. The path is stamped at init, not when a write is
+  // scheduled: input stays live on the leaving container for the whole
+  // transition, and a write armed then would stamp the destination and pass
+  // its own check. The query is stamped too, and moved on by this tool's own
+  // writes only: a link to this same page with another query moves the
+  // address before the router marks the leaving container
+  // data-bd-role="leave" (Barba fetches first), so any query this tool did
+  // not write means the reader is leaving.
+  function isOwnPage() {
+    return !!el.root && el.root.isConnected && window.location.pathname === el.ownPath
+      && window.location.search === el.ownSearch
+      && !el.root.closest('[data-bd-role="leave"]');
+  }
+
   function writeUrl(key) {
     if (!window.URL || !history.replaceState) return;
+    if (!isOwnPage()) return;
     var next = new URL(window.location.href);
     next.searchParams.set('icon', key);
     if (next.href === window.location.href) return;
     try {
       history.replaceState(history.state, '', next.href);
+      el.ownSearch = window.location.search;
     } catch (error) {
       console.warn('[icon-library] the browser refused a history write; the URL is stale', error);
     }
@@ -989,7 +1043,7 @@
   function buildColourControl() {
     colourCtl = window.ToolColour.create(el.colourMount, {
       id: 'il-colour',
-      label: 'Colour',
+      label: L('Colour'),
       value: params.colour,
       onChange: handleColourChange
     });
@@ -1255,6 +1309,8 @@
   function resolveElements(root) {
     el = {
       root: root,
+      ownPath: window.location.pathname,   // the address this tool may write to (isOwnPage)
+      ownSearch: window.location.search,
       layout: root.querySelector('#icon-library'),
       search: root.querySelector('#il-search'),
       category: root.querySelector('#il-category'),
@@ -1329,6 +1385,8 @@
     brandId = '';
     if (previewObserver) previewObserver.disconnect();
     previewObserver = null;
+    if (gridObserver) gridObserver.disconnect();
+    gridObserver = null;
     el = {};
     icons = [];
     iconsByKey = {};
@@ -1423,6 +1481,7 @@
       renderGrid();
       wireControls();
       observePreview();
+      observeGrid();
       // The category row is the engine's scroller (scroller.js): its edge
       // fades and wheel. Bound once whoever gets there first.
       if (window.initScroller) window.initScroller(el.categoryScroll);

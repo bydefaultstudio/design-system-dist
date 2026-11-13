@@ -46,12 +46,17 @@
  * decides whether it goes into the file. Transparent is preview-only and
  * always available.
  *
- * @version 3.8.0
+ * @version 3.8.1
  */
 (function () {
   'use strict';
 
-  console.log('[logo-tool] v3.6.1 loaded');
+  // The engine's words in this site's locale: bd-locale.js, which the docs
+  // kit writes and loads first on a site that isn't en-GB. Without it, the
+  // words as written.
+  function L(text) { return window.bdLocale ? window.bdLocale.text(text) : text; }
+
+  console.log('[logo-tool] v3.8.1 loaded');
 
   //
   //------- FLATTEN — upstream candidate for @bydefaultstudio/svg-cleaner -------//
@@ -216,7 +221,7 @@
       return 'This brand has not published a logo manifest yet. Add one to turn on self-serve logo exports.';
     }
     if (!M.variants || !M.variants.length || !M.colours || !M.colours.length) {
-      return 'This brand’s logo manifest has no variations or no colours yet.';
+      return L('This brand’s logo manifest has no variations or no colours yet.');
     }
     var badVariant = M.variants.filter(function (v) { return !v || !v.id || !v.markup; })[0];
     if (badVariant) {
@@ -237,7 +242,7 @@
       return !c || !c.id || !isHex6(c.value) || !c.bg || !isHex6(c.bg.value);
     })[0];
     if (badColour) {
-      return 'A colour in this brand’s manifest needs a six-digit hex value and a background colour in the same form.';
+      return L('A colour in this brand’s manifest needs a six-digit hex value and a background colour in the same form.');
     }
     return null;
   }
@@ -1530,7 +1535,7 @@
       M = null;
       releaseStage();
       resolveElements(root);
-      showEmptyState('This brand’s logo manifest could not be read. Check its variations and colours.');
+      showEmptyState(L('This brand’s logo manifest could not be read. Check its variations and colours.'));
       return;
     }
 

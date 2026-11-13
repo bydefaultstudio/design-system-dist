@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const measure = require('./svg-measure');
+const { LOCALES } = require('./locale');
 
 // The newest shape this engine reads. Bump it only when a field is renamed,
 // moved or removed; an added optional field doesn't bump it. Each bump adds
@@ -39,10 +40,36 @@ const NAMED_GROUPS = ['primary', 'secondary'];
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const HEX = /^#[0-9a-fA-F]{6}$/;
+// The icon the page bar's close and the feedback dialog's close draw when
+// brand.json's icons.close leaves it out.
+const DEFAULT_CLOSE_ICON = 'close-large';
 
 /** The site's name is always "<name> OS" (D9). Never stored. */
 function siteName(brand) {
   return `${brand.name} OS`;
+}
+
+/** The close icon's name: the brand's icons.close, else the engine's. */
+function closeIcon(brand) {
+  return (brand && brand.icons && brand.icons.close) || DEFAULT_CLOSE_ICON;
+}
+
+/**
+ * The icon names a site's pages can draw, for validate's opts.icons: each
+ * SVG in iconsDir by its key, less drafts (_-prefixed) and deprecated
+ * aliases, the set the generator's icon map keeps. null when the folder
+ * isn't there, so the check is skipped rather than refusing every name (the
+ * build already warns about a missing icons folder). Quiet on a broken alias
+ * file: the generator warns about that once.
+ */
+function iconSet(iconsDir, rootDir) {
+  if (!iconsDir || !fs.existsSync(iconsDir)) return null;
+  const { readIconAliases } = require('./icon-aliases');
+  const aliases = readIconAliases({ rootDir, iconsDir, warn: () => {} });
+  return new Set(fs.readdirSync(iconsDir)
+    .filter((f) => f.endsWith('.svg') && !f.startsWith('_'))
+    .map((f) => f.replace(/\.svg$/i, '').toLowerCase().replace(/\s+/g, '-'))
+    .filter((key) => !aliases.has(key)));
 }
 
 // ── Reading and upgrading ────────────────────────────────────────────────
@@ -216,8 +243,9 @@ function viewBoxOf(markup) {
 
 const KNOWN = {
   root: ['$schema', 'version', 'name', 'slug', 'url', 'description', 'footerText', 'fonts', 'favicons',
-    'ogImage', 'colours', 'logos', 'wording', 'access', 'emailSignature', 'email', 'switches'],
+    'ogImage', 'colours', 'logos', 'icons', 'wording', 'access', 'emailSignature', 'email', 'switches'],
   fonts: ['googleFontsUrl', 'typekitId', 'preload'],
+  icons: ['close'],
   favicons: ['svg', 'ico'],
   colours: ['hues', 'named', 'pairings', 'toolPairings'],
   named: ['id', 'label', 'token', 'group'],
@@ -226,7 +254,7 @@ const KNOWN = {
   variant: ['id', 'label', 'shortLabel', 'file', 'minWidth', 'rotate', 'clearSpace', 'spec'],
   clearSpace: ['paths', 'label'],
   colourway: ['id', 'label', 'value', 'bg', 'variants'],
-  wording: ['organisation', 'website', 'supportEmail'],
+  wording: ['organisation', 'website', 'supportEmail', 'locale'],
   // requestRoute is no longer read (phase D): Ask for access is the engine's
   // /support.html on every site. Still accepted, so no old file breaks; the
   // generator warns until it is deleted.
@@ -273,10 +301,13 @@ function isSitePath(value) {
  * opts.root      project root, for logo and font paths
  * opts.tokens    Set of defined custom-property names, for colour checks
  *                (skipped when not given)
+ * opts.icons     Set of the site's icon names (iconSet()), for icons.close
+ *                (skipped when not given or null)
  */
 function validate(brand, opts = {}) {
   const root = opts.root || process.cwd();
   const tokens = opts.tokens || null;
+  const icons = opts.icons || null;
   const problems = [];
   const fail = (msg) => problems.push(msg);
 
@@ -407,6 +438,22 @@ function validate(brand, opts = {}) {
   // Logos and the required clear space
   validateLogos(brand.logos, root, fail, isObj, str, unknown);
 
+  // Icons the chrome draws: a name from the site's icon set
+  if (brand.icons !== undefined) {
+    if (!isObj(brand.icons)) fail('"icons" must be an object.');
+    else {
+      unknown(brand.icons, KNOWN.icons, 'icons.');
+      const close = brand.icons.close;
+      if (close !== undefined) {
+        if (!str(close) || !ID.test(close)) {
+          fail(`"icons.close" is ${JSON.stringify(close)}. It must be an icon's name, lower-case and hyphenated, such as "close", or left out to use "${DEFAULT_CLOSE_ICON}".`);
+        } else if (icons && !icons.has(close)) {
+          fail(`"icons.close" is "${close}", which isn't in the site's icon set (the icons folder, docs.config.js iconsDir). Name an icon that is, or leave it out to use "${DEFAULT_CLOSE_ICON}".`);
+        }
+      }
+    }
+  }
+
   // Wording
   if (brand.wording !== undefined) {
     if (!isObj(brand.wording)) fail('"wording" must be an object.');
@@ -424,6 +471,11 @@ function validate(brand, opts = {}) {
       const support = brand.wording.supportEmail;
       if (support !== undefined && !(str(support) && /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(support))) {
         fail(`"wording.supportEmail" is ${JSON.stringify(support)}. It must be one plain address, such as "support@example.com", or left out.`);
+      }
+      // The spelling of the engine's own words (locale.js); a site's own pages keep theirs
+      const locale = brand.wording.locale;
+      if (locale !== undefined && !LOCALES.includes(locale)) {
+        fail(`"wording.locale" is ${JSON.stringify(locale)}. It must be ${LOCALES.map((l) => `"${l}"`).join(' or ')}, written exactly so, or left out for "${LOCALES[0]}".`);
       }
     }
   }
@@ -684,7 +736,18 @@ function wording(brand) {
   return {
     organisation: w.organisation || brand.name,
     website: w.website || brand.url,
+    // The spelling of the engine's own words (locale.js): en-GB, as written
+    locale: w.locale || LOCALES[0],
   };
+}
+
+/**
+ * The wording THEME_CONFIG carries: the locale only when it isn't the
+ * engine's own, so an en-GB site's theme-config.js is the file it always was.
+ */
+function runtimeWording(brand) {
+  const { locale, ...w } = wording(brand);
+  return locale === LOCALES[0] ? w : { ...w, locale };
 }
 
 /**
@@ -718,7 +781,7 @@ function themeConfigPayload(brand) {
   const c = brand.colours;
   const payload = {
     brand: { name: brand.name, siteName: siteName(brand), slug: brand.slug, url: brand.url },
-    wording: wording(brand),
+    wording: runtimeWording(brand),
     hues: c.hues.slice(),
   };
   if (c.named) {
@@ -794,8 +857,11 @@ module.exports = {
   ENGINE_NAME,
   ENGINE_CREDIT,
   ENGINE_HOME_SLUG,
+  DEFAULT_CLOSE_ICON,
   BrandError,
   siteName,
+  closeIcon,
+  iconSet,
   upgrade,
   validate,
   loadBrand,

@@ -160,12 +160,17 @@
  * or start, its top-left corner on the point. Nothing an older spec holds
  * reads differently.
  *
- * @version 4.2.1
+ * @version 4.2.2
  */
 (function () {
   'use strict';
 
-  var VERSION = '4.2.1';
+  // The engine's words in this site's locale: bd-locale.js, which the docs
+  // kit writes and loads first on a site that isn't en-GB. Without it, the
+  // words as written.
+  function L(text) { return window.bdLocale ? window.bdLocale.text(text) : text; }
+
+  var VERSION = '4.2.2';
   console.log('[layer-stack] v' + VERSION + ' loaded');
 
   var SVG_NS = 'http://www.w3.org/2000/svg';
@@ -231,14 +236,14 @@
     'shape.form': [['rectangle', 'Rectangle'], ['circle', 'Circle'], ['rounded', 'Rounded rectangle']],
     // A shape alone can shade what lies beyond it: the file outside a safe area.
     'shape.draw': [['outline', 'Outline'], ['fill', 'Fill'], ['both', 'Both'], ['outside', 'Outside: the outline, and everything beyond it shaded']],
-    'note.anchor': [['centre', 'Centred on the point'], ['start', 'Top-left corner on the point']],
-    'guide.kind': [['centre', 'Centre lines'], ['diagonal', 'Diagonals'], ['circle', 'Keyline circle'], ['square', 'Keyline rectangle'], ['thirds', 'Thirds'], ['line', 'Single line']],
+    'note.anchor': [['centre', L('Centred on the point')], ['start', 'Top-left corner on the point']],
+    'guide.kind': [['centre', L('Centre lines')], ['diagonal', 'Diagonals'], ['circle', 'Keyline circle'], ['square', 'Keyline rectangle'], ['thirds', 'Thirds'], ['line', 'Single line']],
     'guide.axis': [['vertical', 'Vertical'], ['horizontal', 'Horizontal']],
     'grid.kind': [['cells', 'Cells'], ['columns', 'Columns'], ['rows', 'Rows']],
     'measure.target': [['canvas', 'The canvas'], ['specimen', 'The specimen'], ['zone-inset', 'A zone\'s inset'], ['zone-area', 'The area inside a zone'], ['all', 'Canvas + bleed'], ['span', 'A span: from one point to another']],
     'measure.axis': [['width', 'Width'], ['height', 'Height']],
     // Across the box: a width's start is its top, a height's its left.
-    'measure.edge': [['start', 'Start'], ['centre', 'Centre'], ['end', 'End']],
+    'measure.edge': [['start', 'Start'], ['centre', L('Centre')], ['end', 'End']],
     'measure.value': [['on-line', 'On line'], ['left', 'Left'], ['right', 'Right'], ['top', 'Top'], ['bottom', 'Bottom']],
     'measure.size': [['default', 'Default'], ['large', 'Large']],
     'measure.valueStyle': [['filled', 'Filled'], ['text', 'Text']],
@@ -246,7 +251,7 @@
     'canvas.shape': [['rectangle', 'Rectangle'], ['circle', 'Circle'], ['rounded', 'Rounded'], ['app-icon', 'App icon']],
     'canvas.shapeShow': [['outside', 'Shade outside: what the shape cuts away'], ['inside', 'Shade inside: what stays'], ['outline', 'Outline']],
     reference: [['canvas', 'Canvas'], ['specimen', 'Specimen']],
-    align: [['start', 'From the top left'], ['centre', 'From the centre']],
+    align: [['start', 'From the top left'], ['centre', L('From the centre')]],
     draw: [['outline', 'Outline'], ['fill', 'Fill'], ['both', 'Both']],
     lineStyle: [['solid', 'Solid'], ['dashed', 'Dashed']],
     source: [['platform', 'Platform'], ['technology', 'Technology'], ['directory', 'Directory'], ['measured', 'Measured']],
@@ -273,8 +278,8 @@
     // A tap target or the slot an object sits in: an outline. A coloured
     // area (what a v1 fill over the artwork becomes): a fill.
     'shape.tap-area':       { type: 'shape',      label: 'Tap area',       settings: { form: 'rectangle', x: { value: 40, unit: '%' }, y: { value: 40, unit: '%' }, w: { value: 20, unit: '%' }, h: { value: 20, unit: '%' }, draw: 'outline', lineStyle: 'dashed' } },
-    'shape.area':           { type: 'shape',      label: 'Coloured area',  settings: { form: 'rectangle', draw: 'fill', fillColour: 'var(--neutral-600)', fillOpacity: 1 } },
-    'guide.centre':         { type: 'guide',      label: 'Centre lines',   settings: { kind: 'centre', reference: 'canvas' } },
+    'shape.area':           { type: 'shape',      label: L('Coloured area'),  settings: { form: 'rectangle', draw: 'fill', fillColour: 'var(--neutral-600)', fillOpacity: 1 } },
+    'guide.centre':         { type: 'guide',      label: L('Centre lines'),   settings: { kind: 'centre', reference: 'canvas' } },
     'guide.diagonal':       { type: 'guide',      label: 'Diagonals',      settings: { kind: 'diagonal', reference: 'canvas' } },
     'guide.keyline':        { type: 'guide',      label: 'Keyline circle', settings: { kind: 'circle', reference: 'canvas', size: { value: 20, unit: 'px' } } },
     'guide.thirds':         { type: 'guide',      label: 'Thirds',         settings: { kind: 'thirds', reference: 'canvas' } },

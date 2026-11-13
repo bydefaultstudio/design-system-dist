@@ -17,14 +17,15 @@
  * and Cmd with an arrow are left alone: they are history and text keys.
  *
  * A library: binds one keydown listener on the grid it is handed, which dies
- * with the grid on a page swap, and has no init. Exposes window.ToolGrid.
- * @version 1.0.0
+ * with the grid on a page swap, and has no init. Exposes window.ToolGrid:
+ * create(), and columnCount(), the columns the grid lays out at the moment.
+ * @version 1.1.0
  */
 
 (function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
   console.log('[Tool Grid] v' + VERSION + ' loaded');
 
   // auto-fill resolves to explicit tracks in the computed value, one per
@@ -105,5 +106,5 @@
     };
   }
 
-  window.ToolGrid = { create: create };
+  window.ToolGrid = { create: create, columnCount: columnCount };
 })();

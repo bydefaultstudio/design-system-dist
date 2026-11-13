@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^8.1.1"
+npm install "github:bydefaultstudio/design-system-dist#semver:^8.2.0"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -194,9 +194,11 @@ first in the file:
 | `logos.spec` | no | The clear-space rule as a Layout Spec, exported from the Layout Specs tool, drawn round every logo without a spec of its own. Left out, the plain ring at `--artwork-logo-clear-space` X |
 | `logos.variants` | yes | `{ id, label, file, minWidth, clearSpace: { paths, label } }`, plus optional `shortLabel`, `rotate` and `spec` (the logo's own Layout Spec) |
 | `logos.colourways` | yes | `{ id, label, value, bg: { id, value } }`, in hex: an exported file can't resolve a token |
+| `icons.close` | no | The icon the page bar's close and the feedback dialog's close draw, by its name in your icon set (`iconsDir`). Defaults to `close-large`. A name not in the set fails the build |
 | `wording.organisation` | no | Who app copy names: who to tell when something breaks, who a licence names. Defaults to `name` |
 | `wording.website` | no | The organisation's own website, when it differs from `url`. Defaults to `url` |
 | `wording.supportEmail` | no | The address a reader writes to when a form can't send, named in the Ask for access form's error. One plain address |
+| `wording.locale` | no | The spelling of the engine's own words: `"en-GB"` (the default, as the engine is written) or `"en-US"`. See Locale below |
 | `access.turnstileSiteKey` | no | The spam check's site key on the Ask for access page, given with the form service's address. Public. Left out, a signed-out reader's request is refused |
 | `access.requestRoute` | no | No longer read: Ask for access is `/support.html` on every site. The build warns until it is deleted |
 | `emailSignature` | no | The Email Signature tool's settings. `base` is a permanent address: sent signatures fetch their images from it forever |
@@ -240,6 +242,46 @@ A tool page's HTML body can use `{{brand:name}}`, `{{brand:siteName}}`,
 `{{brand:slug}}`, `{{brand:url}}`, `{{brand:organisation}}`,
 `{{brand:website}}` and `{{brand:websiteHost}}`. An unknown key fails the
 build.
+
+`{{close-icon}}` draws the brand's close icon (`icons.close`, else
+`close-large`): write it in a tool bar's `.bar-close`, so the close matches
+the doc pages' bar. `{{icon:close-large}}` stays that icon whatever the
+brand sets.
+
+### Locale
+
+The engine is written in British English. Set `"locale": "en-US"` under
+`wording` and the engine's own words on your site are in US spelling:
+
+```json
+"wording": { "locale": "en-US" }
+```
+
+What converts is what the package ships: each app's guide and page (titles,
+descriptions, the sidebar's names, the body), the engine's own pages (sign
+in, Ask for access, locked, search, not installed), the labels, hints and
+messages the tool scripts show, and the dates People shows. Every page's
+`<html lang>` becomes `en-US`, and the build writes
+`assets/js/bd-locale.js`, which every page loads first.
+
+What never converts:
+
+- Your own pages in `cms/`, and your own copy of a guide or app page
+  (`cms/<app>-docs.md`, `cms/apps/<slug>.html`). The build says so when it
+  uses one. Spell your copy as you want it, or delete it to use the
+  package's
+- Your brand values: `{{brand:organisation}}` shows exactly what you wrote
+- Identifiers: tokens (`--chip-colour-*`), classes (`.tool-colour`), ids,
+  attribute values, file names (`tool-colour.js`), JSON keys, saved values,
+  addresses and heading anchors. A heading "Colour" reads "Color" and keeps
+  its `#colour` link
+- Code, in a guide's code spans and blocks (fenced or indented), a
+  reference link's label, the content of a `<textarea>`, `<template>` or
+  `<svg>`, and anything inside an element marked `translate="no"` or
+  `data-locale="off"`
+
+Left out, or `"en-GB"`, the build is exactly what it was before the setting
+existed.
 
 ### No engine wording on your pages
 
@@ -760,10 +802,11 @@ options (`publicPaths`, `publicPrefixes`); export those options as
 
 ```js
 // worker/site-config.mjs
-import { PAGE_ACCESS, SECTIONS, SOURCE_PAGES, ACCESS_NAV, APPS, NOT_INSTALLED } from './page-access.mjs';
+import { PAGE_ACCESS, SECTIONS, SOURCE_PAGES, ACCESS_NAV, APPS, NOT_INSTALLED, APPLIED_LEVELS, LEVELS_READ_AT } from './page-access.mjs';
 export const SITE_OPTIONS = {
   name: 'Acme OS', pages: PAGE_ACCESS, sections: SECTIONS, sources: SOURCE_PAGES,
   accessNav: ACCESS_NAV, apps: APPS, notInstalled: NOT_INSTALLED,
+  appliedLevels: APPLIED_LEVELS, levelsReadAt: LEVELS_READ_AT,
   hosts: ['acme.example'],
   publicPrefixes: ['/brand-assets/'],
 };
@@ -794,7 +837,35 @@ A bare page that is public gets the same public-files check.
 `ASSETS` binding with `run_worker_first: true` and `html_handling: "none"`,
 `nodejs_compat`, the `BETTER_AUTH_SECRET` secret, and `ACCESS_OWNER`. Run
 `npx bd-migrations` for the gate's tables. Add `auth/login.html`,
-`support.html` and `locked.html` to the files your build ships.
+`support.html`, `locked.html`, `not-found.html` and `error.html` to the files
+your build ships.
+
+**When something goes wrong.** A signed-in reader at an address with no page
+gets the not-found page with 404; a signed-out visitor gets the sign-in page,
+as at any gated address. If answering a request throws, the Worker serves the
+error page with 500 and logs the cause. Replace either with your own
+`cms/not-found.md` or `cms/error.md`; the error page must stay public and load
+only public files, which the door-page check enforces.
+
+**Page levels from Settings.** Owners and admins change a section's or a
+page's level in Settings › People, without a code change. A change is staged,
+then applied to D1 (migration `0015_level_settings.sql`, which
+`npx bd-migrations` runs), then goes live when a build bakes it. The gate only
+ever reads built levels, so the build has to read the table:
+
+- Set `accessDb` in `docs.config.js` to your D1 database's name, and add
+  `LEVELS_FROM_D1=1` to the build command your Workers Builds runs (it reads
+  the table with `wrangler d1 execute --remote`, so the build's API token
+  needs D1 read). Without the flag the build uses code levels only, and
+  applied changes stay waiting. With it, a build that cannot read the table
+  stops, so your last deploy stays live at the levels it has.
+- Pass `appliedLevels: APPLIED_LEVELS` and `levelsReadAt: LEVELS_READ_AT`
+  (both from `page-access.mjs`) to `createGate()`, as `SITE_OPTIONS` above
+  does, so Settings can tell which changes wait for a build.
+- Optional, so applying asks for a build and Settings offers **Try again**:
+  a deploy hook for your production branch (the Worker's Settings > Builds >
+  Deploy hooks), stored as the secret `BUILDS_DEPLOY_HOOK`, its URL or id.
+  Without it applied changes go live at your next deploy.
 
 ## Glossary
 

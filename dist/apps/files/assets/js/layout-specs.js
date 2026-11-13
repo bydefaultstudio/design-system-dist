@@ -42,12 +42,17 @@
  * hides its layers together, and its layers list indented under it. The
  * specimen is never in one.
  *
- * @version 3.1.0
+ * @version 3.1.1
  */
 (function () {
   'use strict';
 
-  var VERSION = '3.1.0';
+  // The engine's words in this site's locale: bd-locale.js, which the docs
+  // kit writes and loads first on a site that isn't en-GB. Without it, the
+  // words as written.
+  function L(text) { return window.bdLocale ? window.bdLocale.text(text) : text; }
+
+  var VERSION = '3.1.1';
   console.log('[layout-specs] v' + VERSION + ' loaded');
 
   var ROOT_SELECTOR = '[data-tool="layout-specs"]';
@@ -111,13 +116,13 @@
   var FIELD_LABELS = {
     display: 'Display', edge: 'Edge', reference: 'Measured from', amount: 'Inset',
     draw: 'Draw', lineStyle: 'Line', lineWeight: 'Weight', bleed: 'Bleed', form: 'Form',
-    overshootTop: 'Overshoot top', overshootBottom: 'Overshoot bottom', overshootLeft: 'Overshoot left', overshootRight: 'Overshoot right', colour: 'Colour', opacity: 'Opacity',
-    outlineColour: 'Outline colour', outlineOpacity: 'Outline opacity', fillColour: 'Fill colour', fillOpacity: 'Fill opacity',
+    overshootTop: 'Overshoot top', overshootBottom: 'Overshoot bottom', overshootLeft: 'Overshoot left', overshootRight: 'Overshoot right', colour: L('Colour'), opacity: 'Opacity',
+    outlineColour: L('Outline colour'), outlineOpacity: 'Outline opacity', fillColour: L('Fill colour'), fillOpacity: 'Fill opacity',
     kind: 'Kind', size: 'Size', cell: 'Cell', align: 'Align', target: 'Measure', zone: 'Which zone',
     text: 'Text', x: 'Left', y: 'Top', w: 'Width', h: 'Height',
     radius: 'Corner', src: 'Image', fit: 'Fit',
     marker: 'Marker', markerText: 'Marker text', markerSrc: 'Marker file', markerRotate: 'Rotation',
-    markerOrient: 'Direction', markerRepeat: 'Repeat', markerColour: 'Marker colour', markerOpacity: 'Marker opacity',
+    markerOrient: 'Direction', markerRepeat: 'Repeat', markerColour: L('Marker colour'), markerOpacity: 'Marker opacity',
     offsetX: 'Offset across', offsetY: 'Offset down', count: 'Count', margin: 'Margin', gutter: 'Gutter',
     axis: 'Direction', position: 'Position', ratio: 'Height',
     colourHex: 'Hex', background: 'Background', shape: 'Shape', shapeShow: 'Show'
@@ -133,10 +138,10 @@
     markerRepeat: 'One marker on each edge, or repeated along it.',
     overshootTop: 'How far the drawing reaches past the shape the rules are built on, on each edge: an o below the baseline, a b above the cap height. Layers measured from the specimen read the box without it; the drawing is never cut. In the specimen\'s own units, % of its width or height, or X.',
     bleed: 'Runs the lines off the canvas, out to the edge of the zones and shapes, hidden ones too. Never out to the specimen, so the bleed stays the same whatever sample is loaded. Where the lines sit does not change.',
-    cell: 'In % the count is exact on any size: 10% is ten columns on a 98px canvas. In px or X the cell keeps its size; align it from the centre to split the remainder evenly.',
-    align: 'Where the cells start counting: the top left, or the centre, which splits the remainder evenly.',
+    cell: L('In % the count is exact on any size: 10% is ten columns on a 98px canvas. In px or X the cell keeps its size; align it from the centre to split the remainder evenly.'),
+    align: L('Where the cells start counting: the top left, or the centre, which splits the remainder evenly.'),
     amount: 'In % it is a share of the shorter side. X is the specimen\'s own unit: for a logo, the glyph width its manifest names.',
-    offsetX: 'The specimen is centred, then moved by this much. Negative moves it left or up. In % it is a share of the canvas.',
+    offsetX: L('The specimen is centred, then moved by this much. Negative moves it left or up. In % it is a share of the canvas.'),
     count: 'How many columns or rows. They stretch to fill the space between the margins.',
     margin: 'Space before the first and after the last, measured from the edge of the box.',
     position: 'From the left for a vertical line, from the top for a horizontal one.',
@@ -156,13 +161,13 @@
     'measure.target': 'Inset: how deep a zone\'s band is. Area: the box inside it. + Bleed measures the canvas and its bleed as one: a logo and the clear space around it. Span: from one point to another along the axis, at a position across it; its length is the value.',
     'measure.at': 'Where the line sits across the axis: from the top for a width, from the left for a height.',
     'shape.draw': 'Outline draws the edge, Fill shades the shape, Both does both. Outside outlines the shape and shades everything beyond it, out to the canvas edge: a safe area.',
-    'note.anchor': 'Centre puts the note\'s middle on the point. Top left hangs it from the point by its corner, so it sits inside a corner whatever it says.',
+    'note.anchor': L('Centre puts the note\'s middle on the point. Top left hangs it from the point by its corner, so it sits inside a corner whatever it says.'),
     'measure.axis': 'One line per measure. Add a second set to the other for both sides.',
     'measure.edge': 'Where the line sits across what it measures. Beside a box it stands off it; on a zone it lies on the zone.',
     'measure.value': 'On the line, or beside it. Beside, the value grows away from the line.',
     'measure.size': 'Large doubles the lines, the ticks and the value, for a diagram seen small.',
-    'measure.valueStyle': 'Filled is a pill in the measure\'s colour. Text is the number in that colour, on the ground.',
-    'note.colour': 'Auto is text on the ground. A colour makes the note a pill.',
+    'measure.valueStyle': L('Filled is a pill in the measure\'s colour. Text is the number in that colour, on the ground.'),
+    'note.colour': L('Auto is text on the ground. A colour makes the note a pill.'),
     'guide.size': 'A circle\'s diameter, in % of the shorter side; a rectangle\'s width, in % of the width, so 100% spans it.',
     'guide.ratio': 'In % of the width. 100 is a square, 125 is 4:5 portrait, 80 is 5:4 landscape, 56.25 is 16:9.',
     'guide.draw': 'A keyline drawn as an outline, a filled shape, or both.',
@@ -183,10 +188,10 @@
     'measure.target': { canvas: 'Canvas', specimen: 'Specimen', 'zone-inset': 'Inset', 'zone-area': 'Area', all: '+ Bleed', span: 'Span' },
     'measure.value': { 'on-line': 'On line' },
     'shape.draw': { outline: 'Outline', fill: 'Fill', both: 'Both', outside: 'Outside' },
-    'note.anchor': { centre: 'Centre', start: 'Top left' },
+    'note.anchor': { centre: L('Centre'), start: 'Top left' },
     'image.fit': { contain: 'Fit', cover: 'Fill' },
     'canvas.shape': { rectangle: 'Rectangle', circle: 'Circle', rounded: 'Rounded', 'app-icon': 'App icon' },
-    align: { start: 'Top left', centre: 'Centre' }
+    align: { start: 'Top left', centre: L('Centre') }
   };
 
   /* Each layer type's icon, at the head of its row in the list (Figma, By
@@ -2043,7 +2048,7 @@
     } else {
       var note = document.createElement('p');
       note.className = 'form-hint';
-      note.textContent = 'The specimen is always one layer: a stand-in to test the rules against, never part of them. It is centred in the canvas, then sized and moved by the settings above. Move it in the list to put images under or over it.';
+      note.textContent = L('The specimen is always one layer: a stand-in to test the rules against, never part of them. It is centred in the canvas, then sized and moved by the settings above. Move it in the list to put images under or over it.');
       el.settings.appendChild(note);
     }
   }
@@ -2274,7 +2279,9 @@
   function applyPreset(layer, presetId) {
     var fresh = window.LayerStack.createLayer(presetId);
     var previous = window.LayerStack.PRESETS[layer.preset];
-    if (layer.label === (previous ? previous.label : typeLabel(layer))) {
+    // Not renamed: the default name in either spelling, since a spec made
+    // on an en-GB site carries "Centre lines" where this one says "Center"
+    if (L(layer.label) === L(previous ? previous.label : typeLabel(layer))) {
       layer.label = fresh.label;
       updateListLabel(layer);
     }
@@ -2313,7 +2320,7 @@
      top or bottom, a height's at the left or right. */
   function shortNames(layer, name) {
     if (layer.type === 'measure' && name === 'edge') {
-      return layer.settings.axis === 'height' ? { start: 'Left', centre: 'Centre', end: 'Right' } : { start: 'Top', centre: 'Centre', end: 'Bottom' };
+      return layer.settings.axis === 'height' ? { start: 'Left', centre: L('Centre'), end: 'Right' } : { start: 'Top', centre: L('Centre'), end: 'Bottom' };
     }
     return SHORT_CHOICES[layer.type + '.' + name] || SHORT_CHOICES[name] || {};
   }
@@ -2761,7 +2768,7 @@
       // The outline's colour, or the fill's when the zone is a fill alone
       // (layer-stack.js, computeMarkers).
       var follows = layer.settings.draw === 'fill' ? 'fillColour' : 'outlineColour';
-      entries = [{ value: '', fill: layer.settings[follows] || DEFAULT_COLOUR.zone, label: follows === 'fillColour' ? 'The fill\'s colour' : 'The outline\'s colour' }];
+      entries = [{ value: '', fill: layer.settings[follows] || DEFAULT_COLOUR.zone, label: follows === 'fillColour' ? L('The fill\'s colour') : L('The outline\'s colour') }];
     } else {
       var fallback = DEFAULT_COLOUR[layer.type] || 'currentColor';
       entries = [{ value: fallback, label: 'Default (' + fallback.replace(/^var\(|\)$/g, '') + ')' }];

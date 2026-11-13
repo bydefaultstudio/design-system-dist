@@ -86,7 +86,7 @@ function main() {
   }
 
   // What the new version requires, checked as the build checks it
-  const problems = B.validate(result.data, { root: process.cwd(), tokens: siteTokens(B) });
+  const problems = B.validate(result.data, { root: process.cwd(), tokens: siteTokens(B), icons: siteIcons(B) });
   if (problems.length) {
     console.log('\nStill to do by hand, before the site builds:');
     for (const p of problems) console.log(`  - ${p}`);
@@ -118,6 +118,25 @@ function siteTokens(B) {
   }
   const files = [ds, brandCss].filter(Boolean).map((f) => path.resolve(f)).filter((f) => fs.existsSync(f));
   return files.length ? B.definedTokens(files) : undefined;
+}
+
+// The icon names the site's pages can draw, as the build reads them, so a
+// misspelt icons.close is reported here too: docs.config.js's iconsDir, else
+// the icons the docs kit bundles. null (no check) when neither is there.
+function siteIcons(B) {
+  const config = path.resolve('cms', 'docs.config.js');
+  let dir = null;
+  if (fs.existsSync(config)) {
+    try {
+      const c = require(config);
+      if (c.iconsDir) dir = path.resolve(c.iconsDir);
+    } catch (err) { /* reported by defaultFile already */ }
+  }
+  if (!dir) {
+    const kit = path.join(__dirname, '../docs-kit/assets/icons');
+    if (fs.existsSync(kit)) dir = kit;
+  }
+  return B.iconSet(dir, process.cwd());
 }
 
 main();

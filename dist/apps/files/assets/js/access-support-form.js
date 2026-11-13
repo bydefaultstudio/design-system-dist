@@ -7,8 +7,12 @@
  *   data-request-type   preselects that Request Type option
  *   data-message-label  replaces the message field's label
  *   data-message-hint   replaces the message field's hint
+ *   data-message-error  replaces the message field's "empty" error
  *   data-submit-label   replaces the submit button's text
- *   data-success        replaces the success message
+ *   data-success-title  replaces the confirmation's heading
+ *   data-success        replaces the confirmation's line; {email} in it
+ *                       becomes the address the reader gave
+ *   data-success-link   a link the confirmation offers, as "label|href"
  *   data-error          replaces the error message, e.g. with an address
  *                       to write to instead
  *   data-support-email  the site's support address (brand.json
@@ -19,13 +23,19 @@
  * An unknown data-request-type is ignored, so the select falls back to its
  * placeholder rather than sending a value the Worker would refuse.
  *
- * @version 1.4.1
+ * The confirmation replaces the form, and the page's own [data-hide-on-success]
+ * elements (its heading and lead) step aside, so it stands alone on the page.
+ * Icons come from <template data-icon="warning|check-circled"> inside the
+ * container, read before the form is built: the page renders them from the
+ * brand's icon set, and without them the messages show with no icon.
+ *
+ * @version 1.5.0
  * @author By Default
  */
 (function () {
   'use strict';
 
-  console.log('access-support-form.js v1.4.0 loaded');
+  console.log('access-support-form.js v1.5.0 loaded');
 
   //
   //------- Configuration -------//
@@ -33,8 +43,20 @@
 
   var API_BASE = '/api';
   var FORM_TYPE = 'access-support';
-  var SUCCESS_MESSAGE = 'Thanks \u2014 we\u2019ll review your request and be in touch shortly.';
-  var ERROR_MESSAGE = 'Something went wrong. Try again in a minute.';
+  // Every message says what happened and what to do next, and none blames
+  // the reader. The field errors name the action, not the rule broken.
+  var COPY = {
+    needName: 'Enter your name.',
+    needEmail: 'Enter your email address.',
+    badEmail: 'Enter a full email address, like name@company.com.',
+    needType: 'Choose what you need help with.',
+    needMessage: 'Tell us what\u2019s happening.',
+    sending: 'Sending\u2026',
+    failed: 'The request did not send. Try again in a minute.',
+    failedWithEmail: 'The request did not send. Try again, or email ',
+    successTitle: 'Request sent.',
+    success: 'The answer comes to {email}.'
+  };
 
   // Mirrored in worker/notion-config.js FORMS options, which refuses any
   // other value. Change both together.
@@ -67,8 +89,8 @@
     var container = node && node.closest ? node.closest('.access-support-form') : null;
     if (container && container.dataset.error) return container.dataset.error;
     var email = container && container.dataset.supportEmail ? container.dataset.supportEmail.trim() : '';
-    if (email) return 'Something went wrong. Please email us directly at ' + email;
-    return ERROR_MESSAGE;
+    if (email) return COPY.failedWithEmail + email + '.';
+    return COPY.failed;
   }
 
   function getTodayISO() {
@@ -84,8 +106,36 @@
   //------- Form Builder -------//
   //
 
+  // The page's icon templates, kept before the container is emptied.
+  var icons = {};
+
+  function readIcons(container) {
+    container.querySelectorAll('template[data-icon]').forEach(function (template) {
+      icons[template.dataset.icon] = template;
+    });
+  }
+
+  // A fresh copy of an icon, hidden from the accessibility tree: the words
+  // beside it carry the meaning. Null when the page gave none.
+  function iconFor(name) {
+    var template = icons[name];
+    if (!template || !template.content.firstElementChild) return null;
+    var icon = template.content.firstElementChild.cloneNode(true);
+    icon.setAttribute('aria-hidden', 'true');
+    return icon;
+  }
+
+  // A message line with the warning icon before it, the field-error pattern.
+  function fillMessage(element, message) {
+    element.replaceChildren();
+    var icon = iconFor('warning');
+    if (icon) element.appendChild(icon);
+    element.appendChild(document.createTextNode(message));
+  }
+
   function renderForm(container) {
     var preset = container.dataset;
+    readIcons(container);
     container.innerHTML = '';
 
     var form = document.createElement('form');
@@ -181,7 +231,7 @@
 
     var placeholder = document.createElement('option');
     placeholder.value = '';
-    placeholder.textContent = 'Select...';
+    placeholder.textContent = 'Choose one';
     placeholder.disabled = true;
     placeholder.selected = true;
     select.appendChild(placeholder);
@@ -256,15 +306,19 @@
       if (describedBy) el.setAttribute('aria-describedby', describedBy);
       else el.removeAttribute('aria-describedby');
     });
-    form.querySelectorAll('.form-error').forEach(function (el) {
+    // Field errors only: the form-level line (a send failure naming the
+    // support address) is showError's and clearError's to manage.
+    form.querySelectorAll('.form-error:not(.access-support-error)').forEach(function (el) {
       el.remove();
     });
 
+    var container = form.closest('.access-support-form');
+    var messageError = (container && container.dataset.messageError) || COPY.needMessage;
     var fields = [
-      { name: 'name', label: 'Your name' },
-      { name: 'email', label: 'Your email address' },
-      { name: 'request-type', label: 'Request type' },
-      { name: 'message', label: 'Message' }
+      { name: 'name', empty: COPY.needName },
+      { name: 'email', empty: COPY.needEmail },
+      { name: 'request-type', empty: COPY.needType },
+      { name: 'message', empty: messageError }
     ];
 
     fields.forEach(function (field) {
@@ -272,10 +326,15 @@
       if (!input) return;
 
       var value = input.value ? input.value.trim() : '';
-      if (!value) {
-        errors.push(field.label);
+      var message = '';
+      if (!value) message = field.empty;
+      // The form is novalidate, so the browser's own check is read here:
+      // "lena@" passes a non-empty test and would otherwise reach the Worker.
+      else if (input.type === 'email' && input.validity.typeMismatch) message = COPY.badEmail;
+      if (message) {
+        errors.push(field.name);
         input.classList.add('is-error');
-        addFieldError(input, field.label + ' is required');
+        addFieldError(input, message);
       }
     });
 
@@ -291,7 +350,7 @@
     var error = document.createElement('div');
     error.className = 'form-error';
     error.id = element.id + '-error';
-    error.textContent = message;
+    fillMessage(error, message);
     element.parentNode.appendChild(error);
     element.setAttribute('aria-invalid', 'true');
     var describedBy = element.getAttribute('aria-describedby');
@@ -373,7 +432,7 @@
     }).then(function (response) {
       if (!response.ok) {
         return response.json().catch(function () { return {}; }).then(function (err) {
-          throw new Error(err.error || ERROR_MESSAGE);
+          throw new Error(err.error || COPY.failed);
         });
       }
       return response.json();
@@ -405,7 +464,7 @@
       var originalText = submitBtn.textContent;
       submitBtn.setAttribute('aria-disabled', 'true');
       submitBtn.setAttribute('aria-busy', 'true');
-      submitBtn.textContent = 'Sending...';
+      submitBtn.textContent = COPY.sending;
 
       var hpField = form.querySelector('[name="hp"]');
       var formData = {
@@ -418,7 +477,7 @@
 
       submitForm(formData).then(function () {
         removeTurnstile();
-        renderSuccess(container, container.dataset.success);
+        renderSuccess(container, formData.email);
       }).catch(function (err) {
         console.error('[Access Support] Submit error:', err);
         submitBtn.removeAttribute('aria-disabled');
@@ -442,9 +501,9 @@
     clearError(form);
 
     var errorEl = document.createElement('div');
-    errorEl.className = 'access-support-error';
+    errorEl.className = 'form-error access-support-error';
     errorEl.setAttribute('role', 'alert');
-    errorEl.textContent = message;
+    fillMessage(errorEl, message);
     form.appendChild(errorEl);
   }
 
@@ -452,23 +511,61 @@
   //------- Success State -------//
   //
 
-  function renderSuccess(container, message) {
+  // The confirmation stands alone: it replaces the form, and the page's
+  // heading and lead step aside (data-hide-on-success), so the reader meets
+  // one answer, not a form page with a line at the bottom.
+  function renderSuccess(container, email) {
+    var preset = container.dataset;
+    var scope = container.closest('section') || document;
+    scope.querySelectorAll('[data-hide-on-success]').forEach(function (el) {
+      el.classList.add('is-hidden');
+    });
     container.innerHTML = '';
 
+    // No live region: focus moves to the heading below, which reads the
+    // confirmation once. A region that arrives already filled is announced
+    // unreliably, and with focus as well it is often read twice.
     var success = document.createElement('div');
     success.className = 'access-support-success';
 
-    success.setAttribute('role', 'status');
-    success.tabIndex = -1;
+    var icon = iconFor('check-circled');
+    if (icon) {
+      icon.classList.add('access-support-success-icon');
+      success.appendChild(icon);
+    }
+
+    // The page's own h1 has stepped aside, so this is the page's heading now,
+    // as on the stop pages it copies.
+    var title = document.createElement('h1');
+    title.className = 'access-support-success-title';
+    title.tabIndex = -1;
+    title.textContent = preset.successTitle || COPY.successTitle;
+    success.appendChild(title);
 
     var text = document.createElement('p');
-    text.textContent = message || SUCCESS_MESSAGE;
-
+    // split/join, not replace: a $ in the address must stay literal
+    text.textContent = (preset.success || COPY.success).split('{email}').join(email);
     success.appendChild(text);
+
+    // "label|href", split at the first bar. Only a site path, an anchor,
+    // https: or mailto: is linked, so the attribute can never carry script.
+    var linkSpec = preset.successLink || '';
+    var bar = linkSpec.indexOf('|');
+    var linkLabel = bar > 0 ? linkSpec.slice(0, bar).trim() : '';
+    var linkHref = bar > 0 ? linkSpec.slice(bar + 1).trim() : '';
+    if (linkLabel && /^(\/|#|https:|mailto:)/i.test(linkHref)) {
+      var a = document.createElement('a');
+      a.className = 'button';
+      a.setAttribute('data-variant', 'text');
+      a.href = linkHref;
+      a.textContent = linkLabel;
+      success.appendChild(a);
+    }
+
     container.appendChild(success);
-    // The form that held focus is gone; put focus on the confirmation so it
-    // is not dropped to <body>, and the message is read out.
-    success.focus();
+    // The form that held focus is gone; put focus on the heading so it is not
+    // dropped to <body>, and the confirmation is read from its start.
+    title.focus();
   }
 
   //

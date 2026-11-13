@@ -461,8 +461,9 @@
 }
 
 /* -- Pairs: split chips --
-   The system's split chip (data-split, cms/chip.md): the darker of the two
-   colours is --chip-fill, the lighter --chip-fill-end. The script assigns
+   The system's split chip (data-split, cms/chip.md): the text is
+   --chip-fill, the background --chip-fill-end, and the ring is --chip-ring
+   (the darker) and --chip-ring-dark (the lighter). The script assigns
    them; nothing here paints. A column per hue on the grids' chip size and
    gap, so every row lines up with the hue columns; more pairs take more rows.
    The hue count, not auto-fill: the gap is worked out so exactly that many
