@@ -1,6 +1,6 @@
 ---
 title: "Image Placeholder"
-description: "A URL-based SVG placeholder image generator. Set custom dimensions, colours, and text for rapid prototyping."
+description: "A URL-based SVG placeholder image generator. Set custom dimensions, colors, and text for rapid prototyping."
 author: "Studio"
 section: "Tools"
 layer: "app"

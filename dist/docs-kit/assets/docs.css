@@ -54,6 +54,7 @@
  *   26. Auth                 — user-info chip, login overlay, login page chrome
  *   27. Wireframe            — low-fidelity map of a page layout
  *   28. Site search          — ⌘K dialog and /search.html results (behaviour: assets/js/search.js)
+ *   29. OS illustration fig. — an os-illustration in content ({{os-illustration:}} shortcode)
  * ===================================================================== */
 
 
@@ -625,11 +626,17 @@
  *
  * data-ground on the card sets what the asset sits on:
  *   faded (default) --media-ground · plain --background-plain ·
- *   dark --background-inverted · none — a picture fills the preview edge to
- *   edge, the same as .asset-card-preview--fill.
+ *   dark --media-ground-dark · white and black, fixed, for logo colourways ·
+ *   none — a picture fills the preview edge to edge, the same as
+ *   .asset-card-preview--fill.
  * data-footer="ground" puts the footer on that ground with no divider; the
  * default is a plain bar under a divider. A picture (ground none) keeps the
  * bar, or the footer would sit on the photo.
+ *
+ * --scale stacks one asset at several sizes, top left, each with its
+ * caption: the logo's scaling figure. The <img> width attribute sets each
+ * size, so the preview drops its ratio and grows to fit the stack, and a
+ * grid of two scale cards weights its first column 5 to 3.
  *
  * The older preview modifiers still work, as aliases for one release:
  * --light is the faded ground, --dark the dark one, --fill ground none.
@@ -673,6 +680,14 @@
 
 .asset-card[data-ground="plain"] { --asset-card-ground: var(--background-plain); }
 .asset-card[data-ground="dark"]  { --asset-card-ground: var(--media-ground-dark); --asset-card-ink: var(--media-ink-dark); }
+
+/* Pure white and pure black, fixed in both modes: the grounds a brand's logo
+   colourways are approved on (brand.json logos.colourways). A semantic ground
+   would flip in dark mode and put an off-black logo on a dark surface, the
+   same reason --media-ground-dark is fixed. Raw HTML only, with the bar
+   footer: the system has no light scope for a ground footer on white. */
+.asset-card[data-ground="white"] { --asset-card-ground: var(--white); --asset-card-ink: var(--black); }
+.asset-card[data-ground="black"] { --asset-card-ground: var(--black); --asset-card-ink: var(--white); }
 
 .asset-card-preview {
   display: flex;
@@ -798,6 +813,49 @@
   max-height: none;
   border: 0;
   border-radius: 0;
+}
+
+/* -- Scale: one asset at decreasing sizes, stacked top left. Each size is
+      the <img> width attribute, never capped by the asset max, only by the
+      preview, so a narrow card shrinks the largest rather than spilling. -- */
+.asset-card-preview--scale {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: var(--space-l);
+  aspect-ratio: auto;
+  max-height: none;
+}
+
+/* Side by side, the grid weights its columns to what they hold: the
+   lockup stack needs its widest size at full width, the Avatar stack far
+   less. Below the grid's collapse point it stays one column. */
+@media (min-width: 769px) {
+  .grid:has(> .asset-card > .asset-card-preview--scale) {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 3fr);
+  }
+}
+
+.asset-card-preview--scale > figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+  max-width: 100%;
+  margin: 0;
+}
+
+/* The caption takes the card's ink, not --text-faded: the ground is fixed,
+   so a mode-flipping grey would fade to nothing on white in dark mode. The
+   figure's gap spaces it, so its default margin goes. */
+.asset-card-preview--scale figcaption {
+  margin: 0;
+  color: inherit;
+}
+
+.asset-card-preview--scale img {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 /* Contain — template previews of any ratio (feed 4:5, story 9:16, banner
@@ -2089,8 +2147,9 @@ body.sidebar-collapsed .site-sidebar .sidebar-nav-section-toggle[data-tooltip]::
 
 /* Rotate icon when open (90deg to point down) — scoped to the section's
    own toggle so subsection chevrons inside an open section stay governed
-   by their own [open] rule */
-.sidebar-nav-section[open] > .sidebar-nav-section-toggle .sidebar-nav-toggle-icon {
+   by their own [open] rule. Not while it closes: the group stays [open]
+   until it has folded (Travel, below), and the chevron turns as it starts. */
+.sidebar-nav-section[open]:not(.is-closing) > .sidebar-nav-section-toggle .sidebar-nav-toggle-icon {
   transform: rotate(90deg);
 }
 
@@ -2296,7 +2355,7 @@ body[data-role="guest"] .header-search-btn {
   display: none;
 }
 
-.sidebar-nav-subsection[open] > .sidebar-nav-subsection-toggle .sidebar-nav-toggle-icon {
+.sidebar-nav-subsection[open]:not(.is-closing) > .sidebar-nav-subsection-toggle .sidebar-nav-toggle-icon {
   transform: rotate(90deg);
 }
 
@@ -2314,6 +2373,40 @@ body[data-role="guest"] .header-search-btn {
 
 .sidebar-nav-subsection[open] > .sidebar-nav-sublist {
   margin-bottom: calc(-1 * var(--sidebar-nav-row-height));
+}
+
+/* -- Travel --
+   A group opens and closes to its height on --motion-feedback-travel, as
+   the accordion does. nav.js plays it, because a <details> hides its list
+   the moment it closes and CSS reaches a height of auto only in Chromium
+   (interpolate-size). It holds .is-opening or .is-closing on the <details>
+   while it moves; a closing group stays [open] until it has folded.
+
+   Clip, not hidden: hidden would make the group a scroll container and
+   nothing inside it could pin (note 1). The release (note 3) is off while
+   it moves, or its padding would stand a row of bare tint under a group
+   that has only begun to open. Off or on, the box is the same height. */
+/* The open tint travels with the height. Registered as a colour so nav.js
+   can fade it in the same animation; unregistered, a custom property could
+   only flip, and the tint would flash on as a group starts to open and off
+   as it finishes closing. Both the section's fill and its pinned toggle read
+   this one variable, so they fade together. A browser without @property
+   keeps the snap. */
+@property --sidebar-section-tint {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+.sidebar-nav-section:is(.is-opening, .is-closing),
+.sidebar-nav-subsection:is(.is-opening, .is-closing) {
+  overflow: clip;
+  padding-bottom: 0;
+}
+
+.sidebar-nav-section:is(.is-opening, .is-closing) > .sidebar-nav-list,
+.sidebar-nav-subsection:is(.is-opening, .is-closing) > .sidebar-nav-sublist {
+  margin-bottom: 0;
 }
 
 /* -- Pinned toggles -- */
@@ -4894,4 +4987,87 @@ a.search-result.search-see-all:hover {
 
 .logo-spec[data-logo-spec-state="failed"] .logo-spec-caption {
   color: var(--status-danger);
+}
+
+/* ------ 29. OS ILLUSTRATION FIGURE ------
+ * An os-illustration placed in a page's content by the shortcode
+ * {{os-illustration: name="…" alt="…"}} (generate-docs.js,
+ * os-illustration-plan.md §5.5). docs-site because only the generator emits
+ * it; the drawing and its role colours are core (design-system.css §2d, §55).
+ *
+ *   <figure class="os-illustration-figure" data-width="m">
+ *     <div class="os-illustration-frame" data-color="yellow">
+ *       <svg class="os-illustration" …>…</svg>
+ *       [pause button, when the drawing animates]
+ *     </div>
+ *     <figcaption>…</figcaption>
+ *   </figure>
+ *
+ * The figure is a plain <figure>, so section 24 of design-system.css sizes
+ * and places it (data-width, data-align, data-float) as it does a captioned
+ * image. The frame carries the hue, so the caption keeps the page's colours,
+ * and paints the field behind the drawing at the drawing's own shape: a 500
+ * square or a portrait Brand Book board alike, nothing cropped. It restates
+ * the page header's semantic mapping so the pause button, its hover and its
+ * focus ring read on the field in both themes, as the glossary art strip does.
+ */
+.os-illustration-frame {
+  position: relative;
+  background: var(--os-illustration-field);
+  color-scheme: light;
+
+  --color-background: var(--os-illustration-field);
+  --color-text: var(--os-illustration-text);
+  --background-primary: var(--color-background);
+  --background-secondary: var(--color-background);
+  --background-faded: var(--color-raised);
+  --text-primary: var(--color-text);
+  --input-focus: var(--color-text);
+  --text-secondary: var(--color-text-muted);
+  --border-faded: var(--color-border-faded);
+}
+
+.os-illustration-frame[data-field="dark"] {
+  color-scheme: dark;
+}
+
+/* An animated drawing's pause button (os-illustration.js), in the frame's
+   bottom end corner, as in the page header and the glossary strip. It sits
+   over the drawing, so it is painted with the field: its icon and focus ring
+   are then always measured against the field, never against ink or accent
+   that happens to run under the corner. */
+.os-illustration-frame > .button {
+  position: absolute;
+  inset-block-end: var(--space-s);
+  inset-inline-end: var(--space-s);
+  --button-bg: var(--color-background);
+}
+
+/* The transparent variant's hover tint is see-through, which would let the
+   drawing back under the icon; the same tint mixed into the field instead. */
+.os-illustration-frame > .button:hover,
+.os-illustration-frame > .button.is-hover {
+  background-color: color-mix(in srgb, var(--button-color) 5%, var(--color-background));
+}
+
+.os-illustration-frame > .button:not([aria-pressed="true"]) .svg-icn[data-icon="play"],
+.os-illustration-frame > .button[aria-pressed="true"] .svg-icn[data-icon="pause"] {
+  display: none;
+}
+
+/* Forced colours. A cover or header hides its art, which is decoration. Here
+   the drawing can be the content (alt text, role="img"), so it keeps its own
+   colours instead: a diagram is the case forced-color-adjust: none is for. */
+@media (forced-colors: active) {
+  .os-illustration-frame {
+    forced-color-adjust: none;
+  }
+
+  /* The control follows the reader's palette even though the drawing does
+     not. A solid system ground, because the frame behind it keeps its hue. */
+  .os-illustration-frame > .button {
+    forced-color-adjust: auto;
+    background-color: ButtonFace;
+    border: var(--border-s) solid ButtonText;
+  }
 }

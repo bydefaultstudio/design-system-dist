@@ -25,6 +25,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { parseList: list } = require('./portable');
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -34,11 +35,6 @@ function escapeHtml(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function list(value) {
-  if (!value) return [];
-  return value.split(',').map(s => s.trim()).filter(Boolean);
 }
 
 /**

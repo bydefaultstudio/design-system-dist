@@ -10,7 +10,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
   console.log('[Colour Core] v' + VERSION + ' loaded');
 
   //
@@ -140,8 +140,9 @@
   //------- MEASURE — WCAG 2 -------//
   //
 
-  // WCAG 2 relative luminance. logo-tool.js still carries its own copy over
-  // hex strings; moving it onto this module is in ROADMAP.md (Tools).
+  // WCAG 2 relative luminance. qr-code.js, icon-library.js and logo-tool.js
+  // read it from here. tool-canvas.js, which loads before this file, and
+  // swatch.js, a core component, still carry their own copies of this maths.
   function luminance(rgb) {
     var channels = [rgb[0], rgb[1], rgb[2]].map(function (v) {
       var c = v / 255;

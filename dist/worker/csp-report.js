@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.2.0 */
+/* @bydefaultstudio/design-system v8.3.0 */
 /**
  * csp-report.js - where browsers send Content-Security-Policy violations.
  *

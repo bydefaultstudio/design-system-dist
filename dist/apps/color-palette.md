@@ -1,6 +1,6 @@
 ---
-title: "Colour Palette"
-description: "Every colour in the brand palette at full size, read from the live theme, with its hex and its token one click from the clipboard."
+title: "Color Palette"
+description: "Every color in the brand palette at full size, read from the live theme, with its hex and its token one click from the clipboard."
 author: "Studio"
 section: "Tools"
 layer: "app"

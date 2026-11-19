@@ -28,6 +28,10 @@
 
 const fs = require('fs');
 const path = require('path');
+// The generator's own frontmatter and list readers, from portable.js (also in
+// the docs kit), so the registry loads without the generator and still reads
+// a manifest exactly as the generator reads a page.
+const { parseFrontmatter: readFrontmatter, parseList: list } = require('./portable');
 
 // The packages a site switches on (D15), and the one it can't: internal
 // apps are By Default OS's own plumbing (D2), never installable elsewhere.
@@ -117,28 +121,6 @@ const GATE_FILES = Object.freeze({
   pages: Object.freeze(['assets/js/auth-login.js', 'assets/js/access-support-form.js']),
 });
 const LIST_KEYS = ['needs', 'scripts', 'styles', 'files'];
-
-/**
- * The frontmatter's flat `key: value` lines, as the generator reads them
- * (generate-docs.js parseFrontmatter), so a test can load the registry
- * without the generator.
- */
-function readFrontmatter(content) {
-  const match = String(content).match(/^---\s*\n([\s\S]*?)\n---\s*\n/);
-  const frontmatter = {};
-  if (!match) return { frontmatter };
-  for (const line of match[1].split('\n')) {
-    const colon = line.indexOf(':');
-    if (colon > 0) frontmatter[line.slice(0, colon).trim()] = line.slice(colon + 1).trim().replace(/^["']|["']$/g, '');
-  }
-  return { frontmatter };
-}
-
-/** "a, b" → ["a", "b"]; an absent key is an empty list. */
-function list(value) {
-  if (value === undefined || value === null || value === '') return [];
-  return String(value).split(',').map((s) => s.trim()).filter(Boolean);
-}
 
 /**
  * Where the package keeps its apps and their files. Run from the engine's

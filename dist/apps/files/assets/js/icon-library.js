@@ -1,5 +1,7 @@
 /**
  * icon-library.js — Icon Library (browse, recolour, resize and export the icon set)
+ * Requires assets/js/color-core.js (window.bdColor) to load first, for contrast;
+ * the app manifest's tool-colour need brings it.
  *
  * Global page module, loaded once on every page like the other tool modules.
  * It self-registers for the initial load and for Barba's bd:after-nav event,
@@ -133,7 +135,8 @@
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function clamp(value, min, max) {
@@ -675,18 +678,16 @@
 
   // Relative luminance and contrast, the WCAG formulas. Here they answer one
   // question: can the reader see the icon on the stage it is drawn on.
+  // The arithmetic is color-core.js's (window.bdColor, loaded before this
+  // script); this reads the #rrggbb channels it takes.
   function luminance(hex) {
-    var channels = [1, 3, 5].map(function (index) {
-      var value = parseInt(hex.substr(index, 2), 16) / 255;
-      return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
-    });
-    return (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2]);
+    return window.bdColor.luminance([1, 3, 5].map(function (index) {
+      return parseInt(hex.substr(index, 2), 16);
+    }));
   }
 
   function contrast(a, b) {
-    var one = luminance(a);
-    var two = luminance(b);
-    return (Math.max(one, two) + 0.05) / (Math.min(one, two) + 0.05);
+    return window.bdColor.contrastRatio({ lum: luminance(a) }, { lum: luminance(b) });
   }
 
   // The stage follows the colour rather than asking about it: whichever of
@@ -1043,7 +1044,7 @@
   function buildColourControl() {
     colourCtl = window.ToolColour.create(el.colourMount, {
       id: 'il-colour',
-      label: L('Colour'),
+      label: L('Color'),
       value: params.colour,
       onChange: handleColourChange
     });

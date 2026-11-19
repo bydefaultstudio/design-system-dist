@@ -1,6 +1,6 @@
 ---
 title: "Icon Library"
-description: "Search the brand icon set, set a colour and size, then copy or download any icon as SVG, PNG, HTML, CSS or its data-icon key."
+description: "Search the brand icon set, set a color and size, then copy or download any icon as SVG, PNG, HTML, CSS or its data-icon key."
 author: "Studio"
 section: "Tools"
 layer: "app"

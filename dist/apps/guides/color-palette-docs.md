@@ -1,6 +1,6 @@
 ---
-title: "Colour Palette"
-subtitle: "Every brand colour, with its hex and its token"
+title: "Color Palette"
+subtitle: "Every brand color, with its hex and its token"
 description: "The brand palette at full size, read from the live theme: the nine hues at four steps, the off tones and the neutral ramp, each one click from its hex or its token."
 author: "Studio"
 section: "Tools"
@@ -14,18 +14,18 @@ actionUrl: "color-palette.html"
 actionLabel: "Open Tool"
 ---
 
-The Colour Palette shows every colour in the brand palette at full size, edge to edge, with its name and its hex. Each colour copies as a hex value or as its token.
+The Color Palette shows every color in the brand palette at full size, edge to edge, with its name and its hex. Each color copies as a hex value or as its token.
 
-To check two of these colours against each other, open [Colour Pairing](/tools/color-pairing-docs.html).
+To check two of these colors against each other, open [Color Pairing](/tools/color-pairing-docs.html).
 
 ---
 
 ## What it shows
 
-The tool reads the palette from the page it runs on, so a brand that overrides the ramps in its theme sees its own colours, and the hex under each name is the value the theme actually resolves to, not a copy that can drift.
+The tool reads the palette from the page it runs on, so a brand that overrides the ramps in its theme sees its own colors, and the hex under each name is the value the theme actually resolves to, not a copy that can drift.
 
 - **The hues.** Green, aqua, blue, purple, pink, red, peach, yellow and brown, a column each, at four steps from the top: `--<hue>-dark`, `--<hue>`, `--<hue>-light`, `--<hue>-lighter`
-- **The off tones.** `--off-black` and `--off-white`, the colours the brand sets type in
+- **The off tones.** `--off-black` and `--off-white`, the colors the brand sets type in
 - **The neutrals.** The full ramp, `--neutral-50` to `--neutral-990`, labelled by step
 
 Each tile's text is set in the far end of its own hue — the lightest step on a dark tile, the darkest on a light one — when that clears AA 4.5:1 against the tile. When it does not, and on the off tones and neutrals, the text is off black or off white, whichever measures higher.
@@ -45,13 +45,13 @@ The control in the bar picks how much of the palette is on screen.
 - **Tints & Shades.** Every hue at its four steps, the same grid as All, with the rows taking the whole window
 - **Neutrals.** The neutral ramp on its own, `--neutral-50` to `--neutral-990`
 
-In Primary the hues are columns side by side, and the two off tones split a band beneath them that takes a fifth of the height. On a phone every colour stacks full width. In Neutrals every step is a band the full width of the page, stacked lightest to darkest on every screen, and the bands share the window's height. The view is kept in the address, so **Copy link** shares the view on screen.
+In Primary the hues are columns side by side, and the two off tones split a band beneath them that takes a fifth of the height. On a phone every color stacks full width. In Neutrals every step is a band the full width of the page, stacked lightest to darkest on every screen, and the bands share the window's height. The view is kept in the address, so **Copy link** shares the view on screen.
 
-Every view reads the palette from the theme, so a brand's own colours show in each. In Primary and Neutrals the copy actions sit in the middle of each tile.
+Every view reads the palette from the theme, so a brand's own colors show in each. In Primary and Neutrals the copy actions sit in the middle of each tile.
 
 ---
 
-## Copying a colour
+## Copying a color
 
 Point at a tile, or tab to it, and two actions appear at its foot:
 
@@ -64,7 +64,7 @@ On a touch screen both are always showing. The label changes to Copied for a mom
 
 ## Primitives and production
 
-Every colour here is a palette primitive, the layer a brand tunes. In production, components take semantic tokens, which point at these. Reach for the primitive in a theme file or an experiment; reach for the semantic token in a component. See [Colour](/foundations/color.html) for the mapping.
+Every color here is a palette primitive, the layer a brand tunes. In production, components take semantic tokens, which point at these. Reach for the primitive in a theme file or an experiment; reach for the semantic token in a component. See [Color](/foundations/color.html) for the mapping.
 
 ---
 

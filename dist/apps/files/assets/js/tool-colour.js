@@ -74,7 +74,7 @@
     return base.concat(ordered);
   }
 
-  var ERROR_MESSAGE = L('Use a hex colour, like 1F1F1F or #1F1F1F.');
+  var ERROR_MESSAGE = L('Use a hex color, like 1F1F1F or #1F1F1F.');
 
   // The brand copy and check icons, inline: the hex field's copy button is
   // built here, after docgen has expanded the page's {{icon:…}} tokens.

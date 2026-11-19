@@ -16,7 +16,7 @@
 
         The sections are the tools' shared three (cms/tool-canvas.md, The
         export panel). Which logo — the variation — is Settings. How it looks —
-        the colour — is Style. What the FILE is — the format, its width in
+        the color — is Style. What the FILE is — the format, its width in
         pixels, its name and flatten — is Export: the width only scales the
         file, so it sits beside the format it matters to. The two verbs that
         make it are not in a section: they are .tool-actions, pinned, so they
@@ -27,7 +27,7 @@
 
         Every choice is a visible option, and every one is native radios, so
         the arrow keys and the group names come from the component. Variation
-        and colour are chips (cms/chip.md), built from the logo manifest at
+        and color are chips (cms/chip.md), built from the logo manifest at
         init. The width presets
         are a segmented control (cms/form.md, faded variant), authored here.
       -->
@@ -64,7 +64,7 @@
 
         <!--
           The preview is the file. The frame is the artwork at true pixel
-          size, scaled down to fit. Its ground follows the colour — a light
+          size, scaled down to fit. Its ground follows the color — a light
           ground behind a dark logo, a dark one behind a light logo
           (data-logo-ground) — or is the checkerboard (data-ground="checker")
           while Transparent is on. While JPG is chosen it is the file's real
@@ -73,13 +73,13 @@
 
           The logo is centred on the band, with something in each top
           corner and the scale note at its foot. Top left, the readout: what
-          the file is — variation, colour, size. Bottom centre, whether the
+          the file is — variation, color, size. Bottom centre, whether the
           frame shows it at that size. The script rewrites both on every
           render, so neither is a live region.
           Top right, the Preview group: two switches that change what the
           preview shows and nothing in any file, in the band rather than a
           panel because they act on the band. All three take the ink that
-          reads on the ground (data-preview-ink, or the logo's own colour
+          reads on the ground (data-preview-ink, or the logo's own color
           where it clears AA), which the script sets on the band. The layout
           and the ink are the canvas's (tools.css, Preview corners).
         -->
@@ -127,7 +127,7 @@
               </div>
             </div>
             <!-- The brand's clear-space rule drawn round the logo, in the
-                 logo's colour — a usage guide, not part of the file. -->
+                 logo's color — a usage guide, not part of the file. -->
             <div class="tool-option">
               <div class="form-toggle" data-variant="mono">
                 <input type="checkbox" id="lt-safezone" role="switch" aria-describedby="lt-safezone-note">
@@ -196,8 +196,8 @@
             <div class="accordion-inner">
             <div class="tool-panel-body">
 
-              <!-- The tools' shared colour control (tool-colour.js): the
-                   manifest's colourways as Pairs, then Foreground and
+              <!-- The tools' shared color control (tool-colour.js): the
+                   manifest's colorways as Pairs, then Foreground and
                    Background. Background's None, the default, is a
                    transparent file. -->
               <div id="lt-pairs"></div>
@@ -234,7 +234,7 @@
               </fieldset>
 
               <!-- Whether Style's background goes into the file. Off, the
-                   background only colours the preview and SVG and PNG stay
+                   background only colors the preview and SVG and PNG stay
                    transparent. Disabled, with the reason in its note, under
                    None (nothing to include) and under JPG (always included,
                    because a JPG has no alpha). The note is an

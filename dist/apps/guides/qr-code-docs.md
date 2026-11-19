@@ -1,7 +1,7 @@
 ---
 title: "QR Code Generator"
 subtitle: "Brand the code without breaking the scan"
-description: "Generate QR codes for campaigns, packaging and brand assets, as PNG or SVG. Set error correction, quiet zone, module shape and colour, and export at any size."
+description: "Generate QR codes for campaigns, packaging and brand assets, as PNG or SVG. Set error correction, quiet zone, module shape and color, and export at any size."
 author: "Studio"
 section: "Tools"
 layer: "app"
@@ -14,7 +14,7 @@ actionUrl: "qr-code.html"
 actionLabel: "Open Tool"
 ---
 
-A QR code is a print asset like any other, and it arrives on packaging, in out-of-home and on stands where nobody can fix it afterwards. The tool generates one in the brand's colours and exports it as PNG or SVG, with the settings that decide whether it still scans kept in front of you rather than buried in a library call.
+A QR code is a print asset like any other, and it arrives on packaging, in out-of-home and on stands where nobody can fix it afterwards. The tool generates one in the brand's colors and exports it as PNG or SVG, with the settings that decide whether it still scans kept in front of you rather than buried in a library call.
 
 Everything runs in the browser. The text never leaves the page.
 
@@ -24,7 +24,7 @@ Everything runs in the browser. The text never leaves the page.
 
 The tool is three parts: the code on the preview, the controls in three sections on the right — **Settings**, what the code carries and how it is built; **Style**, how it looks; **Export**, the file's format, size and name — and Download and Copy pinned under them. The button in the preview's bottom-right corner folds the sections away so the code takes the whole canvas. On a phone the sections sit under the preview.
 
-The field at the top of Settings takes anything a scanner can carry — a campaign URL, a plain string, a phone number. The preview repaints as you type, a moment behind the keystroke. While the field is empty it shows a sample — the brand's own address, drawn with your current settings — so colour, shape and logo read before you type anything. The sample never exports and is never scan-checked. Download and Copy stay disabled until there is something to encode.
+The field at the top of Settings takes anything a scanner can carry — a campaign URL, a plain string, a phone number. The preview repaints as you type, a moment behind the keystroke. While the field is empty it shows a sample — the brand's own address, drawn with your current settings — so color, shape and logo read before you type anything. The sample never exports and is never scan-checked. Download and Copy stay disabled until there is something to encode.
 
 **Content type** above the field decides how it is read. **URL**, the default, adds `https://` when the address has no scheme, so `example.com` scans as a link a phone offers to open rather than as a line of text; a scheme you type yourself — `http:`, `mailto:`, `tel:` — is left alone. **Text** encodes the field exactly as typed. Switching keeps what is in the field, and the field's label and the note under it follow the choice.
 
@@ -57,7 +57,7 @@ Turning the logo on locks the level to H: all four levels go grey, and the note 
 
 For SVG the number matters less than it looks — the file carries `width`, `height` and a matching `viewBox`, so it scales to any final dimension without loss. Set the size for PNG, where the pixels are the asset.
 
-**Quiet zone**, in Settings, is the empty margin around the grid, measured in modules, from 0 to 8. It defaults to 2, which suits a code placed in a layout that already keeps clear space around it. The QR specification asks for 4, and quiet zone is the setting most often lost in layout. Scanners use that margin to find the code's edges; a code butted against a coloured panel or a photograph reads slowly or not at all. The tool will take it down to 0 without objecting. Raise it to 4 when the code sits on a busy or coloured surface, and let the design hold the space rather than trimming it in the export.
+**Quiet zone**, in Settings, is the empty margin around the grid, measured in modules, from 0 to 8. It defaults to 2, which suits a code placed in a layout that already keeps clear space around it. The QR specification asks for 4, and quiet zone is the setting most often lost in layout. Scanners use that margin to find the code's edges; a code butted against a colored panel or a photograph reads slowly or not at all. The tool will take it down to 0 without objecting. Raise it to 4 when the code sits on a busy or colored surface, and let the design hold the space rather than trimming it in the export.
 
 ---
 
@@ -69,23 +69,23 @@ Rounding is a brand decision with a scanning cost: the rounder the module, the l
 
 ---
 
-## Colour
+## Color
 
-Colour is in **Style**, as **Foreground** (the modules) and **Background**. Each is the brand palette as chips, with a picker and a hex field under it that always show the colour chosen. A chip fills the field. A hex typed into the field that is not a palette colour leaves every chip unchecked. The field takes six hex digits, with or without a leading `#`, in either case. It applies when you leave it or press Enter, and the picker applies as you drag it.
+Color is in **Style**, as **Foreground** (the modules) and **Background**. Each is the brand palette as chips, with a picker and a hex field under it that always show the color chosen. A chip fills the field. A hex typed into the field that is not a palette color leaves every chip unchecked. The field takes six hex digits, with or without a leading `#`, in either case. It applies when you leave it or press Enter, and the picker applies as you drag it.
 
-A value that is not six hex digits is not applied: the field turns red, a message under it says what it takes, and the code keeps the last valid colour until you put a valid hex back. Three-digit shorthand counts as invalid here, so write `#FF0000`, not `#F00`.
+A value that is not six hex digits is not applied: the field turns red, a message under it says what it takes, and the code keeps the last valid color until you put a valid hex back. Three-digit shorthand counts as invalid here, so write `#FF0000`, not `#F00`.
 
-**Pairs**, above the two, sets both at once. Four combinations that scan well come first — black on white, off black on off white, blue on white, and brown dark on brown lighter — then the brand's recommended pairings, the same list [Colour Pairing](/tools/color-pairing.html) offers. Point at a chip to read its name; a pair under 4.5:1 is named low contrast. A pair stays checked while both colours match it. The line under the colours gives the pair's contrast and whether it clears 4.5:1.
+**Pairs**, above the two, sets both at once. Four combinations that scan well come first — black on white, off black on off white, blue on white, and brown dark on brown lighter — then the brand's recommended pairings, the same list [Color Pairing](/tools/color-pairing.html) offers. Point at a chip to read its name; a pair under 4.5:1 is named low contrast. A pair stays checked while both colors match it. The line under the colors gives the pair's contrast and whether it clears 4.5:1.
 
-**None**, the checkerboard chip at the start of Background, drops the background from the file: the PNG exports with an alpha channel, and the SVG omits its background rectangle. Turn on **Transparent** on the preview to see it on a checkerboard. A code with no background inherits whatever sits behind it in the layout, so the contrast question moves out of this tool and into the design — check the colour you are placing it on.
+**None**, the checkerboard chip at the start of Background, drops the background from the file: the PNG exports with an alpha channel, and the SVG omits its background rectangle. Turn on **Transparent** on the preview to see it on a checkerboard. A code with no background inherits whatever sits behind it in the layout, so the contrast question moves out of this tool and into the design — check the color you are placing it on.
 
-Contrast is what a scanner reads, and the direction is not symmetric: the foreground must be darker than the background. A light code on a dark ground fails on many scanners even at high contrast, so keep the dark value in Foreground. To check the colours against the layout the code sits in, use [Colour Pairing](/tools/color-pairing.html).
+Contrast is what a scanner reads, and the direction is not symmetric: the foreground must be darker than the background. A light code on a dark ground fails on many scanners even at high contrast, so keep the dark value in Foreground. To check the colors against the layout the code sits in, use [Color Pairing](/tools/color-pairing.html).
 
 ---
 
 ## Logo
 
-**Logo**, the switch in Style, puts the brand's avatar in the middle of the code, drawn in the foreground colour. The mark comes from the Logo Tool's brand manifest, so a deployment for another brand shows that brand's avatar with no change to the tool; if the manifest carries no avatar, the switch is disabled.
+**Logo**, the switch in Style, puts the brand's avatar in the middle of the code, drawn in the foreground color. The mark comes from the Logo Tool's brand manifest, so a deployment for another brand shows that brand's avatar with no change to the tool; if the manifest carries no avatar, the switch is disabled.
 
 The logo always takes 22% of the code's width. It is a proportion rather than a pixel size, so the logo holds its place at any export size. The tool turns that share into whole modules: it takes the nearest odd number of modules, so the logo sits exactly on the grid's centre with no module cut in half, then clears one empty module around it so the mark never touches the code's own dots. On short content it also raises the grid to at least 29 modules across (version 3), so the cleared square never reaches the corner patterns or the format strips beside them. From version 7 up — long URLs, roughly 45 modules and more — a small alignment square sits at the exact centre, and the logo covers it. Scanners locate the code without it, and the scan check reports the case where one does not.
 
@@ -139,7 +139,7 @@ The ground behind the code is the light off-white while the code has a backgroun
 
 ## Starting over
 
-The reset button beside **Settings** puts error correction, module radius and quiet zone back to the defaults and keeps what you typed. The one beside **Style** puts back the colours, the background and the logo. Each is greyed out while its section is already at the defaults. **Reset all** in the bar's ⋯ menu clears everything: the field, the content type, both sections, the format, the size and the preview's switches.
+The reset button beside **Settings** puts error correction, module radius and quiet zone back to the defaults and keeps what you typed. The one beside **Style** puts back the colors, the background and the logo. Each is greyed out while its section is already at the defaults. **Reset all** in the bar's ⋯ menu clears everything: the field, the content type, both sections, the format, the size and the preview's switches.
 
 ---
 

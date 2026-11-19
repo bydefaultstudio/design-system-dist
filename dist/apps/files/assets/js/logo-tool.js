@@ -1,5 +1,7 @@
 /**
  * logo-tool.js — Logo Tool (self-serve logo exporter with the brand rules built in)
+ * Requires assets/js/color-core.js (window.bdColor) to load first, for contrast;
+ * the app manifest's tool-colour need brings it.
  *
  * Global page module. Loaded once on every page (same as calculator.js, svg-cleaner.js,
  * etc.) and started by itself on initial load AND after every Barba navigation via
@@ -221,7 +223,7 @@
       return 'This brand has not published a logo manifest yet. Add one to turn on self-serve logo exports.';
     }
     if (!M.variants || !M.variants.length || !M.colours || !M.colours.length) {
-      return L('This brand’s logo manifest has no variations or no colours yet.');
+      return L('This brand’s logo manifest has no variations or no colors yet.');
     }
     var badVariant = M.variants.filter(function (v) { return !v || !v.id || !v.markup; })[0];
     if (badVariant) {
@@ -242,7 +244,7 @@
       return !c || !c.id || !isHex6(c.value) || !c.bg || !isHex6(c.bg.value);
     })[0];
     if (badColour) {
-      return L('A colour in this brand’s manifest needs a six-digit hex value and a background colour in the same form.');
+      return L('A color in this brand’s manifest needs a six-digit hex value and a background color in the same form.');
     }
     return null;
   }
@@ -440,22 +442,20 @@
   }
 
   //
-  //------- CONTRAST — WCAG 2 relative luminance, no dependency -------//
+  //------- CONTRAST — WCAG 2 relative luminance, from color-core.js -------//
   //
 
   // Expects six-digit #rrggbb, enforced by manifestProblem() before this ever runs.
+  // The arithmetic is color-core.js's (window.bdColor, loaded before this
+  // script); this reads the #rrggbb channels it takes.
   function luminance(hex) {
-    var channels = [1, 3, 5].map(function (i) {
-      var v = parseInt(hex.slice(i, i + 2), 16) / 255;
-      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-    });
-    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    return window.bdColor.luminance([1, 3, 5].map(function (i) {
+      return parseInt(hex.slice(i, i + 2), 16);
+    }));
   }
 
   function contrastRatio(a, b) {
-    var l1 = luminance(a);
-    var l2 = luminance(b);
-    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    return window.bdColor.contrastRatio({ lum: luminance(a) }, { lum: luminance(b) });
   }
 
   //
@@ -841,7 +841,8 @@
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   //
@@ -1535,7 +1536,7 @@
       M = null;
       releaseStage();
       resolveElements(root);
-      showEmptyState(L('This brand’s logo manifest could not be read. Check its variations and colours.'));
+      showEmptyState(L('This brand’s logo manifest could not be read. Check its variations and colors.'));
       return;
     }
 

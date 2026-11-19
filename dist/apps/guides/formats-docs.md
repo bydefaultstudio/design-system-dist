@@ -50,13 +50,13 @@ Each switch shows or hides one group of the format's drawing. The layers are the
 | Layer | What it shows |
 |---|---|
 | Measurements | How far from each edge to keep clear, in pixels: one dimension line per distance, with the safe area's size in its corner. Where the distance is measured from a crop, the crop and the distance from it are two lines |
-| Profile | How a circle format looks in its circle: the corners are masked out in the page's background colour |
+| Profile | How a circle format looks in its circle: the corners are masked out in the page's background color |
 | Profile grid | How the file looks as a tile on a profile, cropped to the grid's 3:4 tile. Safe area switches off while it shows |
 | App screen | What the app shows on top while the post plays or opens, with anything the screen trims masked out |
 | Safe area | Where text and logos are seen in every view: the file is shaded green outside it, as the Figma templates draw it. A green cross marks its centre when it sits off-centre |
 | Artwork | The default artwork, as it downloads |
 
-App screen and Profile grid appear on a format once its interface drawing is on the site; every Instagram format has them where the platform shows one. The three views are one at a time: turning one on turns the others off. Each crops the drawing as that view crops the post, masking what is lost in the page's background colour, so what is left is what a viewer sees.
+App screen and Profile grid appear on a format once its interface drawing is on the site; every Instagram format has them where the platform shows one. The three views are one at a time: turning one on turns the others off. Each crops the drawing as that view crops the post, masking what is lost in the page's background color, so what is left is what a viewer sees.
 
 The info button beside each layer's name opens a short note on what that layer tells you, in a panel under the button that floats over what is below, so the switches never move. It opens on a click, not on hover, so it works on a phone too, and Escape or a click elsewhere closes it. Reset Layers, beside the Layers heading, puts the switches back as they started.
 
@@ -70,7 +70,7 @@ Where both exist an organic format and its ad can differ, so they are two format
 
 Download PNG saves the format's default artwork at its full size: the format's grid with the brand's logo, the starting point a designer replaces. It is a public file under `/assets/`, so it needs no sign-in.
 
-The profile picture's PNG is the logo kit's avatar mark, centred inside the safe area. For the mark at another size or colour, use the Logo Tool.
+The profile picture's PNG is the logo kit's avatar mark, centred inside the safe area. For the mark at another size or color, use the Logo Tool.
 
 ## A format on any page
 

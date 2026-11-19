@@ -1,18 +1,16 @@
-/* @bydefaultstudio/design-system v8.2.0 */
+/* @bydefaultstudio/design-system v8.3.0 */
 /**
  * image.js — Image placeholder generator, /image/*.
  *
  * Ported from the Netlify function of the same name (tag `netlify-2.1.1`).
  * lib/validate.js and lib/generate.js are pure and shared with
- * test/placeholder-run.js; lib/logo.js prepares the brand mark that
- * generate() places. The mark itself is fetched here, once per isolate, from
- * the ASSETS binding — the only I/O in the pipeline, and the only step that
+ * test/placeholder-run.js, which also imports parseImageUrl from here;
+ * lib/logo.js prepares the brand mark that generate() places. The mark itself
+ * is fetched here, once per isolate, from the ASSETS binding — the only I/O in the pipeline, and the only step that
  * knows the file exists.
  *
- * lib/parse.js is NOT reused: it was shaped by the Netlify request model rather
- * than app logic — it relies on the caller having already URL-decoded the query
- * string — and it stays only for test/placeholder-run.js.
- * The equivalent is re-derived below against the Workers URL API.
+ * The Netlify-era lib/parse.js is gone: it relied on the caller having already
+ * URL-decoded the query string. parseImageUrl below reads the Workers URL API.
  */
 import validate from './image-lib/validate.cjs';
 import generate from './image-lib/generate.cjs';
@@ -23,7 +21,7 @@ import logoLib from './image-lib/logo.cjs';
  * Path shapes: /image/400x300, /image/600x400/orange/white, /image/300
  * Query: ?text= (absent = no text, blank = the dimensions), ?logo=0 hides the mark.
  */
-function parseImageUrl(url) {
+export function parseImageUrl(url) {
   const cleaned = url.pathname
     .replace(/^\/image\/?/, '')
     .replace(/^\/+/, '')

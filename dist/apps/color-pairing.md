@@ -1,6 +1,6 @@
 ---
-title: "Colour Pairing"
-description: "Measure any two colours from the palette against the WCAG contrast thresholds. Pick a text colour, pick a background, see what clears AA and AAA."
+title: "Color Pairing"
+description: "Measure any two colors from the palette against the WCAG contrast thresholds. Pick a text color, pick a background, see what clears AA and AAA."
 author: "Studio"
 section: "Tools"
 layer: "app"

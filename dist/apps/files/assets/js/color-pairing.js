@@ -948,7 +948,7 @@
     if (Object.keys(scan.map).length < 2) {
       showEmpty(
         'This brand defines fewer than two of the palette tokens, so there is nothing to pair. Set the palette in the brand theme, then reload this page.',
-        { before: L('Every colour it does define is on the'), href: '/tools/color-palette.html', text: L('Colour Palette'), after: '.' });
+        { before: L('Every color it does define is on the'), href: '/tools/color-palette.html', text: L('Color Palette'), after: '.' });
       console.warn('[Colour Pairing] init: fewer than two palette tokens resolved');
       return;
     }

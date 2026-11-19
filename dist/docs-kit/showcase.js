@@ -8,7 +8,7 @@
  * and the edit view's inlined manifest.
  *
  * The checks are written out here rather than run through a JSON Schema
- * library: the generator installs only `marked` (cms/generator/package.json),
+ * library: the generator depends only on `marked` (in the root package.json),
  * and a build that resolves a validator from the repo root breaks the day the
  * root install is skipped. scripts/verify-showcase.mjs runs the same assets
  * through the schema itself with ajv in `npm test`, so the two cannot drift

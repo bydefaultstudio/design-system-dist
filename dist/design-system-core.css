@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.2.0 */
+/* @bydefaultstudio/design-system v8.3.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK: CORE
    The foundation, type, buttons, basic forms and simple components.
@@ -33,6 +33,14 @@
   --font-script:    cursive;
   --font-editorial: var(--font-secondary);
   --font-code:      var(--font-quaternary);
+
+  /* Accent words in headings: an emphasised word (<em>, <i>) inside h1 to h6
+     switches to this face and style. The engine ships the title face in
+     italic, so emphasis reads as plain italic; a brand points --font-accent
+     at its accent face (By Default: Bugrino). No weight is set: the face's
+     own nearest weight is used, so a bold-only accent face never fakes one. */
+  --font-accent:       var(--title-family);
+  --font-accent-style: italic;
 
   /* Greeking slots: a face that renders text unreadable, so a work-in-progress
      layout can be judged on structure rather than copy. Neutral here, like
@@ -1778,12 +1786,16 @@ font-family: var(--font-secondary);
 /* Figures of one width, so a column of numbers lines up digit for digit. */
 .tabular-nums { font-variant-numeric: tabular-nums; }
 
-/* -- Eyebrow text -- */
+/* -- Eyebrow text --
+ * The label role in uppercase: 12px from 960px up, 14px below, medium
+ * weight. It reads the --label-* tokens, so it sits quietly above a 20px
+ * card title instead of competing with it, and a theme retunes eyebrows and
+ * labels together. */
 .eyebrow {
-  font-size: var(--font-xs);
-  line-height: var(--line-height-m);
-  font-weight: var(--font-weight-regular);
-  letter-spacing: var(--letter-spacing-l);
+  font-size: var(--label-size);
+  line-height: var(--label-leading);
+  font-weight: var(--label-weight);
+  letter-spacing: var(--label-tracking);
   text-transform: uppercase;
 }
 
@@ -2425,6 +2437,12 @@ h6 {
 
 }
 
+/* An emphasised word in a heading takes the accent face (see --font-accent) */
+:is(h1, h2, h3, h4, h5, h6) :is(em, i) {
+  font-family: var(--font-accent);
+  font-style: var(--font-accent-style);
+}
+
 /* Editorial scale. Each level is a foundation --font-* primitive, stepped
    at the 959px breakpoint rather than clamp() so type tracks browser zoom
    and user font-size (WCAG 1.4.4). The ladder tops out at 36px — roughly
@@ -2560,19 +2578,56 @@ ol ol ol {
   list-style-type: lower-alpha;
 }
 
-/* GFM task lists (- [ ]) render a checkbox inside the list item. Drop the
-   disc bullet so the checkbox is the only marker, and pull the list flush
-   since there's no bullet to indent against. */
-li:has(> input[type="checkbox"]) {
-  list-style: none;
-}
+/* GFM task lists (- [ ]) render a disabled checkbox as the first child of
+   the list item. The checkbox is the marker, so the bullet goes and the list
+   sits flush. Each item is a hanging indent: the box hangs in the item's
+   inline-start padding, sized to the text (1em) and centred on the first
+   line (1lh), so a wrapped line lines up with the text, not under the box.
+   The gap is --check-gap, the same box-to-label gap as a form checkbox.
+   Keyed on [disabled]:first-child, which is what the markdown renderer
+   emits, so a real form checkbox inside a list item is left alone. The list
+   is read-only, not unavailable, so it drops the disabled grey and keeps the
+   box's own colours; it stays disabled to assistive tech. The tick is 0.7em,
+   the small checkbox's tick-to-box ratio. Behind @supports so a browser
+   without :has() keeps the old bullet-and-inline-box rather than an
+   absolute box with no positioned item to hang from. */
+@supports selector(:has(*)) {
+  li:has(> input[type="checkbox"][disabled]:first-child) {
+    position: relative;
+    list-style: none;
+    padding-inline-start: calc(1em + var(--check-gap));
+  }
 
-ul:has(> li > input[type="checkbox"]) {
-  padding-left: 0;
-}
+  ul:has(> li > input[type="checkbox"][disabled]:first-child) {
+    padding-inline-start: 0;
+  }
 
-li > input[type="checkbox"] {
-  margin-right: var(--space-xs);
+  li > input[type="checkbox"][disabled]:first-child {
+    font: inherit;               /* so 1em and 1lh are the item's text, not the input's */
+    --check-size: 1em;
+    --check-mark-size: 0.7em;
+    position: absolute;
+    inset-inline-start: 0;
+    top: calc((1lh - 1em) / 2);
+    background-color: var(--checkbox-background);
+    border-color: var(--checkbox-border);
+    opacity: 1;
+    cursor: default;
+  }
+
+  li > input[type="checkbox"][disabled]:first-child:checked {
+    background-color: var(--checkbox-selected);
+    border-color: var(--checkbox-selected);
+  }
+
+  /* High Contrast: the rule above outranks the checkbox's forced-colours
+     rule, so a ticked item takes the system Highlight pair here too. */
+  @media (forced-colors: active) {
+    li > input[type="checkbox"][disabled]:first-child:checked {
+      background-color: Highlight;
+      border-color: Highlight;
+    }
+  }
 }
 
 /* List items with paragraphs */
@@ -2591,7 +2646,7 @@ blockquote {
   margin: var(--space-xl) 0;
   padding-left: var(--space-xl);
   /* border-left: var(--border-m) solid var(--border-secondary); */
-  font-family: var(--font-secondary);
+  font-family: var(--font-editorial);
   color: var(--text-primary);
   font-size: calc(var(--body-size) + 0.5rem);
   font-style: italic;
@@ -2607,7 +2662,7 @@ blockquote::before {
   transform: translateX(-100%);
   font-size: 2em;            
   line-height: 1;
-  font-family: var(--font-secondary);
+  font-family: var(--font-editorial);
 }
 
 blockquote p {
@@ -2630,6 +2685,15 @@ img {
   border-style: none;
   max-width: 100%;
   box-sizing: content-box;
+}
+
+/* An image sized by both attributes keeps its proportions once max-width
+   shrinks it; without height: auto it keeps the height attribute and
+   stretches. The attributes still reserve the space before load. Only
+   images with both, so one sized by height alone keeps that height. :where()
+   holds the weight at a type selector, so any component's height wins. */
+img:where([width][height]) {
+  height: auto;
 }
 
 /* -- Definition lists -- */
@@ -4331,6 +4395,23 @@ td .svg-icn {
   content: "";
   flex: 1;
   border-top: var(--divider-thickness) solid var(--divider-color);
+}
+
+/* -- Eyebrow divider --
+   A labelled divider whose label is an eyebrow at the start of the line
+   ("PART 2", then the rule): the labelled-rule section break. Composes with
+   .divider--labelled; drops the leading line and reads the label role, so a
+   theme retunes it with every other eyebrow. */
+.divider--eyebrow {
+  font-size: var(--label-size);
+  line-height: var(--label-leading);
+  font-weight: var(--label-weight);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.divider--eyebrow::before {
+  content: none;
 }
 
 hr {

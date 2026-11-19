@@ -45,7 +45,7 @@ The bottom row of the layer list is the canvas. Select it to set the frame.
 | Shape | Rectangle, circle, rounded or app icon |
 | Show | Shade what the shape cuts away, shade what stays, draw its outline |
 | Corner | For a rounded shape: the corner, in % of the shorter side |
-| Background | **None**, the checkerboard chip, for a transparent canvas, then a colour from the palette, or a hex |
+| Background | **None**, the checkerboard chip, for a transparent canvas, then a color from the palette, or a hex |
 
 The shape clips the specimen, the background and any image under the specimen. Your rules stay visible past it, so a clear space can reach beyond a circle avatar's edge. Choosing a shape turns its outline on, so a clip is never silent.
 
@@ -74,7 +74,7 @@ Select it to place it: **Fit** or **Fill**, a **Size**, an **Offset** across and
 | Type | Presets | What it is |
 |---|---|---|
 | Zone | Padding, Live area, Clear space | A rule measured from a box: where things may and may not go |
-| Shape | Tap area, Coloured area | A rule placed where you put it |
+| Shape | Tap area, Colored area | A rule placed where you put it |
 | Guide | Centre lines, Diagonals, Thirds, Guide line, Keyline circle, Keyline rectangle | Construction: the lines the next piece is built on |
 | Grid | Cell grid, X grid, Columns, Rows | Construction: cells, columns or rows |
 | Image | Platform UI, Instagram Reels UI | A picture, under the specimen to check against or over it as a rule |
@@ -85,15 +85,15 @@ Safe area and the unit and percent grids are presets the templates use; Start fr
 
 **A zone follows its box.** Padding sits inside the canvas; clear space sits outside the specimen. Resize either and the zone moves with it.
 
-**A shape stays where you put it.** Use one for a tap target, the slot an object sits in, or a coloured area. Set its position and size, and whether it draws as an outline, a fill or both.
+**A shape stays where you put it.** Use one for a tap target, the slot an object sits in, or a colored area. Set its position and size, and whether it draws as an outline, a fill or both.
 
 **An image takes its role from where it sits.** Under the specimen it is something to check against; over it, an overlay such as the Instagram Reels interface.
 
-Every drawn layer has the same **appearance**: **Draw** (outline, fill or both, where there is an area to fill), then the outline and the fill, each with its own settings. The outline has its **Line**, solid or dashed, its **Weight** in screen pixels, **Outline opacity** and **Outline colour**; the fill has **Fill opacity** and **Fill colour**. Drawn as both, a zone or a shape can have a dark edge round a pale area. Only the paints the draw uses show: a fill alone has no outline to style, an outline alone no fill. A measure draws lines only, so it has one **Opacity** and **Colour**.
+Every drawn layer has the same **appearance**: **Draw** (outline, fill or both, where there is an area to fill), then the outline and the fill, each with its own settings. The outline has its **Line**, solid or dashed, its **Weight** in screen pixels, **Outline opacity** and **Outline color**; the fill has **Fill opacity** and **Fill color**. Drawn as both, a zone or a shape can have a dark edge round a pale area. Only the paints the draw uses show: a fill alone has no outline to style, an outline alone no fill. A measure draws lines only, so it has one **Opacity** and **Color**.
 
-**A measure is one line, as the Figma Annotation kit's measure is.** **Direction** picks Width or Height; for both sides add a second measure, as the templates do in their *Canvas size* group. **Line at** places the line across the box: Top, Centre or Bottom for a width, Left, Centre or Right for a height. Beside a box it stands off it; on a zone it lies on the zone. **Value** puts the number on the line or beside it, Left, Right, Top or Bottom, growing away from the line. **Size** Large doubles the lines, ticks and value for a diagram seen small. **Value style** Filled is a pill in the measure's colour; Text is the number in that colour.
+**A measure is one line, as the Figma Annotation kit's measure is.** **Direction** picks Width or Height; for both sides add a second measure, as the templates do in their *Canvas size* group. **Line at** places the line across the box: Top, Centre or Bottom for a width, Left, Centre or Right for a height. Beside a box it stands off it; on a zone it lies on the zone. **Value** puts the number on the line or beside it, Left, Right, Top or Bottom, growing away from the line. **Size** Large doubles the lines, ticks and value for a diagram seen small. **Value style** Filled is a pill in the measure's color; Text is the number in that color.
 
-**Measures and notes take the kit's colours.** **Colour** offers Auto, the ground's ink, which flips on a dark ground, then Ink, White, Red, Blue, Pink and Green. A note with a colour becomes a pill. White is for a dark ground.
+**Measures and notes take the kit's colors.** **Color** offers Auto, the ground's ink, which flips on a dark ground, then Ink, White, Red, Blue, Pink and Green. A note with a color becomes a pill. White is for a dark ground.
 
 **A rule can carry where it came from.** A spec from a platform's published specs says who set each rule and when it was checked. An **approximate** rule, a measured estimate, draws with a finer dash and a fainter area, so it never looks more precise than it is. A **locked** rule is the platform's: its settings show but do not change, it cannot be deleted, and **Duplicate** makes a copy of your own.
 
@@ -110,7 +110,7 @@ A zone can carry a **marker**: a graphic drawn in its band, as wide as the band 
 | SVG | Any drawing you pick, sanitised before it is drawn |
 | Image | A PNG, JPG or WebP you pick, or a web address |
 
-**Rotation.** The default is −90°, a quarter turn left, so a *d* lies with its ascender on the ground. **Turns** keeps that ground on the zone's outer edge all the way round; **Fixed** turns them all alike. **Repeat** puts one marker on each edge or tiles them along it. The marker's colour and opacity are its own: by default the outline's colour at 60%, or the fill's when the zone is drawn as a fill alone.
+**Rotation.** The default is −90°, a quarter turn left, so a *d* lies with its ascender on the ground. **Turns** keeps that ground on the zone's outer edge all the way round; **Fixed** turns them all alike. **Repeat** puts one marker on each edge or tiles them along it. The marker's color and opacity are its own: by default the outline's color at 60%, or the fill's when the zone is drawn as a fill alone.
 
 ---
 

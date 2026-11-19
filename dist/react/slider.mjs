@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v8.2.0 */
+/* @bydefaultstudio/design-system v8.3.0 */
 /**
  * <Slider> — React adapter over the Slider markup contract (cms/slider.md).
  *

@@ -17,7 +17,7 @@
         The sections are the tools' shared three (the owner's grouping,
         2026-10-04; cms/tool-canvas.md). What the code carries and how it is
         built — content, error correction, module radius, quiet zone — is
-        Settings. How it looks — the colours (pairs, foreground, background
+        Settings. How it looks — the colors (pairs, foreground, background
         with None) and the logo — is Style. What the file is — its format, pixel size and name — is
         Export. The preview only shows: its two switches, Transparent and
         Fill, change what the band shows and nothing in any file (the owner's
@@ -67,7 +67,7 @@
           the scan result is the one status region, because it is the answer
           a reader waits for. At the foot, the scale note. Top right, the
           Preview group. All of it takes the ink that reads on the ground, the
-          code's own colour where it clears AA (tool-canvas.js, syncInk).
+          code's own color where it clears AA (tool-canvas.js, syncInk).
         -->
         <div class="tool-preview" data-size="tall" data-layout="corners" id="qr-code-preview">
           <div class="tool-stage">
@@ -212,7 +212,7 @@
                   <span class="tool-panel-title">Style</span>{{icon:chevron-down}}
                 </button>
               </h2>
-              <!-- Puts the colours, the background and the logo back to
+              <!-- Puts the colors, the background and the logo back to
                    their defaults. -->
               <button class="button tool-panel-action" data-variant="transparent" data-icon-only type="button" id="qr-code-style-reset" data-reset="style" aria-label="Reset Style" data-tooltip="Reset Style" data-tooltip-position="left" disabled>{{icon:refresh}}</button>
             </div>
@@ -220,7 +220,7 @@
             <div class="accordion-inner">
             <div class="tool-panel-body">
 
-              <!-- The brand's avatar at the centre, in the fill colour, at a
+              <!-- The brand's avatar at the centre, in the fill color, at a
                    fixed 22% of the code's width (qr-code.js LOGO_RATIO). On,
                    it locks error correction to H. Disabled, with the reason
                    in its note, when the brand manifest has no avatar. -->
@@ -232,9 +232,9 @@
                 <p class="form-hint" id="qr-code-logo-note">The brand avatar at the centre. Locks error correction to H.</p>
               </div>
 
-              <!-- The tools' one colour control (tool-colour.js; cms/tool-canvas.md,
-                   Colour), built into these mounts at init: a Pairs row that
-                   sets both colours, then Foreground and Background, each the
+              <!-- The tools' one color control (tool-colour.js; cms/tool-canvas.md,
+                   Color), built into these mounts at init: a Pairs row that
+                   sets both colors, then Foreground and Background, each the
                    brand palette with a picker and hex field. Background's
                    None chip is the file's: the PNG keeps an alpha channel and
                    the SVG drops its background rectangle. The preview's

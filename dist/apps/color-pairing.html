@@ -16,7 +16,7 @@
         The sections: Contrast first and pinned (cms/tool-canvas.md, Pinned
         section), because the verdict is the answer and has to stay in view
         while the reader works through Style below it. Style holds the
-        choice: the brand's pairs, then each side's colour grid, then Swap.
+        choice: the brand's pairs, then each side's color grid, then Swap.
         Export holds the CSS the pair is written as, and Copy CSS copies it.
         No Settings: the tool has nothing that is not the pair.
       -->
@@ -25,7 +25,7 @@
         <div class="bar" data-sticky="true">
           <div class="bar-container">
             <div class="bar-content">
-              <h1 class="tool-canvas-title" data-priority="pinned">Colour Pairing</h1>
+              <h1 class="tool-canvas-title" data-priority="pinned">Color Pairing</h1>
 
               <div class="bar-group" data-priority="menu">
                 <button type="button" class="dropdown-item js-copy-url">{{icon:link}}<span>Copy link</span></button>
@@ -55,11 +55,11 @@
           The preview: four cells, no gaps, the pair painted in a
           checkerboard. Top left and bottom right are the pair as chosen,
           text on background; top right and bottom left are the same pair
-          inverted, so every seam is a change of colour and no rule is needed
+          inverted, so every seam is a change of color and no rule is needed
           between them. Each cell is a specimen for a row of the checks: the
           title and the ampersand are large text, the body copy, the button's
           label and the paragraph are normal text, the icons are graphics.
-          The colours arrive as custom properties the script sets on the
+          The colors arrive as custom properties the script sets on the
           canvas (color-pairing.css, Bento).
 
           The specimens are for the eye: the bento is aria-hidden and holds
@@ -117,7 +117,7 @@
             Contrast: the ratio, then every check against its real
             threshold. Pinned, so it stays in view while Style scrolls under
             it. Each result cell carries the bar the script compares against
-            in data-min, and its stamp is a word and a mark, never colour
+            in data-min, and its stamp is a word and a mark, never color
             alone.
 
             The notes open in place, a row under the check they explain:
@@ -187,10 +187,10 @@
 
           <!--
             Style: the pair. The brand's pairs first, the quickest way to a
-            good one; then a grid per side, each one radiogroup of colour
+            good one; then a grid per side, each one radiogroup of color
             chips built by the script hue by hue, so the arrow keys walk one
             hue before the next, and laid out as a column per hue. Under each
-            grid, the picker and the hex field always show that side's colour
+            grid, the picker and the hex field always show that side's color
             and take one outside the palette: the picker applies as it moves,
             the field when it is left or Enter is pressed (the same as
             tool-colour.js). Swap is in the section's header.
@@ -212,7 +212,7 @@
             <div class="tool-panel-body">
 
               <!-- The chip size and the hue-column gap are worked out from
-                   this wrapper's width (color-pairing.css, Colour grids),
+                   this wrapper's width (color-pairing.css, Color grids),
                    so the pairs and both grids share their columns. -->
               <div class="tool-colours" id="color-pairing-colours">
 
@@ -320,7 +320,7 @@
         <!-- Shown when nothing can be measured: the script hides the
              preview and the dock, and this takes the preview's place. -->
         <div class="tool-empty-wrap padding-global top-small is-hidden" id="color-pairing-empty-wrap">
-          <p id="color-pairing-empty">This browser will not let the tool read colour values, so it cannot measure a pair. Open this page in another browser, or turn off fingerprinting protection for this site. Every colour is also on the <a href="/tools/color-palette.html">Colour Palette</a>.</p>
+          <p id="color-pairing-empty">This browser will not let the tool read color values, so it cannot measure a pair. Open this page in another browser, or turn off fingerprinting protection for this site. Every color is also on the <a href="/tools/color-palette.html">Color Palette</a>.</p>
         </div>
 
       </div>

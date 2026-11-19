@@ -1,6 +1,6 @@
 ---
 title: "Logo Tool"
-description: "Pick a variation, size and approved colour, then download a correctly named SVG, PNG or JPG."
+description: "Pick a variation, size and approved color, then download a correctly named SVG, PNG or JPG."
 author: "Studio"
 section: "Tools"
 layer: "app"

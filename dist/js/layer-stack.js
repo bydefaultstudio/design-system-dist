@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.2.0 */
+/* @bydefaultstudio/design-system v8.3.0 */
 /**
  * layer-stack.js — the engine behind Layout Spec: a canvas, the specimen on
  * it, and an ordered stack of rules drawn over (or under) it.
@@ -279,7 +279,7 @@
     // A tap target or the slot an object sits in: an outline. A coloured
     // area (what a v1 fill over the artwork becomes): a fill.
     'shape.tap-area':       { type: 'shape',      label: 'Tap area',       settings: { form: 'rectangle', x: { value: 40, unit: '%' }, y: { value: 40, unit: '%' }, w: { value: 20, unit: '%' }, h: { value: 20, unit: '%' }, draw: 'outline', lineStyle: 'dashed' } },
-    'shape.area':           { type: 'shape',      label: L('Coloured area'),  settings: { form: 'rectangle', draw: 'fill', fillColour: 'var(--neutral-600)', fillOpacity: 1 } },
+    'shape.area':           { type: 'shape',      label: L('Colored area'),  settings: { form: 'rectangle', draw: 'fill', fillColour: 'var(--neutral-600)', fillOpacity: 1 } },
     'guide.centre':         { type: 'guide',      label: L('Centre lines'),   settings: { kind: 'centre', reference: 'canvas' } },
     'guide.diagonal':       { type: 'guide',      label: 'Diagonals',      settings: { kind: 'diagonal', reference: 'canvas' } },
     'guide.keyline':        { type: 'guide',      label: 'Keyline circle', settings: { kind: 'circle', reference: 'canvas', size: { value: 20, unit: 'px' } } },

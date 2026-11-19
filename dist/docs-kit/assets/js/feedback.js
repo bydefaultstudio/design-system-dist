@@ -108,7 +108,9 @@
 
   function getPageTitle() {
     var h1 = document.querySelector('[data-barba="container"] h1') || document.querySelector('h1');
-    var text = h1 ? h1.textContent.replace(/\s+/g, ' ').trim() : '';
+    // A heading drawn differently from its name (the home hero's wordmark)
+    // carries the name as its label.
+    var text = h1 ? (h1.getAttribute('aria-label') || h1.textContent).replace(/\s+/g, ' ').trim() : '';
     return (text || document.title || '').slice(0, 200);
   }
 

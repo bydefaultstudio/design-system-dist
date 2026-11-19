@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.2.0 */
+/* @bydefaultstudio/design-system v8.3.0 */
 export { Dialog } from './dialog.mjs';
 export type { DialogProps, DialogHideSource } from './dialog.mjs';
 
@@ -45,6 +45,9 @@ export type { BreadcrumbProps, BreadcrumbItem } from './breadcrumb.mjs';
 
 export { CellInput } from './cell-input.mjs';
 export type { CellInputProps } from './cell-input.mjs';
+
+export { ChipGroup } from './chip.mjs';
+export type { ChipGroupProps, ChipOption } from './chip.mjs';
 
 export { DatePicker } from './date-picker.mjs';
 export type { DatePickerProps, DatePickerChangeDetail } from './date-picker.mjs';

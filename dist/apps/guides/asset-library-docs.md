@@ -67,7 +67,7 @@ A **font** is downloadable, open or paid. A downloadable font gives its file. An
 
 Downloads need the tool's level: its `downloadAccess`, or its `access` when it sets none. The page locks Download for a reader below it, and the Worker refuses the file to them as well (`LIBRARY_DOWNLOAD_ACCESS` in `worker/library-index.mjs`). A guest never gets a library file, whatever their groups open, because no grant reaches `/files/`, so the page locks Download for every guest too.
 
-The brand's **icons** are one tile, the whole set as a zip. For one icon at a size or a colour, use the [Icon Library](/tools/icon-library.html).
+The brand's **icons** are one tile, the whole set as a zip. For one icon at a size or a color, use the [Icon Library](/tools/icon-library.html).
 
 ---
 

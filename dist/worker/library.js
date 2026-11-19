@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.2.0 */
+/* @bydefaultstudio/design-system v8.3.0 */
 /**
  * library.js — the Asset Library's files, streamed from R2 at /files/
  * (asset-library-plan.md §4.5).
@@ -53,7 +53,7 @@ export async function handleLibrary(request, env, url, setCookies = [], reader =
   // R2 can throw on a transient fault or an offset past the object's end;
   // without this the visitor would see a bare 500 with no private headers.
   try {
-    return await serve(request, env, url, target, setCookies);
+    return await serve(request, env, url, target, setCookies, LIBRARY_INDEX);
   } catch (error) {
     console.error(JSON.stringify({ event: 'library.error', path: url.pathname, message: error && error.message }));
     return plain(503, UNAVAILABLE, setCookies);
@@ -62,7 +62,8 @@ export async function handleLibrary(request, env, url, setCookies = [], reader =
 
 const UNAVAILABLE = 'The file store is not available right now. Try again in a minute.';
 
-async function serve(request, env, url, target, setCookies) {
+// The index comes in as an argument: it is the site's (B4), not this module's
+async function serve(request, env, url, target, setCookies, LIBRARY_INDEX) {
   const { method } = request;
 
   if (target.kind === 'thumb') {

@@ -78,7 +78,7 @@ rounded:
   surface: '0px'
   detail: '0px'
 ---
-<!-- @bydefaultstudio/design-system v8.2.0 -->
+<!-- @bydefaultstudio/design-system v8.3.0 -->
 
 # By Default Design System
 
@@ -114,7 +114,7 @@ Four type roles compose the primitives into building blocks. Each role carries i
 
 Sizes are stepped rem values, never viewport-relative, so browser zoom and user font-size preferences keep working (WCAG 1.4.4). The heading roles step down automatically at 1439px and 959px inside the engine; never write your own breakpoint typography. Body copy holds {typography.body.fontSize} at every width.
 
-Font families are role slots, not faces: `--font-primary` carries the interface, `--font-secondary` the editorial voice, `--font-code` monospace contexts. The engine ships neutral system stacks in these slots; the brand's licensed faces arrive through `theme.css`. Reference the slots, never a family name. Two of the slots, `--font-placeholder` and `--font-scribble`, are for greeking a work-in-progress layout; the engine resolves them to the primary face, and a theme that wants the effect supplies a redaction face the same way it supplies any other. Greeked text is still read aloud by a screen reader.
+Font families are role slots, not faces: `--font-primary` carries the interface, `--font-secondary` the second voice (drop caps), `--font-editorial` the face blockquotes read (the secondary one unless a brand sets it apart), `--font-code` monospace contexts. The engine ships neutral system stacks in these slots; the brand's licensed faces arrive through `theme.css`. Reference the slots, never a family name. Two of the slots, `--font-placeholder` and `--font-scribble`, are for greeking a work-in-progress layout; the engine resolves them to the primary face, and a theme that wants the effect supplies a redaction face the same way it supplies any other. Greeked text is still read aloud by a screen reader.
 
 Text measure is capped with line-length tokens (`--line-length-body`, 55ch, and `--line-length-headline`, 22ch) rather than pixel widths.
 

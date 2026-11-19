@@ -11,6 +11,7 @@ const siteMap = require('./site-map');
 const brandFile = require('./brand');
 const locale = require('./locale');
 const appsRegistry = require('./apps');
+const { parseFrontmatter, parseList } = require('./portable');
 const osJson = require('./os-json');
 // The engine's own version, from the package this generator ships in, so a
 // generated file's banner can't freeze on the release it was first written in.
@@ -134,6 +135,10 @@ const CONFIG = {
   showcase: userConfig.showcase === true,
   siteMap: userConfig.siteMap === true,
   accessGate: userConfig.accessGate === true,
+  // The D1 database a LEVELS_FROM_D1=1 build reads the applied page levels
+  // from (D27). LEVELS_DB, when set, wins. Missing from this whitelist in
+  // 8.2.0, so the setting was ignored and every such build stopped.
+  accessDb: typeof userConfig.accessDb === 'string' && userConfig.accessDb.trim() ? userConfig.accessDb.trim() : null,
   // How a page above the reader shows in navigation (levels-groups-plan.md
   // D19): 'locked' (the default, and By Default OS) lists every page and
   // nav.js paints locks; 'hidden' moves the sidebar list into each page
@@ -1175,45 +1180,59 @@ function renderIconRegistry() {
 }
 
 /**
- * The Brand Book icon page claims to show every icon in the set. Its tables
+ * The Iconography registry claims to show every icon in the set. Its tables
  * are hand-curated into categories, so they can silently fall behind the
  * source directory — warn on every build when they do.
  */
 function warnBrandRegistryGaps() {
-  const brandRegistryFile = path.join(DOCS_DIR, 'brand-iconography.md');
-  if (!fs.existsSync(brandRegistryFile)) return;
-  const source = fs.readFileSync(brandRegistryFile, 'utf8');
-  const listed = new Set([...source.matchAll(/\{\{icon:([a-z0-9-]+)\}\}/g)].map(m => m[1]));
+  const registry = readIconRegistrySection();
+  if (registry === null) return;
+  const listed = new Set([...registry.matchAll(/\{\{icon:([a-z0-9-]+)\}\}/g)].map(m => m[1]));
   const missing = Object.keys(ICON_MAP).filter(name => !listed.has(name)).sort();
   if (missing.length) {
-    console.warn(`⚠️  ${missing.length} icon(s) not listed in cms/brand-iconography.md: ${missing.join(', ')}`);
+    console.warn(`⚠️  ${missing.length} icon(s) not listed in the cms/iconography.md registry: ${missing.join(', ')}`);
   }
+}
+
+/**
+ * The "## Registry" section of cms/iconography.md, up to the next "## "
+ * heading: the one place the icon set is grouped and named. The search does
+ * not skip code fences, so keep "## " headings out of fenced examples above
+ * or inside the section.
+ * @returns {string|null} the section's lines, or null when the file or section is missing
+ */
+function readIconRegistrySection() {
+  const registryFile = path.join(DOCS_DIR, 'iconography.md');
+  if (!fs.existsSync(registryFile)) return null;
+  const body = parseFrontmatter(fs.readFileSync(registryFile, 'utf8')).content;
+  const start = body.search(/^## Registry\s*$/m);
+  if (start === -1) return null;
+  const rest = body.slice(start).split('\n').slice(1).join('\n');
+  const next = rest.search(/^## /m);
+  return next === -1 ? rest : rest.slice(0, next);
 }
 
 //------- Icon Manifest -------//
 
 /**
- * The Brand Book icon page is the only place the set is grouped and named:
- * one `## Category` heading over each table, whose rows read
+ * The Iconography registry is the only place the set is grouped and named:
+ * one `### Category` heading over each table, whose rows read
  * `| {{icon:key}} | Display Name | \`key\` |`. Read that structure once so
- * the Icon Library tool filters by the categories the brand book shows,
- * rather than carrying a second list that drifts from it.
+ * the Icon Library tool filters by the same categories, rather than carrying
+ * a second list that drifts from it.
  * @returns {{order: string[], byKey: Object<string, {name: string, category: string}>}}
  */
 function parseIconCategories() {
   const result = { order: [], byKey: {} };
-  const brandRegistryFile = path.join(DOCS_DIR, 'brand-iconography.md');
-  if (!fs.existsSync(brandRegistryFile)) {
-    console.warn('cms/brand-iconography.md not found — every icon in the manifest falls under "Other"');
+  const registry = readIconRegistrySection();
+  if (registry === null) {
+    console.warn('cms/iconography.md has no "## Registry" section — every icon in the manifest falls under "Other"');
     return result;
   }
 
-  // The body only: a frontmatter line starting "## " must not register a
-  // category.
-  const body = parseFrontmatter(fs.readFileSync(brandRegistryFile, 'utf8')).content;
   let category = null;
-  for (const line of body.split('\n')) {
-    const heading = line.match(/^##\s+(.+?)\s*$/);
+  for (const line of registry.split('\n')) {
+    const heading = line.match(/^###\s+(.+?)\s*$/);
     if (heading) {
       category = heading[1];
       if (!result.order.includes(category)) result.order.push(category);
@@ -1224,10 +1243,13 @@ function parseIconCategories() {
     const key = row[1];
     const existing = result.byKey[key];
     if (existing) {
-      console.warn(`Icon "${key}" is listed twice in cms/brand-iconography.md (${existing.category}, ${category}) — the manifest keeps ${existing.category}`);
+      console.warn(`Icon "${key}" is listed twice in the cms/iconography.md registry (${existing.category}, ${category}) — the manifest keeps ${existing.category}`);
       continue;
     }
     result.byKey[key] = { name: row[2].trim() || titleFromKey(key), category: category };
+  }
+  if (result.order.length === 0) {
+    console.warn('The cms/iconography.md registry has no "###" category headings — every icon in the manifest falls under "Other"');
   }
   return result;
 }
@@ -1308,11 +1330,12 @@ function renderIconManifest() {
       raw: namespaceIds(ICON_MAP[key].raw, key),
     };
   });
-  // warnBrandRegistryGaps matches {{icon:}} anywhere in the brand book; this
-  // parser only reads table rows under a heading, so an icon can pass that
-  // check and still land here. Name the ones that did.
+  // warnBrandRegistryGaps matches {{icon:}} anywhere in the registry section;
+  // this parser only reads table rows under a "###" heading, so an icon
+  // mentioned outside a row, or above the first category, can pass that check
+  // and still land here. Name the ones that did.
   if (unlisted.length && categories.order.length) {
-    console.warn(`${unlisted.length} icon(s) have no category row in cms/brand-iconography.md and fall under "Other": ${unlisted.join(', ')}`);
+    console.warn(`${unlisted.length} icon(s) have no category row in the cms/iconography.md registry and fall under "Other": ${unlisted.join(', ')}`);
   }
   const used = new Set(icons.map(icon => icon.category));
   const order = categories.order.filter(name => used.has(name));
@@ -1698,8 +1721,7 @@ function loadDefaults(dirPath) {
  * The data-access value for a page or a link: its level, public, team or
  * admin, from the `access:` field, the same reading the gate compiles into
  * worker/page-access.mjs, so what the markup says and what the Worker does
- * cannot differ. Anything else, the Netlify-era `brand…` values included, is
- * team.
+ * cannot differ. Anything else is team.
  *
  * The attribute is the client-side hint the locks read (nav.js applyAccess):
  * a sidebar link, a card or a pager link whose level the reader cannot open
@@ -1708,15 +1730,6 @@ function loadDefaults(dirPath) {
  */
 function deriveDataAccess(frontmatter) {
   return normaliseLevel(frontmatter.access);
-}
-
-/**
- * Parse a comma-separated string into a trimmed array.
- * Returns the provided fallback if the value is falsy.
- */
-function parseList(value, fallback) {
-  if (!value) return fallback || [];
-  return value.split(',').map(s => s.trim()).filter(Boolean);
 }
 
 /**
@@ -1729,35 +1742,6 @@ function getSubsectionOrder(defaults, section) {
   const key = `${slug}-subsection-order`;
   if (defaults[key]) return parseList(defaults[key], []);
   return parseList(defaults['subsection-order'], []);
-}
-
-/**
- * Parse frontmatter from markdown content
- */
-function parseFrontmatter(content) {
-  const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/;
-  const match = content.match(frontmatterRegex);
-
-  if (!match) {
-    return { frontmatter: {}, content: content.trim() };
-  }
-
-  const frontmatterText = match[1];
-  const markdownContent = match[2];
-
-  const frontmatter = {};
-  const lines = frontmatterText.split('\n');
-
-  for (const line of lines) {
-    const colonIndex = line.indexOf(':');
-    if (colonIndex > 0) {
-      const key = line.substring(0, colonIndex).trim();
-      const value = line.substring(colonIndex + 1).trim().replace(/^["']|["']$/g, '');
-      frontmatter[key] = value;
-    }
-  }
-
-  return { frontmatter, content: markdownContent.trim() };
 }
 
 /**
@@ -2056,7 +2040,8 @@ function parseMediaShortcode(name, params, line, allowed, values) {
   return { attrs, fail };
 }
 
-// Mirrors docs-site.css section 5 (Asset Card).
+// Mirrors docs-site.css section 5 (Asset Card), less the white and black
+// grounds, which are raw HTML only (cms/asset-card.md).
 const ASSET_SHORTCODE_VALUES = {
   ground: ['faded', 'plain', 'dark', 'none'],
   footer: ['bar', 'ground', 'none'],
@@ -2155,6 +2140,148 @@ function expandMediaShortcodes(markdown) {
       );
     }
     return renderers[name](match[1], line);
+  });
+}
+
+//------- OS illustration shortcode -------//
+
+/**
+ * {{os-illustration: name="brand-book" alt="…" hue="yellow" field="dark" caption="…" width="m" align="center" float="left"}}
+ *
+ * One os-illustration inside a page's content, coloured by the colour scope
+ * like a cover or a page header (os-illustration-plan.md §5.5). The markdown
+ * holds one line; the drawing stays one file in assets/images/os-illustrations/
+ * and is copied into the HTML here, at build time. It has to be inlined: an
+ * <img> is a closed document the page's role colours cannot reach.
+ *
+ * The hue is the declared one, else the drawing's authored one, as on a home
+ * card; a drawing with neither fails, because the shortcode pass has no
+ * section to fall back on. alt is required as on {{image:}}: alt="" for a
+ * decorative drawing, words for one that carries information, which then
+ * becomes role="img" on the <svg>. width, align and float are the {{image:}}
+ * box values and land on the <figure>, where design-system.css §24 already
+ * sizes and places any figure.
+ */
+const OS_ILLUSTRATION_SHORTCODE_VALUES = {
+  hue: OS_ILLUSTRATION_HUES,
+  field: OS_ILLUSTRATION_FIELDS,
+  width: IMAGE_SHORTCODE_VALUES.width,
+  align: IMAGE_SHORTCODE_VALUES.align,
+  float: IMAGE_SHORTCODE_VALUES.float,
+};
+const OS_ILLUSTRATION_PARAMS = ['name', 'alt', 'hue', 'field', 'caption', 'width', 'align', 'float'];
+
+/**
+ * Give every id in one inlined copy a suffix, and every reference to it
+ * (url(#id), href="#id", a #id selector in the drawing's own <style>) the
+ * same one. The import prefixes ids with the slug, so two different drawings
+ * never clash; the same drawing twice on a page does, and the page header may
+ * already hold it with the original ids (plan §11).
+ * @param {string} svg - the drawing's markup
+ * @param {string} suffix - appended to each id, e.g. "-s1"
+ * @returns {string}
+ */
+function suffixSvgIds(svg, suffix) {
+  const ids = [...svg.matchAll(/\sid="([^"]+)"/g)].map(match => match[1]);
+  if (!ids.length) return svg;
+  const escaped = ids.map(id => id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const names = escaped.join('|');
+  const reference = new RegExp(`(\\sid="|#)(${names})(?![\\w-])`, 'g');
+  // SMIL chains name an id bare, as "<id>.end", inside begin and end; the
+  // import rewrites the same three forms (scripts/import-os-illustration.mjs).
+  const timing = new RegExp(`(\\s(?:begin|end)="[^"]*?)(?<![\\w-])(${names})\\.`, 'g');
+  let out = svg.replace(reference, (match, lead, id) => `${lead}${id}${suffix}`);
+  // A begin can chain several ids, so repeat until no bare reference is left.
+  let previous;
+  do {
+    previous = out;
+    out = out.replace(timing, (match, lead, id) => `${lead}${id}${suffix}.`);
+  } while (out !== previous);
+  return out;
+}
+
+/**
+ * Build the markup for one {{os-illustration: …}} line.
+ * @param {string} params - everything between `{{os-illustration:` and `}}`
+ * @param {string} line - the whole line, quoted back in any error
+ * @param {number} instance - this page's count of shortcode drawings so far
+ * @returns {string} a <figure> holding the drawing's frame
+ */
+function renderOsIllustrationShortcode(params, line, instance) {
+  const { attrs, fail } = parseMediaShortcode(
+    'os-illustration', params, line, OS_ILLUSTRATION_PARAMS, OS_ILLUSTRATION_SHORTCODE_VALUES
+  );
+  if (!attrs.name) fail('name is required — the drawing\'s file name in assets/images/os-illustrations/, without .svg');
+  if (attrs.alt === undefined) fail('alt is required — use alt="" for a decorative drawing');
+  // Whitespace is no name: alt=" " would make an image a screen reader
+  // announces with nothing to say.
+  const alt = attrs.alt.trim();
+  // The {{icon:}} pass runs after marked and would put icon markup inside
+  // the aria-label, breaking the <svg> tag.
+  if (alt.includes('{{')) fail('alt is read aloud as text — it can\'t hold a {{…}} shortcode');
+  if (attrs.float && attrs.align) fail('float and align both place the figure — give it one');
+
+  let illustration;
+  try {
+    illustration = resolveOsIllustration({ osIllustration: attrs.name, hue: attrs.hue, field: attrs.field }, 'the shortcode');
+  } catch (error) {
+    fail(error.message.replace(/^the shortcode: /, ''));
+  }
+
+  // The import writes aria-hidden on every drawing, which is right for a
+  // cover or a header and for alt="". With words, the drawing is the content:
+  // it takes the name, and the frame around it says nothing extra.
+  let svg = suffixSvgIds(illustration.svg, `-s${instance}`);
+  if (alt) {
+    // A drawing that carries information is held to non-text contrast
+    // (WCAG 1.4.11), which the decorative rule in design-system.css §2d layer
+    // 5 does not promise: red's ink measures 2.84:1 on its light field. The
+    // lighter and dark fields pass on every hue.
+    if (illustration.color === 'red' && !illustration.field) {
+      fail('red ink is 2.84:1 on the light field, too faint for a drawing that carries information — add field="lighter" or field="dark", or make it decorative with alt=""');
+    }
+    const named = svg.replace(/^<svg([^>]*?)\saria-hidden="true"/, `<svg$1 role="img" aria-label="${escapeAttr(alt)}"`);
+    // The swap leans on the import writing aria-hidden on the root. If it
+    // ever stops, the drawing would ship hidden or unnamed, silently.
+    if (named === svg) fail(`"${attrs.name}" has no aria-hidden on its root <svg> to replace — re-run the import on it`);
+    svg = named;
+  }
+
+  const box = IMAGE_BOX_PARAMS
+    .filter(key => attrs[key])
+    .map(key => ` data-${key}="${attrs[key]}"`)
+    .join('');
+  // The hue goes on the frame, not the figure, so the caption keeps the
+  // page's colours (the D10 rule for covers). data-os-illustration-loop and
+  // the pause button make an animated drawing behave as a page header's
+  // does: it loops on screen until the reader pauses it (D22).
+  const loop = illustration.motion ? ' data-os-illustration-loop' : '';
+  const frame = `<div class="os-illustration-frame"${osIllustrationAttrs(illustration)}${loop}>${svg}${renderOsIllustrationPause(illustration)}</div>`;
+  const caption = attrs.caption === undefined ? '' : `<figcaption>${marked.parseInline(attrs.caption)}</figcaption>`;
+  // One line, no blank lines: marked keeps an HTML block whole only until
+  // the first blank line, and an exported drawing has none.
+  return `<figure class="os-illustration-figure"${box}>${frame.replace(/\n\s*\n/g, '\n')}${caption}</figure>`;
+}
+
+/**
+ * Expand every {{os-illustration: …}} line outside a fenced code block.
+ * Same rules as {{image:}}: the whole line, from column 0. The counter is
+ * per call, and a call is one page, so the id suffixes are unique per page.
+ */
+function expandOsIllustrationShortcodes(markdown) {
+  if (!markdown.includes('{{os-illustration:')) return markdown;
+  let instance = 0;
+  return mapLinesOutsideFences(markdown, (line) => {
+    if (!line.startsWith('{{os-illustration:')) return line;
+    const match = /^\{\{os-illustration:\s*(.*?)\s*\}\}[^\S\n]*$/.exec(line);
+    if (!match) {
+      throw new Error(
+        '{{os-illustration}}: the shortcode has to be the whole line — it must close with }} and carry nothing after it'
+        + `\n  ${line}\n  (grep cms/ for that line)`
+      );
+    }
+    instance += 1;
+    return renderOsIllustrationShortcode(match[1], line, instance);
   });
 }
 
@@ -2300,6 +2427,11 @@ function markdownToHtml(markdown, source = 'a cms/*.md page', headingIds = null)
   // {{asset: …}} and {{video: …}}: an asset card and a BD Video player,
   // before marked for the same reason as {{image:}}.
   markdown = expandMediaShortcodes(markdown);
+
+  // {{os-illustration: …}}: a drawing from assets/images/os-illustrations/
+  // in the page's content, inlined so the colour scope reaches it. Before
+  // marked for the same reason as {{image:}}.
+  markdown = expandOsIllustrationShortcodes(markdown);
 
   // {{format: <id>}} becomes a format card shell, before marked for the
   // same reason as {{image:}}; its {{icon:}} shorthand is expanded by the
@@ -3276,10 +3408,8 @@ function generateIndexPage(template, filesBySection) {
   pageAccess.set('/index.html', { level: 'team', section: '', type: 'shelf', title: 'Home' });
 
   // Home lives at the repo root, so its NAV_BASE is the current directory.
-  // It must be './' not '' — an empty base turns the GoTrue dynamic
-  // import('{{NAV_BASE}}assets/...') into a bare module specifier, which
-  // throws "Failed to resolve module specifier" and breaks auth (the home
-  // page is data-access="team"), causing a login redirect loop.
+  // It is './' rather than '' so a path built from it stays an explicit
+  // relative path (see renderPage).
   return renderPage(template, {
     space: ROOT_SPACE,
     navBase: './',
@@ -3694,14 +3824,6 @@ function generatePageNav(file, pageOrder) {
 }
 
 /**
- * Build footer text from project config (shared by internal and brand docs).
- * A brand manifest's footerText overrides the site default.
- */
-function buildFooterHtml(override) {
-  return override || SITE.footerText || '';
-}
-
-/**
  * The opening block of every page the generator writes — documentation pages,
  * the brand book, the site home, section overviews and brand overviews.
  *
@@ -3972,7 +4094,7 @@ function buildPageScripts(section, frontmatter, navBase = '../') {
 // JS ships in dist/js/ automatically gets its script include documented.
 const COMPONENT_MODULES = require('./component-modules.json');
 const { isPortableComponentPage, isBrandContent } = require('./portable');
-const { loadGlossary, renderGlossaryList, renderTopicChips, entryAppendix, glossaryFeed, escapeHtml: escapeGlossaryText } = require('./glossary');
+const { loadGlossary, renderGlossaryList, renderTopicChips, entryAppendix, glossaryFeed } = require('./glossary');
 
 // The glossary (cms/glossary/), loaded once per run in generateDocs and read by
 // generatePage for {{glossary-terms}}. Null when the directory does not exist.
@@ -4172,8 +4294,8 @@ function generateGlossaryPages(template, glossary, level) {
     const content = markdownToHtml(entry.body + entryAppendix(entry, glossary, entryHref, topicHref));
     // Escaped here, as the Showcase emitter does: renderPage and the header
     // and bar builders take their text as markup.
-    const title = escapeGlossaryText(entry.title);
-    const short = escapeGlossaryText(`${entry.short}.`);
+    const title = escapeAttr(entry.title);
+    const short = escapeAttr(`${entry.short}.`);
     const html = renderPage(template, {
       space: ROOT_SPACE,
       navBase: '../',
@@ -5448,30 +5570,214 @@ ${CONFIG.accessNav === 'hidden' ? `
       }
     }
 
-    // Closing a pinned (sticky) toggle would drop it back to its place in
-    // the flow, above the visible area, with keyboard focus on it. Close it
-    // here instead and scroll the list by the distance it was pinned, so the
-    // toggle stays exactly where it was on screen. On click rather than
-    // \`toggle\`: toggle does not bubble and fires a task later, after the
-    // jump has painted. Enter and Space on a summary fire click too.
-    function keepClosedSummaryInView(e) {
-      if (e.defaultPrevented || !e.target.closest) return;
-      var summary = e.target.closest('.sidebar-nav-section-toggle, .sidebar-nav-subsection-toggle');
-      if (!summary) return;
-      var details = summary.parentElement;
-      var scroller = summary.closest('.site-sidebar-content');
-      if (!details || !details.open || !scroller) return;
+    // Closes a group without moving its toggle on screen. A pinned (sticky)
+    // toggle would otherwise drop back to its place in the flow, above the
+    // visible area, with keyboard focus on it, so the list is scrolled by the
+    // distance it was pinned and the toggle stays exactly where it was.
+    function closeInPlace(details, summary, scroller) {
       var summaryTop = summary.getBoundingClientRect().top;
       var pinnedBy = summaryTop - details.getBoundingClientRect().top;
-      if (pinnedBy < 1) return;
       // A header mid-release sits partly above the edge; land it at the edge.
       var overshoot = Math.min(0, summaryTop - scroller.getBoundingClientRect().top);
       // Read before closing: the list collapsing clamps scrollTop, and
       // subtracting from the clamped value would jump the wrong way.
       var target = scroller.scrollTop - pinnedBy + overshoot;
-      e.preventDefault();
       details.open = false;
-      scroller.scrollTop = target;
+      if (pinnedBy >= 1) scroller.scrollTop = target;
+    }
+
+    // ── Groups travel to their height ──
+    // A section or subsection opens and closes to its height on
+    // --motion-feedback-travel, as the accordion does (docs-site.css §1D,
+    // Travel). Played here, because a <details> hides its list the moment it
+    // closes. On click rather than \`toggle\`: toggle does not bubble and
+    // fires a task later, after the change has painted. Enter and Space on a
+    // summary fire click too.
+    //
+    // Only what is on screen travels. A long group opens to the bottom of
+    // the sidebar and lands the rest out of sight, and closes from there, so
+    // no group travels further than the sidebar is tall. A pinned group folds
+    // up into its toggle where it sits, then closes in place.
+    //
+    // The group travels in step with its chevron, which turns on the travel
+    // token: the chevron's computed transition comes back in seconds with
+    // any calc() a brand wrote worked out, and at 0s under reduced motion.
+    // Read on every click, so reduced motion switched on mid-session holds
+    // and the group changes at once.
+    var groupMotion = new WeakMap();
+
+    // The open tint travels with the height (docs-site.css §1D, Travel), or
+    // it would snap on as a group starts to open and off as it finishes
+    // closing, a flash at each end. Only where the tint is a registered
+    // colour that can be interpolated: a browser without @property keeps the
+    // snap. A section always fades. A subsection fades only where its
+    // section paints no background behind it (the mobile drawer); on the
+    // desktop its toggle already sits on the section's tint.
+    var tintTravels = !!(window.CSS && CSS.registerProperty);
+
+    function travelsTint(details) {
+      if (!tintTravels) return false;
+      if (details.classList.contains('sidebar-nav-section')) return true;
+      var section = details.parentElement && details.parentElement.closest('.sidebar-nav-section');
+      if (!section) return false;
+      var behind = window.getComputedStyle(section).backgroundColor;
+      return behind === 'transparent' || behind === 'rgba(0, 0, 0, 0)';
+    }
+
+    function tintOf(details) {
+      return window.getComputedStyle(details).getPropertyValue('--sidebar-section-tint').trim() || 'transparent';
+    }
+
+    function travelTiming(summary) {
+      var chevron = summary.querySelector('.sidebar-nav-toggle-icon');
+      if (!chevron || typeof chevron.animate !== 'function') return null;
+      var style = window.getComputedStyle(chevron);
+      var ms = parseFloat(style.transitionDuration) * 1000;
+      if (!(ms > 0)) return null;
+      return { duration: ms, easing: style.transitionTimingFunction || 'ease-out' };
+    }
+
+    function travelGroup(e) {
+      if (e.defaultPrevented || !e.target.closest) return;
+      var summary = e.target.closest('.sidebar-nav-section-toggle, .sidebar-nav-subsection-toggle');
+      if (!summary) return;
+      var details = summary.parentElement;
+      var scroller = summary.closest('.site-sidebar-content');
+      if (!details || !scroller) return;
+      e.preventDefault();
+      // A section still opening around this group would clip it as it grows.
+      landOpeningAround(details.parentElement);
+
+      // A second click mid-travel turns the group round from where it is.
+      var running = groupMotion.get(details);
+      var opening = running ? !running.opening : !details.open;
+      var list = details.querySelector(':scope > .sidebar-nav-list, :scope > .sidebar-nav-sublist');
+      var timing = travelTiming(summary);
+      if (!timing) {
+        dropTravel(details);
+        if (opening) details.open = true;
+        else closeInPlace(details, summary, scroller);
+        return;
+      }
+
+      // Measured as the group stands, before any travel lets go: mid-travel
+      // that is the held frame, whose class already has the release off.
+      // A group at rest takes its class first, so a header mid-release is
+      // back at its pin.
+      if (!running) details.classList.add(opening ? 'is-opening' : 'is-closing');
+      var box = details.getBoundingClientRect();
+      var from = box.height;
+      // Mid-travel the tint is wherever the held frame has it; a group at
+      // rest opens from none and closes from the tint it shows.
+      var tint = travelsTint(details);
+      var tintFrom = tint ? (running || !opening ? tintOf(details) : 'transparent') : null;
+      var onScreen = scroller.getBoundingClientRect().bottom - box.top;
+      var to;
+      if (!opening) {
+        // Pinned, the group folds up to its toggle where it sits. Unless the
+        // sidebar has too little below to keep its scroll position: then the
+        // position settles as the group folds, bringing the toggle down from
+        // its pin, and the group folds all the way, or a row would be left
+        // to snap shut. edge is a bottom border (the drawer's rule between
+        // sections), which the closed group keeps.
+        var toggle = summary.getBoundingClientRect();
+        var pinnedBy = toggle.top - box.top;
+        var edge = details.offsetHeight - details.clientHeight;
+        var below = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop;
+        var holdsPin = pinnedBy >= 1 && from - pinnedBy - toggle.height - edge <= below;
+        to = Math.min(from, (holdsPin ? pinnedBy : 0) + toggle.height + edge);
+        from = Math.min(from, Math.max(to, onScreen));
+      }
+
+      dropTravel(details);
+      details.classList.add(opening ? 'is-opening' : 'is-closing');
+      if (opening) {
+        details.open = true;
+        to = Math.min(details.getBoundingClientRect().height, Math.max(from, onScreen));
+      }
+
+      var first = { height: from + 'px' };
+      var last = { height: to + 'px' };
+      if (tint) {
+        first['--sidebar-section-tint'] = tintFrom;
+        last['--sidebar-section-tint'] = opening ? tintOf(details) : 'transparent';
+      }
+
+      var animation;
+      try {
+        animation = details.animate(
+          [first, last],
+          { duration: timing.duration, easing: timing.easing, fill: 'forwards' }
+        );
+      } catch (err) {
+        // An easing this browser cannot read: change at once instead.
+        details.classList.remove('is-opening', 'is-closing');
+        if (!opening) closeInPlace(details, summary, scroller);
+        return;
+      }
+      groupMotion.set(details, {
+        animation: animation, opening: opening, summary: summary, scroller: scroller, list: list
+      });
+      // A closing list is still drawn while it folds, so it is taken out of
+      // the tab order and the accessibility tree now, as the accordion's is:
+      // Tab from the toggle would otherwise land on a link about to vanish
+      // and drop focus to the page.
+      if (!opening && list) list.inert = true;
+      animation.onfinish = function onTravelEnd() {
+        landGroup(details);
+      };
+    }
+
+    // Lets go of a group's travel where it stands: the animation, its class
+    // and a closing list's inert. Its open state is left as it is.
+    function dropTravel(details) {
+      var motion = groupMotion.get(details);
+      if (!motion) return;
+      groupMotion.delete(details);
+      if (motion.list) motion.list.inert = false;
+      details.classList.remove('is-opening', 'is-closing');
+      motion.animation.cancel();
+    }
+
+    // Sets the group's end state and lets go of the travel, in one task.
+    // fill: forwards held the last frame until now, so no frame shows the
+    // group at its full height in between.
+    function landGroup(details) {
+      var motion = groupMotion.get(details);
+      if (!motion) return;
+      if (!motion.opening) closeInPlace(details, motion.summary, motion.scroller);
+      dropTravel(details);
+    }
+
+    // Lands every group still opening around a node, so nothing inside one
+    // stays clipped by a height that is still travelling.
+    function landOpeningAround(node) {
+      var group = node && node.closest ? node.closest('details') : null;
+      while (group) {
+        var motion = groupMotion.get(group);
+        if (motion && motion.opening) landGroup(group);
+        group = group.parentElement ? group.parentElement.closest('details') : null;
+      }
+    }
+
+    // Focus landing inside a group still opening completes it at once
+    // (cms/motion.md): its links take focus straight away but are clipped
+    // until the travel ends. A focused toggle's own group is left out, so a
+    // click that turns a group round does not complete it first. Not
+    // finish(): its event comes a frame later, holding the clipped height.
+    function landOnFocus(e) {
+      if (!e.target.closest) return;
+      var toggle = e.target.closest('summary');
+      landOpeningAround(toggle ? toggle.parentElement.parentElement : e.target);
+    }
+
+    // Something else shut a group while it opened (the access lock): the
+    // travel gives way, rather than grow an empty box. Only that case: a
+    // closing group stays open, and the toggle from a group's own opening
+    // can arrive after a second click has already turned it round.
+    function yieldToToggle(e) {
+      var motion = groupMotion.get(e.target);
+      if (motion && motion.opening && !e.target.open) dropTravel(e.target);
     }
 
     // Marks a toggle .is-pinned while sticky holds it away from its place in
@@ -5504,7 +5810,9 @@ ${CONFIG.accessNav === 'hidden' ? `
 
     if (sidebarClickRoot) {
       sidebarClickRoot.addEventListener('click', guardSummaryClick);
-      sidebarClickRoot.addEventListener('click', keepClosedSummaryInView);
+      sidebarClickRoot.addEventListener('click', travelGroup);
+      sidebarClickRoot.addEventListener('focusin', landOnFocus);
+      sidebarClickRoot.addEventListener('toggle', yieldToToggle, true);
       sidebarClickRoot.addEventListener('scroll', schedulePinnedCheck, { capture: true, passive: true });
       sidebarClickRoot.addEventListener('toggle', schedulePinnedCheck, true);
       window.addEventListener('resize', schedulePinnedCheck, { passive: true });
@@ -7999,8 +8307,10 @@ async function generateDocs() {
     pageAccess.set('/' + file.htmlPath, {
       level: normaliseLevel(file.ownAccess),
       // A standalone page (an engine page under its own folder, auth/) is in
-      // no section a group could be granted
-      section: file.standalone ? '' : file.htmlFolder,
+      // no section a group could be granted. A doc page made standalone only
+      // to keep it out of the nav (foundations/color.html) still sits in its
+      // folder's section, so a group granted that section keeps it
+      section: file.standalone && (!file.htmlFolder || ENGINE_PAGE_FILES.has(file.filename)) ? '' : file.htmlFolder,
       type: resolvePageType(file.frontmatter).name,
       title: file.title,
     });
@@ -8154,4 +8464,6 @@ module.exports = {
   // For scripts/verify-media-shortcodes.js
   expandImageShortcodes,
   expandMediaShortcodes,
+  expandOsIllustrationShortcodes,
+  suffixSvgIds,
 };

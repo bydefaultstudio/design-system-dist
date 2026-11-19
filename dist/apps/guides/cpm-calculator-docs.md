@@ -43,7 +43,7 @@ Only the typed quantity has a field; the other is worked out and shown in the pr
 
 ## The preview
 
-The **figures** give the answers as cards, as the World Clock's are: the label and a quiet fact on one line — the months, the rate, the share, Net's share of the spend — and the value large and light under them, every value at the largest size the longest one fits. They run three across at most: Spend, Impressions and Net fill the first row, and the fees and the partner, when on, start the next. Then **Where the spend goes** splits the spend into its parts as a bar, shown once there are two parts or more. Each part has its own colour — the creative fee purple, ad hosting aqua, the partner pink, Net the accent — and the same colour keys its card and its legend line. Only an amount that is itself below zero turns red.
+The **figures** give the answers as cards, as the World Clock's are: the label and a quiet fact on one line — the months, the rate, the share, Net's share of the spend — and the value large and light under them, every value at the largest size the longest one fits. They run three across at most: Spend, Impressions and Net fill the first row, and the fees and the partner, when on, start the next. Then **Where the spend goes** splits the spend into its parts as a bar, shown once there are two parts or more. Each part has its own color — the creative fee purple, ad hosting aqua, the partner pink, Net the accent — and the same color keys its card and its legend line. Only an amount that is itself below zero turns red.
 
 The **month table** shows only while the breakdown is on: a row per month with spend, impressions, each active fee, the partner and net, and a Total row. Each row is a card, the header a small plain label line, and the Total row sits on white under a rule. The table is read-only — the months are typed in the dock. From 960px the header, the Total row and the Month column stay in view as the table scrolls.
 
@@ -85,7 +85,7 @@ Net             = Net spend − Partner
 **What the tool will not quietly accept:**
 
 - **A CPM of 0 or empty** — nothing can be worked out, so every derived figure shows "–" and the CPM field says so.
-- **Fees above the CPM** — net spend goes negative. The numbers still show, in the error colour, and the Fees section and the preview say why.
+- **Fees above the CPM** — net spend goes negative. The numbers still show, in the error color, and the Fees section and the preview say why.
 
 While you type in a number field, an error is only ever cleared: it is written when you leave the field, so passing through "1" on the way to "15" raises nothing.
 
