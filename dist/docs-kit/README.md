@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^8.4.0"
+npm install "github:bydefaultstudio/design-system-dist#semver:^8.4.1"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -118,7 +118,7 @@ automatically — external URLs pass through untouched.
 | `retiredSections` | `{}` | map of renamed section label → its new label; docgen fails on a page that still names the old one |
 | `filenameOverrides` | `{}` | per-file output folder/name overrides |
 | `indexCards` | derived from pages | curated home page card list (`{ title, href, subtitle }`) |
-| `discovery` | none | **Preview.** A discovery home page written to `discovery.output`: `greeting` (`links` of `{ label, href }`, `fallback`, `search`, `linksLabel`) and `rows`, each `{ kind: 'shelf' \| 'feature' \| 'note', label, title, href, action }` with its cards from `section` (pages with `featured: "true"` first, in `featured-order`), `glossary` (slugs) or `cards`, plus optional `hue` and `cardLabel`. Notes come from `<contentDir>/home/notes.json`; a `note` or `feature` row needs one. The greeting is filled by `home-greeting.js`, in the kit set. The shape may change when it becomes the home page |
+| `discovery` | none | **Preview.** A discovery home page written to `discovery.output`: `greeting` (`links` of `{ label, href }`, `fallback`, `search`, `linksLabel`) and `rows`, each `{ kind: 'shelf' \| 'feature' \| 'note', label, title, href, action }` with its cards from `section` (pages with `featured: "true"` first, in `featured-order`), `glossary` (slugs) or `cards`, plus optional `hue` and `cardLabel`. Notes come from `<contentDir>/home/notes.json`; a `note` or `feature` row needs one. The greeting is filled by `home-greeting.js`, in the kit set and loaded only on a site that sets `discovery` (8.4.1). The shape may change when it becomes the home page |
 | `logoHtml` | site name as text | raw HTML for the site-header logo |
 | `contactHref` / `contactLabel` | none | site-header contact link |
 | `sectionIcons` | `{}` | map of section label → icon key for the sidebar |

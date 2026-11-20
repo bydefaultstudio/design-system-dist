@@ -3893,6 +3893,11 @@ main.page-content[tabindex="-1"]:focus {
      height, so the page fills what is left of the viewport */
   min-height: calc(100vh - var(--top-nav-height));
   min-height: calc(100dvh - var(--top-nav-height));
+  /* --login-keyboard is set by login-keyboard.js while a phone's keyboard is
+     open. The page is border-box, so the padding first fills its spare
+     height, then grows it to at least its content plus the keyboard: a
+     focused field can always be scrolled clear. 0 otherwise. */
+  padding-bottom: var(--login-keyboard, 0px);
   background: var(--background-primary);
 }
 
@@ -4183,6 +4188,14 @@ html:has(.login-page) {
 
   .login-slideshow-panel:not(:has(.login-slideshow-controls)) {
     display: flex;
+  }
+
+  /* No slide has words (data-variant="controls", sign-in.js): the panel is
+     the controls alone, a slim row sized to them in the same corner. Its
+     dark backing stays, so the bar fill and the button hold 3:1 and the
+     focus ring shows on any picture */
+  .login-slideshow-panel[data-variant="controls"] {
+    padding: var(--space-s);
   }
 
   /* A bar's length is a width, not a share or a basis: the panel shrinks

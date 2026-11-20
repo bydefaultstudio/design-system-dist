@@ -86,7 +86,11 @@ const fileName = (src) => path.basename(String(src).split(/[?#]/)[0]);
 const HARDCODED_SCRIPTS = ['assets/js/nav.js'];
 
 // uiScripts unset is the kit's set, served from assets/docs-kit/ (less any
-// file the site lists itself, as the generator does).
+// file the site lists in extraScripts, search.js without search and
+// home-greeting.js without discovery, as kitUiScriptNames in
+// cms/generator/generate-docs.js decides. A partial mirror: the generator
+// also drops a file the site names in raw <script src> tags in its head or
+// body-end HTML, which this does not read).
 function uiScripts() {
   if (Array.isArray(config.uiScripts)) return config.uiScripts;
   const own = new Set((config.extraScripts || []).map((s) => fileName(s).toLowerCase()));
@@ -94,6 +98,7 @@ function uiScripts() {
   return MANIFEST.kitUiScripts
     .filter((f) => !own.has(f.toLowerCase()))
     .filter((f) => f !== 'search.js' || searchOn)
+    .filter((f) => f !== 'home-greeting.js' || !!config.discovery)
     .map((f) => `assets/docs-kit/${f}`);
 }
 

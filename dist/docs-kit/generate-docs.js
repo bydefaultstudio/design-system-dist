@@ -4697,6 +4697,22 @@ function noscriptSignOut() {
 }
 
 /**
+ * The kit's UI scripts a site loads when it sets no uiScripts of its own, in
+ * load order. Left out: any file the site already names (`siteScripts`, lower-
+ * case file names), search.js without search, and home-greeting.js without a
+ * discovery home, whose greeting is the only thing it fills. Mirrored by
+ * uiScripts() in tools/verify-router.js.
+ */
+function kitUiScriptNames(config, siteScripts = new Set()) {
+  return KIT_UI_SCRIPTS.filter((f) => {
+    if (siteScripts.has(f)) return false;
+    if (f === 'search.js' && !config.search) return false;
+    if (f === 'home-greeting.js' && !config.discovery) return false;
+    return true;
+  });
+}
+
+/**
  * Where this site serves one of the UI scripts, for a page outside the docs
  * template: the path in the site's own uiScripts list, else the kit's copy,
  * which applyTemplateChrome has already put in assets/docs-kit/. Null when
@@ -8019,9 +8035,7 @@ function applyTemplateChrome(rawTemplate) {
     const rawSrcs = [...rawHtml.matchAll(/<script\b[^>]*\bsrc\s*=\s*["']?([^"'\s>]+)/gi)].map(m => m[1]);
     const siteScripts = new Set([...CONFIG.extraScripts, ...rawSrcs].map(scriptName));
     uiScripts = [];
-    for (const f of KIT_UI_SCRIPTS) {
-      if (siteScripts.has(f)) continue;
-      if (f === 'search.js' && !CONFIG.search) continue;
+    for (const f of kitUiScriptNames(CONFIG, siteScripts)) {
       uiScripts.push(`assets/docs-kit/${f}`);
       copyKitAsset(`js/${f}`, path.join(OUTPUT_DIR, 'assets', 'docs-kit', f));
     }
@@ -8787,4 +8801,6 @@ module.exports = {
   expandMediaShortcodes,
   expandOsIllustrationShortcodes,
   suffixSvgIds,
+  // For scripts/verify-kit-ui-scripts.js
+  kitUiScriptNames,
 };

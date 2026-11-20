@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.4.0 */
+/* @bydefaultstudio/design-system v8.4.1 */
 /**
  * Dialog + Drawer component
  * Opens and closes native <dialog> elements declaratively.

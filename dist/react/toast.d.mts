@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.4.0 */
+/* @bydefaultstudio/design-system v8.4.1 */
 export type ToastType = 'default' | 'success' | 'warning' | 'danger' | 'info';
 
 /**

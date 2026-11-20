@@ -148,8 +148,11 @@ function renderBackground(config, { href, escape, icon }) {
   const toggle = moves
     ? `<button type="button" class="button login-slideshow-toggle" data-variant="transparent" data-icon-only aria-label="Pause slideshow">${icon('pause')}${icon('play')}</button>`
     : '';
+  // No words on any slide: the panel is only the controls, which a wide
+  // screen draws as a slim row rather than a caption-sized box
+  const variant = caption ? '' : ' data-variant="controls"';
   const panel = (caption || bars || toggle)
-    ? `\n      <div class="login-slideshow-panel">${caption}${(bars || toggle) ? `<div class="login-slideshow-controls">${bars}${toggle}</div>` : ''}</div>`
+    ? `\n      <div class="login-slideshow-panel"${variant}>${caption}${(bars || toggle) ? `<div class="login-slideshow-controls">${bars}${toggle}</div>` : ''}</div>`
     : '';
   return `<div class="login-backdrop" data-background="slideshow">
     <div class="login-slideshow" data-login-slideshow>

@@ -7,7 +7,7 @@ type: "bare"
 search: "false"
 status: "published"
 access: "public"
-scripts: "cell-input.js, auth-login.js, login-slideshow.js"
+scripts: "cell-input.js, login-keyboard.js, auth-login.js, login-slideshow.js"
 ---
 <!--
   The sign-in page (engine-parity-phase-d.md, D26). It ships with the engine

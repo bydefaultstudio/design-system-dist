@@ -129,6 +129,11 @@ module.exports = {
     strategies: ["delegated","self-registered"],
     note: "document click/input/change/reset behind window.__fieldInit; initField repaints .is-filled for prefilled values on bd:after-nav",
   },
+  "home-greeting.js": {
+    strategies: ["self-registered"],
+    init: "initHomeGreeting",
+    note: "the discovery home page's greeting, loaded only on a site that sets discovery; one init per document, which fills [data-home-greeting] and [data-home-date] on load, on bd:after-nav and on bd:session; holds no element references, so there is nothing to release",
+  },
   "search.js": {
     strategies: ["self-registered"],
     init: "initSearch",

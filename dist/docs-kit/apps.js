@@ -118,7 +118,7 @@ const ENGINE_PAGES = {
  */
 const GATE_FILES = Object.freeze({
   everyPage: Object.freeze(['assets/js/header-account.js', 'assets/js/locked.js']),
-  pages: Object.freeze(['assets/js/auth-login.js', 'assets/js/login-slideshow.js', 'assets/js/access-support-form.js']),
+  pages: Object.freeze(['assets/js/auth-login.js', 'assets/js/login-keyboard.js', 'assets/js/login-slideshow.js', 'assets/js/access-support-form.js']),
 });
 const LIST_KEYS = ['needs', 'scripts', 'styles', 'files'];
 
