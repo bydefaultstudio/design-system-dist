@@ -30,7 +30,7 @@
     "bar.js", "dropdown.js", "breadcrumb.js", "copy-button.js", "swatch.js", "docs-copy-chrome.js",
     "number-input.js", "toast.js", "dialog.js", "accordion.js", "tabs.js", "rating.js",
     "cell-input.js", "chip.js", "scroller.js", "date-picker.js", "password-toggle.js", "field.js",
-    "logo-spec.js", "slider.js", "search.js"
+    "logo-spec.js", "slider.js", "search.js", "home-greeting.js"
   ],
   "componentCss": [
     "bd-animate.css",

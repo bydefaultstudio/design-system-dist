@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.3.0 */
+/* @bydefaultstudio/design-system v8.4.0 */
 /**
  * Accordion component
  * Initialises all .accordion containers on the page.

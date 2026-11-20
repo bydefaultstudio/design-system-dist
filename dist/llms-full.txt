@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v8.3.0 -->
+<!-- @bydefaultstudio/design-system v8.4.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 8.3.0 (package)**
+**Version: 8.4.0 (package)**
 
 ## Getting the System
 
@@ -2805,7 +2805,7 @@ Every interactive component must include:
 | Avatar | `.avatar` | No | `avatar.md` |
 | Bar | `.bar`, `.bar-container`, `.bar-content`, `.bar-group`, `.bar-actions`, `.bar-overflow`, `.bar-close` | Yes — `bar.js` (overflow) | `bar.md` |
 | Page Header | `.page-header`, `.page-header-media`, `.page-header-container`, `.page-header-title`, `.page-header-subtitle`, `.page-header-actions` | No | `page-header.md` |
-| Section Header | `.section-header`, `.section-header-title`, `.section-header-actions` | No | `section-header.md` |
+| Section Header | `.section-header`, `.section-header-title`, `.section-header-actions`, `.section-header-label` | No | `section-header.md` |
 | Login | `.login`, `.login-header`, `.login-logo`, `.login-title`, `.login-subtitle`, `.login-form`, `.login-meta`, `.login-status`, `.login-footer` | No | `login.md` |
 | Cell Input | `.cell-input`, `.cell-input-cells`, `.cell-input-word`, `.cell-input-cell` | Yes — `cell-input.js` (cell build + paint) | `cell-input.md` |
 | Field | `.field`, `.field-icon`, `.field-clear`, `.field-toggle` | Yes — `field.js` (clear + `.is-filled`); `password-toggle.js` for the toggle | `field.md` |
@@ -5425,10 +5425,32 @@ Each title drops two rungs below 960px. A [media cover](#covers-with-an-image) h
 
 - **The media slot comes first**, before the header. The header is lifted out of the flow and sits over it.
 - **The image fills a fixed ratio**, `--book-cover-media-ratio` (`16 / 10`), cropped with `object-fit: cover` if its own shape differs. Change the token, not the image, when the artwork's shape changes.
-- **The variant brings its own title size and inset**, so leave `data-size` off. The image sets the cover's height — the variant drops the minimum height — and the title is `--font-2xl`, stepping to `--font-xl` below 960px.
+- **The variant brings its own title size and inset**, so leave `data-size` off, with one exception: `data-size="large"` gives the lead of a [feature layout](#a-feature-layout) its larger title. The image sets the cover's height — the variant drops the minimum height — and the title is `--font-2xl`, stepping to `--font-xl` below 960px.
 - **Both header slots sit on the image**, each on a chip of the cover's surface. The trailing chip appears on hover and focus, like the icon on a plain cover; a leading icon stays visible.
 - **Every cover on the shelf gets an image, or none does.** A shelf with some covers illustrated and some bare reads as unfinished.
 - By Default's covers use the [illustration style](/foundations/brand-illustration.html). That is an instance choice; the slot takes any image.
+
+---
+
+## Covers on a colour field
+
+`data-surface="field"` on an illustrated media cover lets the drawing's colour fill the whole cover, so the art bleeds into the card and the text sits on the hue. Put the hue (`data-color`, and `data-field` if the drawing uses one) on the cover as well as on the media slot. An optional `.eyebrow` above the title names what kind of thing the cover opens.
+
+```html
+<a class="book-cover" data-variant="media" data-surface="field" data-color="peach" href="/tools/logo-tool.html">
+  <div class="book-cover-media" data-color="peach">…the drawing…</div>
+  <header class="book-cover-header" data-color="peach">…</header>
+  <div class="book-cover-body">
+    <p class="eyebrow">Tool</p>
+    <h3 class="book-cover-title">Logo Tool</h3>
+    <p class="book-cover-description">The logo, in any colour and size.</p>
+  </div>
+</a>
+```
+
+The cover has no border, because the field is its edge, and hover lifts it and plays the art without changing its colour. Like the drawing it carries, a field cover stays light in dark mode: on a dark page the row reads as lit posters. The text colour is the drawing's text role, which is already checked for contrast on every hue. Under forced colours the art hides and the cover gets its border back.
+
+Don't put the same hue on two neighbours: a row of one colour reads as a band, not as cards.
 
 ---
 
@@ -5491,7 +5513,51 @@ Meta wraps rather than competing, so a row tolerates more here than a cover foot
 <div class="book-shelf" data-cols="3">…</div>
 ```
 
-Both settings collapse to a single column at 768px. The breakpoint belongs to the component rather than the grid utility, so it travels with it into another product.
+Four suits a row of small illustrated covers. It holds four columns down to 960px, pairs up to 768px, then follows the shelf to one column, or to a scrolling row (below).
+
+```html
+<div class="book-shelf" data-cols="4">…</div>
+```
+
+Two, three and four columns all collapse to a single column at 768px. The breakpoints belong to the component rather than the grid utility, so they travel with it into another product. They are viewport breakpoints, because the component cannot know the column it sits in; a site whose content column is narrower than the window (a docs sidebar) re-points `--book-shelf-columns` from its own container query.
+
+---
+
+## A scrolling shelf
+
+`data-scroll` turns the shelf into one row that scrolls sideways and snaps to its covers, so a phone reader swipes a row rather than scrolling past every cover in it. `mobile` scrolls on a touch screen under 768px; `always` scrolls at every width. It is CSS only: no script, nothing to start.
+
+```html
+<div class="book-shelf" data-cols="4" data-scroll="mobile">…</div>
+```
+
+The settings are named after a carousel's, and each is one token or attribute on the shelf:
+
+| Setting | What it does | Default |
+|---|---|---|
+| `--book-shelf-per-view` | Covers in view. A fraction lets the next cover peek, which is what tells a reader the row scrolls | `1.25` |
+| `--book-shelf-gap` | Gap between covers | `--space-xl` |
+| `--book-shelf-scroll-inset` | Space before the first cover and after the last | `0px` |
+| `data-snap` | Where a cover stops: `start`, `center`, or `none` for free scrolling | `start` |
+
+Covers are links, so the keyboard reaches every one, and the focus ring is drawn on the cover so the row's edge never clips it. `mobile` asks for a touch screen on purpose: a browser does not scroll a cover that is already partly in view when it takes focus, so a keyboard reader would land on the peeking cover with most of it off the edge. A narrow or zoomed desktop window therefore keeps the stacked shelf. `always` has that limit at every width, so pair it with a script that scrolls the focused cover into view. Smooth scrolling is off under reduced motion.
+
+---
+
+## A feature layout
+
+`data-layout="feature"` gives the shelf a lead: the first cover takes half the shelf and both rows, two covers sit beside it, and the fourth item, a [note card](/components/card.html), fills the row under them, so the two halves end level. Give the lead `data-size="large"`.
+
+```html
+<div class="book-shelf" data-layout="feature">
+  <a class="book-cover" data-variant="media" data-size="large" href="…">…</a>
+  <a class="book-cover" data-variant="media" href="…">…</a>
+  <a class="book-cover" data-variant="media" href="…">…</a>
+  <figure class="card" data-variant="note">…</figure>
+</div>
+```
+
+Under 960px the lead takes a row to itself; under 768px everything stacks. Use it once on a page: it is the lead story, and two leads is none.
 
 ---
 
@@ -5606,14 +5672,14 @@ A cover or a row can be locked: the lock replaces the trailing icon, the text mu
 
 **Don't:**
 
-- Don't add `.card` alongside `.book-cover` — it is standalone and ships its own background, border, and hover states
+- Don't add `.card` alongside `.book-cover` — it is standalone and ships its own background, border, and hover states. The note card in a [feature layout](#a-feature-layout) is the one exception
 - Don't override `min-height` on a single cover; uniform height is what makes a shelf read as a shelf
 - Don't swap the trailing icon per card — constancy is what signals "this opens". That is By Default's usage rule, not a component constraint
 - Don't put extra content in `.book-cover-body`; the slot is title and description only — an image goes in `.book-cover-media`
 - Don't mix media covers and plain covers on one shelf
-- Don't mix `.book-cover` and `.card` in one grid — pick one pattern per surface
+- Don't mix `.book-cover` and `.card` in one grid — pick one pattern per surface, except the feature layout's note
 - Don't wrap a shelf in `.grid.cols-2.gap-xl`; the shelf owns its layout
-- Don't mix sizes in one shelf — uniform height is what makes an index read as a shelf
+- Don't mix sizes in one shelf — uniform height is what makes an index read as a shelf. The feature layout's large lead is the exception
 - Don't give a contents row a header or footer strip; that turns a row into a card and blurs the shelf/contents distinction
 
 ---
@@ -5628,6 +5694,9 @@ This section documents how the component is built. For usage, see the sections a
 |---|---|---|
 | `--book-shelf-columns` | `2` | Column count on the shelf |
 | `--book-shelf-gap` | `var(--space-xl)` | Space between covers |
+| `--book-shelf-per-view` | `1.25` | Scrolling shelf: covers in view; a fraction lets the next one peek |
+| `--book-shelf-scroll-inset` | `0px` | Scrolling shelf: space before the first cover and after the last |
+| `--book-shelf-scroll-room` | `var(--space-s)` | Scrolling shelf: block padding that keeps the hover lift, shadow and focus ring from being clipped, given back by a negative margin |
 | `--book-cover-min-height` | `250px` | Cover height — the shelf's visual rhythm |
 | `--book-cover-title-size` | `var(--font-5xl)` | Cover title; `data-size` and the 960px step re-point it |
 | `--book-cover-background` | `var(--background-primary)` | Cover fill; dark mode re-points to `var(--background-secondary)` |
@@ -5652,6 +5721,11 @@ This section documents how the component is built. For usage, see the sections a
 |---|---|
 | `.book-shelf` | L0 grid of covers; owns columns and gap |
 | `.book-shelf[data-cols="3"]` | Three-column shelf |
+| `.book-shelf[data-cols="4"]` | Four-column shelf; two under 960px |
+| `.book-shelf[data-scroll="mobile\|always"]` | One row that scrolls sideways and snaps to its covers |
+| `.book-shelf[data-snap="start\|center\|none"]` | Where a cover stops in a scrolling shelf |
+| `.book-shelf[data-layout="feature"]` | A lead cover beside a pair and a note |
+| `.book-cover[data-surface="field"]` | An illustrated media cover filled with the drawing's field colour |
 | `.book-cover[data-size="small\|large"]` | Smaller or larger cover — height, title, and inset together |
 | `.book-cover[data-variant="media"]` | Image across the top, start-aligned caption below, header over the image |
 | `.book-cover-media` | Image slot of a media cover; first child, fills `--book-cover-media-ratio` |
@@ -6533,6 +6607,29 @@ Combine `.card--flush` with `.card--interactive` to create a clickable card with
 
 ---
 
+## Note card
+
+`data-variant="note"` is a card that speaks in sentences: a tip, a quote or a fact that sits between rows of other things. It is not a [callout](/components/callout.html), which is a warning or a note inside an article. A tip or a fact is an `<aside>`; a quote is a `<figure>` holding a `<blockquote>` and a `<figcaption>`.
+
+```html
+<aside class="card" data-variant="note" data-color="green">
+  <p class="eyebrow card-note-label">Brand tip</p>
+  <p class="card-note-text">Check a colour pair before you design with it.</p>
+  <p class="card-note-source"><a href="/tools/color-pairing.html">Colour Pairing</a></p>
+</aside>
+```
+
+```html
+<figure class="card" data-variant="note">
+  <blockquote class="card-note-text"><p>“Good design is as little design as possible.”</p></blockquote>
+  <figcaption class="card-note-source">Dieter Rams</figcaption>
+</figure>
+```
+
+A note is neutral by default, a raised fill inside the card's own border. `data-color` paints it in a hue, which becomes its edge, so the border goes, and it follows the theme in dark mode; links and the focus ring inside it take the hue's ink. Type the quotation marks in the text: the note drops the prose blockquote's italic and its decorative mark. A quote needs a source you have checked. The note card is not part of the open core file, because its colours come from the colour scope.
+
+---
+
 ## Accessibility
 
 - Use semantic HTML inside cards (`<h3>`, `<p>`, `<ul>`, etc.)
@@ -6573,6 +6670,10 @@ This section documents how the component is built. For usage, see the sections a
 | `.card` | Base component: background, border, radius, padding |
 | `.card--flush` | Removes padding |
 | `.card--interactive` | Adds hover background, shadow, focus ring, and link styling |
+| `.card[data-variant="note"]` | A tip, quote or fact on its own; `data-color` paints it |
+| `.card-note-label` | The note's label line; an `.eyebrow`, with an optional icon |
+| `.card-note-text` | The note's sentence, or the `<blockquote>` of a quote |
+| `.card-note-source` | Where the note comes from; sits at the foot |
 | `.card-title` | Card heading, resets margin |
 | `.card-description` | Card body text, secondary text color |
 | `.card-image` | Full-bleed image with top border-radius |
@@ -10768,7 +10869,8 @@ This section documents how the component is built. For usage, see the sections a
 
 | Selector | Purpose |
 |---|---|
-| `.login` | Root column: full width up to the cap, flex column, `--login-gap` gap, centered items and centered text — everything on the card sits on one axis, the fields' own values and placeholders included, since `text-align` inherits into inputs |
+| `.login` | Root column: full width up to the cap, flex column, `--login-gap` gap, centered items and centered text — everything on the card sits on one axis, the fields' own values and placeholders included |
+| `.login input`, `.login textarea`, `.login select` | `text-align: inherit`, because the browser's stylesheet sets inputs to the start: without it a value and its placeholder sat left in a centred card. The cell input's real input paints no text, so it is unaffected |
 | `.login-header` | Centered logo/title/subtitle stack with `--space-m` gap |
 | `.login-logo` | Logo slot at token height; inner `svg` scales to it and inherits `currentColor` |
 | `.login-title` | Heading at `--font-3xl`, weight from the heading element, document-flow margins removed |
@@ -12245,6 +12347,24 @@ On narrow viewports a long title and its actions wrap, keeping `--section-header
 
 ---
 
+## Labelled rule
+
+`data-variant="labelled"` moves the rule off the top of the row and onto a label. The label is the first line and draws the rule after itself, like a tab on a divider, so the line belongs to the section it opens. The title and the actions share the line below. Use it for the rows of an index or a home page, where each row needs a short category word and a heading that says more.
+
+```html
+<header class="section-header" data-variant="labelled">
+  <p class="eyebrow section-header-label">Tools</p>
+  <h2 class="section-header-title">Make it with the tools</h2>
+  <div class="section-header-actions">
+    <a href="/tools/" class="button" data-variant="text">All tools</a>
+  </div>
+</header>
+```
+
+The label names the category; the heading makes the point. The label stays a `<p>` outside the heading, so the heading reads alone, and the rule is decoration that assistive technology never meets. The variant needs its label: without one there is no rule at all.
+
+---
+
 ## Accessibility
 
 - Pick the heading level from the document outline — one `h1` per page, then descend without skipping levels
@@ -12288,6 +12408,8 @@ This section documents how the component is built. For usage, see the sections a
 | `.section-header` | Base container: flex row, wrapping, top border, block padding |
 | `.section-header-title` | The heading; removes the element's document-flow margins |
 | `.section-header-actions` | Optional right-hand slot; flex row pushed right with an auto margin |
+| `.section-header[data-variant="labelled"]` | The rule moves onto a label line above the title |
+| `.section-header-label` | The label line of the labelled variant; draws the rule after its text |
 
 ### Key rules
 

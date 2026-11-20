@@ -2311,7 +2311,8 @@ body[data-role]:not([data-role="owner"]) .site-sidebar [data-access="owner"],
 body[data-role]:not([data-role="owner"]) .site-sidebar li:has(> [data-access="owner"]),
 body[data-role]:not([data-role="owner"]) .book-contents-item[data-access="owner"],
 body[data-role]:not([data-role="owner"]) .book-cover[data-access="owner"],
-body[data-role="guest"] .header-search-btn {
+body[data-role="guest"] .header-search-btn,
+body[data-role="guest"] .home-greeting-search {
   display: none;
 }
 
@@ -3856,19 +3857,347 @@ main.page-content[tabindex="-1"]:focus {
   outline: none;
 }
 
-/* --- Login Page (standalone /auth/login.html) --- */
+/* --- Login Page (standalone /auth/login.html) ---
+   The sign-in page's layout (cms/auth-login.md): a background slot and the
+   sign-in strip. From 960px up the slot fills the screen and the strip, a
+   480px column of page chrome on the right, holds the header's actions and
+   the form centred in what is left. Below it the page stacks: the header
+   with its logo, the slot as a band, then the form from the top.
+
+   The slot is .login-backdrop, drawn by the build from signIn in
+   docs.config.js (cms/generator/sign-in.js), in one of three modes:
+   data-background="none" a plain panel (no band on a phone), "slideshow"
+   the site's slides (login-slideshow.js), "custom" an empty mount the
+   site's own script fills.
+
+   The slot comes after the strip in the markup, so the form is the first
+   thing read and the first Tab stop, and any control in the background
+   follows it. order (a phone) and grid-row (wide) draw the slot first all
+   the same. Nothing in the slot is content a reader needs before the form:
+   it is decoration, and at most a control that changes the decoration. */
+
+/* On :root, not .login-page: the header is the page's sibling and reads
+   the strip's width too */
+:root {
+  --login-strip-width: 480px;
+  --login-band-height: 240px;
+  /* How long each slide shows: the progress bar's fill, which is also the
+     slideshow's clock (login-slideshow.js) */
+  --login-slide-duration: var(--duration-8xl);
+}
 
 .login-page {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  /* The top-nav is sticky (in normal flow) on auth pages — it already
-     reserves its own height, so min-height fills the remaining viewport.
-     No margin-top: that would double-count the nav height and push the
-     card off-centre with an overflow scroll. */
+  flex-direction: column;
+  /* The header is sticky (in normal flow) on a phone and reserves its own
+     height, so the page fills what is left of the viewport */
   min-height: calc(100vh - var(--top-nav-height));
-  padding: var(--space-l);
+  min-height: calc(100dvh - var(--top-nav-height));
   background: var(--background-primary);
+}
+
+/* Focus scrolled into view clears the header, with room to spare (WCAG
+   2.2's 2.4.11, Focus Not Obscured): fixed from 960px up, sticky on a
+   phone, where a control in the band is reached after the form and
+   scrolled up to, under the header, unless this holds it clear */
+html:has(.login-page) {
+  scroll-padding-top: calc(var(--top-nav-height) + var(--space-m));
+}
+
+/* The strip is page chrome, not a panel: the form sits in it with no card */
+.login-strip {
+  display: flex;
+  flex: 1 0 auto;
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--space-xl);
+}
+
+/* A phone shows the logo once, in the header above */
+.login-strip .login-logo {
+  display: none;
+}
+
+/* -- The background slot -- */
+
+/* order: drawn above the form on a phone, though it follows it in the page */
+.login-backdrop {
+  position: relative;
+  order: -1;
+  background: var(--background-secondary);
+}
+
+/* A phone shows a band only when there is something to show in it */
+.login-backdrop[data-background="none"] {
+  display: none;
+}
+
+.login-backdrop[data-background="custom"] {
+  height: var(--login-band-height);
+  overflow: hidden;
+}
+
+/* -- Slideshow -- */
+
+.login-slides {
+  position: relative;
+  height: var(--login-band-height);
+  overflow: hidden;
+}
+
+.login-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity var(--motion-page-fade-duration) var(--motion-page-fade-easing);
+}
+
+.login-slide.is-active {
+  opacity: 1;
+}
+
+.login-slide > img,
+.login-slide > video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The caption and the controls draw once login-slideshow.js has set them
+   up: without the script nothing moves, and nothing needs pausing */
+.login-slideshow:not(.is-ready) .login-slideshow-panel {
+  display: none;
+}
+
+/* On a phone the panel is the slim row under the band, on the page */
+.login-slideshow-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+  padding: var(--space-m) var(--space-xl);
+  background: var(--background-primary);
+}
+
+/* The words belong to the image they describe: a wide screen only. A
+   panel with nothing else in it draws nothing on a phone */
+.login-slideshow-caption,
+.login-slideshow-panel:not(:has(.login-slideshow-controls)) {
+  display: none;
+}
+
+.login-slideshow-title,
+.login-slideshow-text {
+  margin-block: 0;
+}
+
+.login-slideshow-title {
+  font-size: var(--font-s);
+  color: var(--text-primary);
+}
+
+.login-slideshow-text {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.login-slideshow-title:empty,
+.login-slideshow-text:empty {
+  display: none;
+}
+
+.login-slideshow-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-m);
+}
+
+.login-slideshow-progress {
+  display: flex;
+  flex: 1 1 auto;
+  gap: var(--space-m);
+}
+
+.login-slideshow-bar {
+  position: relative;
+  flex: 1 1 0;
+  height: var(--space-2xs);
+  overflow: hidden;
+  background: var(--border-faded);
+}
+
+.login-slideshow-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--text-primary);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.login-slideshow-bar.is-done::after {
+  transform: scaleX(1);
+}
+
+/* The fill is the clock: its animationend moves to the next slide. Linear,
+   the motion tokens' one steady rate (the spinner's), because a bar that
+   eased would misstate how much of the slide is left */
+.login-slideshow-bar.is-active::after {
+  animation: login-slide-progress var(--login-slide-duration) var(--motion-loading-spin-easing) forwards;
+}
+
+.login-slideshow.is-paused .login-slideshow-bar.is-active::after {
+  animation-play-state: paused;
+}
+
+@keyframes login-slide-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.login-slideshow-toggle {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
+
+/* One icon at a time: pause while it plays, play while it is paused */
+.login-slideshow-toggle [data-icon="play"],
+.login-slideshow.is-paused .login-slideshow-toggle [data-icon="pause"] {
+  display: none;
+}
+
+.login-slideshow.is-paused .login-slideshow-toggle [data-icon="play"] {
+  display: flex;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* A slide the reader chose to move to arrives at once */
+  .login-slide {
+    transition: none;
+  }
+}
+
+/* Forced colours flatten both fills to Canvas: an outlined track and a
+   Highlight fill, the segmented control's pattern, so the fill reads in
+   every high-contrast theme */
+@media (forced-colors: active) {
+  .login-slideshow-bar {
+    forced-color-adjust: none;
+    background: Canvas;
+    box-shadow: inset 0 0 0 var(--border-s) CanvasText;
+  }
+
+  .login-slideshow-bar::after {
+    background: Highlight;
+  }
+}
+
+/* -- Wide: the background fills the screen, the strip on the right -- */
+
+@media (min-width: 960px) {
+  .login-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--login-strip-width);
+    /* The header sits in the strip (below), not above the page */
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* Placed, not auto-placed: a replacement page without the slot keeps
+     the form on the right, under the header, and the slot, which follows
+     the strip in the page, shares its row rather than starting a new one */
+  .login-backdrop {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .login-strip {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  /* The header becomes the strip's top bar: its actions on the right, and
+     no logo, since the form carries the brand's own. nav.js draws the same
+     header everywhere; only its place changes here. */
+  body:has(.login-page) .site-header {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: var(--login-strip-width);
+  }
+
+  body:has(.login-page) .site-header-start {
+    display: none;
+  }
+
+  /* Pinned while a long pane scrolls the strip beside it */
+  .login-backdrop,
+  .login-backdrop[data-background="none"],
+  .login-backdrop[data-background="custom"] {
+    display: block;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .login-slideshow,
+  .login-slides {
+    height: 100%;
+  }
+
+  /* The header has no logo here: the form carries the brand's own */
+  .login-strip .login-logo {
+    display: block;
+  }
+
+  .login-strip {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: calc(var(--top-nav-height) + var(--space-xl)) var(--space-2xl) var(--space-4xl);
+  }
+
+  /* On the image: a panel in the dark theme (login-slideshow.js sets it),
+     opaque, so its words read on any picture */
+  .login-slideshow-panel {
+    position: absolute;
+    left: var(--space-2xl);
+    bottom: var(--space-2xl);
+    max-width: calc(100% - 2 * var(--space-2xl));
+    gap: var(--space-m);
+    padding: var(--space-xl);
+    color: var(--text-primary);
+  }
+
+  .login-slideshow-caption {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  /* A slide with no words leaves no empty box above the controls */
+  .login-slideshow-caption:not(:has(p:not(:empty))) {
+    display: none;
+  }
+
+  .login-slideshow-panel:not(:has(.login-slideshow-controls)) {
+    display: flex;
+  }
+
+  /* A bar's length is a width, not a share or a basis: the panel shrinks
+     to fit its content, and sizes it from each bar's width. Past four
+     slides on a narrow backdrop they shrink to keep the row in the panel */
+  .login-slideshow-progress {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .login-slideshow-bar {
+    flex: 0 1 auto;
+    width: var(--space-6xl);
+    min-width: var(--space-s);
+  }
 }
 
 /* --- Locked page (cms/locked.md) ---
@@ -5069,5 +5398,117 @@ a.search-result.search-see-all:hover {
     forced-color-adjust: auto;
     background-color: ButtonFace;
     border: var(--border-s) solid ButtonText;
+  }
+}
+
+
+/* ------ HOME DISCOVERY ------
+   The discovery home page (home-discovery-plan.md): a greeting under the
+   hero, then rows. The rows are the book shelf, the section header and the
+   note card from design-system.css; only the greeting and the row rhythm
+   live here. */
+
+/* The home page's rows are shelves, not prose, so it widens past the 1080px
+   reading measure. */
+.docs-content-grid:has(.home-rows) {
+  max-width: 1440px;
+}
+
+/* Card copy is capped at 14 words by docgen (renderDiscoveryRow), which keeps
+   a row's cards level. The clamp is the backup for a narrow card. */
+.home-rows .book-cover-description {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.home-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-m);
+}
+
+.home-greeting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-l) var(--space-2xl);
+}
+
+.home-greeting-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+  min-width: 0;
+}
+
+/* The date line holds its line before the script fills it, so filling it
+   moves nothing under it. */
+.home-greeting-date {
+  min-height: 1lh;
+  margin-block: 0;
+  color: var(--text-secondary);
+}
+
+.home-greeting-title {
+  margin-block: 0;
+  font-size: var(--title-size);
+  font-weight: var(--title-weight);
+  line-height: var(--title-leading);
+  letter-spacing: var(--title-tracking);
+  color: var(--text-primary);
+}
+
+.home-greeting-search {
+  margin-inline-start: auto;
+}
+
+/* The rows answer to the content column, not the viewport: with the
+   sidebar open the column is 280px narrower, and four covers in a 705px
+   column are 150px wide. The shelf's own breakpoints are viewport ones,
+   because it is portable; here the docs shell knows its column, so the
+   shelf's column token is re-pointed from the container (CLAUDE.md: content
+   breakpoints query main-content). (0,3,0) out-ranks the shelf's own rules. */
+@container main-content (max-width: 959.98px) {
+  .home-rows .book-shelf[data-cols="4"],
+  .home-rows .book-shelf[data-layout="feature"] {
+    --book-shelf-columns: 2;
+  }
+
+  .home-rows .book-shelf[data-layout="feature"] > :first-child {
+    grid-row: auto;
+  }
+}
+
+/* One column only where two would be cramped. The container is the whole
+   main area, padding included, and it shrinks by the sidebar or the rail,
+   so a 767px threshold here gave one 700px card at an 800px window. Two
+   cards hold down to a 560px column, about 250px each; a touch screen
+   under 768px gets the scrolling row instead (design-system.css). */
+@container main-content (max-width: 559.98px) {
+  .home-rows .book-shelf[data-cols="4"],
+  .home-rows .book-shelf[data-layout="feature"] {
+    --book-shelf-columns: 1;
+  }
+
+  .home-rows .book-shelf[data-layout="feature"] > :first-child,
+  .home-rows .book-shelf[data-layout="feature"] > :nth-child(4) {
+    grid-column: auto;
+  }
+}
+
+@container main-content (max-width: 767.98px) {
+  .home-greeting-search {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+
+  /* "Good afternoon" and a first name wrap to two lines in a narrow
+     column, so the title holds two before the script writes it. */
+  .home-greeting-title {
+    min-height: 2lh;
   }
 }

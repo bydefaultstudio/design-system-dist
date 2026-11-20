@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.3.0 */
+/* @bydefaultstudio/design-system v8.4.0 */
 /**
  * image.js — Image placeholder generator, /image/*.
  *

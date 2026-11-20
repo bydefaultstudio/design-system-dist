@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.3.0 */
+/* @bydefaultstudio/design-system v8.4.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -5272,6 +5272,94 @@ details .disclosure-content {
 
 
 
+/* -- Note --
+   data-variant="note" is editorial content on its own: a tip, a quote or a
+   fact between rows of other things. Not a callout, which is an admonition
+   inside an article. It is an <aside>, or a <figure> holding a <blockquote>
+   and a <figcaption> for a quote. Neutral by default; data-color paints it
+   with the hue's own ground and text (layer 2, so it themes in dark mode).
+   The source sits at the foot, so notes of different lengths in one row end
+   level. */
+.card[data-variant="note"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-l);
+  margin: 0;
+  padding: var(--space-2xl);
+  background-color: var(--background-secondary);
+}
+
+/* A coloured note restates the semantics its contents read, as the book
+   cover does: links and the focus ring read --text-plain, --text-link and
+   --input-focus, so leaving those out paints a page-coloured link on the
+   hue (about 1:1 on a shade step in dark). The hue is the edge, so the
+   card's border goes. */
+.card[data-variant="note"][data-color] {
+  --background-primary: var(--color-background);
+  --background-secondary: var(--color-background);
+  --background-faded: var(--color-raised);
+  --text-primary: var(--color-text);
+  --text-plain: var(--color-text);
+  --text-link: var(--color-text);
+  --text-secondary: var(--color-text-muted);
+  --text-faded: var(--color-text-muted);
+  --border-faded: var(--color-border-faded);
+  --input-focus: var(--color-text);
+  border: none;
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+.card-note-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-block: 0;
+}
+
+.card-note-text {
+  margin-block: 0;
+  font-size: var(--font-2xl);
+  line-height: var(--line-height-m);
+  letter-spacing: var(--title-tracking);
+  text-wrap: pretty;
+}
+
+/* The quote is the note's text, not the prose blockquote: no rule, no mark,
+   no italic. The quotation marks are typed in the text. */
+.card[data-variant="note"] blockquote {
+  margin: 0;
+  padding: 0;
+  border: none;
+  font-family: inherit;
+  font-style: normal;
+  color: inherit;
+}
+
+.card[data-variant="note"] blockquote::before {
+  content: none;
+}
+
+.card[data-variant="note"] blockquote p {
+  margin-block: 0;
+  font-size: inherit;
+}
+
+.card-note-source {
+  margin-block: auto 0;
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+
+/* Forced colours flattens the ground the note is made of, so it gets an
+   edge. */
+@media (forced-colors: active) {
+  .card[data-variant="note"] {
+    border: var(--border-s) solid CanvasText;
+  }
+}
+
+
 /* ------ 18. BREADCRUMB ------ */
 
 /* An ordered list inside a labelled nav: a screen reader announces "list,
@@ -8996,6 +9084,9 @@ fieldset[data-size="small"] {
   /* -- Component tokens (re-point these to re-skin; never override the rules) -- */
   --book-shelf-columns: 2;
   --book-shelf-gap: var(--space-xl);
+  --book-shelf-per-view: 1.25;      /* scrolling shelf: covers in view */
+  --book-shelf-scroll-inset: 0px;   /* scrolling shelf: space at either end */
+  --book-shelf-scroll-room: var(--space-s); /* scrolling shelf: room for the lift and ring */
 
   display: grid;
   grid-template-columns: repeat(var(--book-shelf-columns), minmax(0, 1fr));
@@ -9006,12 +9097,144 @@ fieldset[data-size="small"] {
   --book-shelf-columns: 3;
 }
 
-/* Both selectors are listed because a media query adds no specificity: the
-   (0,2,0) attribute rule above would otherwise keep three columns on mobile. */
+.book-shelf[data-cols="4"] {
+  --book-shelf-columns: 4;
+}
+
+/* -- Feature layout --
+   One lead cover beside a pair and a note: the lead takes half the shelf and
+   both rows, the pair sits beside it, the fourth item (a note, usually)
+   fills the row under the pair, so the two halves end level. Placed by
+   position, so the shelf owns its layout whatever the fourth item is. Four tracks, placed by the grid itself. */
+.book-shelf[data-layout="feature"] {
+  --book-shelf-columns: 4;
+}
+
+.book-shelf[data-layout="feature"] > :first-child {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.book-shelf[data-layout="feature"] > :nth-child(4) {
+  grid-column: span 2;
+}
+
+/* Four columns hold down to 960px, then pair up. This block sits above the
+   768px one so that one still wins on source order. */
+@media (max-width: 959px) {
+  .book-shelf[data-cols="4"],
+  .book-shelf[data-layout="feature"] {
+    --book-shelf-columns: 2;
+  }
+
+  .book-shelf[data-layout="feature"] > :first-child {
+    grid-row: auto;
+  }
+}
+
+/* Every selector is listed because a media query adds no specificity: the
+   (0,2,0) attribute rules above would otherwise keep their columns on mobile. */
 @media (max-width: 768px) {
   .book-shelf,
-  .book-shelf[data-cols="3"] {
+  .book-shelf[data-cols="3"],
+  .book-shelf[data-cols="4"],
+  .book-shelf[data-layout="feature"] {
     --book-shelf-columns: 1;
+  }
+
+  /* A span of two in a one-column grid would open a second, implicit column. */
+  .book-shelf[data-layout="feature"] > :first-child,
+  .book-shelf[data-layout="feature"] > :nth-child(4) {
+    grid-column: auto;
+  }
+}
+
+/* -- Scrolling shelf --
+   data-scroll turns the shelf into one row that scrolls sideways and snaps
+   to its covers: "mobile" on a touch screen under 768px, "always" at every
+   width. CSS only, so there is nothing to bind or release.
+
+   "mobile" asks for a touch screen (pointer: coarse) on purpose. A browser
+   does not scroll a focused cover that is already partly in view, so a
+   keyboard reader would land on the peeking cover with most of it off the
+   edge; and a page zoomed to 400% on a desktop is under 768px too. Both keep
+   the stacked grid, where every cover is whole. "always" has that limit at
+   every width: give it a script that scrolls the focused cover into view
+   before using it (ROADMAP, bd-carousel).
+
+   The settings are named after a carousel's, and each is one token or
+   attribute. The tokens are declared with the shelf's own, above, so a
+   re-point on .book-shelf reaches them:
+
+     --book-shelf-per-view      covers in view; a fraction lets the next peek
+     --book-shelf-gap           the gap between covers (the shelf's own)
+     --book-shelf-scroll-inset  space before the first cover and after the last
+     data-snap                  "start" (default), "center" or "none"
+
+   The block padding is room for the cover's hover lift, shadow and focus
+   ring, which a scroll container would clip; the negative margin gives the
+   same space back, so the row sits where a still shelf would. */
+.book-shelf[data-scroll="always"] {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - (var(--book-shelf-per-view) - 1) * var(--book-shelf-gap)) / var(--book-shelf-per-view));
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--book-shelf-scroll-inset);
+  padding-inline: var(--book-shelf-scroll-inset);
+  padding-block: var(--book-shelf-scroll-room);
+  margin-block: calc(-1 * var(--book-shelf-scroll-room));
+  scrollbar-width: none;
+}
+
+.book-shelf[data-scroll="always"] > * {
+  scroll-snap-align: start;
+}
+
+.book-shelf[data-scroll="always"][data-snap="center"] > * {
+  scroll-snap-align: center;
+}
+
+.book-shelf[data-scroll="always"][data-snap="none"] {
+  scroll-snap-type: none;
+}
+
+@media (max-width: 768px) and (pointer: coarse) {
+  .book-shelf[data-scroll="mobile"] {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - (var(--book-shelf-per-view) - 1) * var(--book-shelf-gap)) / var(--book-shelf-per-view));
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--book-shelf-scroll-inset);
+    padding-inline: var(--book-shelf-scroll-inset);
+    padding-block: var(--book-shelf-scroll-room);
+    margin-block: calc(-1 * var(--book-shelf-scroll-room));
+    scrollbar-width: none;
+  }
+
+  .book-shelf[data-scroll="mobile"] > * {
+    scroll-snap-align: start;
+  }
+
+  .book-shelf[data-scroll="mobile"][data-snap="center"] > * {
+    scroll-snap-align: center;
+  }
+
+  .book-shelf[data-scroll="mobile"][data-snap="none"] {
+    scroll-snap-type: none;
+  }
+}
+
+.book-shelf[data-scroll]::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .book-shelf[data-scroll] {
+    scroll-behavior: smooth;
   }
 }
 
@@ -9091,6 +9314,13 @@ fieldset[data-size="small"] {
   text-align: start;
 }
 
+/* The media rule above re-points the size tokens, so a large media cover
+   states its own step here, after it: the lead of a feature shelf. */
+.book-cover[data-variant="media"][data-size="large"] {
+  --book-cover-title-size: var(--font-4xl);
+  --book-cover-body-padding: var(--space-xl);
+}
+
 /* The heading scale steps by restating font-size on the element, not by
    re-pointing a token — so a class that sets its own size has to carry the
    step itself, or it stays at desktop size on every phone. Every size
@@ -9115,6 +9345,10 @@ fieldset[data-size="small"] {
 
   .book-cover[data-variant="media"] {
     --book-cover-title-size: var(--font-xl);
+  }
+
+  .book-cover[data-variant="media"][data-size="large"] {
+    --book-cover-title-size: var(--font-2xl);
   }
 }
 
@@ -9193,6 +9427,15 @@ fieldset[data-size="small"] {
   font-size: var(--book-cover-title-size);
   line-height: var(--title-leading);
   font-weight: var(--font-weight-regular);
+  /* One long word wraps inside a narrow cover instead of running past its
+     edge, as .section-header-title does. */
+  overflow-wrap: anywhere;
+}
+
+/* A label above the title: the body's gap spaces it, not the paragraph's
+   own margin (no margins inside a block). */
+.book-cover-body .eyebrow {
+  margin: 0;
 }
 
 .book-cover-description {
@@ -9293,9 +9536,36 @@ fieldset[data-size="small"] {
   color: var(--os-illustration-ink);
 }
 
+/* -- Book cover media: the field surface --
+ * data-surface="field" lets the art's field fill the whole cover, so the
+ * drawing bleeds into the card and the text sits on the hue: the art card.
+ * The hue (data-color, and data-field with it) then goes on the cover as well
+ * as on the slot. Re-pointing the scope's two roles is the whole treatment,
+ * as on a page header with an illustration: .book-cover[data-color] maps
+ * them onto every semantic the cover reads. They are layer-1 steps, which
+ * never swap with the theme, so the card stays light in dark mode like the
+ * art it carries. (0,3,0) beats every section 2d theme arm. The field is the
+ * edge, so the border goes; hover lifts and plays the art, with no colour
+ * change. */
+.book-cover[data-variant="media"][data-surface="field"][data-color] {
+  --color-background: var(--os-illustration-field);
+  --color-text: var(--os-illustration-text);
+  --book-cover-border: none;
+  --book-cover-background-hover: var(--color-background);
+}
+
+.book-cover[data-variant="media"][data-surface="field"][data-color] .book-cover-media {
+  border-bottom: none;
+}
+
 /* Forced colours flattens the field, so the art goes and the slot keeps its
-   ratio. */
+   ratio. The field surface loses its edge with its colour, so its border
+   comes back. */
 @media (forced-colors: active) {
+  .book-cover[data-variant="media"][data-surface="field"][data-color] {
+    border: var(--border-s) solid CanvasText;
+  }
+
   .book-cover-media > .os-illustration {
     display: none;
   }
@@ -9311,6 +9581,23 @@ fieldset[data-size="small"] {
 :is(a, button).book-cover:focus-visible {
   outline: var(--focus-width) solid var(--input-focus);
   outline-offset: var(--focus-offset);
+}
+
+/* Two places the ring is drawn on the cover instead of around it. A
+   scrolling shelf clips at its edges, which would cut the ring of its first
+   and last cover. And a field cover stays light in dark mode, so its ring is
+   the field's dark ink: outside the cover that ink sits on the dark page and
+   vanishes (1:1 on red and green), and flush with the edge it only makes the
+   card look smaller. So it sits a full step inside, ink on its own field.
+   The field rule comes second and out-ranks the other, (0,5,1) to (0,4,1),
+   so it wins inside a scrolling shelf. Each field rule asks for data-color
+   too: without the hue there is no field to fill the cover with. */
+.book-shelf[data-scroll] > :is(a, button).book-cover:focus-visible {
+  outline-offset: calc(var(--focus-width) * -1);
+}
+
+:is(a, button).book-cover[data-variant="media"][data-surface="field"][data-color]:focus-visible {
+  outline-offset: calc((var(--focus-width) + var(--focus-offset)) * -1);
 }
 
 /* Selected: the cover a reader has picked (a library tile), marked with
@@ -11744,6 +12031,42 @@ section[id] {
   margin-inline-start: auto;
 }
 
+/* -- Labelled rule --
+   data-variant="labelled" moves the rule off the top of the row and onto a
+   label: the label is the first, full-width line and draws the rule after
+   itself, like a tab on a divider, so the line belongs to the section it
+   opens. The title and the actions share the line below. The rule is
+   decoration, so it is a pseudo-element and never reaches the accessibility
+   tree. The variant needs a .section-header-label to make sense: without one
+   there is no rule at all. */
+.section-header[data-variant="labelled"] {
+  align-items: end;
+  row-gap: var(--space-l);
+  padding-block-start: 0;
+  border-top: none;
+}
+
+.section-header-label {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-m);
+  margin-block: 0;
+  color: var(--text-secondary);
+}
+
+.section-header-label::after {
+  content: "";
+  flex: 1;
+  border-top: var(--section-header-border);
+}
+
+@media (max-width: 768px) {
+  .section-header[data-variant="labelled"] {
+    row-gap: var(--space-m);
+  }
+}
+
 
 /* ------ 46. LOGIN ------
    An authentication stack: header, one or more form panes, trailing text
@@ -11766,10 +12089,10 @@ section[id] {
 }
 
 /* Everything on one axis: the header, the labels, the status lines, the
-   trailing actions — and the fields' own text, since text-align inherits into
-   an input's value and placeholder — are all centred, so the eye never has
-   to change column. That last one is deliberate: a left-aligned value in a
-   centred card is the one thing that would break the axis. */
+   trailing actions — and the fields' own text, their values and
+   placeholders — are all centred, so the eye never has to change column.
+   That last one is deliberate: a left-aligned value in a centred card is
+   the one thing that would break the axis. */
 .login {
   width: 100%;
   max-width: var(--login-max-width);
@@ -11778,6 +12101,17 @@ section[id] {
   align-items: center;
   gap: var(--login-gap);
   text-align: center;
+}
+
+/* A field does not inherit the centring on its own: the browser's own
+   stylesheet sets text-align on inputs, so the value and placeholder sat
+   at the start of a centred card. Asked for here. The cell input's real
+   input draws no text of its own (cell-input.js paints the cells), so it
+   is unaffected. */
+.login input,
+.login textarea,
+.login select {
+  text-align: inherit;
 }
 
 /* -- Header: logo + title + subtitle -- */

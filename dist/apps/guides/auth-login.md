@@ -7,7 +7,7 @@ type: "bare"
 search: "false"
 status: "published"
 access: "public"
-scripts: "cell-input.js, auth-login.js"
+scripts: "cell-input.js, auth-login.js, login-slideshow.js"
 ---
 <!--
   The sign-in page (engine-parity-phase-d.md, D26). It ships with the engine
@@ -20,9 +20,21 @@ scripts: "cell-input.js, auth-login.js"
 
   Every file this page loads must be public at the gate (the build checks
   that too): a signed-out reader is the only one who sees it.
+
+  The layout: a background slot and the sign-in strip beside it, 480px on
+  the right from 960px up, a band above the form on a phone. The strip is
+  page chrome, not a panel, so the form carries no .card. The slot is
+  drawn by the build from signIn in docs.config.js (sign-in.js): a plain
+  panel by default, the site's slideshow, or an empty mount the site's own
+  script fills. Its placeholder comes after the strip, so the form is
+  first in reading and Tab order and a control in the background (By
+  Default's colour switch) comes after it; the CSS still draws the slot on
+  the left, or above the form on a phone (docs-site.css, Login Page). A
+  replacement page keeps the placeholder, after its strip, to keep the slot.
 -->
 <div class="login-page">
-  <div class="card login">
+  <div class="login-strip">
+  <div class="login">
     <!-- Notifications have dedicated places. Confirmations ("Code sent")
          live here, at the top of the card, as a banner over the whole screen.
          Errors live under the field they concern (every one, including
@@ -86,6 +98,8 @@ scripts: "cell-input.js, auth-login.js"
       </div>
     </form>
   </div>
+  </div>
+  {{sign-in-background}}
 
   <!-- The error line's icon, cloned in by auth-login.js, which marks the
        clone aria-hidden: that is what keeps it out of the field's

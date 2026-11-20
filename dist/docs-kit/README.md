@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^8.3.0"
+npm install "github:bydefaultstudio/design-system-dist#semver:^8.4.0"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -118,10 +118,11 @@ automatically — external URLs pass through untouched.
 | `retiredSections` | `{}` | map of renamed section label → its new label; docgen fails on a page that still names the old one |
 | `filenameOverrides` | `{}` | per-file output folder/name overrides |
 | `indexCards` | derived from pages | curated home page card list (`{ title, href, subtitle }`) |
+| `discovery` | none | **Preview.** A discovery home page written to `discovery.output`: `greeting` (`links` of `{ label, href }`, `fallback`, `search`, `linksLabel`) and `rows`, each `{ kind: 'shelf' \| 'feature' \| 'note', label, title, href, action }` with its cards from `section` (pages with `featured: "true"` first, in `featured-order`), `glossary` (slugs) or `cards`, plus optional `hue` and `cardLabel`. Notes come from `<contentDir>/home/notes.json`; a `note` or `feature` row needs one. The greeting is filled by `home-greeting.js`, in the kit set. The shape may change when it becomes the home page |
 | `logoHtml` | site name as text | raw HTML for the site-header logo |
 | `contactHref` / `contactLabel` | none | site-header contact link |
 | `sectionIcons` | `{}` | map of section label → icon key for the sidebar |
-| `uiScripts` | the kit set: the docs chrome (`bar`, `dropdown`, `breadcrumb`, `copy-button`, `swatch`, `docs-copy-chrome`) and every core component (`number-input`, `toast`, `dialog`, `accordion`, `tabs`, `rating`, `cell-input`, `chip`, `scroller`, `date-picker`, `password-toggle`, `field`), copied to `assets/docs-kit/`. A file your `extraScripts` already lists by the same name is left out, so nothing loads twice | script list for docs UI behaviours. Setting it replaces the whole kit set |
+| `uiScripts` | the kit set: the docs chrome (`bar`, `dropdown`, `breadcrumb`, `copy-button`, `swatch`, `docs-copy-chrome`) and every core component (`number-input`, `toast`, `dialog`, `accordion`, `tabs`, `rating`, `cell-input`, `chip`, `scroller`, `date-picker`, `password-toggle`, `field`, and `home-greeting` for `discovery`), copied to `assets/docs-kit/`. A file your `extraScripts` already lists by the same name is left out, so nothing loads twice | script list for docs UI behaviours. Setting it replaces the whole kit set |
 | `markdownSourceBase` | none | serve path of the .md sources; enables "view as markdown" menu items |
 | `search` | on with `install`, else `false` | the header search button, its dialog and `/search.html`. Run `npx bd-search` from the site root after the site is assembled to build the indexes; `false` opts out. A site that sets its own `uiScripts` lists `search.js` itself. Node 20.19 or later |
 | `validateLayers` | `false` | require a valid `layer:` field in every file's frontmatter |
@@ -771,11 +772,81 @@ pages aren't installed) and no `basePath` (the gate serves from the site
 root); the build refuses either. The sign-in page's logo must load nothing
 from outside its own file, or the build names what to remove.
 
+**The sign-in page's background.** From 960px up the sign-in page is a
+background slot with the form in a 480px strip on the right, the header's
+actions at the strip's top; on a phone the header, the slot as a 240px
+band, then the form. `signIn` in `docs.config.js` fills the slot:
+
+```js
+signIn: {
+  background: 'slideshow',          // 'none' (the default), 'slideshow' or 'custom'
+  slides: [                         // slideshow only
+    { src: 'assets/images/sign-in/one.jpg', title: 'Logo Tool', text: 'Every lockup in one place.' },
+    { src: 'assets/video/two.mp4', poster: 'assets/images/sign-in/two.jpg', title: '…', text: '…' },
+  ],
+  scripts: ['assets/js/sign-in-hero.js'],   // your own files, on the sign-in page only
+  styles: ['assets/css/sign-in-hero.css'],
+},
+```
+
+- `none`: a plain panel in `--background-secondary`, and no band on a phone.
+- `slideshow`: your images or videos (`.mp4`, `.webm`, `.m4v`, `.mov`, `.ogv`), each
+  shown for `--login-slide-duration` (6 seconds), with a caption panel
+  (`title`, one line of `text`, progress bars and a pause button) on the
+  image on a wide screen, and the bars and the button alone under the band
+  on a phone. Autoplay is off under reduced motion; the button plays it.
+  Videos are muted and inline and only the shown one plays. The slides are
+  decoration: no alt text, hidden from screen readers, so the words in
+  `title` and `text` must not be the only place something is said.
+- `custom`: an empty `<div class="login-backdrop" data-background="custom"
+  id="login-background">` for your own script to fill. It is the slot's
+  size (the left of the screen, pinned; the band on a phone), clips what
+  overflows, and the page loads `scripts` and `styles` after its own. It
+  comes after the strip in the page, so the email field is the first Tab
+  stop and anything focusable in the mount follows the form; the CSS still
+  draws it on the left, or as the band above the form on a phone. The mount
+  is yours, its semantics included:
+  - **The engine does not hide it from screen readers**, and never will
+    (`verify-door-pages.js` holds the markup to no `aria-hidden` and no
+    `inert`). A background can hold a control (By Default's hero has a
+    colour switch) that must stay reachable by keyboard and screen reader,
+    so `aria-hidden` on the mount would take it away. Mark your own
+    decoration `aria-hidden`.
+  - **A control in it is a native one** with its name, role and current
+    state exposed: radios in a `fieldset` with a `legend`, or a `<button
+    aria-pressed>`. Its focus ring needs 3:1 against whatever sits behind
+    it, and any text on imagery 4.5:1 or an opaque backing, as the
+    slideshow's panel has. Keep the stops few (one if you can): no
+    `tabindex` above 0, no autofocus, and never move focus from the
+    mount's script. Keep each control and its focus ring inside the band
+    at 320 by 240, since the mount clips.
+  - **Read the reader's settings yourself**, with
+    `matchMedia('(prefers-reduced-motion: reduce)')` and
+    `matchMedia('(pointer: fine)')` (and listen for `change`). The engine
+    passes neither, and does not need to: the browser already says.
+    Pointer type may change an effect (a cursor-follow), never whether a
+    control exists or can be reached by keyboard: a touch laptop reports
+    a coarse pointer and still has a keyboard. Honouring reduced motion is
+    a house rule beyond AA (2.3.3 is AAA); the AA duties are the next two.
+  - **Give anything that moves for more than five seconds a pause control**
+    (WCAG 2.2.2), and **nothing may flash more than three times in any one
+    second** (2.3.1), a fast colour switch or a pointer effect included.
+  - Don't move the strip or the header, or put the form or any id
+    `auth-login.js` reads inside the mount.
+  - It is a bare page, with no page transitions: start on
+    `DOMContentLoaded`.
+
+Every path is a site path from the output root, and each file must be
+public and in the output (the door check below). A misnamed key, a slide
+with no `src`, or slides without `background: 'slideshow'` stop the build.
+A replacement `cms/auth-login.md` keeps the slot by keeping the
+`{{sign-in-background}}` line, after the `.login-strip` around the form.
+
 **The scripts load themselves.** `header-account.js` (the account menu, and
 the page's one session check, which publishes `window.bdSession` for the
 lock guard and the nav's locks) and `locked.js` load on every page;
-`auth-login.js` and `access-support-form.js` on the pages that use them.
-The build copies all four to `assets/js/` and fails while a different copy
+`auth-login.js`, `login-slideshow.js` and `access-support-form.js` on the
+pages that use them. The build copies all five to `assets/js/` and fails while a different copy
 of one sits there. Don't list them in `uiScripts` or `extraScripts`.
 
 **Signing out.** The account menu signs out, and every page with a level

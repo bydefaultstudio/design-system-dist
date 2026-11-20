@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.3.0 */
+/* @bydefaultstudio/design-system v8.4.0 */
 /**
  * generate.js — Pure function: validated params (+ optional prepared logo) -> SVG string.
  *

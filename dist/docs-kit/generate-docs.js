@@ -17,6 +17,7 @@ const osJson = require('./os-json');
 // generated file's banner can't freeze on the release it was first written in.
 const ENGINE_VERSION = require(path.join(__dirname, '..', '..', 'package.json')).version;
 const showcase = require('./showcase');
+const signIn = require('./sign-in');
 const { marked } = require('marked');
 
 //------- Project discovery -------//
@@ -96,6 +97,11 @@ const CONFIG = {
   retiredSections: userConfig.retiredSections || {},
   filenameOverrides: userConfig.filenameOverrides || {},
   indexCards: userConfig.indexCards || null,
+  // The discovery home page (generateDiscoveryPage): greeting, rows, notes.
+  discovery: userConfig.discovery || null,
+  // The sign-in page's background (sign-in.js): 'none', a slideshow, or a
+  // mount the site's own script fills. Checked below, after the contract.
+  signIn: signIn.normalise(userConfig.signIn),
   // The home page's own header: a function ({ title, description }) => HTML,
   // used in place of the standard page header. The strings arrive escaped.
   indexHeader: typeof userConfig.indexHeader === 'function' ? userConfig.indexHeader : null,
@@ -188,6 +194,14 @@ const CONFIG = {
 };
 // Legacy alias — the body of this file predates the unified contract.
 const PROJECT_CONFIG = CONFIG;
+
+// The sign-in background's settings: a misnamed key or a slide with no
+// file would otherwise ship a sign-in page that quietly shows nothing
+if (CONFIG.signIn.problems.length) {
+  console.error(`❌ The sign-in page's settings (signIn in docs.config.js) can't be used:\n${CONFIG.signIn.problems.map((p) => `   ${p}`).join('\n')}`);
+  process.exit(1);
+}
+CONFIG.signIn = CONFIG.signIn.config;
 
 // basePath contract: '' (site root, the default) or '/sub/path' — leading
 // slash, no trailing slash. Fail loudly; a silently malformed prefix would
@@ -1478,6 +1492,10 @@ function cardAccessAttrs(access) {
  * @param {string} [opts.osIllustration] - drawing slug; makes it a media cover
  * @param {string} [opts.hue] - the art's hue (overrides the authored one)
  * @param {string} [opts.field] - `lighter` or `dark`; omit for light
+ * @param {string} [opts.surface] - `field`: the art's field fills the cover
+ * @param {string} [opts.size] - `small` or `large`
+ * @param {string} [opts.label] - a category line above the title
+ * @param {boolean} [opts.footer] - false leaves the byline footer out
  * @returns {string} HTML string
  */
 function renderBookCover(opts) {
@@ -1500,17 +1518,23 @@ function renderBookCover(opts) {
   const media = illustration
     ? `\n        <div class="book-cover-media"${hueAttrs}>${illustration.svg}</div>`
     : '';
-  // The lock is always in the markup and shown only on .is-locked, which
-  // nav.js sets for a reader who cannot open the page (applyAccess).
-  return `<a href="${siteHref(opts.href)}" class="book-cover"${variantAttr}${accessAttr}${MOTION.cover}>${media}
-        <header class="book-cover-header"${hueAttrs}><div class="book-cover-trailing">${getIcon('open-full')}${lockIcon('book-cover-lock')}</div></header>
-        <div class="book-cover-body">
-          <h${level} class="book-cover-title"${flipAttr}>${opts.title}</h${level}>
-          ${description}
-        </div>
+  // The field surface (§37): the hue goes on the cover too, and the art's
+  // field fills the whole card. Only a media cover has a field to fill.
+  const surfaceAttr = illustration && opts.surface === 'field' ? ` data-surface="field"${hueAttrs}` : '';
+  const sizeAttr = opts.size ? ` data-size="${opts.size}"` : '';
+  const label = opts.label ? `<p class="eyebrow">${opts.label}</p>\n          ` : '';
+  const footer = opts.footer === false ? '' : `
         <footer class="book-cover-footer">
           <span class="book-cover-byline"><em>by</em> ${author}</span>
-        </footer>
+        </footer>`;
+  // The lock is always in the markup and shown only on .is-locked, which
+  // nav.js sets for a reader who cannot open the page (applyAccess).
+  return `<a href="${siteHref(opts.href)}" class="book-cover"${variantAttr}${surfaceAttr}${sizeAttr}${accessAttr}${MOTION.cover}>${media}
+        <header class="book-cover-header"${hueAttrs}><div class="book-cover-trailing">${getIcon('open-full')}${lockIcon('book-cover-lock')}</div></header>
+        <div class="book-cover-body">
+          ${label}<h${level} class="book-cover-title"${flipAttr}>${opts.title}</h${level}>
+          ${description}
+        </div>${footer}
       </a>`;
 }
 
@@ -3434,6 +3458,242 @@ function generateIndexPage(template, filesBySection) {
 }
 
 /**
+ * The discovery home page (home-discovery-plan.md): the home header, a
+ * greeting, then rows a site declares in config (discovery.rows). Every row
+ * is built from parts that already exist: a labelled section header, a book
+ * shelf of art cards, a note card.
+ *
+ * A row's cards come from one of three places, so a site names what it wants
+ * and never hand-writes a card:
+ *   section:  the first `count` pages of a section that have a drawing and
+ *             that a team reader can open, in the section's own order
+ *   glossary: glossary entries, by slug
+ *   cards:    written out, as on indexCards
+ *
+ * It is written to discovery.output while it is a preview, beside the home
+ * page it will replace, and joins no navigation.
+ */
+const DISCOVERY_ROW_KINDS = ['shelf', 'feature', 'note'];
+const DISCOVERY_CARD_MAX_WORDS = 14;
+
+function discoveryNotes() {
+  const file = path.join(DOCS_DIR, 'home', 'notes.json');
+  if (!fs.existsSync(file)) return [];
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (err) {
+    throw new Error(`cms/home/notes.json could not be read: ${err.message}`);
+  }
+  const notes = Array.isArray(data.notes) ? data.notes : [];
+  notes.forEach((note, i) => {
+    if (!['tip', 'quote', 'fact'].includes(note.kind)) throw new Error(`cms/home/notes.json: note ${i + 1} needs a kind of tip, quote or fact`);
+    if (!note.text) throw new Error(`cms/home/notes.json: note ${i + 1} has no text`);
+    if (note.href && !note.source) throw new Error(`cms/home/notes.json: note ${i + 1} has an href but no source, and the source is the link text`);
+    if (note.kind === 'quote' && !note.source) throw new Error(`cms/home/notes.json: quote ${i + 1} needs a source`);
+    if (note.color && !OS_ILLUSTRATION_HUES.includes(note.color)) throw new Error(`cms/home/notes.json: note ${i + 1} has a color "${note.color}" that is not in the colour scope`);
+  });
+  return notes;
+}
+
+// One note per release: the engine version picks it, so a build is the same
+// every time it runs and the page still changes without a hand edit.
+function pickDiscoveryNote(notes, offset = 0) {
+  const pool = notes.filter((note) => note.kind !== 'quote');
+  if (!pool.length) return null;
+  // Order-aware, so 3.0.1 and 3.1.0 pick different notes.
+  const seed = ENGINE_VERSION.split('').reduce((hash, ch) => (hash * 31 + ch.charCodeAt(0)) >>> 0, 0);
+  return pool[(seed + offset) % pool.length];
+}
+
+function renderNoteCard(note) {
+  const source = note.source
+    ? (note.href ? `<a href="${siteHref(note.href)}">${escapeAttr(note.source)}</a>` : escapeAttr(note.source))
+    : '';
+  if (note.kind === 'quote') {
+    return `<figure class="card" data-variant="note">
+        <blockquote class="card-note-text"><p>${escapeAttr(note.text)}</p></blockquote>
+        <figcaption class="card-note-source">${source}</figcaption>
+      </figure>`;
+  }
+  const colorAttr = note.color ? ` data-color="${note.color}"` : '';
+  const label = note.label ? `<p class="eyebrow card-note-label">${escapeAttr(note.label)}</p>\n        ` : '';
+  return `<aside class="card" data-variant="note"${colorAttr}>
+        ${label}<p class="card-note-text">${escapeAttr(note.text)}</p>
+        ${source ? `<p class="card-note-source">${source}</p>` : ''}
+      </aside>`;
+}
+
+function discoveryCards(row, filesBySection, where) {
+  let cards = [];
+  if (row.cards) {
+    cards = row.cards.map((card) => ({ ...card, access: card.access || levelOf(card.href) }));
+  } else if (row.glossary) {
+    cards = row.glossary.map((slug) => {
+      const entry = GLOSSARY && GLOSSARY.bySlug.get(slug);
+      if (!entry || !entry.published) throw new Error(`${where}: no published glossary entry "${slug}"`);
+      const href = `/${GLOSSARY_FOLDER}/${slug}.html`;
+      return { href, title: escapeAttr(entry.title), subtitle: escapeAttr(entry.short), access: levelOf(href), osIllustration: hasOsIllustration(slug) ? slug : '', fallbackHue: row.hue || '' };
+    });
+  } else if (row.section) {
+    if (!filesBySection[row.section]) throw new Error(`${where}: no section "${row.section}"`);
+    // Curation lives in the page (plan §10.1): `featured: "true"` puts a page
+    // at the front of its section's row, in `featured-order`, then the rest
+    // follow in the section's own order.
+    const isFeatured = (file) => String(file.frontmatter.featured) === 'true';
+    const featuredOrder = (file) => Number(file.frontmatter['featured-order']) || 999;
+    const files = [...filesBySection[row.section]].sort((a, b) => {
+      if (isFeatured(a) !== isFeatured(b)) return isFeatured(a) ? -1 : 1;
+      if (isFeatured(a) && featuredOrder(a) !== featuredOrder(b)) return featuredOrder(a) - featuredOrder(b);
+      const orderA = a.frontmatter.order || 999;
+      const orderB = b.frontmatter.order || 999;
+      return orderA !== orderB ? orderA - orderB : a.title.localeCompare(b.title);
+    });
+    for (const file of files) {
+      if (file.frontmatter.layer === 'docs-site') continue;
+      const target = guideTarget(file, row.section);
+      if (LEVEL_RANK[target.access] > LEVEL_RANK.team) continue;
+      const art = pageOsIllustration(file.frontmatter, file);
+      if (!art.osIllustration) {
+        if (isFeatured(file)) console.warn(`⚠️  ${where}: "${file.title}" is featured but has no drawing, so the row skips it`);
+        continue;
+      }
+      cards.push({ href: target.href, title: file.title, subtitle: file.frontmatter.subtitle, access: target.access, declaredHue: !!file.frontmatter.hue, ...art });
+    }
+  } else {
+    throw new Error(`${where}: a row needs section, glossary or cards`);
+  }
+  cards = cards.filter((card) => card.osIllustration).slice(0, row.count || 4);
+  // No two neighbours in one hue, or the row reads as one band (D18). A hue
+  // written down for the card (a page's `hue:`, a card's in config) is kept;
+  // one that came from the drawing or the section moves. Of a clashing pair
+  // the later card moves if it can, else the earlier one, to the next hue in
+  // the scope that neither of its neighbours has.
+  const fixed = cards.map((card) => !!(card.declaredHue || (row.cards && card.hue)));
+  const hues = cards.map((card) => resolveOsIllustration(card, where).color);
+  const moveHue = (i) => {
+    const avoid = [hues[i - 1], hues[i + 1]];
+    const start = OS_ILLUSTRATION_HUES.indexOf(hues[i]);
+    for (let step = 1; step < OS_ILLUSTRATION_HUES.length; step++) {
+      const candidate = OS_ILLUSTRATION_HUES[(start + step) % OS_ILLUSTRATION_HUES.length];
+      if (!avoid.includes(candidate)) return candidate;
+    }
+    return hues[i];
+  };
+  for (let i = 1; i < cards.length; i++) {
+    if (hues[i] !== hues[i - 1]) continue;
+    if (!fixed[i]) hues[i] = moveHue(i);
+    else if (!fixed[i - 1]) hues[i - 1] = moveHue(i - 1);
+    else console.warn(`⚠️  ${where}: "${cards[i - 1].title}" and "${cards[i].title}" are neighbours in the same hue (${hues[i]}), and both declare it`);
+  }
+  return cards.map((card, i) => ({ ...card, hue: hues[i] }));
+}
+
+function renderDiscoveryHeader(row) {
+  const action = row.href && row.action
+    ? `\n        <div class="section-header-actions">
+          <a class="button" data-variant="text" href="${siteHref(row.href)}">${escapeAttr(row.action)} ${getIcon('arrow-right')}</a>
+        </div>`
+    : '';
+  return `<header class="section-header" data-variant="labelled">
+        <p class="eyebrow section-header-label">${escapeAttr(row.label)}</p>
+        <h2 class="section-header-title">${escapeAttr(row.title)}</h2>${action}
+      </header>`;
+}
+
+function renderDiscoveryRow(row, filesBySection, notes, index) {
+  const where = `discovery row ${index + 1} (${row.label || row.kind})`;
+  if (!DISCOVERY_ROW_KINDS.includes(row.kind)) throw new Error(`${where}: kind must be ${DISCOVERY_ROW_KINDS.join(', ')}`);
+  if (row.kind === 'note') {
+    const note = pickDiscoveryNote(notes, index);
+    return note ? renderNoteCard(note) : '';
+  }
+  if (!row.label || !row.title) throw new Error(`${where}: a row needs a label and a title`);
+  const cards = discoveryCards(row, filesBySection, where);
+  // Cards in a row sit level only if their copy is near the same length. A
+  // warning, not an error: the copy is each page's own subtitle, so a long one
+  // must not stop the whole build. The CSS clamp catches what slips through.
+  for (const card of cards) {
+    const words = String(card.subtitle || '').split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+    if (words > DISCOVERY_CARD_MAX_WORDS) console.warn(`⚠️  ${where}: "${card.title}" description is ${words} words, the cap is ${DISCOVERY_CARD_MAX_WORDS}. Shorten its subtitle or short`);
+  }
+  if (!cards.length) {
+    console.warn(`⚠️  ${where}: no page with a drawing, so the row is left out`);
+    return '';
+  }
+  const cover = (card, extra = {}) => renderBookCover({ ...card, surface: 'field', label: row.cardLabel ? escapeAttr(row.cardLabel) : '', footer: false, ...extra });
+  let shelf;
+  // A feature is a lead, a pair and a quote. Short of any of them the layout
+  // would leave a hole, so the row falls back to the plain shelf.
+  const quote = notes.find((note) => note.kind === 'quote');
+  if (row.kind === 'feature' && cards.length >= 3 && quote) {
+    shelf = `<div class="book-shelf" data-layout="feature"${MOTION.shelf}>
+        ${cover(cards[0], { size: 'large' })}
+        ${cards.slice(1, 3).map((card) => cover(card)).join('\n        ')}
+        ${renderNoteCard(quote)}
+      </div>`;
+  } else {
+    shelf = `<div class="book-shelf" data-cols="4" data-scroll="mobile"${MOTION.shelf}>
+        ${cards.map((card) => cover(card)).join('\n        ')}
+      </div>`;
+  }
+  return `<section>
+      ${renderDiscoveryHeader(row)}
+      ${shelf}
+    </section>`;
+}
+
+function renderDiscoveryGreeting(greeting = {}) {
+  const links = (greeting.links || []).map((link) =>
+    `<a class="button" data-variant="outline" data-size="small" href="${siteHref(link.href)}">${link.icon ? getIcon(link.icon) + ' ' : ''}${escapeAttr(link.label)}</a>`
+  ).join('\n          ');
+  const search = CONFIG.search
+    ? `\n      <button type="button" class="button home-greeting-search" data-variant="outline" data-dialog-open="site-search" aria-controls="site-search" aria-haspopup="dialog" aria-keyshortcuts="Meta+K Control+K">${getIcon('search')} <span>${escapeAttr(greeting.search || 'Search')}</span></button>`
+    : '';
+  return `<section class="home-greeting" aria-label="Start here">
+      <div class="home-greeting-text">
+        <p class="eyebrow home-greeting-date" data-home-date></p>
+        <p class="home-greeting-title" data-home-greeting>${escapeAttr(greeting.fallback || 'Welcome')}</p>
+        ${links ? `<nav class="button-group home-greeting-links" aria-label="${escapeAttr(greeting.linksLabel || 'Shortcuts')}">
+          ${links}
+        </nav>` : ''}
+      </div>${search}
+    </section>`;
+}
+
+function generateDiscoveryPage(template, filesBySection) {
+  const discovery = CONFIG.discovery;
+  const notes = discoveryNotes();
+  const rows = (discovery.rows || []).map((row, i) => renderDiscoveryRow(row, filesBySection, notes, i)).filter(Boolean);
+  const address = '/' + discovery.output;
+  pageAccess.set(address, { level: 'team', section: '', type: 'shelf', title: 'Home' });
+  return renderPage(template, {
+    space: ROOT_SPACE,
+    navBase: './',
+    assetBase: '',
+    title: 'Home',
+    description: SITE_HTML.description,
+    header: CONFIG.indexHeader
+      ? renderIndexHeader()
+      : buildPageHeaderHtml({ title: SITE_HTML.name, subtitle: SITE_HTML.description }),
+    content: stampBodyLinks(`<div class="home-rows" data-pagefind-ignore>
+    ${renderDiscoveryGreeting(discovery.greeting)}
+    ${rows.join('\n    ')}
+    </div>`, address, 'team', { mark: CONFIG.accessNav === 'hidden' }),
+    // A preview beside the home page is not a second "Home" in search.
+    searchable: discovery.output === 'index.html',
+    access: deriveDataAccess(loadDefaults(DOCS_DIR)),
+    sectionSlug: 'home',
+    pageSection: 'home',
+    order: 0,
+    level: PAGE_TYPES.shelf.level,
+    frame: PAGE_TYPES.shelf.frame,
+    article: PAGE_TYPES.shelf.article,
+    chrome: PAGE_TYPES.shelf.chrome,
+  });
+}
+
+/**
  * The Tools index's bookshelf: a cover per page, opening the tool a guide
  * names (guideTarget), with the tool's drawing when every cover has one.
  */
@@ -4484,7 +4744,59 @@ function bareScriptTags(file, navBase) {
     }
     take(src);
   }
+  // The sign-in page's background scripts (signIn.scripts), after the
+  // page's own: the site's files, by site path, checked by the door check
+  if (isSignInPage(file)) for (const src of CONFIG.signIn.scripts) take(src);
   return srcs.map((src) => `<script src="${prefixHref(navBase, src)}"></script>`).join('\n    ');
+}
+
+/** The engine's sign-in page, the one page the signIn settings dress. */
+function isSignInPage(file) {
+  return '/' + file.htmlPath === appsRegistry.ENGINE_PATHS.login;
+}
+
+/**
+ * The sign-in page's background in place of its placeholder, drawn from
+ * signIn (sign-in.js). A site's own cms/auth-login.md without the
+ * placeholder keeps whatever it draws there.
+ */
+function signInBackground(body, file, navBase) {
+  if (!isSignInPage(file)) return body;
+  const source = `cms/${file.filename}`;
+  const mode = CONFIG.signIn.background;
+  // The placeholder outside comments, code and pre, as every body token is
+  const token = /(<code[^>]*>[\s\S]*?<\/code>)|(<pre[^>]*>[\s\S]*?<\/pre>)|(<!--[\s\S]*?-->)|\{\{sign-in-background\}\}/g;
+  let found = false;
+  const html = signIn.renderBackground(CONFIG.signIn, {
+    href: (p) => prefixHref(navBase, p),
+    escape: escapeAttr,
+    icon: getIcon,
+  });
+  const out = body.replace(token, (match, code, pre, comment) => {
+    if (code || pre || comment || found) return match;
+    found = true;
+    return html;
+  });
+  // A background the site asked for, on a page with nowhere to draw it, or
+  // a slideshow on a page that never loads its script, would ship a sign-in
+  // page that quietly shows less than the config says
+  if (mode !== 'none' && !found) {
+    console.error(`\n❌ ${source}: signIn.background is "${mode}", but the page has no {{sign-in-background}} line to draw it in. Add it inside .login-page, after the .login-strip, as the engine's page has it.\n`);
+    process.exit(1);
+  }
+  // A replacement page that still draws the slot before the strip looks the
+  // same (the CSS places both), but puts the background's controls before
+  // the email field in Tab order: worth a word, not a failed build
+  const slotAt = body.search(/\{\{sign-in-background\}\}/);
+  const stripAt = body.search(/class="login-strip"/);
+  if (found && slotAt !== -1 && stripAt !== -1 && slotAt < stripAt) {
+    console.warn(`\n⚠️  ${source}: {{sign-in-background}} comes before .login-strip, so any control in the background is a Tab stop before the email field. Move the line to straight after the strip (CHANGELOG, the sign-in Action line).\n`);
+  }
+  if (mode === 'slideshow' && !parseList(file.frontmatter.scripts).some((s) => /^login-slideshow(\.js)?$/i.test(s))) {
+    console.error(`\n❌ ${source}: signIn.background is "slideshow", but the page's scripts: don't load login-slideshow.js, so the slides would never move or pause. Add it after auth-login.js.\n`);
+    process.exit(1);
+  }
+  return out;
 }
 
 /**
@@ -4531,7 +4843,7 @@ function generateBarePage(file, bareTemplate) {
   // nothing paints a lock from a link's level: the attribute would promise a
   // marking that never comes. Under 'hidden' the Worker reads it to cut the
   // link, so it stays. The links are checked either way.
-  const body = stampBodyLinks(expandHtmlBody(content, file), '/' + file.htmlPath, access, { mark: CONFIG.accessNav === 'hidden' });
+  const body = stampBodyLinks(signInBackground(expandHtmlBody(content, file), file, navBase), '/' + file.htmlPath, access, { mark: CONFIG.accessNav === 'hidden' });
   // Searchable as any page is: a door that is public or team-level, unless it opts out
   const indexed = frontmatter.search !== 'false' && (access === 'public' || access === 'team');
   const chrome = brandChromeSlots(ROOT_SPACE.manifest, navBase);
@@ -4547,6 +4859,8 @@ function generateBarePage(file, bareTemplate) {
     .replace('{{DESIGN_SYSTEM_PATH}}', () => prefixHref(navBase, PROJECT_CONFIG.designSystemPath))
     .replace('{{FONT_HEAD}}', () => fontHeadHtml(ROOT_SPACE.manifest, navBase))
     .replace('{{BRAND_CSS}}', () => brandCssLink(navBase))
+    // The sign-in background's own stylesheets (signIn.styles), after the brand's
+    .replace('{{PAGE_STYLES}}', () => (isSignInPage(file) ? CONFIG.signIn.styles.map((href) => `\n    <link rel="stylesheet" href="${prefixHref(navBase, href)}">`).join('') : ''))
     .replace('{{PAGE_ACCESS}}', () => access)
     // A public bare page is a door: its reader is signed out
     .replace('{{NOSCRIPT_SIGN_OUT}}', () => (access === 'public' ? '' : noscriptSignOut()))
@@ -8162,6 +8476,7 @@ async function generateDocs() {
   // them, own level else the section default.
   for (const file of allFiles) linkLevels.set('/' + file.htmlPath, normaliseLevel(file.ownAccess));
   linkLevels.set('/index.html', 'team');
+  if (CONFIG.discovery && CONFIG.discovery.output) linkLevels.set('/' + CONFIG.discovery.output, 'team');
   for (const section of Object.keys(filesBySection)) {
     if (SECTION_FOLDERS[section]) linkLevels.set(`/${SECTION_FOLDERS[section]}/index.html`, indexLevel(SECTION_FOLDERS[section]));
   }
@@ -8285,6 +8600,12 @@ async function generateDocs() {
     const indexContent = generateIndexPage(template, filesBySection);
     fs.writeFileSync(path.join(OUTPUT_DIR, 'index.html'), indexContent);
     console.log('📄 Generated: index.html');
+    // The discovery home page, written beside the home page while it is a
+    // preview (config: discovery.output).
+    if (CONFIG.discovery && CONFIG.discovery.output) {
+      fs.writeFileSync(path.join(OUTPUT_DIR, CONFIG.discovery.output), generateDiscoveryPage(template, filesBySection));
+      console.log(`📄 Generated: ${CONFIG.discovery.output}`);
+    }
   }
 
   // Generate HTML for target files
