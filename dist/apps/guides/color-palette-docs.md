@@ -8,7 +8,7 @@ layer: "app"
 subsection: ""
 order: 6
 status: "published"
-access: "team"
+access: "public"
 brand: "internal"
 actionUrl: "color-palette.html"
 actionLabel: "Open Tool"

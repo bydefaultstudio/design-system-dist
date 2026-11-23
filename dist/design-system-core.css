@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK: CORE
    The foundation, type, buttons, basic forms and simple components.
@@ -108,6 +108,26 @@
   --peach-light: #FED7AA;
   --peach: #FDBA74;
   --peach-dark: #7C2D12;
+
+  /* -- Status steps --
+     Every status colour reads its own primitives, never an accent ramp, so a
+     brand can set any hue's steps without moving a status colour (green and
+     red since 2026-11-19, blue, yellow and the surfaces since 2026-11-23).
+     The values are the ones measured for AA in both themes (the -dark step as
+     text on its -lighter surface, the -light step as text on the dark
+     ground). Re-measure before changing. */
+  --info-lighter: #DBEAFE;
+  --info-light: #BFDBFE;
+  --info-dark: #1E3A8A;
+  --success-lighter: #DCFCE7;
+  --success-light: #6DD995;
+  --success-dark: #155F31;
+  --warning-lighter: #FEF3C7;
+  --warning-light: #FDE68A;
+  --warning-dark: #78350F;
+  --danger-lighter: #FEE2E2;
+  --danger-light: #F76969;
+  --danger-dark: #991B1B;
   /* -- Base font sizes (rem-based, progressive step scale: +2px body, +4px heading, +8px display) -- */
   --font-3xs: 0.625rem;  /* 10px */
   --font-2xs: 0.75rem;   /* 12px */
@@ -434,14 +454,14 @@
      primitives only reach 3.0-4.2:1 on their own pastels — under AA for small
      text — so every hue's text takes the -dark step, as warning always has.
      Buttons consume the text half alone and follow it deliberately. */
-  --status-info: var(--blue-dark);
-  --status-info-bg: var(--blue-lighter);
-  --status-success: var(--green-dark);
-  --status-success-bg: var(--green-lighter);
-  --status-warning: var(--yellow-dark);
-  --status-warning-bg: var(--yellow-lighter);
-  --status-danger: var(--red-dark);
-  --status-danger-bg: var(--red-lighter);
+  --status-info: var(--info-dark);
+  --status-info-bg: var(--info-lighter);
+  --status-success: var(--success-dark);
+  --status-success-bg: var(--success-lighter);
+  --status-warning: var(--warning-dark);
+  --status-warning-bg: var(--warning-lighter);
+  --status-danger: var(--danger-dark);
+  --status-danger-bg: var(--danger-lighter);
   /* -- Form semantic tokens -- */
   --input-border: var(--border-secondary);
   --input-background: var(--background-primary);
@@ -703,16 +723,16 @@
   --border-control: var(--neutral-400);
 
   /* -- Status -- */
-  --status-info: var(--blue-light);
-  --status-success: var(--green-light);
-  --status-warning: var(--yellow-light);
-  --status-danger: var(--red-light);
+  --status-info: var(--info-light);
+  --status-success: var(--success-light);
+  --status-warning: var(--warning-light);
+  --status-danger: var(--danger-light);
   /* The pair flips as a pair: light text over the page ground pulled 15%
      toward the hue. Anchored to --background-primary rather than --brown-dark
      (a toast-local colour), so a rethemed dark ground carries these surfaces
-     with it. Danger is the floor at 4.54:1 — --red-light is a mid red, not a
+     with it. Danger is the floor at 4.54:1 — --danger-light is a mid red, not a
      pastel, so it sits close to its own surface. Do not lighten the mix or
-     darken --red-light without re-measuring. */
+     darken --danger-light without re-measuring. */
   --status-info-bg: color-mix(in srgb, var(--status-info), var(--background-primary) 85%);
   --status-success-bg: color-mix(in srgb, var(--status-success), var(--background-primary) 85%);
   --status-warning-bg: color-mix(in srgb, var(--status-warning), var(--background-primary) 85%);
@@ -785,10 +805,10 @@
     --border-faded: var(--white-alpha-20);
     --border-control: var(--neutral-400);
 
-    --status-info: var(--blue-light);
-    --status-success: var(--green-light);
-    --status-warning: var(--yellow-light);
-    --status-danger: var(--red-light);
+    --status-info: var(--info-light);
+    --status-success: var(--success-light);
+    --status-warning: var(--warning-light);
+    --status-danger: var(--danger-light);
     /* Mirror of the [data-theme="dark"] status surfaces above */
     --status-info-bg: color-mix(in srgb, var(--status-info), var(--background-primary) 85%);
     --status-success-bg: color-mix(in srgb, var(--status-success), var(--background-primary) 85%);

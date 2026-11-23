@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -106,6 +106,26 @@
   --peach-light: #FED7AA;
   --peach: #FDBA74;
   --peach-dark: #7C2D12;
+
+  /* -- Status steps --
+     Every status colour reads its own primitives, never an accent ramp, so a
+     brand can set any hue's steps without moving a status colour (green and
+     red since 2026-11-19, blue, yellow and the surfaces since 2026-11-23).
+     The values are the ones measured for AA in both themes (the -dark step as
+     text on its -lighter surface, the -light step as text on the dark
+     ground). Re-measure before changing. */
+  --info-lighter: #DBEAFE;
+  --info-light: #BFDBFE;
+  --info-dark: #1E3A8A;
+  --success-lighter: #DCFCE7;
+  --success-light: #6DD995;
+  --success-dark: #155F31;
+  --warning-lighter: #FEF3C7;
+  --warning-light: #FDE68A;
+  --warning-dark: #78350F;
+  --danger-lighter: #FEE2E2;
+  --danger-light: #F76969;
+  --danger-dark: #991B1B;
   /* -- Base font sizes (rem-based, progressive step scale: +2px body, +4px heading, +8px display) -- */
   --font-3xs: 0.625rem;  /* 10px */
   --font-2xs: 0.75rem;   /* 12px */
@@ -432,14 +452,14 @@
      primitives only reach 3.0-4.2:1 on their own pastels — under AA for small
      text — so every hue's text takes the -dark step, as warning always has.
      Buttons consume the text half alone and follow it deliberately. */
-  --status-info: var(--blue-dark);
-  --status-info-bg: var(--blue-lighter);
-  --status-success: var(--green-dark);
-  --status-success-bg: var(--green-lighter);
-  --status-warning: var(--yellow-dark);
-  --status-warning-bg: var(--yellow-lighter);
-  --status-danger: var(--red-dark);
-  --status-danger-bg: var(--red-lighter);
+  --status-info: var(--info-dark);
+  --status-info-bg: var(--info-lighter);
+  --status-success: var(--success-dark);
+  --status-success-bg: var(--success-lighter);
+  --status-warning: var(--warning-dark);
+  --status-warning-bg: var(--warning-lighter);
+  --status-danger: var(--danger-dark);
+  --status-danger-bg: var(--danger-lighter);
   /* -- Form semantic tokens -- */
   --input-border: var(--border-secondary);
   --input-background: var(--background-primary);
@@ -701,16 +721,16 @@
   --border-control: var(--neutral-400);
 
   /* -- Status -- */
-  --status-info: var(--blue-light);
-  --status-success: var(--green-light);
-  --status-warning: var(--yellow-light);
-  --status-danger: var(--red-light);
+  --status-info: var(--info-light);
+  --status-success: var(--success-light);
+  --status-warning: var(--warning-light);
+  --status-danger: var(--danger-light);
   /* The pair flips as a pair: light text over the page ground pulled 15%
      toward the hue. Anchored to --background-primary rather than --brown-dark
      (a toast-local colour), so a rethemed dark ground carries these surfaces
-     with it. Danger is the floor at 4.54:1 — --red-light is a mid red, not a
+     with it. Danger is the floor at 4.54:1 — --danger-light is a mid red, not a
      pastel, so it sits close to its own surface. Do not lighten the mix or
-     darken --red-light without re-measuring. */
+     darken --danger-light without re-measuring. */
   --status-info-bg: color-mix(in srgb, var(--status-info), var(--background-primary) 85%);
   --status-success-bg: color-mix(in srgb, var(--status-success), var(--background-primary) 85%);
   --status-warning-bg: color-mix(in srgb, var(--status-warning), var(--background-primary) 85%);
@@ -783,10 +803,10 @@
     --border-faded: var(--white-alpha-20);
     --border-control: var(--neutral-400);
 
-    --status-info: var(--blue-light);
-    --status-success: var(--green-light);
-    --status-warning: var(--yellow-light);
-    --status-danger: var(--red-light);
+    --status-info: var(--info-light);
+    --status-success: var(--success-light);
+    --status-warning: var(--warning-light);
+    --status-danger: var(--danger-light);
     /* Mirror of the [data-theme="dark"] status surfaces above */
     --status-info-bg: color-mix(in srgb, var(--status-info), var(--background-primary) 85%);
     --status-success-bg: color-mix(in srgb, var(--status-success), var(--background-primary) 85%);
@@ -891,6 +911,14 @@
 [data-color="pink"]   { --color-tint: var(--pink-lighter);   --color-light: var(--pink-light);   --color-base: var(--pink);   --color-shade: var(--pink-dark);   --color-on-base: var(--black); --color-off-base: var(--white); }
 [data-color="peach"]  { --color-tint: var(--peach-lighter);  --color-light: var(--peach-light);  --color-base: var(--peach);  --color-shade: var(--peach-dark);  --color-on-base: var(--black); --color-off-base: var(--white); }
 [data-color="brown"]  { --color-tint: var(--brown-lighter);  --color-light: var(--brown-light);  --color-base: var(--brown);  --color-shade: var(--brown-dark);  --color-on-base: var(--white); --color-off-base: var(--black); }
+/* Neutral, the tenth, has no ramp of its own: it borrows the steps Figma's
+   Neutral mode uses (lighter brown-lighter, light neutral-100, dark
+   neutral-950), with --neutral-500 as the base, where white is 4.74:1.
+   scripts/import-os-illustration.mjs reads the same four tokens. In the
+   engine alone --brown-lighter is --neutral-100, so tint and light are one
+   colour and an os-illustration's accent-soft sits on its field unseen; a
+   brand with its own brown (By Default's #F5EBE3) separates them. */
+[data-color="neutral"] { --color-tint: var(--brown-lighter); --color-light: var(--neutral-100); --color-base: var(--neutral-500); --color-shade: var(--neutral-950); --color-on-base: var(--white); --color-off-base: var(--black); }
 
 /* -- 2. Roles. Step picks which end of the ramp is the ground. --------- */
 
@@ -993,6 +1021,9 @@
    inherited by By Default too). Those two are the new floor: muted on raised
    measures 4.85:1 on red and 4.61:1 on green. #166534 was the first pick for
    green and measured 4.31:1 here, which is why it sits a step darker.
+   (2026-11-19: status now reads its own --success-* / --danger-*
+   primitives, and By Default's theme sets red and green back to the
+   brand's deeper dark steps, #4E0100 and #003E37, which only raise these.)
 
    border-faded — a decorative boundary, not a control boundary. The system's own
    --border-faded is an alpha wash of black (--black-alpha-15) or, in dark, of
@@ -1034,7 +1065,10 @@
    their text is off-black: 5.64 / 4.92 on red and 9.43 / 7.65 on green
    (title / 90% subtitle). The art keeps its ink, because it is decorative and
    the contrast requirement is the text's. A hue that fails the same way joins
-   that rule. The lighter and dark fields pass on every hue, so they reset it. */
+   that rule. The lighter and dark fields pass on every hue, so they reset it.
+   Those figures are the engine's ramps. A brand with deeper red and green
+   dark steps passes without the rule (By Default's: 8.77 and 7.54:1), and
+   off-black still reads there, so the rule stays for the engine. */
 
 [data-color] {
   --os-illustration-field: var(--color-light);

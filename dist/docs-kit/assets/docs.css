@@ -2244,7 +2244,8 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   display: none;
 }
 
-.site-sidebar [aria-disabled="true"] > .sidebar-nav-lock {
+.site-sidebar [aria-disabled="true"] > .sidebar-nav-lock,
+.site-sidebar .is-locked > .sidebar-nav-lock {
   display: flex;
   width: var(--sidebar-nav-lock-size);
   height: var(--sidebar-nav-lock-size);
@@ -2260,6 +2261,20 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
   color: var(--sidebar-nav-locked-color);
   background: none;
   cursor: not-allowed;
+}
+
+/* accessNav 'earned' (community-access-plan.md D11): a signed-out reader's
+   community link is locked in look only. It still goes, to sign in, so it
+   keeps a pointer rather than not-allowed; nav.js leaves it out of
+   aria-disabled for the same reason. */
+.site-sidebar a.is-locked:not([aria-disabled="true"]) {
+  color: var(--sidebar-nav-locked-color);
+}
+
+.book-cover.is-locked:not([aria-disabled="true"]),
+.book-contents-item.is-locked:not([aria-disabled="true"]),
+.page-nav-link.is-locked:not([aria-disabled="true"]) {
+  cursor: pointer;
 }
 
 /* The reason, once, above the rows, in the words for that reader (nav.js
@@ -2279,8 +2294,14 @@ body:not(.sidebar-collapsed) .sidebar-nav-section[open] .sidebar-nav-list {
 }
 
 body.is-signed-out .sidebar-lock-note,
-body.is-guest .sidebar-lock-note {
+body.is-guest .sidebar-lock-note,
+body[data-role="community"] .sidebar-lock-note {
   display: block;
+}
+
+/* Under 'earned' a community reader has nothing locked, so no note. */
+.sidebar-lock-note:empty {
+  display: none;
 }
 
 /* The rail shows icons only. Desktop only: the collapsed class persists in
@@ -2297,22 +2318,23 @@ body.is-guest .sidebar-lock-note {
    (levels-groups-plan.md D23). Keyed on body[data-role], which the template's
    pre-paint script sets from the last session answer and nav.js settles, so
    nothing flickers away after paint. A signed-out reader has no role and
-   sees them locked with everything else. Search is closed to a guest for
-   the reason gate.mjs gives: the indexes hold every team page's text. */
-body[data-role="team"] .site-sidebar [data-access="admin"],
-body[data-role="guest"] .site-sidebar [data-access="admin"],
-body[data-role="team"] .site-sidebar li:has(> [data-access="admin"]),
-body[data-role="guest"] .site-sidebar li:has(> [data-access="admin"]),
-body[data-role="team"] .book-contents-item[data-access="admin"],
-body[data-role="guest"] .book-contents-item[data-access="admin"],
-body[data-role="team"] .book-cover[data-access="admin"],
-body[data-role="guest"] .book-cover[data-access="admin"],
+   sees them locked with everything else. Search is closed to a guest and a
+   community member for the reason gate.mjs gives: the indexes hold every
+   team page's text. Every role but admin and owner, so a new role fails
+   closed. .is-granted (nav.js) keeps an admin page an internal group opens
+   for a team member in view (community-access-plan.md D8). */
+body[data-role]:not([data-role="admin"]):not([data-role="owner"]) .site-sidebar [data-access="admin"]:not(.is-granted),
+body[data-role]:not([data-role="admin"]):not([data-role="owner"]) .site-sidebar li:has(> [data-access="admin"]:not(.is-granted)),
+body[data-role]:not([data-role="admin"]):not([data-role="owner"]) .book-contents-item[data-access="admin"]:not(.is-granted),
+body[data-role]:not([data-role="admin"]):not([data-role="owner"]) .book-cover[data-access="admin"]:not(.is-granted),
 body[data-role]:not([data-role="owner"]) .site-sidebar [data-access="owner"],
 body[data-role]:not([data-role="owner"]) .site-sidebar li:has(> [data-access="owner"]),
 body[data-role]:not([data-role="owner"]) .book-contents-item[data-access="owner"],
 body[data-role]:not([data-role="owner"]) .book-cover[data-access="owner"],
 body[data-role="guest"] .header-search-btn,
-body[data-role="guest"] .home-greeting-search {
+body[data-role="guest"] .home-greeting-search,
+body[data-role="community"]:not([data-community-search]) .header-search-btn,
+body[data-role="community"]:not([data-community-search]) .home-greeting-search {
   display: none;
 }
 
@@ -4247,13 +4269,16 @@ html:has(.login-page) {
   display: inline;
 }
 
-.locked-panel[data-locked-level="owner"] #locked-ask {
+.locked-panel[data-locked-level="owner"] #locked-ask,
+.locked-panel[data-locked-level="hidden"] #locked-ask {
   display: none;
 }
 
 .locked-panel[data-locked-level="owner"] [data-for="owner"],
 .locked-panel[data-locked-level="admin"] [data-for="admin"],
-.locked-panel:not([data-locked-level="admin"]):not([data-locked-level="owner"]) [data-for="team"] {
+.locked-panel[data-locked-level="community"] [data-for="community"],
+.locked-panel[data-locked-level="hidden"] [data-for="hidden"],
+.locked-panel:not([data-locked-level="admin"]):not([data-locked-level="owner"]):not([data-locked-level="community"]):not([data-locked-level="hidden"]) [data-for="team"] {
   display: inline;
 }
 
@@ -4331,7 +4356,7 @@ html:has(.login-page) {
    * The ring is drawn on the region, not on the label button that holds
    * focus, so it frames the card rather than striking through a word. Same
    * width as the base `button:focus-visible` ring (design-system.css §2b).
-   * Not the same colour: --status-info becomes --blue-light in dark mode
+   * Not the same colour: --status-info becomes --info-light in dark mode
    * while these fills stay pastel, which is a 1:1 ring — so the ring takes
    * the region's own dark step, which is ≥6.5:1 on either fill in either
    * mode. Same precedent as .page-header[data-color] :focus-visible. */
@@ -5437,7 +5462,9 @@ a.search-result.search-see-all:hover {
   -webkit-box-orient: vertical;
 }
 
+/* Taller art on the home cards than on a section index's 16 / 10. */
 .home-rows {
+  --book-cover-media-ratio: 5 / 4;
   display: flex;
   flex-direction: column;
   gap: var(--section-m);

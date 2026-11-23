@@ -8,7 +8,7 @@ layer: "docs-site"
 search: "false"
 chrome: "false"
 status: "published"
-access: "team"
+access: "community"
 ---
 <!-- type: "page": this body is raw HTML, injected verbatim. No markdown
      pipeline; the {{icon:name}} shorthand still expands.

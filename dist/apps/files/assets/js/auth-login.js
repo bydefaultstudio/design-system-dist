@@ -339,7 +339,7 @@
           // admin links before paint for everyone but admins; 'in' when the
           // answer has none, which nav.js treats as signed in, role unknown.
           var role = result.data.user && result.data.user.role;
-          setSessionHint(role === 'owner' || role === 'admin' || role === 'team' || role === 'guest' ? role : 'in');
+          setSessionHint(role === 'owner' || role === 'admin' || role === 'team' || role === 'community' || role === 'guest' ? role : 'in');
           window.location.assign(destination());
           return;
         }

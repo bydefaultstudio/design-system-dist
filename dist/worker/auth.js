@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * auth.js — Better Auth in the Worker: the sign-in endpoints (access-plan.md §4).
  *
@@ -6,7 +6,7 @@
  * named individuals only (D5, §4.6): the `allowed_email` table in D1 is the
  * policy, and it is consulted HERE, before Better Auth sees the request. Since
  * permissions-plan.md (2026-10-07) the row also says what the person is -
- * admin, team or guest - and that role is copied onto the user record as it is
+ * admin, team, community or guest - and that role is copied onto the user record as it is
  * created, so it rides the session cookie from then on.
  *
  * Why not a Better Auth hook: the email-OTP plugin writes the code to
@@ -52,6 +52,7 @@ import {
   normalizeEmail,
   overFailLimit,
   resolveRole,
+  scopeKindFor,
   sweepSendLog,
 } from './gate.mjs';
 import { USER_ADDITIONAL_FIELDS } from './auth-schema.mjs';
@@ -312,8 +313,10 @@ export async function handleAuth(request, env, ctx) {
   // The page's one session call (header-account.js) learns the role the
   // gate will act on - resolved the way worker/gate.mjs resolves it, owner
   // floor included, so the page never hides admin links from the owner -
-  // and, for a guest, the sections and pages their groups grant, so the
-  // sidebar can lock what they cannot open. One D1 read, guests only.
+  // and, for a guest or a team member, the sections and pages their groups
+  // of that role's kind grant, so the sidebar can lock or show what they
+  // can open. One D1 read for those two roles (scopeKindFor), none for any
+  // other: a cost per session call, accepted for the internal-group links.
   if (request.method === 'GET' && url.pathname === SESSION_PATH && response.ok) {
     return withReaderAccess(response, env);
   }
@@ -573,7 +576,7 @@ function isDemoRow(row, email, ownerEmail) {
   // flag on it would be a codeless sign-in as the owner (code review,
   // 2026-11-08). Never, however the row was made.
   if (isOwnerEmail(email, ownerEmail)) return false;
-  return !!row && row.demo === 1 && (row.role === 'team' || row.role === 'guest');
+  return !!row && row.demo === 1 && ['team', 'community', 'guest'].includes(row.role);
 }
 
 async function readJsonBody(request, maxBytes) {
@@ -632,12 +635,12 @@ async function withReaderAccess(response, env) {
   // 2026-11-08, finding 4). Only the expiry leaves.
   const session = { expiresAt: data.session.expiresAt };
   const role = resolveRole(data.user, env.ACCESS_OWNER);
-  if (role !== 'guest') return withJsonBody(response, { ...data, session, role });
+  if (!scopeKindFor(role)) return withJsonBody(response, { ...data, session, role });
   let scopes = [];
   try {
-    scopes = await guestScopes(env.DB, data.user.email);
+    scopes = await readerScopes(env.DB, data.user.email, role);
   } catch {
-    scopes = []; // fail closed: a guest with no scopes sees every team page locked
+    scopes = []; // fail closed: no scopes locks every page a group would open
   }
   return withJsonBody(response, { ...data, session, role, scopes });
 }
@@ -664,15 +667,25 @@ export function isExpired(row, now = Math.floor(Date.now() / 1000)) {
   return row.expires_at !== null && row.expires_at !== undefined && Number(row.expires_at) <= now;
 }
 
-/** The scopes a guest's groups grant, as 'section:<folder>' and 'page:<path>' strings. */
-export async function guestScopes(db, rawEmail) {
+/**
+ * The scopes a reader's groups grant, as 'section:<folder>' and
+ * 'page:<path>' strings: only from groups of the kind their CURRENT role
+ * reads (scopeKindFor), so a team member moved down to community keeps a
+ * membership row of an internal group and nothing it opened
+ * (community-access-plan.md D8). Any other role has none.
+ */
+export async function readerScopes(db, rawEmail, role) {
+  const kind = scopeKindFor(role);
   const email = normalizeEmail(rawEmail);
-  if (!email) return [];
+  if (!kind || !email) return [];
   const { results } = await db
     .prepare(
-      'SELECT DISTINCT g.scope FROM access_group_member m JOIN access_group_grant g ON g.group_id = m.group_id WHERE m.email = ?1',
+      `SELECT DISTINCT g.scope FROM access_group_member m
+         JOIN access_group a ON a.id = m.group_id
+         JOIN access_group_grant g ON g.group_id = m.group_id
+        WHERE m.email = ?1 AND a.kind = ?2`,
     )
-    .bind(email)
+    .bind(email, kind)
     .all();
   return results.map((row) => row.scope);
 }

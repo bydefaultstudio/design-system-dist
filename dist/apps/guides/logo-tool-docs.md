@@ -8,11 +8,10 @@ layer: "app"
 subsection: ""
 order: 2
 status: "published"
-access: "team"
+access: "public"
 brand: "internal"
 actionUrl: "./logo-tool.html"
 actionLabel: "Open Tool"
-hue: "aqua"
 ---
 
 Guidelines are documentation: rules somebody has to read, remember and apply by hand every time they need the logo. This tool inverts that. Minimum size is the floor of the width field, not a paragraph on page twelve. The clear space is drawn round the logo you are looking at, not a diagram on another page. The approved colorways come first, one choice each, and the file is named for the color it carries.
@@ -62,7 +61,7 @@ The ceiling is 4096 px. Past that browsers start failing to rasterise, and a log
 
 ## Color
 
-Color is in **Style**, on the control every tool uses ([Tool Canvas](/docs/tool-canvas.html#color)).
+Color is in **Style**, on the control every tool uses.
 
 - **Pairs** are the brand's approved colorways: each logo color on the background it was designed for, such as *Off white on black*. One choice sets both. A colorway the brand approves only on some lockups leaves the row on the others. After them come the brand's recommended pairings, the list [Color Pairing](/tools/color-pairing.html) offers, for a logo set on a colored ground. Point at a chip to read its name. A pair under 3:1, the WCAG non-text bar for a logo mark, is named low contrast, with its ratio.
 - **Foreground** is the logo color: the brand palette, the picker, or any six-digit hex.
@@ -99,6 +98,10 @@ Format lives in the **Export** section with Include background, the width, the f
 **Flatten** applies to SVG only. It merges every letter path into one, which is what most workflows want from a downloaded logo. It is a merge, not a geometry operation: counters and holes survive because they are already subpaths. Where artwork mixes fill rules the option refuses rather than silently corrupting the shape.
 
 ---
+
+## Who can take the files
+
+Anyone can open the tool and try every variation, colour and size. Copy and Export are for {{brand:communityLabel}} members, or the team, depending on the level the site sets; below it, they show a lock, and a press explains how to get the tool for your own brand. One variant can have its own level (`assetAccess:` in the tool's frontmatter, by variant id), so the primary logo can open wider than the rest. The lock is an invitation, not a vault: the logos the site shows are public.
 
 ## Filenames
 

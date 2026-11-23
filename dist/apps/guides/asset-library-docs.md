@@ -1,6 +1,7 @@
 ---
 title: "Asset Library"
 subtitle: "Every approved brand file, found by name and taken in the right format"
+card: "Every approved brand file, ready to take"
 description: "How the Asset Library works: search that turns words into filters, the Type, Format, Project and Tag filters, links, font licences, and how a file gets into the library."
 author: "Studio"
 section: "Tools"
@@ -65,7 +66,7 @@ A **link** is an asset that lives somewhere else, a Figma file, a Figma Slides o
 
 A **font** is downloadable, open or paid. A downloadable font gives its file. An open font (free, on Google Fonts) shows a specimen and, in place of Download, a button that goes straight to where it lives. A paid font (`link-only`) shows a specimen and an About the licence button, whose dialog says the licence covers the brand's own work and where to license it, or to ask the brand team when there is no foundry link. Open and paid fonts' bytes are never on this site. Upright and italic are separate files, tagged `italic`, and every font carries its style: sans, serif, display, mono or script. A whole family can be one zip: its tile shows a specimen set from the Regular style inside it, the dock says how many styles the pack holds, and Download gives them all. A downloadable font's Download opens the licence notice first, the terms every licensed file in the library is handed out under: for {{brand:organisation}} work only, never shared or passed on, deleted when the work ends. The download starts from Accept and from nothing else: until then a middle-click, a drag or Save link as on the button is refused. A font under an open licence (`openLicence: true`, such as one on the SIL Open Font Licence) is free to share, so its Download skips the notice.
 
-Downloads need the tool's level: its `downloadAccess`, or its `access` when it sets none. The page locks Download for a reader below it, and the Worker refuses the file to them as well (`LIBRARY_DOWNLOAD_ACCESS` in `worker/library-index.mjs`). A guest never gets a library file, whatever their groups open, because no grant reaches `/files/`, so the page locks Download for every guest too.
+Every file has a level. By default it is the tool's: its `downloadAccess`, or its `access` when it sets none (`LIBRARY_DOWNLOAD_ACCESS` in `worker/library-index.mjs`). A file can set its own in the catalog, `"access": "admin"` for one only admins should take, or `"public"` or `"community"` for one to share wider. The page locks Download for a reader below the file's level and does not load its thumbnail, and the Worker refuses both to them as well: it checks the file's own level on every `/files/` request, thumbnails included, and a public file downloads with no sign-in. A guest never gets a library file, whatever their groups open, so the page locks Download for every guest too.
 
 The brand's **icons** are one tile, the whole set as a zip. For one icon at a size or a color, use the [Icon Library](/tools/icon-library.html).
 

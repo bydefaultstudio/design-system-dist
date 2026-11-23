@@ -17,10 +17,11 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.2.0';
+  var VERSION = '1.4.0';
   var API = '/api/people/';
 
-  var ROLE_LABELS = { owner: 'Owner', admin: 'Admin', team: 'Team', guest: 'Guest' };
+  // community's label is the deployment's (data-community-label), set at init.
+  var ROLE_LABELS = { owner: 'Owner', admin: 'Admin', team: 'Team', community: 'Community', guest: 'Guest' };
   var STATUS_COLOURS = { invited: 'info', active: 'success', expiring: 'warning', expired: 'danger' };
 
   var COPY = {
@@ -35,22 +36,45 @@
     removed: 'Removed. Their access ends now.',
     resent: 'Invite sent again.',
     unlocked: 'Lockout lifted. They can ask for a new code now.',
-    groupSaved: 'Group saved. Its guests see the change within five minutes.',
+    groupSaved: 'Group saved. Its members see the change within five minutes.',
     groupRemoved: 'Group deleted.',
     never: 'Never',
     none: '-',
     noGroups: 'No groups yet. Without one, a guest opens only the public pages and the indexes.',
+    noGroupsOfKind: function (kind) {
+      return kind === 'internal'
+        ? 'No internal groups yet. Add one under Groups to open admin pages for a team member.'
+        : 'No external groups yet. Without one, a guest opens only the public pages and the indexes.';
+    },
+    kindFixed: function (kind) {
+      return kind === 'internal'
+        ? 'Internal group: for the team and admins only. A group stays the kind it was made as.'
+        : 'External group: for guests and ' + ROLE_LABELS.community + ' members. A group stays the kind it was made as.';
+    },
+    typeName: 'Type the group\'s name exactly to delete it.',
     confirmRemove: function (email) { return email + ' comes off the list and is signed out everywhere. You can add them again later.'; },
     confirmGroup: function (name, members) {
       return 'The ' + name + ' group goes' + (members ? ', and its ' + members + (members === 1 ? ' member loses' : ' members lose') + ' the pages it opens' : '') + '.';
     }
   };
 
+  // The kind of group a role joins (worker/gate.mjs memberKindFor): an owner none.
+  function memberKindFor(role) {
+    if (role === 'guest' || role === 'community') return 'external';
+    if (role === 'team' || role === 'admin') return 'internal';
+    return null;
+  }
+
+  // What an external group may open (worker/gate.mjs isClosedToGroups).
+  function openToKind(level, kind) {
+    return kind === 'internal' ? level !== 'owner' : level === 'public' || level === 'community';
+  }
+
   // `data` starts as an empty answer rather than null, so a dialog opened
   // before the list has loaded, or after it failed, renders empty lists
   // instead of throwing in a click handler.
   var EMPTY = { viewer: { email: '' }, people: [], groups: [], sections: [], pages: [] };
-  var state = { root: null, data: EMPTY, editing: null, editingGroup: null, busy: false, confirm: null };
+  var state = { root: null, data: EMPTY, editing: null, editingGroup: null, busy: false, confirm: null, confirmTyped: null };
 
   /* ------ Utilities ------ */
 
@@ -262,11 +286,19 @@
     empty.hidden = groups.length > 0;
 
     groups.forEach(function (group) {
+      var internal = group.kind === 'internal';
+      // An internal group carries the brand's mark, beside a badge that says
+      // it in words: the picture is the signal, the word is the meaning.
+      var mark = el('span', { class: 'avatar', 'data-shape': 'rounded', 'aria-hidden': 'true', text: internal ? '' : initials(group.name, group.id) }, internal ? [brandMark()] : []);
       var row = el('tr', null, [
         el('td', null, [
-          el('div', { class: 'people-person-text' }, [
-            el('span', { class: 'people-person-name', text: group.name }),
-            group.note ? el('span', { class: 'text-size-s text-secondary', text: group.note }) : null
+          el('div', { class: 'people-person' }, [
+            mark,
+            el('div', { class: 'people-person-text' }, [
+              el('span', { class: 'people-person-name', text: group.name }),
+              group.note ? el('span', { class: 'text-size-s text-secondary', text: group.note }) : null,
+              el('span', { class: 'people-badges' }, [internal ? badge('Internal', 'info') : badge('External')])
+            ])
           ])
         ]),
         el('td', { text: grantText(group) }),
@@ -279,10 +311,18 @@
     });
   }
 
-  function renderCheckList(container, items, name, selected) {
+  // The deployment's own mark (its favicon), for an internal group. A site
+  // without one keeps the plain avatar: the image removes itself.
+  function brandMark() {
+    var img = el('img', { src: state.root.getAttribute('data-brand-mark') || '/assets/icons/favicon.svg', alt: '' });
+    img.addEventListener('error', function () { img.remove(); }, { once: true });
+    return img;
+  }
+
+  function renderCheckList(container, items, name, selected, emptyText) {
     container.replaceChildren();
     if (!items.length) {
-      container.appendChild(el('p', { class: 'form-hint', text: name === 'groups' ? COPY.noGroups : 'None yet.' }));
+      container.appendChild(el('p', { class: 'form-hint', text: emptyText || (name === 'groups' ? COPY.noGroups : 'None yet.') }));
       return;
     }
     items.forEach(function (item) {
@@ -293,16 +333,23 @@
     });
   }
 
-  function renderGroupChecks(fieldset, selected) {
+  // Only the groups this role may join (worker/people-core.mjs validatePerson),
+  // so a role change never submits a group the API refuses.
+  function renderGroupChecks(fieldset, selected, role) {
     var list = fieldset.querySelector('[data-groups-list]');
     list.id = list.id || (fieldset.closest('dialog').id + '-groups');
-    renderCheckList(list, (state.data.groups || []).map(function (g) { return { value: g.id, label: g.name }; }), 'groups', selected);
+    var kind = memberKindFor(role);
+    var groups = (state.data.groups || []).filter(function (g) { return g.kind === kind; });
+    renderCheckList(list, groups.map(function (g) { return { value: g.id, label: g.name }; }), 'groups', selected, COPY.noGroupsOfKind(kind));
   }
 
-  function renderPagesSelect(select, selected) {
+  // The pages a group of this kind may open; an internal group reaches every
+  // page but owner pages, an external one public and community pages only.
+  function renderPagesSelect(select, selected, kind) {
     select.replaceChildren();
     var bySection = {};
     (state.data.pages || []).forEach(function (page) {
+      if (!openToKind(page.level, kind)) return;
       var key = page.section || '';
       if (!bySection[key]) bySection[key] = [];
       bySection[key].push(page);
@@ -318,10 +365,13 @@
     });
   }
 
-  function toggleGroupsField(form) {
+  // Every role but owner joins groups of its kind. A role change keeps the
+  // ticks that still apply and drops the rest.
+  function toggleGroupsField(form, selected) {
     var fieldset = form.querySelector('[data-groups-field]');
     var role = form.querySelector('select[name="role"]').value;
-    fieldset.hidden = role !== 'guest';
+    fieldset.hidden = !memberKindFor(role);
+    renderGroupChecks(fieldset, selected || checkedValues(form, 'groups'), role);
   }
 
   function checkedValues(container, name) {
@@ -415,8 +465,7 @@
     var form = byId('people-add-form');
     form.reset();
     byId('people-add-error').textContent = '';
-    renderGroupChecks(form.querySelector('[data-groups-field]'), []);
-    toggleGroupsField(form);
+    toggleGroupsField(form, []);
   }
 
   function submitAdd(event) {
@@ -429,7 +478,7 @@
     var body = {
       emails: form.elements.emails.value,
       role: form.elements.role.value,
-      groups: form.elements.role.value === 'guest' ? checkedValues(form, 'groups') : [],
+      groups: memberKindFor(form.elements.role.value) ? checkedValues(form, 'groups') : [],
       expiresAt: form.elements.expiresAt.value || null,
       demo: form.elements.demo.checked,
       note: form.elements.note.value
@@ -488,8 +537,7 @@
     // Demo is set at invite only (the API refuses it later): the edit dialog
     // offers the switch only to end one.
     byId('people-edit-demo-field').hidden = !person.demo;
-    renderGroupChecks(form.querySelector('[data-groups-field]'), person.groups || []);
-    toggleGroupsField(form);
+    toggleGroupsField(form, person.groups || []);
     // Resend is for an invite that has not been taken up; a demo account
     // gets no email. Remove is never offered on the viewer's own row - the
     // API refuses it, and a button that always fails is noise.
@@ -512,7 +560,7 @@
     var body = {
       email: state.editing.email,
       role: form.elements.role.value,
-      groups: form.elements.role.value === 'guest' ? checkedValues(form, 'groups') : [],
+      groups: memberKindFor(form.elements.role.value) ? checkedValues(form, 'groups') : [],
       expiresAt: form.elements.expiresAt.value || null,
       demo: form.elements.demo.checked,
       note: form.elements.note.value
@@ -574,22 +622,40 @@
 
   /* ------ Confirm ------ */
 
-  function confirmAction(title, text, button, go) {
+  // `typed`, when given, is the exact text the reader must type before the
+  // action runs: an internal group's name (community-access-plan.md D8).
+  function confirmAction(title, text, button, go, typed) {
     state.confirm = go;
+    state.confirmTyped = typed || null;
     byId('people-confirm-title').textContent = title;
     byId('people-confirm-text').textContent = text;
     byId('people-confirm-error').textContent = '';
     byId('people-confirm-go').textContent = button;
+    var field = byId('people-confirm-typed-field');
+    var input = byId('people-confirm-typed');
+    field.hidden = !typed;
+    input.value = '';
+    markInvalid(input, byId('people-confirm-error'), false);
+    byId('people-confirm-typed-hint').textContent = typed ? 'Type ' + typed + ' to confirm.' : '';
     openDialog(byId('people-confirm'));
+    if (typed) input.focus();
   }
 
   function runConfirm() {
     if (state.busy || typeof state.confirm !== 'function') return;
     var error = byId('people-confirm-error');
     var button = byId('people-confirm-go');
+    var input = byId('people-confirm-typed');
     error.textContent = '';
+    if (state.confirmTyped && input.value !== state.confirmTyped) {
+      error.textContent = COPY.typeName;
+      markInvalid(input, error, true);
+      input.focus();
+      return;
+    }
+    markInvalid(input, error, false);
     setBusy(button, true);
-    state.confirm()
+    state.confirm(input.value)
       .then(function (result) {
         if (!result.ok) {
           error.textContent = errorMessage(result);
@@ -629,12 +695,23 @@
     byId('people-group-id').value = group ? group.id : '';
     form.elements.name.value = group ? group.name : '';
     form.elements.note.value = group ? group.note : '';
+    // The kind is chosen once, when the group is made; after that it is a
+    // sentence, not a disabled control a keyboard cannot reach.
+    var kind = group ? group.kind : 'external';
+    byId('people-group-kind-field').hidden = !!group;
+    byId('people-group-kind-fixed').hidden = !group;
+    byId('people-group-kind-fixed').textContent = group ? COPY.kindFixed(kind) : '';
+    form.elements.kind.value = kind;
     var grants = group ? group.grants : [];
     var sections = byId('people-group-sections');
     renderCheckList(sections, (state.data.sections || []).map(function (s) { return { value: 'section:' + s.folder, label: s.label }; }), 'sections', grants);
-    renderPagesSelect(byId('people-group-pages'), grants);
+    renderPagesSelect(byId('people-group-pages'), grants, kind);
     byId('people-group-remove').hidden = !group;
     openDialog(byId('people-group'));
+  }
+
+  function groupKind(form) {
+    return state.editingGroup ? state.editingGroup.kind : form.elements.kind.value;
   }
 
   function submitGroup(event) {
@@ -649,6 +726,7 @@
       id: form.elements.id.value || undefined,
       name: form.elements.name.value,
       note: form.elements.note.value,
+      kind: groupKind(form),
       grants: checkedValues(form, 'sections').concat(pages)
     };
     markInvalid(form.elements.name, error, false);
@@ -674,11 +752,11 @@
     var editor = byId('people-group');
     closeDialog(editor);
     afterClosed(editor, function confirmRemoveGroup() {
-      confirmAction('Delete this group?', COPY.confirmGroup(group.name, group.members), 'Delete', function () {
-        return request('groups/remove', { id: group.id }).then(function (result) {
+      confirmAction('Delete this group?', COPY.confirmGroup(group.name, group.members), 'Delete', function (typed) {
+        return request('groups/remove', { id: group.id, confirm: typed }).then(function (result) {
           return { ok: result.ok, data: result.data, message: COPY.groupRemoved };
         });
-      });
+      }, group.kind === 'internal' ? group.name : null);
     });
   }
 
@@ -701,8 +779,16 @@
   }
 
   function onChange(event) {
-    var select = event.target;
-    if (select.matches && select.matches('select[name="role"]')) toggleGroupsField(select.form);
+    var target = event.target;
+    if (!target.matches) return;
+    if (target.matches('select[name="role"]')) toggleGroupsField(target.form);
+    // A new group's kind decides which pages it may open: the ticks that
+    // still apply stay.
+    if (target.matches('#people-group-form input[name="kind"]')) {
+      var select = byId('people-group-pages');
+      var kept = Array.prototype.map.call(select.selectedOptions, function (option) { return option.value; });
+      renderPagesSelect(select, kept, target.value);
+    }
   }
 
   /* ------ Initialize ------ */
@@ -712,6 +798,7 @@
     if (!root || root.dataset.peopleInit) return;
     root.dataset.peopleInit = 'true';
     state.root = root;
+    ROLE_LABELS.community = root.getAttribute('data-community-label') || ROLE_LABELS.community;
     // The group dialog has its own opener handler (it fills the form from
     // state), so the trigger loses dialog.js's attribute before the delegated
     // document listener sees the click.

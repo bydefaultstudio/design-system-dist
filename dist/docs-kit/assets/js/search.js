@@ -148,16 +148,47 @@
   // authored HTML body — /search.html's, for one — cannot.
   var indexUrls;
 
+  // Under accessNav 'earned' the dialog also names a second index, public and
+  // community pages only (community-access-plan.md D11). Only a team, admin
+  // or owner reader gets the full one: any other role, an unknown one
+  // included, gets the smaller index, and the Worker refuses the full one to
+  // them anyway.
+  function fullIndexReader() {
+    var role = window.bdSession ? window.bdSession.role : document.body.getAttribute('data-role');
+    return role === 'team' || role === 'admin' || role === 'owner';
+  }
+
+  // Which pair to load, from the session answer once it has landed (the
+  // pre-paint role hint until then). Re-read on bd:session, below: a hint
+  // that said team for a reader the session says is community must not keep
+  // pointing them at the full index, nor the other way round.
+  function chooseUrls() {
+    var src = document.querySelector('[data-symbols][data-pagefind]');
+    if (!src) return null;
+    var community = src.hasAttribute('data-pagefind-community') && !fullIndexReader();
+    return {
+      symbols: src.getAttribute(community ? 'data-symbols-community' : 'data-symbols'),
+      pagefind: src.getAttribute(community ? 'data-pagefind-community' : 'data-pagefind')
+    };
+  }
+
   function urls() {
-    if (indexUrls === undefined) {
-      var src = document.querySelector('[data-symbols][data-pagefind]');
-      indexUrls = src ? {
-        symbols: src.getAttribute('data-symbols'),
-        pagefind: src.getAttribute('data-pagefind')
-      } : null;
-    }
+    if (indexUrls === undefined) indexUrls = chooseUrls();
     return indexUrls;
   }
+
+  document.addEventListener('bd:session', function rechooseIndex() {
+    if (indexUrls === undefined) return; // nothing chosen yet
+    var next = chooseUrls();
+    if (!next || (indexUrls && next.pagefind === indexUrls.pagefind)) return;
+    // The other pair: forget what was loaded, so the next search loads it.
+    indexUrls = next;
+    index.symbols = null;
+    index.symbolsFailed = false;
+    index.pagefind = null;
+    index.pagefindFailed = false;
+    index.pagefindLoading = null;
+  });
 
   // Where the site is rooted. The generator runs the dialog's data-symbols
   // through siteHref, so stripping the known tail leaves exactly basePath — ''
@@ -175,7 +206,7 @@
   function indexBase() {
     var u = urls();
     if (!u) return '';
-    var m = u.symbols.match(/^(.*)\/search-index\/symbols\.json$/);
+    var m = u.symbols.match(/^(.*)\/search-index\/(?:community\/)?symbols\.json$/);
     return m ? m[1] : '';
   }
 
@@ -1318,13 +1349,18 @@
     else if (dialogEl.open) dialogEl.close();
   }
 
-  // Search is closed to a guest (permissions-plan.md §4.7): the indexes carry
-  // every team page's text, so the Worker refuses them and the trigger is
-  // hidden (docs-site.css, body[data-role="guest"]). The shortcut has no
-  // trigger to hide, so it is refused here.
+  // Search is closed to a guest (permissions-plan.md §4.7), and to a
+  // community member unless the site builds them an index of their own
+  // (accessNav 'earned', community-access-plan.md D11): the full index carries
+  // every team page's text, so the Worker refuses it and the trigger is
+  // hidden (docs-site.css, body[data-role]). The shortcut has no trigger to
+  // hide, so it is refused here.
   function searchClosed() {
-    if (window.bdSession) return window.bdSession.role === 'guest';
-    return document.body.getAttribute('data-role') === 'guest';
+    var s = window.bdSession;
+    // Signed out, search is closed: every index needs a sign-in.
+    if (s ? !s.signedIn : document.body.classList.contains('is-signed-out')) return true;
+    var role = s ? s.role : document.body.getAttribute('data-role');
+    return role === 'guest' || (role === 'community' && !dialogEl.hasAttribute('data-pagefind-community'));
   }
 
   function openDialog() {

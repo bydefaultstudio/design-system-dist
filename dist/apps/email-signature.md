@@ -13,7 +13,7 @@ sidebar: "collapsed"
 version: "2.2.0"
 package: "utilities"
 guide: "email-signature-docs.md"
-needs: "tools, tool-canvas"
+needs: "tools, tool-canvas, download-lock"
 scripts: "assets/js/email-signature.js"
 styles: "assets/css/email-signature.css"
 ---

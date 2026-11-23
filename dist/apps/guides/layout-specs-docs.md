@@ -1,6 +1,7 @@
 ---
 title: "Layout Specs"
 subtitle: "Build the rules once. Make every piece after from them."
+card: "Set the rules once, build every piece"
 description: "Layout Specs builds the rules artwork lives by, its padding, clear space, grid and the interface that covers it, around a stand-in, and keeps them as a Layout Spec any tool can read."
 author: "Studio"
 section: "Tools"
@@ -8,7 +9,7 @@ layer: "app"
 subsection: ""
 order: 4
 status: "published"
-access: "team"
+access: "community"
 brand: "internal"
 actionUrl: "layout-specs.html"
 actionLabel: "Open Tool"

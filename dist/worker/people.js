@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * people.js - the People API (permissions-plan.md §5): the list, invites,
  * roles, groups and removal, so adding a person never needs a terminal.
@@ -23,11 +23,11 @@
  *   POST /api/people/resend         { email }
  *   POST /api/people/remove         { email }   - the row AND every session (§15, enforced)
  *   POST /api/people/unlock         { email }   - lifts a sign-in lockout (FAIL_LIMITS, SEND_LIMITS)
- *   POST /api/people/groups/save    { id?, name, note, grants }
- *   POST /api/people/groups/remove  { id }
+ *   POST /api/people/groups/save    { id?, name, note, kind, grants }   (kind fixed once made)
+ *   POST /api/people/groups/remove  { id, confirm }   (confirm: an internal group's exact name)
  */
 import { allowedRow, parseAddress } from './auth.js';
-import { FAIL_KEY_PREFIX, FAIL_LIMITS, SEND_LIMITS, evaluateRateLimit, isOwnerEmail, isSameOrigin, managesPeople, privateHeaders, sweepSendLog } from './gate.mjs';
+import { FAIL_KEY_PREFIX, FAIL_LIMITS, SEND_LIMITS, evaluateRateLimit, isClosedToGroups, isOwnerEmail, isSameOrigin, managesPeople, privateHeaders, sweepSendLog } from './gate.mjs';
 import { SITE } from './site.mjs';
 import { inviteSubject, renderInviteEmail, renderInviteText } from './email-template.mjs';
 import {
@@ -71,13 +71,15 @@ const COPY = {
   limited: 'Too many invites in a short time. Wait a few minutes.',
   groupNotFound: 'That group no longer exists. Reload to see the current groups.',
   groupExists: 'A group with that name already exists. Pick another name or edit that group.',
+  kindFixed: 'A group stays the kind it was made as. Make a new group of the other kind instead.',
+  typeName: 'Type the group\'s name exactly to delete it.',
   // Every message here is shown in a dialog word for word; the boundary
   // failures say what to do, not what the protocol was.
   notThrough: 'That request did not go through. Reload the page and try again.',
   failed: 'Something went wrong on our side. Try again.',
 };
 
-const ROLE_RANK = { guest: 0, team: 1, admin: 2, owner: 3 };
+const ROLE_RANK = { guest: 0, community: 1, team: 2, admin: 3, owner: 4 };
 
 export async function handlePeople(request, env, url, reader, setCookies = []) {
   if (!reader || !managesPeople(reader.role)) return respond({ error: COPY.forbidden }, 403, setCookies);
@@ -101,8 +103,8 @@ export async function handlePeople(request, env, url, reader, setCookies = []) {
       case 'resend': result = await resend(env, url, reader, body, now); break;
       case 'remove': result = await remove(env, reader, body, now); break;
       case 'unlock': result = await unlock(env, reader, body); break;
-      case 'groups/save': result = await saveGroup(env, body); break;
-      case 'groups/remove': result = await removeGroup(env, body); break;
+      case 'groups/save': result = await saveGroup(env, reader, body); break;
+      case 'groups/remove': result = await removeGroup(env, reader, body); break;
       default: result = { status: 404, body: { error: COPY.failed } };
     }
     return respond(result.body, result.status, setCookies);
@@ -125,7 +127,7 @@ async function listEverything(env, reader) {
         ORDER BY a.added_at, a.email`,
     ),
     env.DB.prepare('SELECT group_id, email FROM access_group_member'),
-    env.DB.prepare('SELECT id, name, note FROM access_group ORDER BY name'),
+    env.DB.prepare('SELECT id, name, note, kind FROM access_group ORDER BY name'),
     env.DB.prepare('SELECT group_id, scope FROM access_group_grant ORDER BY scope'),
     // The day's failed sign-in codes per address, for the Locked out badge.
     env.DB.prepare('SELECT key, COUNT(*) AS n FROM otp_send_log WHERE key LIKE ?1 AND at > ?2 GROUP BY key')
@@ -181,6 +183,7 @@ async function listEverything(env, reader) {
       id: row.id,
       name: row.name,
       note: row.note || '',
+      kind: row.kind,
       grants: grantsByGroup.get(row.id) || [],
       members: membersByGroup.get(row.id) || 0,
     })),
@@ -192,8 +195,7 @@ async function listEverything(env, reader) {
 /* ------ Write ------ */
 
 async function invite(env, url, reader, body, now) {
-  const groupIds = await listGroupIds(env);
-  const checked = validateInvite(body, { groupIds, now });
+  const checked = validateInvite(body, { groups: await listGroups(env), now });
   if (!checked.ok) return { status: 400, body: { error: checked.errors.join(' ') } };
   const { emails, role, groups, expiresAt, demo, note } = checked.value;
   if (!canAssignRole(reader.role, role)) return { status: 403, body: { error: COPY.makeOwner } };
@@ -245,8 +247,7 @@ async function update(env, reader, body, now) {
   const row = await allowedRow(env.DB, email);
   if (!row) return { status: 404, body: { error: COPY.notFound } };
 
-  const groupIds = await listGroupIds(env);
-  const checked = validatePerson(body, { groupIds, now });
+  const checked = validatePerson(body, { groups: await listGroups(env), now });
   if (!checked.ok) return { status: 400, body: { error: checked.errors.join(' ') } };
   const { role, groups, expiresAt, demo, note } = checked.value;
   const current = rowRole(env, row);
@@ -288,6 +289,9 @@ async function update(env, reader, body, now) {
   // keeps nothing once the demo is over.
   const demoted = (ROLE_RANK[role] < ROLE_RANK[current] && !isOwner(env, email)) || (row.demo === 1 && !demo);
 
+  const before = await env.DB.prepare('SELECT group_id FROM access_group_member WHERE email = ?1').bind(email).all();
+  const had = before.results.map((r) => r.group_id);
+
   const statements = [
     env.DB.prepare(
       'UPDATE allowed_email SET role = ?1, expires_at = ?2, demo = ?3, note = ?4 WHERE email = ?5',
@@ -313,6 +317,9 @@ async function update(env, reader, body, now) {
     statements.push(env.DB.prepare('DELETE FROM verification WHERE identifier = ?1').bind(signInCodeIdentifier(email)));
   }
   await env.DB.batch(statements);
+  const joined = groups.filter((id) => !had.includes(id));
+  const left = had.filter((id) => !groups.includes(id));
+  if (joined.length || left.length) console.info(JSON.stringify({ event: 'people.memberships', by: reader.email, email, joined, left }));
   return { status: 200, body: { ok: true, signedOut: demoted } };
 }
 
@@ -378,33 +385,51 @@ async function unlock(env, reader, body) {
   return { status: 200, body: { ok: true } };
 }
 
-async function saveGroup(env, body) {
+async function saveGroup(env, reader, body) {
   const checked = validateGroup(body, { pages: SITE.pages, sections: SITE.sections });
   if (!checked.ok) return { status: 400, body: { error: checked.errors.join(' ') } };
-  const { id, name, note, grants } = checked.value;
-  const existing = await env.DB.prepare('SELECT id FROM access_group WHERE id = ?1').bind(id).first();
+  const { id, name, note, kind, grants } = checked.value;
+  const existing = await env.DB.prepare('SELECT id, kind FROM access_group WHERE id = ?1').bind(id).first();
+  const had = existing
+    ? (await env.DB.prepare('SELECT scope FROM access_group_grant WHERE group_id = ?1').bind(id).all()).results.map((r) => r.scope)
+    : [];
   const editing = typeof body.id === 'string' && body.id.trim() !== '';
   if (editing && !existing) return { status: 404, body: { error: COPY.groupNotFound } };
   if (!editing && existing) return { status: 409, body: { error: COPY.groupExists } };
+  // A group's kind is set when it is made (community-access-plan.md D8): an
+  // external group turned internal would carry its outsiders across.
+  if (existing && existing.kind !== kind) return { status: 409, body: { error: COPY.kindFixed } };
 
   const statements = [
     existing
       ? env.DB.prepare('UPDATE access_group SET name = ?1, note = ?2 WHERE id = ?3').bind(name, note, id)
-      : env.DB.prepare('INSERT INTO access_group (id, name, note) VALUES (?1, ?2, ?3)').bind(id, name, note),
+      : env.DB.prepare('INSERT INTO access_group (id, name, note, kind) VALUES (?1, ?2, ?3, ?4)').bind(id, name, note, kind),
     env.DB.prepare('DELETE FROM access_group_grant WHERE group_id = ?1').bind(id),
   ];
   for (const scope of grants) {
     statements.push(env.DB.prepare('INSERT INTO access_group_grant (group_id, scope) VALUES (?1, ?2)').bind(id, scope));
   }
   await env.DB.batch(statements);
+  console.info(JSON.stringify({
+    event: 'people.group_saved',
+    by: reader.email,
+    id,
+    kind,
+    created: !existing,
+    added: grants.filter((scope) => !had.includes(scope)),
+    removed: had.filter((scope) => !grants.includes(scope)),
+  }));
   return { status: 200, body: { ok: true, id } };
 }
 
-async function removeGroup(env, body) {
+async function removeGroup(env, reader, body) {
   const id = typeof body.id === 'string' ? body.id.trim() : '';
-  const existing = await env.DB.prepare('SELECT id FROM access_group WHERE id = ?1').bind(id).first();
+  const existing = await env.DB.prepare('SELECT id, name, kind FROM access_group WHERE id = ?1').bind(id).first();
   if (!existing) return { status: 404, body: { error: COPY.groupNotFound } };
+  // Deleting an internal group is deliberate (D8): its name, typed exactly.
+  if (existing.kind === 'internal' && body.confirm !== existing.name) return { status: 400, body: { error: COPY.typeName } };
   await env.DB.prepare('DELETE FROM access_group WHERE id = ?1').bind(id).run();
+  console.info(JSON.stringify({ event: 'people.group_removed', by: reader.email, id, kind: existing.kind }));
   return { status: 200, body: { ok: true } };
 }
 
@@ -428,9 +453,10 @@ function rowRole(env, row) {
   return isOwner(env, row.email) ? 'owner' : row.role;
 }
 
-async function listGroupIds(env) {
-  const { results } = await env.DB.prepare('SELECT id FROM access_group').all();
-  return results.map((row) => row.id);
+/** Every group as { id, kind }: what a person's groups are checked against. */
+async function listGroups(env) {
+  const { results } = await env.DB.prepare('SELECT id, kind FROM access_group').all();
+  return results;
 }
 
 /** Every row, with the ACCESS_OWNER row read as the owner it is, so both last-of guards count them. */
@@ -468,21 +494,31 @@ async function recordAndCheckSends(env, adminEmail, emails, now) {
   return false;
 }
 
-/** The section labels (and page titles) a guest's groups open, for the invite's one line about what they can open. */
+/**
+ * The section labels (and page titles) a person's groups open, for the
+ * invite's one line about what they can open. Only what each group's kind
+ * can actually open (isClosedToGroups): a section by its own level (its
+ * index), a page by its own, so an external group's team section is never
+ * named to a guest who cannot open it.
+ */
 async function grantedSections(env, groupIds) {
   if (!groupIds.length) return [];
   const { results } = await env.DB
-    .prepare(`SELECT DISTINCT scope FROM access_group_grant WHERE group_id IN (${groupIds.map((_, i) => `?${i + 1}`).join(', ')}) ORDER BY scope`)
+    .prepare(
+      `SELECT DISTINCT g.scope, a.kind FROM access_group_grant g JOIN access_group a ON a.id = g.group_id
+        WHERE g.group_id IN (${groupIds.map((_, i) => `?${i + 1}`).join(', ')}) ORDER BY g.scope`,
+    )
     .bind(...groupIds)
     .all();
   const labels = [];
   for (const row of results) {
     if (row.scope.startsWith('section:')) {
       const folder = row.scope.slice('section:'.length);
-      if (SITE.sections[folder]) labels.push(SITE.sections[folder]);
+      const index = SITE.pages.get(`/${folder}/index.html`);
+      if (SITE.sections[folder] && index && !isClosedToGroups(index.level, row.kind) && !labels.includes(SITE.sections[folder])) labels.push(SITE.sections[folder]);
     } else if (row.scope.startsWith('page:')) {
       const entry = SITE.pages.get(row.scope.slice('page:'.length));
-      if (entry) labels.push(entry.title);
+      if (entry && !isClosedToGroups(entry.level, row.kind) && !labels.includes(entry.title)) labels.push(entry.title);
     }
   }
   return labels;

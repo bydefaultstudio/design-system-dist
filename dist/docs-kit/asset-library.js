@@ -294,7 +294,7 @@ function thumbFor(entry) {
  * search and the dock read; nothing the Worker needs. Assets sort newest
  * first, ties by title, so the page's default order is in the data.
  */
-function buildManifest(catalog, lock) {
+function buildManifest(catalog, lock, downloadAccess = 'team') {
   const lockFiles = (lock && lock.files) || {};
   const kits = catalog ? catalog.kits.map((k) => ({ id: k.id, title: k.title, client: k.client || null })) : [];
   // Orientation joins the authored groups, holding only what the files have.
@@ -340,6 +340,9 @@ function buildManifest(catalog, lock) {
       licenceFoundry: asset.licenceFoundry || null,
       openLicence: asset.openLicence === true,
       related: asset.related ? asset.related.tool : null,
+      // The level its file and thumbnail need (D13): the tool locks the
+      // Download and skips the thumbnail for a reader below it.
+      access: asset.access || downloadAccess,
       files,
     };
   }).sort((a, b) => (a.added < b.added ? 1 : a.added > b.added ? -1
@@ -349,12 +352,43 @@ function buildManifest(catalog, lock) {
   return { kits, tagGroups, assets };
 }
 
+const SPLIT_RANK = { public: 0, community: 1, team: 2, admin: 3, owner: 4 };
+
 /**
- * The Worker's lookup: "<asset id>/<filename>" → [object key, mime, size].
+ * The manifest split for the page (generate-docs.js renderAssetManifestParts):
+ * a base holding no asset data, and one block per level with that level's
+ * assets and the kits whose most open asset is there. A kit no asset uses
+ * travels nowhere. The orientation group lists every orientation; the page
+ * offers only those its assets carry. No global position travels.
+ */
+function splitManifest(manifest) {
+  const levelOf = (asset) => asset.access || 'team';
+  const byLevel = new Map();
+  for (const asset of manifest.assets) {
+    if (!byLevel.has(levelOf(asset))) byLevel.set(levelOf(asset), { assets: [], kits: [] });
+    byLevel.get(levelOf(asset)).assets.push(asset);
+  }
+  const kitLevel = new Map();
+  for (const asset of manifest.assets) {
+    for (const id of asset.kits || []) {
+      if (!kitLevel.has(id) || SPLIT_RANK[levelOf(asset)] < SPLIT_RANK[kitLevel.get(id)]) kitLevel.set(id, levelOf(asset));
+    }
+  }
+  for (const kit of manifest.kits) {
+    if (kitLevel.has(kit.id)) byLevel.get(kitLevel.get(kit.id)).kits.push(kit);
+  }
+  const tagGroups = manifest.tagGroups.map((g) => (g.id === 'orientation' ? { ...g, tags: ORIENTATIONS.slice() } : g));
+  const blocks = [...byLevel.keys()].sort((a, b) => SPLIT_RANK[a] - SPLIT_RANK[b]).map((level) => ({ level, block: byLevel.get(level) }));
+  return { base: { ...manifest, kits: [], tagGroups, assets: [] }, blocks };
+}
+
+/**
+ * The Worker's lookup: "<asset id>/<filename>" → [object key, mime, size, level].
+ * The level is the asset's own `access`, else the library's (D13).
  * Link-only fonts and link covers have no entry, so their bytes are unreachable even if
  * someone guesses the URL. Sorted, so two builds of one tree are identical.
  */
-function buildIndex(catalog, lock) {
+function buildIndex(catalog, lock, downloadAccess = 'team') {
   const lockFiles = (lock && lock.files) || {};
   const entries = [];
   for (const asset of catalog ? catalog.assets : []) {
@@ -364,31 +398,65 @@ function buildIndex(catalog, lock) {
       // Fail closed per file: an entry whose objects are not confirmed in the
       // bucket is not offered, whatever else the catalog says.
       if (!entry || !entry.original || entry.uploaded !== true) continue;
-      entries.push([`${asset.id}/${basenameOf(rendition.file)}`, [entry.original, entry.mime || 'application/octet-stream', entry.size || 0]]);
+      entries.push([`${asset.id}/${basenameOf(rendition.file)}`, [entry.original, entry.mime || 'application/octet-stream', entry.size || 0, asset.access || downloadAccess]]);
     }
   }
   return entries.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
 }
 
-function renderLibraryIndex(entries, downloadAccess = 'team') {
+const LEVEL_ORDER = ['public', 'community', 'team', 'admin', 'owner'];
+
+/**
+ * The thumbnails' levels (D13): R2 key → the level of the asset it pictures,
+ * link covers and specimens included, since the tool shows them all. Two
+ * assets with byte-identical files share a thumbnail; it takes the more open
+ * of their levels, which shows nothing either file does not already show.
+ * Only uploaded objects, sorted, so two builds of one tree are identical.
+ */
+function buildThumbLevels(catalog, lock, downloadAccess = 'team') {
+  const lockFiles = (lock && lock.files) || {};
+  const levels = new Map();
+  for (const asset of catalog ? catalog.assets : []) {
+    const level = asset.access || downloadAccess;
+    for (const rendition of asset.files) {
+      const entry = lockFiles[rendition.file];
+      if (!entry || !entry.thumb || entry.uploaded !== true || !SHA_PATTERN.test(entry.sha || '')) continue;
+      const keys = entry.thumb.kind === 'svg'
+        ? [`t/${entry.sha}.svg`]
+        : THUMB_WIDTHS.map((w) => `t/${entry.sha}-${w}.webp`);
+      for (const key of keys) {
+        const held = levels.get(key);
+        if (!held || LEVEL_ORDER.indexOf(level) < LEVEL_ORDER.indexOf(held)) levels.set(key, level);
+      }
+    }
+  }
+  return [...levels].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+}
+
+function renderLibraryIndex(entries, downloadAccess = 'team', thumbs = []) {
   const banner = `/**
  * library-index.mjs — GENERATED by cms/generator/generate-docs.js, do not edit.
  *
  * Every downloadable file in the Asset Library (cms/asset-library/catalog.json
- * + lock.json), as "<asset id>/<filename>" → [R2 object key, mime, size].
+ * + lock.json), as "<asset id>/<filename>" → [R2 object key, mime, size, level].
  * worker/library.js answers /files/<id>/<filename> from this map and nothing
  * else: a path not here is a 404 whatever the bucket holds, so removing an
  * asset from the catalog revokes its download on the next deploy. Open and
  * link-only fonts and link assets' covers are deliberately absent.
- * LIBRARY_DOWNLOAD_ACCESS is the tool's downloadAccess (or its access): an
- * original needs that level. To change either, edit the catalog or
+ * LIBRARY_DOWNLOAD_ACCESS is the tool's downloadAccess (or its access): the
+ * level an original needs when its catalog entry sets none. LIBRARY_THUMBS is
+ * each thumbnail's R2 key → its asset's level; a thumbnail not in it is a 404.
+ * To change any of them, edit the catalog or
  * cms/apps/asset-library.md and re-run: cd cms/generator && npm run docgen.
  */
 `;
   const body = entries.length
     ? `export const LIBRARY_INDEX = new Map([\n${entries.map(([k, v]) => `  [${JSON.stringify(k)}, ${JSON.stringify(v)}],`).join('\n')}\n]);\n`
     : 'export const LIBRARY_INDEX = new Map();\n';
-  return banner + `export const LIBRARY_DOWNLOAD_ACCESS = ${JSON.stringify(downloadAccess)};\n` + body;
+  const thumbBody = thumbs.length
+    ? `export const LIBRARY_THUMBS = new Map([\n${thumbs.map(([k, v]) => `  [${JSON.stringify(k)}, ${JSON.stringify(v)}],`).join('\n')}\n]);\n`
+    : 'export const LIBRARY_THUMBS = new Map();\n';
+  return banner + `export const LIBRARY_DOWNLOAD_ACCESS = ${JSON.stringify(downloadAccess)};\n` + body + thumbBody;
 }
 
 /** JSON for a <script type="application/json"> block: no "</script>", no "<!--". */
@@ -409,7 +477,9 @@ module.exports = {
   loadLibrary,
   validateCatalog,
   buildManifest,
+  splitManifest,
   buildIndex,
+  buildThumbLevels,
   renderLibraryIndex,
   manifestJson,
   isSafeFilename,

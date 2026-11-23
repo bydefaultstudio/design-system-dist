@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * gate.mjs — the pure half of the access gate: route lists and predicates.
  *
@@ -12,7 +12,7 @@
  *
  *   1. Is this session valid? - worker/session.js, with Better Auth.
  *   2. May this reader open this page? - authorise() below, a Map lookup for
- *      a team member or an admin; one D1 read, for a guest, done by the caller.
+ *      everyone but a guest; one D1 read, for a guest, done by the caller.
  *
  * Public routes have TWO sources, kept apart on purpose (access-plan.md §5,
  * §12.4), and this file holds only the first:
@@ -23,8 +23,8 @@
  *   2. PAGES - every generated page's level, from its `access:` frontmatter,
  *      compiled by the docs kit into the site's worker/page-access.mjs and
  *      handed to createGate() (worker/site.mjs holds it). A page with
- *      `access: "public"` is open; `team`, `admin` and `owner` are the gated
- *      levels. Never add a page to a public list and never add a route to
+ *      `access: "public"` is open; `community`, `team`, `admin` and `owner`
+ *      are the gated levels. Never add a page to a public list and never add a route to
  *      the page map.
  *
  * Anything matching neither is gated at the team level: a new folder ships
@@ -34,8 +34,9 @@
  * because the build wrote every page it generated into the map, and a section
  * file it did not is a copy nobody chose to ship. Fail closed.
  */
-import { normaliseRole } from './auth-schema.mjs';
+import { LEVELS, normaliseRole } from './auth-schema.mjs';
 import { ENGINE_PATHS, SITE } from './site.mjs';
+import { FILES_PREFIX, parseFilesPath } from './library-core.mjs';
 
 export { normaliseRole, ENGINE_PATHS };
 
@@ -115,6 +116,9 @@ export function isEmbeddablePath(pathname) {
 export function embeddableHeaders(response) {
   const out = new Response(response.body, response);
   out.headers.delete('X-Frame-Options');
+  // privateHeaders marks gated answers same-origin; a page meant to be framed
+  // elsewhere must not carry that to an embedder that enforces COEP.
+  out.headers.delete('Cross-Origin-Resource-Policy');
   out.headers.set('Content-Security-Policy', 'frame-ancestors *');
   return out;
 }
@@ -169,6 +173,53 @@ export function isConflictCopyPath(pathname) {
   return /(?: |%20)\d+(?:\.[a-z0-9]+)?(?:\/|$)/i.test(pathname);
 }
 
+/**
+ * The community search index (accessNav 'earned', community-access-plan.md
+ * D11): public and community pages only, so it opens at community. The full
+ * index under /pagefind/ and /search-index/symbols.json stays team.
+ */
+const COMMUNITY_SEARCH_PREFIXES = ['/pagefind-community/', '/search-index/community/'];
+const COMMUNITY_SEARCH_ENTRY = Object.freeze({ level: 'community', section: '', type: '' });
+
+const LEVEL_ENTRIES = new Map(LEVELS.map((level) => [level, Object.freeze({ level, section: '', type: '' })]));
+
+/**
+ * A file's own level, where it has one (community-access-plan.md D13 and the
+ * step 7 note on section files), or null for the default.
+ *
+ * - The Asset Library's /files/: an original takes its catalog entry's level
+ *   (the fourth value in LIBRARY_INDEX), a thumbnail its asset's
+ *   (LIBRARY_THUMBS). A path the index does not know has no level here, so it
+ *   stays team, and library.js answers it 404.
+ * - A file under a section folder that is no page on the map: its section's
+ *   level (the index's, the sectionAccess default), when that is public or
+ *   community. A team section's files stay team, so a section grant never
+ *   opens them to an outsider (D9), and a community member opens a community
+ *   section's files by role, as they open its pages.
+ */
+// An index entry's level: its fourth value, else the library's, as
+// library-core.mjs fileLevel reads it; no entry has none.
+function fileIndexLevel(hit, library) {
+  return hit ? hit[3] || library.downloadAccess : undefined;
+}
+
+function fileEntry(pathname, pages, sections) {
+  if (pathname.startsWith(FILES_PREFIX)) {
+    const library = SITE.library;
+    if (!library || !SITE.apps.installed.includes('asset-library')) return null;
+    const target = parseFilesPath(pathname);
+    if (!target) return null;
+    const level = target.kind === 'thumb'
+      ? (library.thumbs instanceof Map ? library.thumbs.get(target.key) : undefined)
+      : fileIndexLevel(library.index.get(target.lookup), library);
+    return LEVEL_ENTRIES.get(level) || null;
+  }
+  const section = fileSectionOf(pathname);
+  if (section === '' || !Object.prototype.hasOwnProperty.call(sections, section)) return null;
+  const index = pages.get(`/${section}/index.html`);
+  return index && !isClosedToGroups(index.level, 'external') ? LEVEL_ENTRIES.get(index.level) : null;
+}
+
 export function isUnmappedSectionPage(pathname, pages = SITE.pages, sections = SITE.sections) {
   if (!pathname.endsWith('.html') || pages.has(pathname)) return false;
   const section = sectionOf(pathname);
@@ -176,25 +227,47 @@ export function isUnmappedSectionPage(pathname, pages = SITE.pages, sections = S
 }
 
 export function pageEntry(pathname, pages = SITE.pages, sections = SITE.sections) {
-  const entry = pages.get(pathname);
+  const entry = pages.get(pathname) || fileEntry(pathname, pages, sections);
   if (entry) return entry;
+  if (COMMUNITY_SEARCH_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return COMMUNITY_SEARCH_ENTRY;
+  // Under 'locked' isPublicPath opens them before this is asked.
+  if (LLM_FILES.has(pathname)) return llmEntry(pages);
   if (isSourcePath(pathname)) return UNMAPPED_SOURCE_ENTRY;
   if (isUnmappedSectionPage(pathname, pages, sections)) return UNMAPPED_PAGE_ENTRY;
   return DEFAULT_ENTRY;
 }
 
 /**
- * The LLM reference carries every foundation and core page's text, all of
- * them team pages. Under accessNav 'hidden' a signed-out reader sees public
- * pages only, so the files are gated with the rest (code review, 2026-11-09).
+ * The LLM reference carries every foundation and core page's text. Under
+ * accessNav 'hidden' or 'earned' a signed-out reader sees none of those pages,
+ * so the files are not public (code review, 2026-11-09); pageEntry() opens them
+ * at community, the level the Foundations and Components sections now take
+ * (community-access-plan.md step 6): never below community, and as high as
+ * the highest page in those sections (llmEntry).
  */
 const LLM_FILES = new Set(['/llms.txt', '/llms-full.txt']);
 
+// The sections the LLM reference quotes. The files open at the highest level
+// any page in them has, so raising one of those pages raises the files too.
+const LLM_SECTIONS = new Set(['foundations', 'components']);
+const llmEntries = new WeakMap();
+function llmEntry(pages) {
+  let entry = llmEntries.get(pages);
+  if (entry) return entry;
+  let level = 'community';
+  for (const [pathname, e] of pages) {
+    if (LLM_SECTIONS.has(e.section) && !INDEX_SHAPE.test(pathname) && LEVELS.indexOf(e.level) > LEVELS.indexOf(level)) level = e.level;
+  }
+  entry = Object.freeze({ level, section: '', type: '' });
+  llmEntries.set(pages, entry);
+  return entry;
+}
+
 export function isPublicPath(pathname, pages = SITE.pages, accessNav = SITE.accessNav) {
-  if (accessNav === 'hidden' && LLM_FILES.has(pathname)) return false;
+  if (accessNav !== 'locked' && LLM_FILES.has(pathname)) return false;
   if (ENGINE_PUBLIC_PATHS.has(pathname) || pathname === SITE.loginPath || SITE.publicPaths.has(pathname)) return true;
   if (SITE.landingPath !== null && pathname === SITE.landingPath) return true;
-  const entry = pages.get(pathname);
+  const entry = pages.get(pathname) || fileEntry(pathname, pages, SITE.sections);
   if (entry && entry.level === 'public') return true;
   return ENGINE_PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
     || SITE.publicPrefixes.some((prefix) => pathname.startsWith(prefix));
@@ -208,8 +281,36 @@ export function isPublicPath(pathname, pages = SITE.pages, accessNav = SITE.acce
  * Lab does) without being an index, and nav.js reads the same rule from
  * the href it has.
  */
-export function isIndexPath(pathname) {
-  return pathname === '/index.html' || /^\/[a-z0-9-]+\/index\.html$/.test(pathname);
+/**
+ * Whether a section index opens for a reader below team (a community member
+ * or a guest). Under 'locked' and 'hidden' always, as before. Under 'earned'
+ * only when the section holds a page they can see, open or locked: a public
+ * or community page. A section of internal pages alone is hidden, index and
+ * all (community-access-plan.md D11). The home page always opens.
+ */
+const SECTION_SHOWS = new WeakMap();
+export function indexShows(pathname, pages = SITE.pages, accessNav = SITE.accessNav) {
+  if (accessNav !== 'earned' || pathname === '/index.html') return true;
+  let shown = SECTION_SHOWS.get(pages);
+  if (!shown) {
+    shown = new Set();
+    for (const [p, e] of pages) {
+      if (!INDEX_SHAPE.test(p) && (e.level === 'public' || e.level === 'community')) shown.add(sectionOf(p));
+    }
+    SECTION_SHOWS.set(pages, shown);
+  }
+  return shown.has(sectionOf(pathname));
+}
+
+/** The shape of a contents page, before asking whether its folder is a section. */
+const INDEX_SHAPE = /^\/[a-z0-9-]+\/index\.html$/;
+
+export function isIndexPath(pathname, sections = SITE.sections, pages = SITE.pages) {
+  if (pathname === '/index.html') return true;
+  // Only a real section's contents page: any other one-level index.html is
+  // judged like any page off the map, never opened to every signed-in reader.
+  const m = /^\/([a-z0-9-]+)\/index\.html$/.exec(pathname || '');
+  return !!m && Object.prototype.hasOwnProperty.call(sections, m[1]) && pages.has(pathname);
 }
 
 /**
@@ -276,11 +377,47 @@ export function isOwner(role) {
 }
 
 /**
- * The levels a group can never open (D17, D23): admin and owner pages stay
- * with the roles they are named for, whatever a guest's groups say.
+ * The two kinds of group (community-access-plan.md D8, D9), set when a group
+ * is made and never changed after. An external group is for people outside:
+ * guests and community members. An internal group is for the team: team
+ * members and admins, and it lifts a team member onto admin pages.
  */
-export function isClosedToGroups(level) {
-  return level === 'admin' || level === 'owner';
+export const GROUP_KINDS = Object.freeze(['external', 'internal']);
+
+/**
+ * The kind of group a role may join: guests and community members external,
+ * team members and admins internal. An owner opens everything, so no group
+ * is for them (null).
+ */
+export function memberKindFor(role) {
+  if (role === 'guest' || role === 'community') return 'external';
+  if (role === 'team' || role === 'admin') return 'internal';
+  return null;
+}
+
+/**
+ * The kind of group whose grants change what a role opens, so the only kind
+ * the gate ever reads for them: a guest's external groups (community pages),
+ * a team member's internal ones (admin pages). A community member already
+ * opens every community page and an admin every admin page, so neither
+ * costs a database read (null).
+ */
+export function scopeKindFor(role) {
+  if (role === 'guest') return 'external';
+  if (role === 'team') return 'internal';
+  return null;
+}
+
+/**
+ * The levels a group of this kind can never open (D17, D23, and
+ * community-access-plan.md D8, D9). An owner page runs the engine: closed to
+ * every group. An internal group stops there. An external group reaches
+ * public and community pages only, so a team page stays internal whatever an
+ * outsider's groups say.
+ */
+export function isClosedToGroups(level, kind = 'external') {
+  if (kind === 'internal') return level === 'owner';
+  return level !== 'public' && level !== 'community';
 }
 
 /**
@@ -288,13 +425,17 @@ export function isClosedToGroups(level) {
  *
  *   'allow'  - serve.
  *   'deny'   - the locked page (403); never a 302, the reader is signed in.
- *              Only ever an admin or an owner page.
- *   'grant'  - a guest on a page their groups may cover: the caller asks the
- *              database (one read, guests only) and turns the answer into
- *              allow or deny.
+ *   'grant'  - a page the reader's groups may cover: the caller asks the
+ *              database (one read) and turns the answer into allow or deny.
  *
- * Owner, admin and team never reach 'grant': their verdict costs a Map lookup and
- * nothing else, which is what keeps the hot path free of D1 (§8).
+ * 'grant' is reached in two places only (community-access-plan.md D8, D9):
+ * a team member on an admin page, which an internal group may open, and a
+ * guest on a community page or a section's file, which an external group may
+ * open. Every other verdict costs a Map lookup and nothing else, which keeps
+ * the hot path free of D1 (§8). A guest on a team page is refused outright:
+ * no external group reaches one. A community member's groups add nothing
+ * yet, since they already open every community page, so they never reach
+ * 'grant'.
  */
 export function authorise(role, pathname, pages = SITE.pages, sections = SITE.sections) {
   if (isConflictCopyPath(pathname)) return 'deny';
@@ -305,10 +446,16 @@ export function authorise(role, pathname, pages = SITE.pages, sections = SITE.se
   // client's admin as much as to anyone else.
   if (entry.level === 'owner') return 'deny';
   if (role === 'admin') return 'allow';
-  if (entry.level === 'admin') return 'deny';
+  // Only a mapped admin page: an unmapped source is admin by default
+  // (UNMAPPED_SOURCE_ENTRY), and no group ever names one.
+  if (entry.level === 'admin') return role === 'team' && pages.has(pathname) ? 'grant' : 'deny';
   if (role === 'team') return 'allow';
-  if (isIndexPath(pathname)) return 'allow';
-  return 'grant';
+  if (entry.level === 'community' && role === 'community') return 'allow';
+  if (isIndexPath(pathname, sections, pages)) return indexShows(pathname, pages) ? 'allow' : 'deny';
+  if (role !== 'guest') return 'deny';
+  // A section's files take its level (fileEntry), so a community section's
+  // file asks the guest's groups like a community page does.
+  return entry.level === 'community' ? 'grant' : 'deny';
 }
 
 /**
@@ -318,10 +465,12 @@ export function authorise(role, pathname, pages = SITE.pages, sections = SITE.se
  * hidden by it.
  */
 export function lockedFor(html, level) {
-  const shown = level === 'owner' || level === 'admin' ? level : 'team';
+  // 'hidden' is accessNav 'earned' refusing a page the reader may not even
+  // see: its wording names neither the page nor its level.
+  const shown = ['community', 'admin', 'owner', 'hidden'].includes(level) ? level : 'team';
   return html
     .replace('data-locked-level=""', `data-locked-level="${shown}"`)
-    .replace(/<span data-for="(team|admin|owner)">([^<]*)<\/span>/g, (match, who, text) => (who === shown ? text : ''));
+    .replace(/<span data-for="(community|team|admin|owner|hidden)">([^<]*)<\/span>/g, (match, who, text) => (who === shown ? text : ''));
 }
 
 /**
@@ -335,10 +484,13 @@ export function notInstalledFor(html, name) {
 
 /**
  * Whether a link or card to `pathname` at `level` stays in a page served to
- * this reader under `accessNav: 'hidden'` (levels-groups-plan.md D19, §3.3).
+ * this reader under `accessNav: 'hidden'` (levels-groups-plan.md D19, §3.3),
+ * and under 'earned' with one addition in hidden-nav.mjs: a community page
+ * stays, locked, for a reader who could earn it.
  * The same order as authorise(), answered for a link rather than a request:
  * `role` is null for a signed-out reader, who keeps public pages only;
- * `scopes` are a guest's grants. worker/hidden-nav.mjs removes what this
+ * `scopes` are the grants of the reader's own kind of group: a guest's
+ * external ones, a team member's internal ones (scopeKindFor). worker/hidden-nav.mjs removes what this
  * refuses; the gate still refuses the page itself if it is reached.
  */
 export function navVisible(role, scopes, level, pathname) {
@@ -347,10 +499,11 @@ export function navVisible(role, scopes, level, pathname) {
   if (role === 'owner') return true;
   if (level === 'owner') return false;
   if (role === 'admin') return true;
-  if (level === 'admin') return false;
+  if (level === 'admin') return role === 'team' && scopeAdmits(scopes, pathname);
   if (role === 'team') return true;
-  if (isIndexPath(pathname)) return true;
-  return scopeAdmits(scopes, pathname);
+  if (level === 'community' && role === 'community') return true;
+  if (isIndexPath(pathname)) return indexShows(pathname);
+  return role === 'guest' && level === 'community' && scopeAdmits(scopes, pathname);
 }
 
 /** The output folder a path sits in - "tools" for /tools/x.html, '' at the root. */
@@ -368,7 +521,11 @@ export function sectionOf(pathname) {
  * map, and must never open to a grant by its folder alone.
  */
 export function fileSectionOf(pathname) {
-  if (typeof pathname !== 'string' || pathname.endsWith('/') || pathname.endsWith('.html')) return '';
+  // Percent-encoding, a doubled slash and an .htm/.html name in any case are
+  // never a section file: the asset layer may decode or fold them into a page
+  // (`x.htm%6C`, `..%2Finternal%2Fx.html`), which must keep its own entry.
+  if (typeof pathname !== 'string' || pathname.endsWith('/') || pathname.includes('%') || pathname.includes('//')
+    || /\.html?$/i.test(pathname)) return '';
   const match = /^\/([a-z0-9-]+)\/(?:[^/]+\/)*[^/]+$/.exec(pathname);
   if (!match || pathname.split('/').some((part) => part === '..' || part === '.')) return '';
   return match[1];
@@ -392,12 +549,12 @@ export function scopeAdmits(scopes, pathname) {
 }
 
 /**
- * A grant the People page may save: a section the site has, or a page the map
- * knows that is neither an admin nor an owner page (a group can never reach
- * one, §3.1, D23). A section grant may name a section that holds such pages;
- * authorise() answers them before it ever asks about grants.
+ * A grant the People page may save for a group of this kind: a section the
+ * site has, or a page the map knows that the kind may open (isClosedToGroups)
+ * and that is no index. A section grant may name a section that holds pages
+ * above the kind; authorise() answers those before it ever asks about grants.
  */
-export function isGrantableScope(scope, pages = SITE.pages, sections = SITE.sections) {
+export function isGrantableScope(scope, pages = SITE.pages, sections = SITE.sections, kind = 'external') {
   if (typeof scope !== 'string') return false;
   if (scope.startsWith('section:')) {
     const folder = scope.slice('section:'.length);
@@ -406,7 +563,7 @@ export function isGrantableScope(scope, pages = SITE.pages, sections = SITE.sect
   if (scope.startsWith('page:')) {
     const pathname = scope.slice('page:'.length);
     const entry = pages.get(pathname);
-    return !!entry && !isClosedToGroups(entry.level) && !isIndexPath(pathname);
+    return !!entry && !isClosedToGroups(entry.level, kind) && !INDEX_SHAPE.test(pathname) && pathname !== '/index.html';
   }
   return false;
 }
@@ -604,6 +761,11 @@ export function collapsesToRejectedCode(status) {
 export function privateHeaders(response, setCookies = []) {
   const out = new Response(response.body, response);
   out.headers.set('Cache-Control', 'private, no-store');
+  // A gated answer is for this site's own pages only. Without this, a page
+  // with an opaque origin on this site (Ad Preview's sandbox, ad-frame.js)
+  // could pull one in as an image or script in a browser that sends the
+  // session cookie with it. CORS fetches are unaffected.
+  out.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
   out.headers.append('Vary', 'Cookie');
   for (const cookie of setCookies) out.headers.append('Set-Cookie', cookie);
   return out;

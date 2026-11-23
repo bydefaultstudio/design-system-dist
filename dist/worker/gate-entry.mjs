@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * gate-entry.mjs - createGate(), the access gate as one factory
  * (levels-groups-plan.md Phase 3, D21). Shipped as
@@ -55,16 +55,17 @@
  * Static assets reach here too: wrangler.jsonc sets run_worker_first, so
  * the session decides what reaches the asset layer (access-plan.md §4.2).
  */
-import { AUTH_BASE_PATH, guestScopes, handleAuth, handleSignOutLink } from './auth.js';
+import { AUTH_BASE_PATH, readerScopes, handleAuth, handleSignOutLink } from './auth.js';
 
 // The route a code is verified on (auth.js VERIFY_PATH): a 200 there is a sign-in
 const SIGN_IN_PATH = `${AUTH_BASE_PATH}/sign-in/email-otp`;
 import { PEOPLE_BASE_PATH, handlePeople } from './people.js';
-import { ENGINE_PATHS, SIGN_OUT_LINK, embeddableHeaders, hasSessionCookie, isConflictCopyPath, isEmbeddablePath, isNavigation, isPublicPath, isUnmappedSectionPage, notInstalledFor, privateHeaders, servesLanding } from './gate.mjs';
+import { ENGINE_PATHS, SIGN_OUT_LINK, embeddableHeaders, hasSessionCookie, isConflictCopyPath, isEmbeddablePath, isNavigation, isPublicPath, isUnmappedSectionPage, notInstalledFor, privateHeaders, scopeKindFor, servesLanding } from './gate.mjs';
 import { requireSession } from './session.js';
 import { CSP_REPORT_PATH, handleCspReport } from './csp-report.js';
 import { hideForReader, isHtml } from './hidden-nav.mjs';
 import { handleImage } from './image.js';
+import { AD_FRAME_PATH, handleAdFrame } from './ad-frame.js';
 import { handleLibrary } from './library.js';
 import { SUBMIT_FORM_PATH, formsOption, handleFormsForward } from './forms-forward.mjs';
 import { createReporter, reportOption } from './fleet-report.mjs';
@@ -105,13 +106,15 @@ async function landingResponse(request, env, url, denial) {
     return denial;
   }
   denial.body?.cancel();
-  // A signed-out visitor: under accessNav 'hidden' the page keeps public links only.
-  const shown = SITE.accessNav === 'hidden' ? hideForReader(page, null, url.href) : page;
+  // A signed-out visitor: under accessNav 'hidden' the page keeps public links
+  // only; under 'earned', public and community ones.
+  const shown = SITE.accessNav !== 'locked' ? hideForReader(page, null, url.href, SITE.accessNav) : page;
   return privateHeaders(shown, denial.headers.getSetCookie());
 }
 
 /**
- * accessNav 'hidden' (levels-groups-plan.md D19, §3.3): every page leaves
+ * accessNav 'hidden' or 'earned' (levels-groups-plan.md D19, §3.3;
+ * community-access-plan.md D11): every page leaves
  * with the links and cards the reader cannot open cut out. A gated page
  * already has its reader; a public page reads the session only when a
  * cookie is present, so a signed-out visitor costs nothing and keeps the
@@ -140,14 +143,14 @@ async function hiddenNav(request, env, url, response, gated, reader, sessionCook
     }
   }
   let scopes = who && Array.isArray(who.scopes) ? who.scopes : [];
-  if (who && who.role === 'guest' && !Array.isArray(who.scopes)) {
+  if (who && scopeKindFor(who.role) && !Array.isArray(who.scopes)) {
     try {
-      scopes = await guestScopes(env.DB, who.email);
+      scopes = await readerScopes(env.DB, who.email, who.role);
     } catch {
-      scopes = []; // fail closed: a guest with no scopes keeps public links and indexes only
+      scopes = []; // fail closed: no scopes keeps what the role opens on its own
     }
   }
-  const cut = privateHeaders(hideForReader(response, who ? { role: who.role, scopes } : null, url.href), cookies);
+  const cut = privateHeaders(hideForReader(response, who ? { role: who.role, scopes } : null, url.href, SITE.accessNav), cookies);
   return isEmbeddablePath(url.pathname) ? embeddableHeaders(cut) : cut;
 }
 
@@ -161,8 +164,8 @@ async function hiddenNav(request, env, url, response, gated, reader, sessionCook
  * Vary: Cookie: the session cookie is re-issued every few minutes, which
  * would empty the cache, and sign-out clears it (Clear-Site-Data).
  */
-const SEARCH_INDEX_PREFIXES = ['/pagefind/', '/search-index/'];
-const HASHED_INDEX = /^\/pagefind\/(?:fragment|index|filter)\//;
+const SEARCH_INDEX_PREFIXES = ['/pagefind/', '/pagefind-community/', '/search-index/'];
+const HASHED_INDEX = /^\/pagefind(?:-community)?\/(?:fragment|index|filter)\//;
 function searchIndexCache(response, pathname) {
   if ((response.status !== 200 && response.status !== 304) || !SEARCH_INDEX_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return response;
   const out = new Response(response.body, response); // the asset layer's headers can be immutable
@@ -193,7 +196,7 @@ async function notInstalledResponse(request, env, url, name, reader, sessionCook
   const out = new Response(body, { status: 404, headers: page.headers });
   out.headers.delete('Content-Length');
   out.headers.delete('ETag'); // one template, a body per app
-  if (SITE.accessNav === 'hidden') return hiddenNav(request, env, url, out, true, reader, sessionCookies);
+  if (SITE.accessNav !== 'locked') return hiddenNav(request, env, url, out, true, reader, sessionCookies);
   return privateHeaders(out, sessionCookies);
 }
 
@@ -220,7 +223,7 @@ async function notFoundResponse(request, env, url, fallback, reader, sessionCook
   if (request.method === 'HEAD') page.body?.cancel();
   const out = new Response(request.method === 'HEAD' ? null : page.body, { status: 404, headers: page.headers });
   out.headers.delete('ETag');
-  if (SITE.accessNav === 'hidden') return hiddenNav(request, env, url, out, true, reader, sessionCookies);
+  if (SITE.accessNav !== 'locked') return hiddenNav(request, env, url, out, true, reader, sessionCookies);
   return privateHeaders(out, sessionCookies);
 }
 
@@ -407,6 +410,11 @@ export function createGate(options = {}) {
         return handleImage(url, env, { logoPath: SITE.apps.imageLogo });
       }
 
+      // Ad Preview's sandbox, public while the app is installed: a frame with
+      // no secrets whose own load may arrive without the session cookie, and
+      // which answers only an iframe on this site (ad-frame.js).
+      if (SITE.apps.installed.includes('ad-preview') && pathname === AD_FRAME_PATH) return handleAdFrame(request);
+
       // Where browsers post Content-Security-Policy violations: public, so a
       // signed-out visitor on the login page reports too. After the site's
       // own public routes, so a site that handles the path itself keeps it.
@@ -556,7 +564,7 @@ export function createGate(options = {}) {
         const indexResponse = await env.ASSETS.fetch(new Request(indexUrl, request));
         if (indexResponse.status !== 404) {
           notePage(env, ctx, request, indexResponse, gated, reader, pathname);
-          if (SITE.accessNav === 'hidden') return hiddenNav(request, env, url, indexResponse, gated, reader, sessionCookies);
+          if (SITE.accessNav !== 'locked') return hiddenNav(request, env, url, indexResponse, gated, reader, sessionCookies);
           return gated ? privateHeaders(indexResponse, sessionCookies) : indexResponse;
         }
         // Discard the 404 body explicitly. Every index-less directory URL takes
@@ -572,7 +580,7 @@ export function createGate(options = {}) {
         return notFoundResponse(request, env, url, privateHeaders(assetResponse, sessionCookies), reader, sessionCookies);
       }
       notePage(env, ctx, request, assetResponse, gated, reader, pathname);
-      if (SITE.accessNav === 'hidden') return searchIndexCache(await hiddenNav(request, env, url, assetResponse, gated, reader, sessionCookies), pathname);
+      if (SITE.accessNav !== 'locked') return searchIndexCache(await hiddenNav(request, env, url, assetResponse, gated, reader, sessionCookies), pathname);
       if (gated) return searchIndexCache(privateHeaders(assetResponse, sessionCookies), pathname);
       return isEmbeddablePath(pathname) ? embeddableHeaders(assetResponse) : assetResponse;
   }

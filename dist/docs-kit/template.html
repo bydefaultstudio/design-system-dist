@@ -57,7 +57,7 @@
          signed in: the check itself lands after paint, and a sidebar
          dropping from full width to the rail would be a visible shift.
          header-account.js writes bd-session-hint - the reader's role,
-         admin, team or guest, or out - and nav.js applies the locks.
+         admin, team, community or guest, or out - and nav.js applies the locks.
          The role goes on body[data-role] so admin links and cards are
          hidden before paint for everyone else rather than flickering
          away (permissions-plan.md §4.5); the CSS keys on it. A gated page
@@ -65,7 +65,7 @@
          branch writes the stored collapse preference. With storage blocked
          there is no hint, so a signed-in reader sees a public page paint
          locked and then open once the check lands. -->
-    <script>(function(){var b=document.body,h=null,c=null;try{h=localStorage.getItem('bd-session-hint');c=localStorage.getItem('docs-sidebar-collapsed');}catch(e){}var r=h==='owner'||h==='admin'||h==='team'||h==='guest';if(r)b.setAttribute('data-role',h);var l=b.getAttribute('data-access')==='public'&&!r&&h!=='in';if(l)b.classList.add('is-signed-out');if(l||c==='true')b.classList.add('sidebar-collapsed');})();</script>
+    <script>(function(){var b=document.body,h=null,c=null;try{h=localStorage.getItem('bd-session-hint');c=localStorage.getItem('docs-sidebar-collapsed');}catch(e){}var r=h==='owner'||h==='admin'||h==='team'||h==='community'||h==='guest';if(r)b.setAttribute('data-role',h);var l=b.getAttribute('data-access')==='public'&&!r&&h!=='in';if(l)b.classList.add('is-signed-out');if(l||c==='true')b.classList.add('sidebar-collapsed');})();</script>
 
     <!-- Design system missing banner (shown by JS if CSS variables fail to load) -->
     <div id="ds-missing-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#fffbea;border-bottom:1px solid #f0c040;padding:12px 20px;font-family:sans-serif;font-size:14px;color:#7a5c00;align-items:center;gap:12px;">

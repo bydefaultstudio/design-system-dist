@@ -1,12 +1,13 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * library.js — the Asset Library's files, streamed from R2 at /files/
  * (asset-library-plan.md §4.5).
  *
  * Runs AFTER the gate, mounted by createGate() when the site installs the
- * Asset Library (engine parity B4): /files/ is in no public list, so by
- * the time a request lands here it carries a session, and every answer below
- * is private. Two kinds of path, decided by library-core.mjs:
+ * Asset Library (engine parity B4). The gate judges each file at its own
+ * level (gate.mjs fileEntry), so a public file reaches here with no session
+ * and anything else with one; this checks the same level again, and every
+ * answer below is private. Two kinds of path, decided by library-core.mjs:
  *
  *   thumbnails  /files/_t/<sha>…   straight to the bucket by content hash,
  *                                   cached privately for a year
@@ -21,7 +22,8 @@
  * requests are handed to R2's onlyIf. `?view=1` serves inline instead of as a
  * download — how the page opens a PDF in a tab.
  */
-import { contentDisposition, fileHeaders, mayDownload, parseFilesPath, parseRange, thumbHeaders } from './library-core.mjs';
+import { contentDisposition, fileHeaders, fileLevel, mayDownload, parseFilesPath, parseRange, thumbHeaders } from './library-core.mjs';
+import { SITE } from './site.mjs';
 
 function plain(status, text, setCookies = []) {
   const headers = new Headers({ 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'private, no-store' });
@@ -30,15 +32,15 @@ function plain(status, text, setCookies = []) {
 }
 
 /**
- * @param {{ index: Map, downloadAccess: string }} library the site's generated
- *   worker/library-index.mjs (LIBRARY_INDEX, LIBRARY_DOWNLOAD_ACCESS), passed
+ * @param {{ index: Map, downloadAccess: string, thumbs?: Map }} library the site's
+ *   generated worker/library-index.mjs (LIBRARY_INDEX, LIBRARY_DOWNLOAD_ACCESS,
+ *   LIBRARY_THUMBS), passed
  *   to createGate({ library }): the engine never imports a site's file.
  */
 export async function handleLibrary(request, env, url, setCookies = [], reader = null, library = null) {
   // A caller from before B4 passes no index: unavailable, never a 500
   if (!library || !(library.index instanceof Map)) return plain(503, UNAVAILABLE, setCookies);
   const LIBRARY_INDEX = library.index;
-  const LIBRARY_DOWNLOAD_ACCESS = library.downloadAccess;
   const { method } = request;
   if (method !== 'GET' && method !== 'HEAD') {
     const response = plain(405, 'Method not allowed', setCookies);
@@ -47,7 +49,9 @@ export async function handleLibrary(request, env, url, setCookies = [], reader =
   }
   const target = parseFilesPath(url.pathname);
   if (!target) return plain(404, 'Not found', setCookies);
-  if (target.kind !== 'thumb' && !mayDownload(reader, LIBRARY_DOWNLOAD_ACCESS)) return plain(403, 'Downloads are for admins.', setCookies);
+  const level = fileLevel(target, library);
+  if (level === null) return plain(404, 'Not found', setCookies);
+  if (!mayDownload(reader, level)) return plain(403, refusal(level), setCookies);
   if (!env.LIBRARY) return plain(503, UNAVAILABLE, setCookies);
 
   // R2 can throw on a transient fault or an offset past the object's end;
@@ -61,6 +65,16 @@ export async function handleLibrary(request, env, url, setCookies = [], reader =
 }
 
 const UNAVAILABLE = 'The file store is not available right now. Try again in a minute.';
+
+// What a refused reader is told: who the file is for. A signed-in guest can
+// meet the community wording too, so it names the members, not a sign-in.
+function refusal(level) {
+  if (level === 'community') return `This file is for ${SITE.communityLabel} members.`;
+  if (level === 'admin') return 'This file is for admins.';
+  if (level === 'owner') return 'This file is for the owner.';
+  return 'This file is for the team.';
+}
+
 
 // The index comes in as an argument: it is the site's (B4), not this module's
 async function serve(request, env, url, target, setCookies, LIBRARY_INDEX) {

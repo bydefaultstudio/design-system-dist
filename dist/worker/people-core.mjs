@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * people-core.mjs - the pure half of the People API (permissions-plan.md §5).
  *
@@ -8,7 +8,7 @@
  * wrong is named here, in the words the page shows.
  */
 import { ROLES } from './auth-schema.mjs';
-import { isGrantableScope, normalizeEmail } from './gate.mjs';
+import { GROUP_KINDS, isGrantableScope, memberKindFor, normalizeEmail } from './gate.mjs';
 
 export const PEOPLE_BASE_PATH = '/api/people/';
 
@@ -113,18 +113,28 @@ export function expiryChange(stored, submitted) {
 
 /**
  * What a person's row may carry: role, groups, expiry, demo, note. Shared by
- * invite and update. Groups belong to guests: a team member or an admin opens
- * every team page already, so a group on them would be a record of nothing.
+ * invite and update. `groups` is every group the site has, as { id, kind }.
+ * A person joins only groups of their role's kind (memberKindFor,
+ * community-access-plan.md D8, D9): guests and community members external
+ * ones, team members and admins internal ones. Nobody outside the team ever
+ * joins an internal group. An owner opens everything, so joins none.
  */
-export function validatePerson(body, { groupIds, now }) {
+export function validatePerson(body, { groups: known = [], now }) {
   const errors = [];
   const role = typeof body.role === 'string' ? body.role : '';
-  if (!ROLES.includes(role)) errors.push('The role is owner, admin, team or guest.');
+  if (!ROLES.includes(role)) errors.push('The role is owner, admin, team, community or guest.');
 
   const groups = Array.isArray(body.groups) ? body.groups.map(String) : [];
-  const unknownGroups = groups.filter((id) => !groupIds.includes(id));
+  const kinds = new Map(known.map((group) => [group.id, group.kind]));
+  const unknownGroups = groups.filter((id) => !kinds.has(id));
   if (unknownGroups.length) errors.push(`No such group: ${unknownGroups.join(', ')}.`);
-  if (role !== 'guest' && groups.length) errors.push('Groups are for guests. Everyone else opens every team page already.');
+  const kind = memberKindFor(role);
+  if (groups.length && ROLES.includes(role) && !kind) errors.push('An owner opens everything, so joins no group.');
+  else if (kind && groups.some((id) => kinds.has(id) && kinds.get(id) !== kind)) {
+    errors.push(kind === 'internal'
+      ? 'A team member or an admin joins internal groups only.'
+      : 'Internal groups are for the team and admins only. A guest or a community member joins external groups.');
+  }
 
   const expiry = parseExpiry(body.expiresAt, now);
   if (!expiry.ok) errors.push(expiry.error);
@@ -132,7 +142,7 @@ export function validatePerson(body, { groupIds, now }) {
   const demo = body.demo === true || body.demo === 1 || body.demo === '1';
   // A demo account signs in with any code, so its address is a password
   // anyone can use. Never on a role that manages people or opens owner pages.
-  if (demo && isManagerRole(role)) errors.push('A demo account is a team member or a guest. Owners and admins sign in with their own code.');
+  if (demo && isManagerRole(role)) errors.push('A demo account is a team member, a community member or a guest. Owners and admins sign in with their own code.');
 
   return {
     ok: errors.length === 0,
@@ -152,11 +162,15 @@ export function validateInvite(body, context) {
 }
 
 /**
- * A group's row: a name, an optional note, and its grants, each a section
- * the site has or a page the map knows that is not an admin page.
+ * A group's row: a name, an optional note, its kind (external unless said
+ * otherwise), and its grants, each a section the site has or a page the map
+ * knows that a group of that kind may open (isGrantableScope). Whether the
+ * kind may change is the API's question: it is fixed once the group exists.
  */
 export function validateGroup(body, { pages, sections }) {
   const errors = [];
+  const kind = body.kind === undefined || body.kind === null || body.kind === '' ? 'external' : String(body.kind);
+  if (!GROUP_KINDS.includes(kind)) errors.push('A group is internal or external.');
   const name = typeof body.name === 'string' ? body.name.trim() : '';
   if (name === '') errors.push('The group needs a name.');
   if (name.length > GROUP_NAME_MAX_LENGTH) errors.push(`The name is at most ${GROUP_NAME_MAX_LENGTH} characters.`);
@@ -164,10 +178,14 @@ export function validateGroup(body, { pages, sections }) {
   if (!errors.length && id === '') errors.push('The name needs at least one letter or number.');
 
   const grants = Array.isArray(body.grants) ? [...new Set(body.grants.map(String))] : [];
-  const bad = grants.filter((scope) => !isGrantableScope(scope, pages, sections));
-  if (bad.length) errors.push(`Not a section or page a group can grant: ${bad.join(', ')}.`);
+  const bad = GROUP_KINDS.includes(kind) ? grants.filter((scope) => !isGrantableScope(scope, pages, sections, kind)) : [];
+  if (bad.length) {
+    errors.push(kind === 'internal'
+      ? `Not a section or page a group can grant: ${bad.join(', ')}.`
+      : `Not a section or page an external group can grant: ${bad.join(', ')}. External groups open public and community pages only.`);
+  }
 
-  return { ok: errors.length === 0, errors, value: { id, name, note: cleanNote(body.note), grants } };
+  return { ok: errors.length === 0, errors, value: { id, name, note: cleanNote(body.note), kind, grants } };
 }
 
 function isLive(row, now) {
@@ -215,16 +233,20 @@ export function canAssignRole(actorRole, role) {
   return isManagerRole(actorRole);
 }
 
-/** The page map as the picker sees it: every page a group may be granted, by section. */
+/**
+ * The page map as the picker sees it: every page any group may be granted,
+ * by section, with its level, so the page offers an external group only the
+ * public and community ones (an internal group reaches the rest).
+ */
 export function grantablePages(pages, sections) {
   const out = [];
   for (const [path, entry] of pages) {
-    if (!isGrantableScope(`page:${path}`, pages, sections)) continue;
+    if (!isGrantableScope(`page:${path}`, pages, sections, 'internal')) continue;
     // The glossary's entry pages and feed: one row each would bury the
     // picker under ~200 terms. They open with the glossary's own level
     // (cms/glossary.md), and a guest reaches them once that is public.
     if (path.startsWith('/glossary/')) continue;
-    out.push({ path, title: entry.title || path, section: entry.section });
+    out.push({ path, title: entry.title || path, section: entry.section, level: entry.level });
   }
   out.sort((a, b) => a.section.localeCompare(b.section, 'en') || a.title.localeCompare(b.title, 'en'));
   return out;

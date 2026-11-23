@@ -199,10 +199,10 @@ module.exports = {
     init: "initSvgCleaner",
     note: "starts itself on DOMContentLoaded and bd:after-nav (B1); initSvgCleaner bails when its markup is absent",
   },
-  "display-ad-preview.js": {
+  "ad-preview.js": {
     strategies: ["self-registered"],
-    init: "initDisplayAdPreview",
-    note: "starts itself on DOMContentLoaded and bd:after-nav (B1); initDisplayAdPreview bails when its markup is absent",
+    init: "initAdPreview",
+    note: "starts itself on DOMContentLoaded and bd:after-nav (B1); initAdPreview bails when its markup is absent",
   },
   "email-signature.js": {
     strategies: ["self-registered"],

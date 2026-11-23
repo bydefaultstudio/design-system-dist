@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * Chip component
  * Adds clear-on-reclick to .chip-group[data-clearable].

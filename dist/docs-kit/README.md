@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^8.5.0"
+npm install "github:bydefaultstudio/design-system-dist#semver:^8.6.0"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -117,8 +117,8 @@ automatically — external URLs pass through untouched.
 | `sectionFolders` | `{}` (flat output) | map of section label → output subfolder; mapped sections get overview index pages |
 | `retiredSections` | `{}` | map of renamed section label → its new label; docgen fails on a page that still names the old one |
 | `filenameOverrides` | `{}` | per-file output folder/name overrides |
-| `indexCards` | derived from pages | curated home page card list (`{ title, href, subtitle }`) |
-| `discovery` | none | **Preview.** A discovery home page written to `discovery.output`: `greeting` (`links` of `{ label, href }`, `fallback`, `search`, `linksLabel`) and `rows`, each `{ kind: 'shelf' \| 'feature' \| 'note', label, title, href, action }` with its cards from `section` (pages with `featured: "true"` first, in `featured-order`), `glossary` (slugs) or `cards`, plus optional `hue` and `cardLabel`. Notes come from `<contentDir>/home/notes.json`; a `note` or `feature` row needs one. The greeting is filled by `home-greeting.js`, in the kit set and loaded only on a site that sets `discovery` (8.4.1). The shape may change when it becomes the home page |
+| `indexCards` | derived from pages | curated home page card list (`{ title, href, subtitle }`, optional `osIllustration`, `hue`). Every page in a section takes the card's `hue`, unless the card sets `pageHues`: `'own'` (each page keeps its drawing's colour) or a map of page source name to hue (`{ 'logo-tool-docs': 'peach' }`). A page's own `hue:` wins in every mode |
+| `discovery` | none | **Preview.** A discovery home page written to `discovery.output`: `greeting` (`links` of `{ label, href }`, `fallback`, `search`, `linksLabel`) and `rows`, each `{ kind: 'shelf' \| 'feature' \| 'note', label, title, href, action }` with its cards from `section` (pages with `featured: "true"` first, in `featured-order`), `glossary` (slugs) or `cards`, plus optional `hue` and `cardLabel`. Notes come from `<contentDir>/home/notes.json`; a `note` or `feature` row needs one. A row is one band in its section's hue, and a tip whose `color` matches the row above or below takes a hue neither has. A card shows its page's `card:` line, else its `subtitle`. The greeting is filled by `home-greeting.js`, in the kit set and loaded only on a site that sets `discovery` (8.4.1). The shape may change when it becomes the home page |
 | `logoHtml` | site name as text | raw HTML for the site-header logo |
 | `contactHref` / `contactLabel` | none | site-header contact link |
 | `sectionIcons` | `{}` | map of section label → icon key for the sidebar |

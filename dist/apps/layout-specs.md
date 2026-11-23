@@ -7,7 +7,7 @@ layer: "app"
 type: "tool"
 order: 4
 status: "stable"
-access: "team"
+access: "community"
 brand: "internal"
 sidebar: "collapsed"
 version: "3.1.1"

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * library-core.mjs — the pure half of the Asset Library route: path parsing,
  * Range arithmetic and the download headers. No Workers APIs and no I/O, so
@@ -115,6 +115,8 @@ export function fileHeaders({ mime, size, etag, name, inline, range, setCookies 
   headers.set('Cache-Control', FILE_CACHE_CONTROL);
   headers.set('Accept-Ranges', 'bytes');
   headers.set('X-Content-Type-Options', 'nosniff');
+  // Same-origin only, as privateHeaders sets on every other gated answer.
+  headers.set('Cross-Origin-Resource-Policy', 'same-origin');
   headers.append('Vary', 'Cookie');
   if (mime === 'image/svg+xml') headers.set('Content-Security-Policy', SVG_CSP);
   if (etag) headers.set('ETag', etag);
@@ -140,6 +142,7 @@ export function thumbHeaders({ contentType, size, etag, setCookies = [] }) {
   headers.set('Content-Type', contentType);
   headers.set('Cache-Control', THUMB_CACHE_CONTROL);
   headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('Cross-Origin-Resource-Policy', 'same-origin');
   headers.append('Vary', 'Cookie');
   if (etag) headers.set('ETag', etag);
   if (Number.isFinite(size)) headers.set('Content-Length', String(size));
@@ -149,16 +152,35 @@ export function thumbHeaders({ contentType, size, etag, setCookies = [] }) {
 }
 
 /**
- * Whether a reader may take an original at the library's download level
- * (LIBRARY_DOWNLOAD_ACCESS in library-index.mjs). The gate has already let
- * them in, so a guest never gets here (no grant reaches /files/); what is
- * left is an admin level above a team member. download-lock.js shows the
- * same answer as a locked Download.
+ * Whether a reader may take a file at its level (fileLevel below: the
+ * file's own, else the library's). The gate has already judged the same
+ * level, so this is the second lock, not the first. download-lock.js shows
+ * the same answer as a locked Download.
  */
 export function mayDownload(reader, level) {
   if (level === 'public') return true;
   if (!reader) return false;
   if (level === 'owner') return reader.role === 'owner';
   if (level === 'admin') return reader.role === 'admin' || reader.role === 'owner';
-  return true;
+  if (level === 'team') return ['team', 'admin', 'owner'].includes(reader.role);
+  if (level === 'community') return ['community', 'team', 'admin', 'owner'].includes(reader.role);
+  // An unknown level fails closed, never open.
+  return false;
+}
+
+/**
+ * The level a file needs (community-access-plan.md D13): an original its
+ * catalog entry's (LIBRARY_INDEX's fourth value, else the library's
+ * LIBRARY_DOWNLOAD_ACCESS), a thumbnail its asset's (LIBRARY_THUMBS). null is
+ * a path the index does not know: a 404, never a lookup. A site from before
+ * D13 passes no thumbs map, and its thumbnails take the library's level.
+ */
+export function fileLevel(target, library) {
+  if (target.kind === 'thumb') {
+    if (!(library.thumbs instanceof Map)) return library.downloadAccess;
+    return library.thumbs.get(target.key) || null;
+  }
+  const hit = library.index.get(target.lookup);
+  if (!hit) return null;
+  return hit[3] || library.downloadAccess;
 }

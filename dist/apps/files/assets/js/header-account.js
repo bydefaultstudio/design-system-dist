@@ -22,7 +22,7 @@
  * than letting a second module ask again — every call costs a rate-limit
  * read and write in D1, signed in or not. On a 200 it sets window.bdSession
  * - { signedIn, role, scopes, email, name }, the role resolved by the Worker
- * (admin, team or guest) and the scopes a guest's groups grant - dispatches
+ * (owner, admin, team, community or guest) and the scopes a guest's groups grant - dispatches
  * `bd:session` with the same, and leaves a one-word hint in localStorage
  * (the role, or `out`) that the template's pre-paint script reads on the
  * next page, so a signed-in reader is not shown the locked sidebar while
@@ -115,7 +115,7 @@
   // access, never the most. Fail closed, like worker/gate.mjs.
   function roleOf(data) {
     var role = data.role || (data.user && data.user.role);
-    return role === 'owner' || role === 'admin' || role === 'team' || role === 'guest' ? role : 'guest';
+    return role === 'owner' || role === 'admin' || role === 'team' || role === 'community' || role === 'guest' ? role : 'guest';
   }
 
   function publishSession(data) {

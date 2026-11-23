@@ -23,7 +23,7 @@
  * and moving it with the arrows moves the selection. The arrows in the
  * grid move it too (tool-grid.js, shared with the Icon Library).
  *
- * @version 3.7.1
+ * @version 3.8.0
  */
 (function () {
   'use strict';
@@ -33,7 +33,7 @@
   // words as written.
   function L(text) { return window.bdLocale ? window.bdLocale.text(text) : text; }
 
-  var VERSION = '3.7.1';
+  var VERSION = '3.8.0';
 
   // Who a reader tells when something breaks, and who adds the files: the
   // brand's organisation (brand.json wording.organisation, else its name),
@@ -207,12 +207,36 @@
   function readManifest(root) {
     var node = root.querySelector('#asset-manifest') || document.getElementById('asset-manifest');
     if (!node) return null;
+    var manifest;
     try {
-      return JSON.parse(node.textContent);
+      manifest = JSON.parse(node.textContent);
     } catch (error) {
       console.error('[asset-library] the manifest is not valid JSON', error);
       return null;
     }
+    // The assets and their kits arrive in one block per level; the Worker
+    // has already removed the blocks this reader may not take
+    // (generate-docs.js renderAssetManifestParts), so what is here is what
+    // they may see.
+    var parts = (node.parentNode || root).querySelectorAll('.asset-manifest-part');
+    manifest.assets = Array.isArray(manifest.assets) ? manifest.assets : [];
+    manifest.kits = Array.isArray(manifest.kits) ? manifest.kits : [];
+    Array.prototype.forEach.call(parts, function (part) {
+      try {
+        var block = JSON.parse(part.textContent);
+        if (block && Array.isArray(block.assets)) manifest.assets = manifest.assets.concat(block.assets);
+        if (block && Array.isArray(block.kits)) manifest.kits = manifest.kits.concat(block.kits);
+      } catch (error) {
+        console.error('[asset-library] a manifest part is not valid JSON', error);
+      }
+    });
+    // The manifest's own order (cms/generator/asset-library.js buildManifest):
+    // newest first, then title, then id.
+    manifest.assets.sort(function (a, b) {
+      if (a.added !== b.added) return a.added < b.added ? 1 : -1;
+      return String(a.title).localeCompare(String(b.title), 'en') || (a.id < b.id ? -1 : 1);
+    });
+    return manifest;
   }
 
   function readIcons(root) {
@@ -263,6 +287,8 @@
         licenceUrl: a.licenceUrl || null,
         licenceFoundry: a.licenceFoundry || null,
         openLicence: a.openLicence === true,
+        // An unknown level is read as team: a typo locks, never opens.
+        access: ['public', 'community', 'team', 'admin'].indexOf(a.access) === -1 ? 'team' : a.access,
         files: a.files,
         fields: [
           (a.title || a.id).toLowerCase(),
@@ -345,8 +371,15 @@
     return asset.link ? file.label : extensionOf(file.name);
   }
 
+  // Whether the reader may take this asset's file, and so see its thumbnail
+  // (community-access-plan.md D13): the Worker refuses both below the
+  // asset's level, so the tile does not ask for a picture it cannot have.
+  function mayTake(asset) {
+    return !window.bdDownloadLock || window.bdDownloadLock.canDownload(asset.access);
+  }
+
   function thumbMarkup(asset, file, eager) {
-    var thumb = file.thumb;
+    var thumb = mayTake(asset) ? file.thumb : null;
     var ground = file.ground || 'light';
     var open = '<span class="tool-thumb" data-ground="' + escapeHtml(ground) + '"' + (file.alpha ? ' data-alpha' : '') + '>';
     if (!thumb) {
@@ -1114,22 +1147,16 @@
     el.licenceDialogFoundry.textContent = asset.licenceFoundry || '';
   }
 
-  // aria-disabled on Download is shared with the tools' download lock
-  // (download-lock.js): the lock sets it for a reader below the level and
-  // marks that it did; this tool sets it for "nothing to give". Set here,
-  // it is this tool's, so the mark comes off and an unlock leaves it; and
-  // while locked it is never taken away, whatever is chosen.
+  // aria-disabled on Download is this tool's alone ("nothing to give"):
+  // the download lock marks a locked Download with .is-locked and
+  // aria-haspopup instead, and a press on a disabled one does nothing,
+  // locked or not (download-lock.js).
   function setDownloadDisabled(disabled) {
-    if (disabled) {
-      el.download.setAttribute('aria-disabled', 'true');
-      el.download.removeAttribute('data-locked-disabled');
-    } else if (!el.download.classList.contains('is-locked')) {
-      el.download.removeAttribute('aria-disabled');
-    } else {
-      // Locked: aria-disabled stays, but it is the lock's now, not this
-      // tool's, so the unlock takes it away and Download works again.
-      el.download.setAttribute('data-locked-disabled', '1');
-    }
+    if (disabled === (el.download.getAttribute('aria-disabled') === 'true')) return;
+    if (disabled) el.download.setAttribute('aria-disabled', 'true');
+    else el.download.removeAttribute('aria-disabled');
+    // The lock announces a dialog only on a control that can open one.
+    document.dispatchEvent(new CustomEvent('bd:download-lock'));
   }
 
   // A licensed file's link must not be taken round the notice: a
@@ -1215,6 +1242,11 @@
       el.open.removeAttribute('href');
     }
     el.download.hidden = linkOnly || !!asset.link;
+    // The file's own level (D13): download-lock.js locks this Download
+    // against it rather than the library's, and is told to look again.
+    el.download.setAttribute('data-download-access', asset.access);
+    el.previewDownload.setAttribute('data-download-access', asset.access);
+    document.dispatchEvent(new CustomEvent('bd:download-lock'));
     // An <a> with no href has no link role; aria-disabled carries the state
     // and the Button paints it.
     if (linkOnly || !file.url) {
@@ -1466,7 +1498,7 @@
     el.previewPosition.textContent = index === -1 ? '' : (index + 1) + ' of ' + total;
     el.previewImg.setAttribute('data-ground', file.ground || 'light');
     el.previewImg.toggleAttribute('data-alpha', !!file.alpha);
-    if (file.thumb) {
+    if (file.thumb && mayTake(asset)) {
       el.previewImg.src = file.thumb.kind === 'svg' ? file.thumb.src : file.thumb.src[file.thumb.src.length - 1];
       el.previewImg.alt = file.kind === 'pdf' ? 'First page of ' + asset.title : (asset.alt || asset.title);
       el.previewImg.hidden = false;

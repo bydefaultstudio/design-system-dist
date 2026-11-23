@@ -226,12 +226,12 @@
           -->
           <div class="tool-actions">
             <div class="button-group">
-              <button type="button" class="button copy-btn" id="world-clock-copy-url" data-clipboard-target="#world-clock-url">
-                <span class="copy-btn-default">{{icon:copy}}<span>Copy embed URL</span></span>
+              <button type="button" class="button copy-btn" id="world-clock-copy-url" data-download-lock data-clipboard-target="#world-clock-url">
+                <span class="copy-btn-default">{{icon:copy}}{{icon:lock}}<span>Copy embed URL</span></span>
                 <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
               </button>
-              <button type="button" class="button copy-btn" data-variant="outline" id="world-clock-copy-embed" data-clipboard-target="#world-clock-embed-code">
-                <span class="copy-btn-default">{{icon:copy}}<span>Copy embed code</span></span>
+              <button type="button" class="button copy-btn" data-variant="outline" id="world-clock-copy-embed" data-download-lock data-clipboard-target="#world-clock-embed-code">
+                <span class="copy-btn-default">{{icon:copy}}{{icon:lock}}<span>Copy embed code</span></span>
                 <span class="copy-btn-copied">{{icon:check}}<span>Copied!</span></span>
               </button>
             </div>

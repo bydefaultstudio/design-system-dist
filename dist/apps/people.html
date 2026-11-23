@@ -19,7 +19,7 @@
         The script (assets/js/people.js) fills the tables from /api/people/
         and owns the dialogs; everything here is the empty shell it fills.
       -->
-      <div id="people">
+      <div id="people" data-community-label="{{brand:communityLabel}}" data-brand-mark="/assets/icons/favicon.svg">
 
         <div class="bar" data-sticky="true">
           <div class="bar-container">
@@ -86,7 +86,7 @@
               <div class="section-header">
                 <div class="block gap-xs">
                   <h2 class="section-header-title" id="people-groups-heading">Groups</h2>
-                  <p class="text-secondary" data-text-wrap="pretty">A group is a bundle of sections and pages. A guest opens what their groups grant and the public pages; nothing else.</p>
+                  <p class="text-secondary" data-text-wrap="pretty">A group is a bundle of sections and pages. An external group gives guests and {{brand:communityLabel}} members public and {{brand:communityLabel}} pages. An internal group gives a team member admin pages, and nobody outside the team can join one.</p>
                 </div>
                 <div class="section-header-actions">
                   <button type="button" class="button" data-variant="outline" data-size="small" data-dialog-open="people-group" id="people-group-add">{{icon:users}}<span>Add group</span></button>
@@ -170,7 +170,8 @@
               <div class="form-group">
                 <label for="people-add-role">Role</label>
                 <select id="people-add-role" name="role">
-                  <option value="team" selected>Team - opens every team page</option>
+                  <option value="community" selected>{{brand:communityLabel}} - opens the public and {{brand:communityLabel}} pages</option>
+                  <option value="team">Team - opens every team page</option>
                   <option value="guest">Guest - opens what their groups grant</option>
                   <option value="admin">Admin - opens everything but owner pages, and manages people</option>
                   <option value="owner" hidden disabled>Owner - opens everything, and manages admins and owners</option>
@@ -219,6 +220,7 @@
               <div class="form-group" id="people-edit-role-field">
                 <label for="people-edit-role">Role</label>
                 <select id="people-edit-role" name="role" autofocus>
+                  <option value="community">{{brand:communityLabel}} - opens the public and {{brand:communityLabel}} pages</option>
                   <option value="team">Team - opens every team page</option>
                   <option value="guest">Guest - opens what their groups grant</option>
                   <option value="admin">Admin - opens everything but owner pages, and manages people</option>
@@ -280,6 +282,24 @@
                 <label for="people-group-note">Note <span class="form-optional">(optional)</span></label>
                 <input type="text" id="people-group-note" name="note" maxlength="200" placeholder="Who this group is for">
               </div>
+              <!-- The kind is chosen once, when the group is made
+                   (community-access-plan.md D8). Editing shows it as a
+                   sentence instead (people-group-kind-fixed). -->
+              <fieldset class="form-group" id="people-group-kind-field">
+                <legend>Kind</legend>
+                <div class="block gap-xs">
+                  <div class="form-check">
+                    <input type="radio" id="people-group-kind-external" name="kind" value="external" checked>
+                    <label for="people-group-kind-external">External - for guests and {{brand:communityLabel}} members; opens public and {{brand:communityLabel}} pages</label>
+                  </div>
+                  <div class="form-check">
+                    <input type="radio" id="people-group-kind-internal" name="kind" value="internal">
+                    <label for="people-group-kind-internal">Internal - for the team and admins only; may open team and admin pages</label>
+                  </div>
+                </div>
+                <p class="form-hint">Set once. A group stays the kind it was made as.</p>
+              </fieldset>
+              <p id="people-group-kind-fixed" hidden></p>
               <fieldset class="form-group">
                 <legend>Sections</legend>
                 <div class="block gap-xs" id="people-group-sections"></div>
@@ -287,7 +307,7 @@
               <div class="form-group">
                 <label for="people-group-pages">Single pages <span class="form-optional">(optional)</span></label>
                 <select id="people-group-pages" name="pages" multiple size="8" aria-describedby="people-group-pages-hint"></select>
-                <p class="form-hint" id="people-group-pages-hint">For a page outside the sections above. Pick several with Command or Control, or Shift and the arrow keys. Admin and owner pages are not offered.</p>
+                <p class="form-hint" id="people-group-pages-hint">For a page outside the sections above. Pick several with Command or Control, or Shift and the arrow keys. Owner pages are never offered, and an external group is offered public and {{brand:communityLabel}} pages only: a team page in a section it grants stays closed.</p>
               </div>
               <p class="form-error" id="people-group-error" role="alert" aria-live="assertive"></p>
             </form>
@@ -331,6 +351,12 @@
           </div>
           <div class="dialog-body">
             <p id="people-confirm-text"></p>
+            <!-- Shown only for an internal group's delete: its name, typed exactly. -->
+            <div class="form-group" id="people-confirm-typed-field" hidden>
+              <label for="people-confirm-typed">Group name</label>
+              <input type="text" id="people-confirm-typed" autocomplete="off" spellcheck="false" aria-describedby="people-confirm-typed-hint">
+              <p class="form-hint" id="people-confirm-typed-hint"></p>
+            </div>
             <p class="form-error" id="people-confirm-error" role="alert" aria-live="assertive"></p>
           </div>
           <div class="dialog-footer">

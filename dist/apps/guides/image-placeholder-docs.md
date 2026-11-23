@@ -8,7 +8,7 @@ layer: "app"
 subsection: ""
 order: 11
 status: "published"
-access: "team"
+access: "public"
 brand: "internal"
 actionUrl: "image-placeholder.html"
 actionLabel: "Open Tool"
@@ -65,7 +65,7 @@ Colors are specified without `#` in the URL path.
 - Invalid values fall back to defaults silently
 - A `transparent` text color draws the text and logo black
 
-In the tool, the size, the logo switch and the text are in the **Settings** section, the URL is the readout in **Export**, and **Copy image URL** and **Open image** sit at the foot of the panel. Color is in the **Style** section, on the control every tool uses ([Tool Canvas](/docs/tool-canvas.html#color)). **Pairs** sets both colors at once: **Default**, then the presets — `--green-lighter` with `--green`, and so on (peach takes `--peach-light`) — then the brand's recommended pairings, the list [Color Pairing](/tools/color-pairing.html) offers. Point at a chip to read its name. **Foreground** is the text and logo color, and **Background** is the fill. Each takes a palette chip, the picker or six hex digits; the tool's fields do not accept CSS names or three-digit hex, although the URL still does. **None**, first in Background, writes `transparent` into the URL. Whatever is chosen is written into the URL as hex, so a URL never depends on the brand's token values: `/image/600x400/dbf7cc/167255`. The line under the colors gives the pair's contrast against 3:1.
+In the tool, the size, the logo switch and the text are in the **Settings** section, the URL is the readout in **Export**, and **Copy image URL** and **Open image** sit at the foot of the panel. Color is in the **Style** section, on the control every tool uses. **Pairs** sets both colors at once: **Default**, then the presets — `--green-lighter` with `--green`, and so on (peach takes `--peach-light`) — then the brand's recommended pairings, the list [Color Pairing](/tools/color-pairing.html) offers. Point at a chip to read its name. **Foreground** is the text and logo color, and **Background** is the fill. Each takes a palette chip, the picker or six hex digits; the tool's fields do not accept CSS names or three-digit hex, although the URL still does. **None**, first in Background, writes `transparent` into the URL. Whatever is chosen is written into the URL as hex, so a URL never depends on the brand's token values: `/image/600x400/dbf7cc/167255`. The line under the colors gives the pair's contrast against 3:1.
 
 ---
 

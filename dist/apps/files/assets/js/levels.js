@@ -20,17 +20,19 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
   var API = '/api/people/levels';
 
-  var LEVELS = ['public', 'team', 'admin', 'owner'];
-  var LEVEL_RANK = { public: 0, team: 1, admin: 2, owner: 3 };
-  var LEVEL_LABELS = { public: 'Public', team: 'Team', admin: 'Admin', owner: 'Owner' };
+  var LEVELS = ['public', 'community', 'team', 'admin', 'owner'];
+  var LEVEL_RANK = { public: 0, community: 1, team: 2, admin: 3, owner: 4 };
+  // community's label is the deployment's (#people[data-community-label]), set at init.
+  var LEVEL_LABELS = { public: 'Public', community: 'Community', team: 'Team', admin: 'Admin', owner: 'Owner' };
 
   // Who can open a page at each level, said as the outcome.
   var AUDIENCE = {
     public: 'Anyone with the link can open it.',
-    team: 'Anyone signed in can open it.',
+    community: 'Community members, the team, admins and owners can open it.',
+    team: 'The team, admins and owners can open it.',
     admin: 'Only admins and owners can open it.',
     owner: 'Only owners can open it.'
   };
@@ -469,6 +471,12 @@
     var root = document.querySelector('[data-tool="people"] #levels');
     if (!root || root.dataset.levelsInit) return;
     root.dataset.levelsInit = 'true';
+    var people = document.querySelector('[data-tool="people"] #people');
+    var label = people && people.getAttribute('data-community-label');
+    if (label) {
+      LEVEL_LABELS.community = label;
+      AUDIENCE.community = label + ' members, the team, admins and owners can open it.';
+    }
     state = { root: root, data: null, busy: false, expanded: {} };
     byId('levels-build-now').addEventListener('click', tryAgain);
     byId('levels-discard').addEventListener('click', discardAll);

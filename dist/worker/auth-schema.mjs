@@ -1,12 +1,13 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * auth-schema.mjs - the access vocabulary, and the one field this site adds
  * to Better Auth's own tables.
  *
  * Three words, each used once (permissions-plan.md §3.1): a LEVEL is on a
- * page - public, team, admin or owner, declared in `access:` frontmatter and
+ * page - public, community, team, admin or owner, declared in `access:` frontmatter and
  * compiled into worker/page-access.mjs; a ROLE is on a person - owner, admin,
- * team or guest (levels-groups-plan.md D16, D23),
+ * team, community or guest (levels-groups-plan.md D16, D23;
+ * community-access-plan.md D1),
  * on the allowlist row before first sign-in and on `user.role` after it; a
  * GROUP is a named bundle of grants a guest belongs to. The same word names a
  * page level and the reader who may open it: a team page is for the team.
@@ -25,10 +26,11 @@
  * worker/session.js corrects it from the list within one cookie-cache cycle.
  */
 
-export const ROLES = Object.freeze(['owner', 'admin', 'team', 'guest']);
-export const DEFAULT_ROLE = 'team';
+export const ROLES = Object.freeze(['owner', 'admin', 'team', 'community', 'guest']);
+// A new person is an outsider until made internal by hand (community-access-plan.md D3).
+export const DEFAULT_ROLE = 'community';
 
-export const LEVELS = Object.freeze(['public', 'team', 'admin', 'owner']);
+export const LEVELS = Object.freeze(['public', 'community', 'team', 'admin', 'owner']);
 export const DEFAULT_LEVEL = 'team';
 
 /** A role string from the database or a cookie → one of ROLES. Unknown or missing → guest: the least access, never the most. */

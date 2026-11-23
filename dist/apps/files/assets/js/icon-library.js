@@ -573,10 +573,21 @@
   // size touch custom properties, the label, the filename, the note and the
   // two baked exports, so a slider drag rebuilds two strings per frame, not
   // four.
+  // The icon Copy and Download take, for the download lock's per-asset
+  // level (the app's assetAccess:, download-lock.js). The lock re-reads it
+  // on bd:download-lock, sent only when the icon changes.
+  function markAsset(key) {
+    if (el.copy.getAttribute('data-download-asset') === key) return;
+    el.copy.setAttribute('data-download-asset', key);
+    el.download.setAttribute('data-download-asset', key);
+    document.dispatchEvent(new CustomEvent('bd:download-lock'));
+  }
+
   function renderPanel() {
     var icon = iconsByKey[params.selected];
     if (!icon) return;
 
+    markAsset(icon.key);
     showError('');
     el.detailTitle.textContent = icon.name;
     el.detailCategory.textContent = icon.category;

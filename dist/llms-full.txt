@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v8.5.0 -->
+<!-- @bydefaultstudio/design-system v8.6.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 8.5.0 (package)**
+**Version: 8.6.0 (package)**
 
 ## Getting the System
 
@@ -761,6 +761,18 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--peach-light` | `#FED7AA` |  |
 | `--peach` | `#FDBA74` |  |
 | `--peach-dark` | `#7C2D12` |  |
+| `--info-lighter` | `#DBEAFE` |  |
+| `--info-light` | `#BFDBFE` |  |
+| `--info-dark` | `#1E3A8A` |  |
+| `--success-lighter` | `#DCFCE7` |  |
+| `--success-light` | `#6DD995` |  |
+| `--success-dark` | `#155F31` |  |
+| `--warning-lighter` | `#FEF3C7` |  |
+| `--warning-light` | `#FDE68A` |  |
+| `--warning-dark` | `#78350F` |  |
+| `--danger-lighter` | `#FEE2E2` |  |
+| `--danger-light` | `#F76969` |  |
+| `--danger-dark` | `#991B1B` |  |
 | **Base font sizes (rem-based, progressive step scale: +2px body, +4px heading, +8px display)** | | |
 | `--font-3xs` | `0.625rem` | 10px |
 | `--font-2xs` | `0.75rem` | 12px |
@@ -969,14 +981,14 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--border-secondary` | `var(--neutral-300)` |  |
 | `--border-faded` | `var(--black-alpha-15)` |  |
 | `--border-control` | `var(--neutral-500)` |  |
-| `--status-info` | `var(--blue-dark)` |  |
-| `--status-info-bg` | `var(--blue-lighter)` |  |
-| `--status-success` | `var(--green-dark)` |  |
-| `--status-success-bg` | `var(--green-lighter)` |  |
-| `--status-warning` | `var(--yellow-dark)` |  |
-| `--status-warning-bg` | `var(--yellow-lighter)` |  |
-| `--status-danger` | `var(--red-dark)` |  |
-| `--status-danger-bg` | `var(--red-lighter)` |  |
+| `--status-info` | `var(--info-dark)` |  |
+| `--status-info-bg` | `var(--info-lighter)` |  |
+| `--status-success` | `var(--success-dark)` |  |
+| `--status-success-bg` | `var(--success-lighter)` |  |
+| `--status-warning` | `var(--warning-dark)` |  |
+| `--status-warning-bg` | `var(--warning-lighter)` |  |
+| `--status-danger` | `var(--danger-dark)` |  |
+| `--status-danger-bg` | `var(--danger-lighter)` |  |
 | **Form semantic tokens** | | |
 | `--input-border` | `var(--border-secondary)` |  |
 | `--input-background` | `var(--background-primary)` |  |
@@ -1447,10 +1459,10 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--border-faded` | `var(--white-alpha-20)` |  |
 | `--border-control` | `var(--neutral-400)` |  |
 | **Status** | | |
-| `--status-info` | `var(--blue-light)` |  |
-| `--status-success` | `var(--green-light)` |  |
-| `--status-warning` | `var(--yellow-light)` |  |
-| `--status-danger` | `var(--red-light)` |  |
+| `--status-info` | `var(--info-light)` |  |
+| `--status-success` | `var(--success-light)` |  |
+| `--status-warning` | `var(--warning-light)` |  |
+| `--status-danger` | `var(--danger-light)` |  |
 | `--status-info-bg` | `color-mix(in srgb, var(--status-info), var(--background-primary) 85%)` |  |
 | `--status-success-bg` | `color-mix(in srgb, var(--status-success), var(--background-primary) 85%)` |  |
 | `--status-warning-bg` | `color-mix(in srgb, var(--status-warning), var(--background-primary) 85%)` |  |
@@ -1542,7 +1554,7 @@ Button colors are component-scoped tokens on `.button`, not root-level variables
 
 ### Status
 
-Status tokens reference the dark shade of each accent color family: `var(--status-info)` maps to `var(--blue-dark)`, following the convention of blue for information. Each status is a pair: the text token sits on a matching `--status-*-bg` surface. In dark mode the pair flips together. Text moves to the light shades, and each surface is derived from the page ground pulled toward the status color, so tags, badges, callouts and toasts of the same type stay legible in both themes.
+Status tokens read their own primitives, not the accent ramps: `var(--status-info)` maps to `var(--info-dark)`, blue by the convention for information, and a brand that moves its blue ramp leaves it where it is. Each status is a pair: the text token sits on a matching `--status-*-bg` surface. In dark mode the pair flips together. Text moves to the light shades, and each surface is derived from the page ground pulled toward the status color, so tags, badges, callouts and toasts of the same type stay legible in both themes.
 
 ---
 
@@ -1849,11 +1861,11 @@ No weight is set: the browser picks the accent face's nearest real weight, so a 
 
 | Face | Role | Weights | Source |
 | --- | --- | --- | --- |
-| Zalando Sans | Body, interface, interface headings, pull quotes in italic | 300 to 900, variable, with italics | Self-hosted from [`assets/fonts/zalando-sans/`](../assets/fonts/zalando-sans/). SIL Open Font Licence 1.1, also on [Google Fonts](https://fonts.google.com/specimen/Zalando+Sans) |
-| Bugrino | The accent: one emphasised word or phrase in a title, as on the socials, and the drop cap | 700, 700 italic, 800 | Self-hosted from [`assets/fonts/bugrino/`](../assets/fonts/bugrino/). Commercial, By Default properties only |
-| IBM Plex Mono | Code, file paths, raw values, keys | 400, 500, 600 | Self-hosted from [`assets/fonts/ibm-plex-mono/`](../assets/fonts/ibm-plex-mono/). SIL Open Font Licence 1.1 |
+| Zalando Sans | Body, interface, interface headings, pull quotes in italic | 300 to 900, variable, with italics | Self-hosted from `assets/fonts/zalando-sans/`. SIL Open Font Licence 1.1, also on [Google Fonts](https://fonts.google.com/specimen/Zalando+Sans) |
+| Bugrino | The accent: one emphasised word or phrase in a title, as on the socials, and the drop cap | 700, 700 italic, 800 | Self-hosted from `assets/fonts/bugrino/`. Commercial, By Default properties only |
+| IBM Plex Mono | Code, file paths, raw values, keys | 400, 500, 600 | Self-hosted from `assets/fonts/ibm-plex-mono/`. SIL Open Font Licence 1.1 |
 | Kaneda Gothic | One oversized graphic moment, always in capitals | As the kit provides | Adobe Fonts, [`use.typekit.net/wgr3lwl.css`](https://use.typekit.net/wgr3lwl.css). Adobe Fonts subscription |
-| Caput | One handwritten flourish | 400 | Self-hosted from [`assets/fonts/caput/`](../assets/fonts/caput/). Commercial, By Default properties only |
+| Caput | One handwritten flourish | 400 | Self-hosted from `assets/fonts/caput/`. Commercial, By Default properties only |
 
 ## Numerals
 
@@ -1884,7 +1896,7 @@ They are **brand-supplied, like every other face.** The engine declares `--font-
 
 They are **for work in progress only.** Greeked text is invisible to nobody: a screen reader still reads every word, and the copy is still in the DOM, in the page source and in search results. Redaction is a visual effect, never a way to hide content. Anything that must not be read must not be on the page.
 
-Copy for them is on the [Placeholder](/docs/placeholder.html) page.
+Copy for them is on the Placeholder page.
 
 ---
 
@@ -2885,7 +2897,7 @@ The website is also a channel — one of the places the brand meets an audience 
 
 _Specs verified against platform documentation: 2026-07-05._
 
-The full meta-tag set is already wired into `templates/page-template.html`; the per-tag reference lives in [SEO best practices](/docs/seo-best-practices.html).
+The full meta-tag set is already wired into `templates/page-template.html`; the per-tag reference lives in SEO best practices.
 
 ### Templates & assets
 
@@ -3344,7 +3356,7 @@ counts to two digits; show `99+` beyond that.
   capture) is a `<button>` and belongs on the screen it acts on.
 - Re-skin through the `--app-nav-*` tokens — an override of the selectors
   survives until the next release, a token re-skin travels with the brand
-  ([Source of Truth](/docs/source-of-truth.html)). Overridden color pairs
+  (Source of Truth). Overridden color pairs
   must hold 4.5:1: the labels are small text at every size.
 
 **Don't:**
@@ -4066,7 +4078,7 @@ The identity configuration: breadcrumb in the content region, actions and close 
 </div>
 ```
 
-This exact shape is what the docs generator emits on every doc page. A tool's bar is the same component with controls in the content region instead of a breadcrumb, and the same trailing cluster — actions, overflow, close (see [Building a Page](../docs/building-a-page.html)). Toggles and segmented controls centre themselves the same way — any supported child adapts without extra classes.
+This exact shape is what the docs generator emits on every doc page. A tool's bar is the same component with controls in the content region instead of a breadcrumb, and the same trailing cluster — actions, overflow, close (see Building a Page). Toggles and segmented controls centre themselves the same way — any supported child adapts without extra classes.
 
 ---
 
@@ -4218,7 +4230,7 @@ A bar is static by default; `data-sticky="true"` docks it at `--bar-top`.
 
 ## In a tool
 
-On a tool page what the bar holds is settled once, in the [tool canvas](/docs/tool-canvas.html) doc, so the tools read alike. Where that narrows a rule here — the tool's name leading the bar, the export in a panel rather than among the actions, Reset in the menu, no settings panel behind a trigger — it wins on a tool.
+On a tool page what the bar holds is settled once, in the tool canvas doc, so the tools read alike. Where that narrows a rule here — the tool's name leading the bar, the export in a panel rather than among the actions, Reset in the menu, no settings panel behind a trigger — it wins on a tool.
 
 ---
 
@@ -4308,7 +4320,7 @@ The 768px block hides `.bar-label`, re-points `--bar-gap` and `--bar-padding-x` 
 
 BD Animate plays three kinds of motion from attributes on the element that moves: an **entrance** when the page arrives (`data-bd-enter`), a **reveal** when the element scrolls into view (`data-bd-animate`, `data-bd-text`) and an **exit** before the page leaves (`data-bd-leave`). A parent marked `data-bd-stagger` sequences its children. The engine is `assets/js/bd-animate.js` on GSAP 3 with the ScrollTrigger, SplitText and CustomEase plugins; the companion stylesheet `bd-animate.css` holds everything it will animate at opacity 0 until its first frame. No class is required. Every duration, easing and stagger step is an [element motion token](/foundations/motion.html#element), read once at the first init.
 
-One `gsap.context` per page container is the whole teardown: the router reverts it once the page is out of the document, so nothing leaks across a navigation. On this site the router drives every call; see [JavaScript](#javascript) for the contract and for how a product without a router uses it. The attributes on this site's own pages are stamped by the generator from one table; which surface does what is listed under [Building a page](/docs/building-a-page.html#how-a-page-arrives).
+One `gsap.context` per page container is the whole teardown: the router reverts it once the page is out of the document, so nothing leaks across a navigation. On this site the router drives every call; see [JavaScript](#javascript) for the contract and for how a product without a router uses it. The attributes on this site's own pages are stamped by the generator from one table; which surface does what is listed under Building a page.
 
 ---
 
@@ -5437,7 +5449,7 @@ Each title drops two rungs below 960px. A [media cover](#covers-with-an-image) h
 `data-surface="field"` on an illustrated media cover lets the drawing's colour fill the whole cover, so the art bleeds into the card and the text sits on the hue. Put the hue (`data-color`, and `data-field` if the drawing uses one) on the cover as well as on the media slot. An optional `.eyebrow` above the title names what kind of thing the cover opens.
 
 ```html
-<a class="book-cover" data-variant="media" data-surface="field" data-color="peach" href="/tools/logo-tool.html">
+<a class="book-cover" data-variant="media" data-surface="field" data-color="peach" href="#">
   <div class="book-cover-media" data-color="peach">…the drawing…</div>
   <header class="book-cover-header" data-color="peach">…</header>
   <div class="book-cover-body">
@@ -5450,7 +5462,7 @@ Each title drops two rungs below 960px. A [media cover](#covers-with-an-image) h
 
 The cover has no border, because the field is its edge, and hover lifts it and plays the art without changing its colour. Like the drawing it carries, a field cover stays light in dark mode: on a dark page the row reads as lit posters. The text colour is the drawing's text role, which is already checked for contrast on every hue. Under forced colours the art hides and the cover gets its border back.
 
-Don't put the same hue on two neighbours: a row of one colour reads as a band, not as cards.
+On a shelf of sections, don't put the same hue on two neighbours: a row of one colour reads as a band, not as cards. A row drawn from one section is the exception, and takes that section's hue throughout.
 
 ---
 
@@ -5482,13 +5494,13 @@ A row carries the same slot vocabulary as a cover, but **no header or footer str
 That is also why the cover's separate `byline` and `meta` slots collapse here — on a footer strip they are two ends with two jobs, but a row has no strip, so the byline sits *inside* meta. Meta takes whatever the row needs to say about itself: an access tag, a byline, a date, or several.
 
 ```html
-<a href="/brand/rate-card.html" class="book-contents-item">
+<a href="#" class="book-contents-item">
   <div class="book-contents-item-leading">
     <span class="svg-icn" data-icon="lock"><!-- inline svg --></span>
   </div>
   <div class="book-contents-item-body">
-    <h3 class="book-contents-item-title">Rate Card</h3>
-    <p class="book-contents-item-description" data-text-wrap="pretty">Commercial terms and partner pricing</p>
+    <h3 class="book-contents-item-title">Archive</h3>
+    <p class="book-contents-item-description" data-text-wrap="pretty">Retired pages, kept for reference</p>
     <span class="book-contents-item-meta">
     <span class="tag" data-color="warning">Team only</span>
   </span>
@@ -5633,7 +5645,7 @@ Inside a `<button>` every part is a `<span>`, because a button holds only phrasi
 A cover or a row can be locked: the lock replaces the trailing icon, the text mutes, and hover changes nothing. The class styles only - the link keeps its `href`, so the script that locks it also sets `aria-disabled="true"` and stops the click, and describes the reason with `aria-describedby` pointing at a visible or hidden note. The lock sits in the trailing slot beside the usual icon, in the markup from the start, so locking is one class.
 
 ```html
-<a href="/docs/brand-setup.html" class="book-contents-item is-locked" aria-disabled="true" aria-describedby="lock-note">
+<a href="#" class="book-contents-item is-locked" aria-disabled="true" aria-describedby="lock-note">
   …
   <div class="book-contents-item-trailing">
     <span class="svg-icn" data-icon="open-full"><!-- svg --></span>
@@ -6377,14 +6389,14 @@ Callout types are powered by status color tokens defined in `:root`:
 
 | Token | Default | Purpose |
 |---|---|---|
-| `var(--status-info)` | `var(--blue-dark)` | Informational content |
-| `var(--status-info-bg)` | `var(--blue-lighter)` | Info background |
-| `var(--status-success)` | `var(--green-dark)` | Tips, positive feedback |
-| `var(--status-success-bg)` | `var(--green-lighter)` | Success background |
-| `var(--status-warning)` | `var(--yellow-dark)` | Warnings, attention needed |
-| `var(--status-warning-bg)` | `var(--yellow-lighter)` | Warning background |
-| `var(--status-danger)` | `var(--red-dark)` | Risks, destructive actions |
-| `var(--status-danger-bg)` | `var(--red-lighter)` | Danger background |
+| `var(--status-info)` | `var(--info-dark)` | Informational content |
+| `var(--status-info-bg)` | `var(--info-lighter)` | Info background |
+| `var(--status-success)` | `var(--success-dark)` | Tips, positive feedback |
+| `var(--status-success-bg)` | `var(--success-lighter)` | Success background |
+| `var(--status-warning)` | `var(--warning-dark)` | Warnings, attention needed |
+| `var(--status-warning-bg)` | `var(--warning-lighter)` | Warning background |
+| `var(--status-danger)` | `var(--danger-dark)` | Risks, destructive actions |
+| `var(--status-danger-bg)` | `var(--danger-lighter)` | Danger background |
 
 In dark mode the pair flips together: text moves to the `-light` primitives and each `--status-*-bg` is derived from the page ground pulled toward the status color — see [Tokens](/foundations/tokens.html).
 
@@ -8326,7 +8338,7 @@ The guard is a safety net, not a lock. Two Escape presses in a row with no inter
 
 Include `assets/js/dialog.js` on any page with a drawer. One script serves both Dialog and Drawer; they are the same machinery, so there is no separate `drawer.js` to add.
 
-React products can render this contract through the packaged adapter, exported as both `<Drawer>` and `<Sheet>` — the second name for the bottom-docked sheet shape, which is what its defaults assume. See [React](/docs/react.html).
+React products can render this contract through the packaged adapter, exported as both `<Drawer>` and `<Sheet>` — the second name for the bottom-docked sheet shape, which is what its defaults assume. See React.
 
 ```html
 <script src="/assets/js/dialog.js" defer></script>
@@ -14448,7 +14460,7 @@ Name the drawing, not the job. An edit button uses `pencil`, a measure button `r
 
 ## Registry
 
-The full brand icon set, grouped by job. The `data-icon` value is the name to use with the wrapper, the shorthand and the sprite. These tables are where the set is named and grouped: the [Icon Library](/tools/icon-library.html) takes its categories from them, and the build warns when an icon in `assets/images/svg-icons/` has no row here.
+The full brand icon set, grouped by job. The `data-icon` value is the name to use with the wrapper, the shorthand and the sprite. These tables are where the set is named and grouped: the Icon Library takes its categories from them, and the build warns when an icon in `assets/images/svg-icons/` has no row here.
 
 `3d`, `accessibility`, `accessibility-circled`, `ad-left`, `ad-right`, `ad-top`, `add`, `add-circled`, `align-center`, `align-left`, `align-right`, `animation`, `ar`, `archive`, `arrow-corner-up-right`, `arrow-down`, `arrow-down-from-line`, `arrow-down-long`, `arrow-left`, `arrow-right`, `arrow-right-to-line`, `arrow-turn-up-left`, `arrow-turn-up-right`, `arrow-up`, `arrow-up-right`, `arrow-up-to-line`, `back-arrow`, `bold`, `bolt`, `book`, `book-cover`, `book-open`, `bookmark`, `browser`, `browser-stack`, `bullseye`, `calendar`, `cart`, `chart`, `chat`, `chat-sparkle`, `check`, `check-circled`, `check-filled-circled`, `check-squared`, `checklist`, `chess-knight`, `chess-pawn`, `chevron-down`, `chevron-down-large`, `chevron-left`, `chevron-left-large`, `chevron-right`, `chevron-right-large`, `chevron-up`, `chevron-up-large`, `chevrons-left-right`, `circle`, `circle-dashed`, `clock`, `close`, `close-circled`, `close-full`, `close-large`, `code`, `cog`, `columns`, `compass`, `component`, `contrast`, `contrast-reverse`, `copy`, `credit-card`, `crosshair`, `cursor`, `cursor-click`, `cursor-pointer`, `cursor-ripple`, `design`, `desktop`, `direction-circled`, `download`, `drag`, `easel`, `ellipsis`, `ellipsis-large`, `ellipsis-large-vertical`, `ellipsis-vertical`, `exclamation-circled`, `external-link`, `eye`, `eye-off`, `facebook`, `fast-forward`, `file`, `file-audio`, `file-css`, `file-doc`, `file-font`, `file-html`, `file-image`, `file-json`, `file-md`, `file-pdf`, `file-svg`, `file-txt`, `file-video`, `filter`, `flame`, `folder`, `folder-open`, `folder-zip`, `font-size`, `full-screen`, `game`, `gamepad`, `github`, `globe`, `grid`, `headphones`, `heart`, `height`, `home`, `info-circled`, `instagram`, `italic`, `layer-add`, `line`, `link`, `linkedin`, `list`, `list-123`, `list-abc`, `lock`, `login`, `logout`, `loop`, `loop-reverse`, `mail`, `map`, `mask`, `menu`, `mic`, `mic-off`, `minus`, `minus-circled`, `mobile`, `mobile-video`, `moon`, `motion`, `news`, `numbers`, `open-full`, `page`, `page-check`, `paint-bucket`, `paintbrush`, `partner`, `pause`, `pencil`, `pencil-draw`, `percent`, `photo`, `photos`, `pie-10-circled`, `pie-100-circled`, `pie-25-circled`, `pie-50-circled`, `pie-75-circled`, `pin`, `play`, `play-circled`, `play-outline`, `present`, `question-circled`, `reddit`, `refresh`, `repost`, `return-arrow`, `return-key`, `rewind`, `rows`, `ruler`, `search`, `search-large`, `search-scan`, `section`, `send`, `shapes`, `share`, `shopping-bag`, `shopping-bag-check`, `sidebar-left-close`, `sidebar-left-open`, `sidebar-right-close`, `sidebar-right-open`, `skip-back-10`, `skip-back-15`, `skip-back-5`, `skip-forward-10`, `skip-forward-15`, `skip-forward-5`, `sliders`, `sliders-vertical`, `smile`, `sound`, `sound-off`, `sound-on`, `sparkle`, `sparkle-large`, `spotify`, `square`, `square-dashed`, `square-rounded-dashed`, `stack`, `stacked`, `sticky-bottom`, `sticky-top`, `substack`, `sun`, `sun-2`, `swap`, `swords`, `t-shirt`, `tablet`, `tag`, `tag-rotated`, `tap`, `tap-ripple`, `text`, `thumbs-down`, `thumbs-up`, `tiktok`, `trash`, `trending-up`, `underline`, `unlock`, `upload`, `user`, `user-add`, `user-circled`, `users`, `video`, `warning`, `width`, `x`, `youtube`, `zoom-in`, `zoom-out`
 
@@ -14458,7 +14470,7 @@ The full brand icon set, grouped by job. The `data-icon` value is the name to us
 
 If you need an icon that is not in the brand icon set:
 
-1. **Check the registry above**: the icon you need may exist under a different name, or search the [Icon Library](/tools/icon-library.html).
+1. **Check the registry above**: the icon you need may exist under a different name, or search the Icon Library.
 2. **Document the request**: describe the concept, intended size, and where it will be used
 3. **Submit to the design team**: new icons must match the existing style (24x24 grid, single-color, rounded corners)
 4. **Do not use a placeholder**: wait for the brand icon to be designed rather than shipping with a generic substitute

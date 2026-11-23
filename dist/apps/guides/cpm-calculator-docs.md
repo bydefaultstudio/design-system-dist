@@ -8,7 +8,7 @@ layer: "app"
 subsection: ""
 order: 9
 status: "published"
-access: "team"
+access: "public"
 brand: "internal"
 actionUrl: "./cpm-calculator.html"
 actionLabel: "Open Tool"
@@ -20,7 +20,7 @@ Plans a campaign for media planners and sales teams: what a budget buys at a CPM
 
 ## The layout
 
-The tool sits on the [tool canvas](/docs/tool-canvas.html) in the Side panels layout: the plan in the preview, the controls docked on the right, **Copy table** pinned at the dock's foot. The toggle in the preview's corner folds the dock away, so the table takes the canvas while you share your screen. **Copy link** and **Reset all** are in the bar's menu.
+The tool sits on the tool canvas in the Side panels layout: the plan in the preview, the controls docked on the right, **Copy table** pinned at the dock's foot. The toggle in the preview's corner folds the dock away, so the table takes the canvas while you share your screen. **Copy link** and **Reset all** are in the bar's menu.
 
 | Section | Holds | Its reset puts back |
 |---|---|---|

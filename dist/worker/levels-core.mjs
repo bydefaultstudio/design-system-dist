@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * levels-core.mjs - the pure half of level settings (levels-groups-plan.md D27).
  *
@@ -22,11 +22,14 @@
  *
  *   { pages: Map<path, level>, sections: Map<folder, level> }
  *
- * Levels rank public < team < admin < owner. "Raise" means a higher rank.
+ * Levels rank public < community < team < admin < owner. "Raise" means a higher rank.
  */
 
-export const LEVELS = ['public', 'team', 'admin', 'owner'];
-export const LEVEL_RANK = Object.freeze({ public: 0, team: 1, admin: 2, owner: 3 });
+import { LEVELS } from './auth-schema.mjs';
+import { SITE } from './site.mjs';
+
+export { LEVELS };
+export const LEVEL_RANK = Object.freeze({ public: 0, community: 1, team: 2, admin: 3, owner: 4 });
 
 export function isLevel(value) {
   return typeof value === 'string' && LEVELS.includes(value);
@@ -52,6 +55,9 @@ export const EMPTY_SETTINGS = Object.freeze({ pages: new Map(), sections: new Ma
  */
 export function buildLevel(codeLevel, pathname, section, settings = EMPTY_SETTINGS) {
   let base = settings.pages && settings.pages.has(pathname) ? settings.pages.get(pathname) : codeLevel;
+  // A row below the section's protected floor never applies (the build skips
+  // it too), so Settings never shows a projection below the floor.
+  if (settings.pages && settings.pages.has(pathname)) base = maxLevel(base, sectionFloor(section));
   const floor = section && settings.sections && settings.sections.get(section);
   if (floor) base = maxLevel(base, floor);
   return base;
@@ -84,6 +90,23 @@ export function isProtectedSection(folder) {
 }
 
 /**
+ * The lowest level a setting may give a protected section or its pages
+ * (docs.config.js protectedSections, page-access.mjs PROTECTED_SECTIONS), or
+ * 'public' for a section with no floor. By Default's Internal may go to team,
+ * still internal, never below.
+ */
+/** A page's section: its page map entry's, else its path's first folder (a nested page included). */
+function sectionOfTarget(target) {
+  const entry = SITE.pages && SITE.pages.get(target);
+  if (entry && entry.section) return entry.section;
+  return (/^\/([a-z0-9-]+)\//.exec(target || '') || [])[1] || '';
+}
+
+export function sectionFloor(folder) {
+  return (SITE.sectionFloors && SITE.sectionFloors.get(folder)) || 'public';
+}
+
+/**
  * Whether a page may be changed in Settings at all. One rule: exactly the
  * pages the Page levels list shows, which are the pages of a listed section
  * other than Settings. That leaves out, without a list to keep in step, the
@@ -107,8 +130,12 @@ export function isSettableSection(folder, sections) {
  * pages. Everything else may go to public.
  */
 export function floorFor(kind, target) {
-  if (kind === 'page' && /^\/[a-z0-9-]+\/index\.html$/.test(target || '')) return 'team';
-  return 'public';
+  // A section floor only ever raises its pages, so any floor is safe; the
+  // protected floor bounds a page setting, which can lower one.
+  if (kind === 'section') return 'public';
+  const protectedFloor = sectionFloor(sectionOfTarget(target));
+  if (kind === 'page' && /^\/[a-z0-9-]+\/index\.html$/.test(target || '')) return maxLevel('team', protectedFloor);
+  return protectedFloor;
 }
 
 /* ------ Who may change what ------ */
@@ -187,14 +214,16 @@ export function validateLevelChange(body, { pages, sections }) {
   const target = typeof (body && body.target) === 'string' ? body.target.trim().toLowerCase() : '';
   if (!target) return { ok: false, error: 'No section or page named.' };
   let level = body.level === null ? null : body.level;
-  if (level !== null && !isLevel(level)) return { ok: false, error: 'The level is public, team, admin or owner.' };
+  if (level !== null && !isLevel(level)) return { ok: false, error: 'The level is public, community, team, admin or owner.' };
   // A public floor raises nothing, so it is the same as no floor: one meaning,
   // one stored form.
   if (kind === 'section' && level === 'public') level = null;
   const settable = kind === 'section' ? isSettableSection(target, sections) : isSettablePage(target, pages, sections);
   if (!settable) return { ok: false, error: REFUSALS.unknown, unknown: true };
-  if (level !== null && rankOf(level) < rankOf(floorFor(kind, target))) {
-    return { ok: false, error: 'A section overview stays at team or above.' };
+  const floor = floorFor(kind, target);
+  if (level !== null && rankOf(level) < rankOf(floor)) {
+    const isOverview = /^\/[a-z0-9-]+\/index\.html$/.test(target) && floor === 'team' && sectionFloor(sectionOfTarget(target)) !== 'team';
+    return { ok: false, error: isOverview ? 'A section overview stays at team or above.' : `This page stays at ${floor} or above.` };
   }
   return { ok: true, value: { kind, target, level } };
 }

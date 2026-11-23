@@ -13,7 +13,7 @@ sidebar: "collapsed"
 version: "3.3.1"
 package: "brand"
 guide: "color-pairing-docs.md"
-needs: "tools, tool-canvas, color-core"
+needs: "tools, tool-canvas, color-core, download-lock"
 scripts: "assets/js/color-pairing.js"
 styles: "assets/css/color-pairing.css"
 ---

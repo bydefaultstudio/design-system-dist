@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * site.mjs - what the access gate needs to know about the site it guards
  * (levels-groups-plan.md Phase 3, D21).
@@ -41,8 +41,15 @@ export const SITE = {
   sections: Object.freeze({}),
   /** Published markdown source → the page it is the source of (page-access.mjs SOURCE_PAGES). */
   sources: new Map(),
-  /** 'locked' or 'hidden' (D19), from docs.config.js accessNav (page-access.mjs ACCESS_NAV). */
+  /**
+   * 'locked', 'hidden' (D19) or 'earned' (community-access-plan.md D11), from
+   * docs.config.js accessNav (page-access.mjs ACCESS_NAV).
+   */
   accessNav: 'locked',
+  /** What this deployment calls the community role (brand.json access.communityLabel, page-access.mjs COMMUNITY_LABEL). The stored value is always `community`. */
+  communityLabel: 'Community',
+  /** Protected section → the lowest level a setting may give it or its pages (page-access.mjs PROTECTED_SECTIONS). */
+  sectionFloors: new Map(),
   /** Domains sign-in answers on, each with its subdomains. localhost always. */
   hosts: [],
   /** Paths this site opens to everyone, beyond the engine's own (robots.txt, the login page). */
@@ -164,7 +171,9 @@ export function configureSite(options = {}) {
   }
   if (!options.sections || typeof options.sections !== 'object') fail('`sections` must be the SECTIONS object from page-access.mjs');
   if (options.sources !== undefined && !(options.sources instanceof Map)) fail('`sources` must be the SOURCE_PAGES Map from page-access.mjs');
-  if (options.accessNav !== undefined && options.accessNav !== 'locked' && options.accessNav !== 'hidden') fail("`accessNav` must be 'locked' or 'hidden'");
+  if (options.accessNav !== undefined && !['locked', 'hidden', 'earned'].includes(options.accessNav)) fail("`accessNav` must be 'locked', 'hidden' or 'earned'");
+  const floors = options.protectedSections === undefined ? {} : options.protectedSections;
+  if (!floors || typeof floors !== 'object' || Array.isArray(floors) || !Object.entries(floors).every(([f, l]) => /^[a-z0-9-]+$/.test(f) && LEVELS.includes(l))) fail('`protectedSections` must be the PROTECTED_SECTIONS object from page-access.mjs: section folder → lowest level');
   const hosts = hostList(options.hosts);
   const publicPaths = pathList(options.publicPaths, 'publicPaths');
   const publicPrefixes = pathList(options.publicPrefixes, 'publicPrefixes', { prefix: true });
@@ -181,7 +190,10 @@ export function configureSite(options = {}) {
   if (apps.imageLogo !== null && apps.imageLogo !== undefined && (typeof apps.imageLogo !== 'string' || !apps.imageLogo.startsWith('/'))) fail('`apps.imageLogo` must be a site path starting with /');
   const library = options.library === undefined ? null : options.library;
   if (apps.installed.includes('asset-library') && !(library && library.index instanceof Map && typeof library.downloadAccess === 'string')) {
-    fail('the Asset Library is installed: pass `library: { index: LIBRARY_INDEX, downloadAccess: LIBRARY_DOWNLOAD_ACCESS }` from library-index.mjs');
+    fail('the Asset Library is installed: pass `library: { index: LIBRARY_INDEX, downloadAccess: LIBRARY_DOWNLOAD_ACCESS, thumbs: LIBRARY_THUMBS }` from library-index.mjs');
+  }
+  if (library && library.thumbs !== undefined && !(library.thumbs instanceof Map)) {
+    fail('`library.thumbs` is LIBRARY_THUMBS from library-index.mjs, a Map');
   }
   const sourcePrefix = onePath(options.sourcePrefix, 'sourcePrefix', '/cms/');
   if (!sourcePrefix.endsWith('/')) fail('`sourcePrefix` must end with /');
@@ -193,6 +205,8 @@ export function configureSite(options = {}) {
   SITE.sections = options.sections;
   SITE.sources = options.sources || new Map();
   SITE.accessNav = options.accessNav || 'locked';
+  SITE.sectionFloors = new Map(Object.entries(floors));
+  SITE.communityLabel = typeof options.communityLabel === 'string' && options.communityLabel.trim() ? options.communityLabel.trim() : 'Community';
   SITE.hosts = hosts;
   SITE.publicPaths = new Set([...publicPaths, ...embeds]);
   SITE.publicPrefixes = [...publicPrefixes];

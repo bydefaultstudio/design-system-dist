@@ -1903,36 +1903,26 @@ body:has(.tool-viewer[open]) .back-to-top-wrapper {
 }
 
 /* Download lock (download-lock.js). A Download the reader cannot take keeps
-   its place and its words: the lock icon takes the download icon's place,
-   the control mutes to the disabled opacity, and the pointer stays, where
-   a disabled button loses it (design-system.css), so the tooltip can say
-   why and a press can go to the way in. No hover ink and no press scale,
-   which would say the button can be pressed. Keyed on data-download, which
-   every tool's Download verb carries; the level is the container's
-   data-download-access. The lock is always in the markup and shown only
-   on .is-locked, as the Book's cover lock is. */
-[data-download] > .svg-icn[data-icon="lock"] {
+   its place and its words, and the lock icon takes the download icon's
+   place. It stays a working button: a press opens the lock's dialog
+   ("Make this tool your own", community-access-plan.md D14), so it keeps
+   its ink, its hover and its pointer, as any button does. Keyed on
+   data-download, which every tool's Download verb carries, and
+   data-download-lock, on the Copy that exports the same file (D12); the
+   level is the container's data-download-access, or the asset's own. The
+   lock is always in the markup and shown only on .is-locked, as the Book's
+   cover lock is. */
+[data-download] > .svg-icn[data-icon="lock"],
+[data-download-lock] > .copy-btn-default > .svg-icn[data-icon="lock"] {
   display: none;
 }
 
-[data-download].is-locked > .svg-icn[data-icon="lock"] {
+[data-download].is-locked > .svg-icn[data-icon="lock"],
+[data-download-lock].is-locked > .copy-btn-default > .svg-icn[data-icon="lock"] {
   display: flex;
 }
 
-[data-download].is-locked > .svg-icn[data-icon="download"] {
+[data-download].is-locked > .svg-icn[data-icon="download"],
+[data-download-lock].is-locked > .copy-btn-default > .svg-icn[data-icon="copy"] {
   display: none;
-}
-
-.button[data-download].is-locked {
-  opacity: var(--opacity-disabled);
-  pointer-events: auto;
-  cursor: not-allowed;
-}
-
-.button[data-download].is-locked:hover {
-  --button-color: var(--text-primary);
-}
-
-.button[data-download].is-locked:active {
-  transform: none;
 }

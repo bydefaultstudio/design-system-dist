@@ -13,7 +13,7 @@ sidebar: "collapsed"
 version: "3.1.0"
 package: "utilities"
 guide: "cpm-calculator-docs.md"
-needs: "tools, tool-canvas"
+needs: "tools, tool-canvas, download-lock"
 scripts: "assets/js/cpm-calculator.js"
 styles: "assets/css/cpm-calculator.css"
 ---

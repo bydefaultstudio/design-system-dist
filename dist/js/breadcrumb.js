@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * Breadcrumb overflow
  * A breadcrumb (design-system.css §18) stays on one line. When its labels no

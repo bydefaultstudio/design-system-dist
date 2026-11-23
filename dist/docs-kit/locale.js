@@ -394,8 +394,8 @@ function markdownBlock(block, labels) {
 }
 
 // The frontmatter fields a reader sees: the page title, its subtitle and
-// description, and the labels a doc page's tool link carries
-const FRONTMATTER_KEYS = ['title', 'subtitle', 'description', 'actionLabel', 'toolLabel'];
+// description, its home card line, and the labels a doc page's tool link carries
+const FRONTMATTER_KEYS = ['title', 'subtitle', 'description', 'card', 'actionLabel', 'toolLabel'];
 // The page types whose body is raw HTML, never markdown (generate-docs.js
 // PAGE_TYPES, body: 'html')
 const HTML_BODY_TYPES = ['page', 'bare', 'tool'];

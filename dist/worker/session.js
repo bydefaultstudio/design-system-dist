@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * session.js - the gate itself (access-plan.md §4.2, §13.2; permissions-plan.md §4.3).
  *
@@ -40,8 +40,9 @@
  */
 import { hideForReader } from './hidden-nav.mjs';
 import { SITE } from './site.mjs';
-import { getAuth, allowedRow, revokeSessions, setListedRole, setUserRole, guestScopes } from './auth.js';
+import { getAuth, allowedRow, revokeSessions, setListedRole, setUserRole, readerScopes } from './auth.js';
 import {
+  ENGINE_PATHS,
   authorise,
   hasSessionCookie,
   isNavigation,
@@ -94,10 +95,37 @@ function denyRequest(request, url, setCookies = []) {
  * A HEAD gets the status without the body; a fetch or Barba request gets JSON,
  * and Barba's request-failure fallback turns that into a full navigation here.
  */
+async function notFoundForHidden(request, env, url, setCookies, viewer) {
+  if (!isNavigation(request.headers)) {
+    return privateHeaders(new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } }), setCookies);
+  }
+  let page;
+  try {
+    page = await env.ASSETS.fetch(new Request(new URL(ENGINE_PATHS.notFound, url.origin), { method: 'GET' }));
+  } catch {
+    page = null;
+  }
+  if (!page || page.status !== 200) {
+    if (page && page.body) page.body.cancel();
+    return privateHeaders(new Response('Not found', { status: 404 }), setCookies);
+  }
+  if (request.method === 'HEAD') page.body?.cancel();
+  const out = new Response(request.method === 'HEAD' ? null : page.body, { status: 404, headers: page.headers });
+  out.headers.delete('ETag');
+  out.headers.delete('Content-Length');
+  return privateHeaders(hideForReader(out, viewer, url.href, SITE.accessNav), setCookies);
+}
+
 async function denyLocked(request, env, url, level, setCookies, viewer) {
+  // Under 'earned' a page above community is hidden from the reader: the
+  // refusal names neither it nor its level (community-access-plan.md D11).
+  const shown = SITE.accessNav === 'earned' && level !== 'community' ? 'hidden' : level;
+  // A page hidden from the reader answers as one that does not exist, so an
+  // address cannot be used to learn whether an internal page is there.
+  if (shown === 'hidden') return notFoundForHidden(request, env, url, setCookies, viewer);
   if (!isNavigation(request.headers)) {
     return privateHeaders(
-      new Response(JSON.stringify({ error: 'forbidden', level }), {
+      new Response(JSON.stringify({ error: 'forbidden', level: shown }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
       }),
@@ -118,12 +146,12 @@ async function denyLocked(request, env, url, level, setCookies, viewer) {
   }
   let body = null;
   if (request.method === 'HEAD') page.body?.cancel(); // never leave the asset stream open
-  else body = lockedFor(await page.text(), level);
+  else body = lockedFor(await page.text(), shown);
   const out = new Response(body, { status: 403, headers: page.headers });
   out.headers.delete('Content-Length');
-  // Under accessNav 'hidden' the locked page's own links are cut like any
-  // other page's: a refusal must not hand over the titles it refuses.
-  return privateHeaders(SITE.accessNav === 'hidden' ? hideForReader(out, viewer, url.href) : out, setCookies);
+  // Under accessNav 'hidden' or 'earned' the locked page's own links are cut
+  // like any other page's: a refusal must not hand over the titles it refuses.
+  return privateHeaders(SITE.accessNav !== 'locked' ? hideForReader(out, viewer, url.href, SITE.accessNav) : out, setCookies);
 }
 
 /**
@@ -215,16 +243,18 @@ export async function requireSession(request, env, url, pathname = url.pathname)
     return { deny: null, setCookies, reader };
   }
 
-  // 'deny' only ever answers an admin or an owner page; a refused grant is a
-  // team page. The locked page names whichever it was.
-  const level = verdict === 'deny' ? pageEntry(target).level : 'team';
+  // The locked page names the level that refused the reader: the page's own,
+  // whether a deny or a refused grant (a guest's community page, a team
+  // member's admin page).
+  const level = pageEntry(target).level;
   let scopes = [];
   if (verdict === 'grant') {
-    // A guest, on a team page their groups may reach: the one D1 read the
-    // second question ever costs (permissions-plan.md §4.4).
+    // A guest on a community page or a section's file, or a team member on
+    // an admin page: the one D1 read the second question ever costs
+    // (permissions-plan.md §4.4), of the groups their role reads.
     let admitted = false;
     try {
-      scopes = await guestScopes(env.DB, user.email);
+      scopes = await readerScopes(env.DB, user.email, role);
       admitted = scopeAdmits(scopes, target);
     } catch {
       admitted = false; // fail closed

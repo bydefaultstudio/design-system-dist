@@ -1,6 +1,7 @@
 ---
 title: "Icon Library"
 subtitle: "The whole set, in brand colors, at the size you need"
+card: "Every icon, in brand colors, any size"
 description: "How the Icon Library works: search and the registry's categories, palette swatches, export sizes, and what each of the five export formats gives you."
 author: "Studio"
 section: "Tools"
@@ -78,6 +79,10 @@ The HTML snippet is the odd one out on purpose. Inline icons inherit their color
 The browser renders the PNG at exactly the pixels you asked for. Nothing leaves the page.
 
 ---
+
+## Who can take the files
+
+Copy and Download need the tool's download level. Below it they show a lock, and a press explains how to get the tool for your own brand. One icon can have its own level (`assetAccess:` in the tool's frontmatter, by icon key), higher or lower than the rest.
 
 ## Filenames
 

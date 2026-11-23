@@ -1174,8 +1174,19 @@
     window.LayerStack.render(overlay, box.spec || safeZoneSpec, { artwork: artwork, overlayOnly: true, scope: el.frame });
   }
 
+  // The variant Copy and Export take, for the download lock's per-asset
+  // level (the app's assetAccess:, download-lock.js). The lock re-reads it
+  // on bd:download-lock, sent only when the variant changes.
+  function markAsset(id) {
+    if (!el.copyBtn || !el.exportBtn || el.copyBtn.getAttribute('data-download-asset') === id) return;
+    el.copyBtn.setAttribute('data-download-asset', id);
+    el.exportBtn.setAttribute('data-download-asset', id);
+    document.dispatchEvent(new CustomEvent('bd:download-lock'));
+  }
+
   function render() {
     var v = currentVariant();
+    markAsset(v.id);
     var box = previewDims();
     var transparent = effectiveTransparent();
     var ground = previewGround();

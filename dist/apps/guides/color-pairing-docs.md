@@ -8,7 +8,7 @@ layer: "app"
 subsection: ""
 order: 5
 status: "published"
-access: "team"
+access: "public"
 brand: "internal"
 actionUrl: "color-pairing.html"
 actionLabel: "Open Tool"

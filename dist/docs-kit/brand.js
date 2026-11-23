@@ -243,7 +243,7 @@ function viewBoxOf(markup) {
 
 const KNOWN = {
   root: ['$schema', 'version', 'name', 'slug', 'url', 'description', 'footerText', 'fonts', 'favicons',
-    'ogImage', 'colours', 'logos', 'icons', 'wording', 'access', 'emailSignature', 'email', 'switches'],
+    'ogImage', 'colours', 'logos', 'icons', 'wording', 'access', 'adPreview', 'emailSignature', 'email', 'switches'],
   fonts: ['googleFontsUrl', 'typekitId', 'preload'],
   icons: ['close'],
   favicons: ['svg', 'ico'],
@@ -258,7 +258,8 @@ const KNOWN = {
   // requestRoute is no longer read (phase D): Ask for access is the engine's
   // /support.html on every site. Still accepted, so no old file breaks; the
   // generator warns until it is deleted.
-  access: ['requestRoute', 'turnstileSiteKey'],
+  access: ['requestRoute', 'turnstileSiteKey', 'communityLabel'],
+  adPreview: ['frameOrigin'],
   emailSignature: ['base', 'previewBase', 'logo', 'logoWidth', 'logoHeight', 'icons', 'cardBackground', 'disclaimer'],
   email: ['tokens', 'headerLogo', 'footer', 'securityNotes'],
 };
@@ -479,6 +480,14 @@ function validate(brand, opts = {}) {
       }
     }
   }
+  if (brand.adPreview !== undefined) {
+    if (!isObj(brand.adPreview)) fail('"adPreview" must be an object.');
+    else {
+      unknown(brand.adPreview, KNOWN.adPreview, 'adPreview.');
+      const problem = adFrameOriginProblem(brand.adPreview.frameOrigin, brand.url);
+      if (problem) fail(problem);
+    }
+  }
   if (brand.access !== undefined) {
     if (!isObj(brand.access)) fail('"access" must be an object.');
     else {
@@ -491,6 +500,13 @@ function validate(brand, opts = {}) {
       const key = brand.access.turnstileSiteKey;
       if (key !== undefined && key !== null && !(typeof key === 'string' && /^[0-9A-Za-z_-]{10,100}$/.test(key))) {
         fail(`"access.turnstileSiteKey" is ${JSON.stringify(key)}. It must be the spam check's site key, letters, digits, - and _ only, or left out.`);
+      }
+      const label = brand.access.communityLabel;
+      if (label !== undefined) {
+        const problem = typeof label === 'string' && label.trim()
+          ? plainTextProblem('access.communityLabel', label, 40)
+          : `"access.communityLabel" is ${JSON.stringify(label)}. It must be a name in words, such as "Community" or "Partner", or left out.`;
+        if (problem) fail(problem);
       }
     }
   }
@@ -754,6 +770,30 @@ function runtimeWording(brand) {
  * The values {{brand:key}} fills in an app page's body. Plain text; the
  * generator escapes each for the attribute or text it lands in.
  */
+/**
+ * Why an Ad Preview frame address can't be used, or null. The frame runs a
+ * pasted tag with allow-same-origin, which is safe only because the frame
+ * is another site: on this site's own host, or a host that shares its last
+ * two labels (a subdomain, a sibling), the tag could lift its own sandbox
+ * and act as the site. Two labels is stricter than the real rule for hosts
+ * like example.co.uk, and strict is the safe side.
+ */
+function adFrameOriginProblem(value, siteUrl) {
+  if (value === undefined || value === null) return null;
+  let frame;
+  try { frame = new URL(value); } catch { frame = null; }
+  if (!frame || frame.protocol !== 'https:' || frame.origin !== value || frame.hostname.endsWith('.')) {
+    return `"adPreview.frameOrigin" is ${JSON.stringify(value)}. It must be an https origin and nothing more, such as "https://ad-preview.example", or left out.`;
+  }
+  let site;
+  try { site = new URL(siteUrl).hostname.replace(/\.$/, ''); } catch { return '"adPreview.frameOrigin" needs the brand\'s "url" to check it is another site.'; }
+  const lastTwo = (host) => host.split('.').slice(-2).join('.');
+  if (frame.hostname === site || lastTwo(frame.hostname) === lastTwo(site)) {
+    return `"adPreview.frameOrigin" is ${JSON.stringify(value)}, on the same site as ${site}. The ad frame must be another site, or a pasted tag could act as this one. Use a domain that hosts nothing else, or leave it out.`;
+  }
+  return null;
+}
+
 function brandTokens(brand) {
   const w = wording(brand);
   const access = brand.access || {};
@@ -769,6 +809,10 @@ function brandTokens(brand) {
     // attribute as "not set" (phase D)
     supportEmail: (brand.wording && brand.wording.supportEmail) || '',
     turnstileSiteKey: access.turnstileSiteKey || '',
+    // What this deployment calls the community role (community-access-plan.md D2)
+    communityLabel: access.communityLabel || 'Community',
+    // Ad Preview's frame on another site; empty runs it on this one, sealed (worker/ad-frame.js)
+    adFrameOrigin: (brand.adPreview && brand.adPreview.frameOrigin) || '',
   };
 }
 
@@ -864,6 +908,7 @@ module.exports = {
   iconSet,
   upgrade,
   validate,
+  adFrameOriginProblem,
   loadBrand,
   definedTokens,
   readSvg,

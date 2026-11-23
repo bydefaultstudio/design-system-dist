@@ -8,7 +8,7 @@ layer: "app"
 subsection: ""
 order: 7
 status: "published"
-access: "team"
+access: "public"
 brand: "internal"
 actionUrl: "qr-code.html"
 actionLabel: "Open Tool"

@@ -151,7 +151,33 @@ const CONFIG = {
   // (#site-nav-source) so the Worker can remove what a reader cannot open
   // before it leaves (worker/hidden-nav.mjs). Hidden needs the Worker's
   // rewrite: without it every reader sees every title, as with 'locked'.
-  accessNav: userConfig.accessNav === 'hidden' ? 'hidden' : 'locked',
+  // 'earned' (community-access-plan.md D11) cuts like 'hidden' but keeps a
+  // community page, locked, for a reader who could earn it by signing in or
+  // asking: lock what a reader could earn, hide what is internal.
+  // An unknown value fails the build rather than quietly falling back to
+  // 'locked', which would show every reader every title.
+  accessNav: (() => {
+    const value = userConfig.accessNav === undefined ? 'locked' : userConfig.accessNav;
+    if (!['locked', 'hidden', 'earned'].includes(value)) throw new Error(`docs.config.js accessNav must be 'locked', 'hidden' or 'earned', not ${JSON.stringify(value)}`);
+    return value;
+  })(),
+  // Section folder → the lowest level Settings › Page levels may give it or
+  // any page in it (By Default's Internal: team, still internal). A setting
+  // below its floor is refused by the Levels API and skipped at build, so an
+  // admin cannot open a private section from the browser. Settings itself is
+  // never settable whatever this says.
+  protectedSections: (() => {
+    const map = userConfig.protectedSections === undefined ? {} : userConfig.protectedSections;
+    const levels = ['public', 'community', 'team', 'admin', 'owner'];
+    if (!map || typeof map !== 'object' || Array.isArray(map) || !Object.entries(map).every(([f, l]) => /^[a-z0-9-]+$/.test(f) && levels.includes(l))) {
+      throw new Error('docs.config.js protectedSections must map section folders to a level, e.g. { internal: \'team\' }');
+    }
+    // A typo would protect nothing and say nothing: every key names a section.
+    const folders = new Set(Object.values(userConfig.sectionFolders || {}));
+    const unknown = Object.keys(map).filter((f) => !folders.has(f));
+    if (unknown.length) throw new Error(`docs.config.js protectedSections names ${unknown.map((f) => JSON.stringify(f)).join(', ')}, not a section folder (sectionFolders)`);
+    return Object.fromEntries(Object.entries(map).sort(([a], [b]) => (a < b ? -1 : 1)));
+  })(),
   assetLibrary: userConfig.assetLibrary === true,
   uiScripts: userConfig.uiScripts || null, // null = the kit set, component-modules.json kitUiScripts
   // Extension surface (all off by default)
@@ -295,6 +321,9 @@ const pageAccess = new Map();
 // the gate judges /cms/setup.md at setup.html's level instead of the default
 // team. Written beside PAGE_ACCESS by writePageAccess().
 const sourcePages = new Map();
+// Markdown sources not published, because a body link in them names a page
+// some of their readers may not see (written to page-access.mjs).
+const withheldSources = new Set();
 
 // Every page's level by URL, filled from the file list BEFORE any page is
 // rendered (see the main build): pageAccess fills as pages are written, so a
@@ -311,7 +340,10 @@ function levelOf(pathname) {
   return (known && known.level) || linkLevels.get(pathname) || 'team';
 }
 
-const LEVEL_RANK = { public: 0, team: 1, admin: 2, owner: 3 };
+const LEVEL_RANK = { public: 0, community: 1, team: 2, admin: 3, owner: 4 };
+// Whether the Worker cuts navigation per reader: 'hidden' and 'earned' both
+// move the sidebar list into each page and stamp every link with its level.
+const cutsNav = CONFIG.accessNav !== 'locked';
 // Body links that point above their page's level, reported at the end of the
 // build: under 'hidden' they fail it, since a reader who may open the page
 // could never open the link, and the sentence would still name the page. A
@@ -351,7 +383,13 @@ function stampBodyLinks(html, pagePath, pageLevel, { mark = true } = {}) {
     if (target.endsWith('/')) target += 'index.html';
     if (!target.endsWith('.html')) return match;
     const level = levelOf(target);
-    if (LEVEL_RANK[level] > LEVEL_RANK[pageLevel] && !(isIndexPagePath(target) && LEVEL_RANK[level] <= LEVEL_RANK.team)) bodyLinkViolations.push(`  ${pagePath} (${pageLevel}) links to ${target} (${level})`);
+    // fromSetting: the target's level came from a Page levels setting, not
+    // its code. An admin's change in Settings must never stop a deploy, so
+    // such a link is a note: the Worker still cuts it for a reader who
+    // cannot open it, words and all.
+    const fromSetting = (CODE_LEVELS.has(target) && CODE_LEVELS.get(target) !== level)
+      || (CODE_LEVELS.has(pagePath) && CODE_LEVELS.get(pagePath) !== pageLevel);
+    if (LEVEL_RANK[level] > LEVEL_RANK[pageLevel] && !(isIndexPagePath(target) && LEVEL_RANK[level] <= LEVEL_RANK.team)) bodyLinkViolations.push({ text: `  ${pagePath} (${pageLevel}) links to ${target} (${level})`, level, fromSetting, pagePath });
     return mark ? `<a${before} href="${href}"${after} data-access="${level}">` : match;
   });
 }
@@ -366,7 +404,65 @@ function stampBodyLinks(html, pagePath, pageLevel, { mark = true } = {}) {
  * worker/, so it cannot import it; scripts/verify-auth-gate.mjs reads the
  * frontmatter independently and counts the map against it.
  */
-const ACCESS_LEVELS = ['public', 'team', 'admin', 'owner'];
+const ACCESS_LEVELS = ['public', 'community', 'team', 'admin', 'owner'];
+
+/**
+ * A tool's per-asset levels, from its `assetAccess:` frontmatter: one string,
+ * "asset-id: level, asset-id: level" (frontmatter takes flat strings only).
+ * The levels are a page's levels but owner, which no download is. Returns
+ * { map, problem }: the map when every entry is good, the first problem
+ * otherwise. Absent is an empty map.
+ * @param {string|undefined} raw
+ */
+function parseAssetAccess(raw) {
+  const map = {};
+  if (raw === undefined || raw === null || String(raw).trim() === '') return { map, problem: null };
+  for (const part of String(raw).split(',')) {
+    const m = /^\s*([a-z0-9][a-z0-9-]*)\s*:\s*([a-z]+)\s*$/.exec(part);
+    if (!m) return { map, problem: `"${part.trim()}" is not "asset-id: level"` };
+    if (!['public', 'community', 'team', 'admin'].includes(m[2])) return { map, problem: `"${m[1]}" has level "${m[2]}" (must be public, community, team or admin)` };
+    if (Object.prototype.hasOwnProperty.call(map, m[1])) return { map, problem: `"${m[1]}" is listed twice` };
+    map[m[1]] = m[2];
+  }
+  return { map, problem: null };
+}
+
+/**
+ * The asset ids a tool's assetAccess may name, or null for a tool with no
+ * assets to level (assetAccess is then refused). A key that names no real
+ * asset fails the build: a typo would otherwise leave that asset at the
+ * tool's level without a word (review, 2026-11-21).
+ * @param {string} slug
+ * @returns {string[]|null}
+ */
+function toolAssetIds(slug) {
+  if (slug === 'logo-tool') return BRAND ? BRAND.logos.variants.map((v) => v.id) : [];
+  if (slug === 'icon-library') return Object.keys(ICON_MAP);
+  return null;
+}
+
+/**
+ * Every problem with a tool's assetAccess: its syntax and levels
+ * (parseAssetAccess), then each key against the tool's real assets.
+ * @param {string|undefined} raw
+ * @param {string[]|null} ids  toolAssetIds(slug)
+ * @returns {string|null}
+ */
+function assetAccessProblem(raw, ids) {
+  const { map, problem } = parseAssetAccess(raw);
+  if (problem) return problem;
+  const keys = Object.keys(map);
+  if (!keys.length) return null;
+  if (!ids) return 'this tool has no assets to give their own level (only the Logo Tool and the Icon Library do)';
+  const unknown = keys.filter((k) => !ids.includes(k));
+  return unknown.length ? `no asset is called ${unknown.map((k) => `"${k}"`).join(', ')}` : null;
+}
+
+/** The container attribute for a tool's per-asset levels, or '' for none. */
+function assetAccessAttr(raw) {
+  const { map } = parseAssetAccess(raw);
+  return Object.keys(map).length ? ` data-asset-access="${escapeAttr(JSON.stringify(map))}"` : '';
+}
 function normaliseLevel(value) {
   const level = String(value || '').trim().toLowerCase();
   return ACCESS_LEVELS.includes(level) ? level : 'team';
@@ -395,13 +491,16 @@ function sectionLevel(folder) {
  */
 function indexLevel(folder) {
   const level = sectionLevel(folder);
-  // Never below team: a public section's index stays behind the sign-in, as
-  // it always was, since it lists that section's team and admin pages too.
-  let base = level && LEVEL_RANK[level] > LEVEL_RANK.team ? level : 'team';
+  // A public section's index is public, so a signed-out reader's breadcrumb
+  // and "Back to" land on it rather than the sign-in (community-access-plan.md
+  // step 6); the Worker cuts any card above the reader. Otherwise never below
+  // team, as it always was.
+  let base = level === 'public' ? 'public' : (level && LEVEL_RANK[level] > LEVEL_RANK.team ? level : 'team');
   // D27: a page override on the index, or a section floor, raises it; still
   // never below team (validateLevelSet enforces the same).
   const over = overlayLevel(`/${folder}/index.html`, base);
   const eff = over === undefined ? base : over;
+  if (eff === 'public' && base === 'public') return 'public';
   return LEVEL_RANK[eff] < LEVEL_RANK.team ? 'team' : eff;
 }
 
@@ -464,6 +563,11 @@ function isProtectedLevelTarget(kind, target) {
   if (kind === 'section') return target === 'settings' || target === '';
   return LEVEL_DOOR_PAGES.has(target) || target === '/index.html' || target.startsWith('/settings/');
 }
+/** A path's first folder, a nested page included: the section it belongs to. */
+function firstFolderOf(pathname) {
+  const m = /^\/([a-z0-9-]+)\//.exec(pathname || '');
+  return m ? m[1] : '';
+}
 function levelFolderOf(pathname) {
   const m = /^\/([a-z0-9-]+)\/[^/]+$/.exec(pathname || '');
   return m ? m[1] : '';
@@ -512,6 +616,9 @@ function loadLevelSettingsSource() {
     if (!ACCESS_LEVELS.includes(row.level)) { console.warn(`⚠️  Level setting skipped (bad level ${JSON.stringify(row.level)}): ${row.kind} ${row.target}`); continue; }
     if (row.kind !== 'section' && row.kind !== 'page') { console.warn(`⚠️  Level setting skipped (bad kind): ${JSON.stringify(row.kind)}`); continue; }
     if (isProtectedLevelTarget(row.kind, row.target)) { console.warn(`⚠️  Level setting skipped (protected target): ${row.kind} ${row.target}`); continue; }
+    // A page row can lower a page; a section row only raises, so it needs no floor.
+    const floor = row.kind === 'page' ? CONFIG.protectedSections[firstFolderOf(row.target)] : null;
+    if (floor && LEVEL_RANK[row.level] < LEVEL_RANK[floor]) { console.warn(`⚠️  Level setting skipped (below the protected floor ${floor}): ${row.kind} ${row.target} → ${row.level}`); continue; }
     (row.kind === 'section' ? sections : pages).set(row.target, row.level);
   }
   return { pages, sections, origin };
@@ -773,7 +880,7 @@ function docFilenames() {
 function siteTokens() {
   if (BRAND) return brandFile.brandTokens(BRAND);
   // The engine's Ask for access page reads the last two; empty means none
-  const tokens = { name: CONFIG.siteName, siteName: CONFIG.siteName, organisation: CONFIG.siteName, supportEmail: '', turnstileSiteKey: '' };
+  const tokens = { name: CONFIG.siteName, siteName: CONFIG.siteName, organisation: CONFIG.siteName, supportEmail: '', turnstileSiteKey: '', communityLabel: 'Community', adFrameOrigin: '' };
   if (CONFIG.siteUrl) tokens.url = CONFIG.siteUrl;
   return tokens;
 }
@@ -1089,9 +1196,10 @@ function lockIcon(className) {
 // Unlike an icon, a missing drawing fails the build: a cover or header that
 // declared art and shipped without it is a broken page, not a blank slot.
 const OS_ILLUSTRATIONS_DIR = path.join(ROOT, 'assets', 'images', 'os-illustrations');
-// The nine hues §2d puts in scope. A hue outside this list would render the
-// field in no colour at all, silently.
-const OS_ILLUSTRATION_HUES = ['blue', 'purple', 'green', 'yellow', 'red', 'aqua', 'pink', 'peach', 'brown'];
+// The hues §2d puts in scope, plus neutral (2026-11-23, as in Figma's Neutral
+// mode). A hue outside this list would render the field in no colour at all,
+// silently.
+const OS_ILLUSTRATION_HUES = ['blue', 'purple', 'green', 'yellow', 'red', 'aqua', 'pink', 'peach', 'brown', 'neutral'];
 // `light` is the default and is never written (§2d: omit data-field for it).
 const OS_ILLUSTRATION_FIELDS = ['lighter', 'dark'];
 const osIllustrationCache = new Map();
@@ -1124,21 +1232,24 @@ function hasOsIllustration(slug) {
 
 /**
  * Resolve what a card or page declares into what the emitters write.
- * The hue is the declared one, else the drawing's authored one, else the
- * fallback (a page's section hue); a drawing with none of them has nothing
- * to colour it, so that fails.
+ * The hue is the declared one, else the fallback (a page's section hue: the
+ * site colour-codes its sections, D26/D29), else the drawing's authored one;
+ * a drawing with none of them has nothing to colour it, so that fails.
  * @param {object} declared
  * @param {string} [declared.osIllustration] - drawing slug
  * @param {string} [declared.hue] - overrides the authored hue
  * @param {string} [declared.field] - `lighter` or `dark`; omit for light
- * @param {string} [declared.fallbackHue] - used when neither of the above is set
+ * @param {string} [declared.fallbackHue] - the section hue; wins over the authored one
+ * @param {boolean} [declared.ownHue] - the authored hue wins over the section's
+ * @param {string} [declared.siteHue] - the site's pick for this page (pageHues map)
  * @param {string} page - what declared it, for the error
  * @returns {{ svg: string, color: string, field: string, motion: boolean } | null}
  */
-function resolveOsIllustration({ osIllustration, hue, field, fallbackHue } = {}, page) {
+function resolveOsIllustration({ osIllustration, hue, field, fallbackHue, ownHue, siteHue } = {}, page) {
   if (!osIllustration) return null;
   const art = getOsIllustration(osIllustration, page);
-  const color = hue || art.hue || fallbackHue;
+  // ownHue: the section lets its pages keep their own colour (pageHues: 'own')
+  const color = hue || siteHue || (ownHue ? art.hue || fallbackHue : fallbackHue || art.hue);
   if (!color) {
     throw new Error(`${page}: os-illustration "${osIllustration}" carries no authored hue, so it needs a hue`);
   }
@@ -1174,14 +1285,37 @@ function homeCardForSection(sectionFolder) {
   return (CONFIG.indexCards || []).find(card => card.href === `/${sectionFolder}/`) || null;
 }
 
+// How a section colours its pages (D30). Leave pageHues out and every page
+// takes the section's hue. 'own' lets each keep its drawing's. A map of
+// source name to hue ({ 'logo-tool-docs': 'peach' }) is 'own' with the site
+// choosing the colours: it lives in the site's config, not in the page, so a
+// guide that ships to another brand carries no By Default colour. A page's
+// own `hue:` wins in every mode.
+function checkPageHues(card) {
+  const value = card.pageHues;
+  if (value === undefined || value === 'own') return;
+  const where = `docs.config.js indexCards "${card.title}": pageHues`;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${where} must be 'own' or a map of page to hue`);
+  for (const [page, hue] of Object.entries(value)) {
+    if (!OS_ILLUSTRATION_HUES.includes(hue)) throw new Error(`${where}: "${page}" has hue "${hue}", not in the colour scope`);
+  }
+}
+for (const card of CONFIG.indexCards || []) checkPageHues(card);
+
+function sectionHueFor(card, page) {
+  if (!card) return { fallbackHue: '' };
+  const map = card.pageHues && typeof card.pageHues === 'object' ? card.pageHues : null;
+  return { fallbackHue: card.hue || '', ownHue: !!card.pageHues, siteHue: (map && page && map[page]) || '' };
+}
+
 // What a doc page's header draws. Figma's Covers page names every frame
 // after the page it covers, so a page takes the drawing with its own slug
 // when one exists, and a tool's docs page (`<tool>-docs`) shares the tool's.
 // Frontmatter overrides it: `os-illustration: <slug>` for another drawing,
 // `os-illustration: none` for no art, `hue:` and `field:` as on a home card.
-// With no hue declared or authored, the page's section hue colours it, so a
-// Figma colour that is not a code ramp step still renders in the section's
-// hue rather than failing the build.
+// With no hue declared, the page's section hue colours it, ahead of the
+// drawing's authored hue (D29): the site colour-codes its sections. The
+// authored hue is the last fallback, for a drawing outside any section.
 function pageOsIllustration(frontmatter, file) {
   const declared = frontmatter['os-illustration'];
   if (declared === 'none') return {};
@@ -1196,7 +1330,7 @@ function pageOsIllustration(frontmatter, file) {
     osIllustration: slug,
     hue: frontmatter.hue,
     field: frontmatter.field,
-    fallbackHue: card ? card.hue : '',
+    ...sectionHueFor(card, file.filename.replace(/\.md$/, '')),
   };
 }
 
@@ -1423,7 +1557,7 @@ function loadValidatedLibrary() {
 function renderAssetManifest() {
   const { catalog, lock } = loadValidatedLibrary();
   if (!catalog) console.warn('{{asset-manifest}}: no cms/asset-library/catalog.json — the Asset Library renders empty');
-  const manifest = assetLibrary.buildManifest(catalog, lock);
+  const manifest = assetLibrary.buildManifest(catalog, lock, libraryDownloadLevel());
   const json = assetLibrary.manifestJson(manifest);
   if (json.length > assetLibrary.MANIFEST_FAIL_BYTES) {
     console.error(`\n❌ Asset manifest is ${Math.round(json.length / 1024)} KB, over the ${assetLibrary.MANIFEST_FAIL_BYTES / 1024} KB inline budget (asset-library-plan.md §3) — move it to a fetched file.`);
@@ -1433,7 +1567,33 @@ function renderAssetManifest() {
     console.warn(`Asset manifest is ${Math.round(json.length / 1024)} KB — nearing the inline budget (asset-library-plan.md §3)`);
   }
   console.log(`Asset manifest: ${manifest.assets.length} assets, ${Math.round(json.length / 1024)} KB`);
-  return `<script type="application/json" id="asset-manifest">${json}</script>`;
+  return renderAssetManifestParts(manifest);
+}
+
+/**
+ * The manifest as one block holding no asset data, then one block per level
+ * with that level's assets and the kits whose lowest-level asset is there,
+ * each marked data-access-data with the level. Under accessNav 'hidden' or
+ * 'earned' the Worker removes, per reader, every block the download rule
+ * refuses them (worker/hidden-nav.mjs dataHandler, library-core mayDownload),
+ * so an admin asset's title, kit and file names never reach a team reader's
+ * browser. No global position travels: each block keeps the manifest's own
+ * order (newest first, then title, then id) and asset-library.js re-sorts the
+ * joined list by the same rule, so nothing counts what was cut. The
+ * orientation group lists every orientation; the page offers only those its
+ * assets carry.
+ */
+function renderAssetManifestParts(manifest) {
+  const { base, blocks } = assetLibrary.splitManifest(manifest);
+  const parts = blocks.map(({ level, block }) =>
+    `<script type="application/json" class="asset-manifest-part" data-access-data="${escapeAttr(level)}">${assetLibrary.manifestJson(block)}</script>`);
+  const baseHtml = `<script type="application/json" id="asset-manifest">${assetLibrary.manifestJson(base)}</script>`;
+  if (CONFIG.accessNav === 'locked') {
+    const pageLevel = (() => { const app = installedApp('asset-library'); return app ? normaliseLevel(app.frontmatter.access) : 'team'; })();
+    const above = manifest.assets.filter((a) => LEVEL_RANK[a.access || 'team'] > LEVEL_RANK[pageLevel]);
+    if (above.length) console.warn(`⚠️  Asset Library: ${above.length} asset(s) above the page's ${pageLevel} level, and accessNav 'locked' ships every block to every reader of the page. Use 'hidden' or 'earned' to cut them per reader.`);
+  }
+  return [baseHtml, ...parts].join('\n');
 }
 
 /**
@@ -1551,7 +1711,7 @@ function renderBookCover(opts) {
         </footer>`;
   // The lock is always in the markup and shown only on .is-locked, which
   // nav.js sets for a reader who cannot open the page (applyAccess).
-  return `<a href="${siteHref(opts.href)}" class="book-cover"${variantAttr}${surfaceAttr}${sizeAttr}${accessAttr}${MOTION.cover}>${media}
+  return `<a href="${siteHref(opts.href)}" class="book-cover"${variantAttr}${surfaceAttr}${sizeAttr}${accessAttr}${opts.attrs || ''}${MOTION.cover}>${media}
         <header class="book-cover-header"${hueAttrs}><div class="book-cover-trailing">${getIcon('open-full')}${lockIcon('book-cover-lock')}</div></header>
         <div class="book-cover-body">
           ${label}<h${level} class="book-cover-title"${flipAttr}>${opts.title}</h${level}>
@@ -1610,6 +1770,7 @@ function renderBookContentsItem(opts) {
  */
 function audienceTag(access) {
   if (access === 'public') return '<span class="tag">Public</span>';
+  if (access === 'community') return `<span class="tag">${escapeAttr(siteTokens().communityLabel || 'Community')}</span>`;
   if (access === 'admin') return '<span class="tag" data-color="warning">Admin</span>';
   if (access === 'owner') return '<span class="tag" data-color="warning">Owner</span>';
   return '';
@@ -3131,7 +3292,7 @@ function renderPage(template, {
   // The indexes are one file every team reader fetches, so a page above team
   // never enters them: its text would reach the team through search when the
   // page itself refuses them (security audit, 2026-11-08, finding 2).
-  const indexed = searchable && (access === 'public' || access === 'team');
+  const indexed = searchable && (access === 'public' || access === 'community' || access === 'team');
   const sectionLabel = indexed ? sectionLabelFromSlug(pageSection) : '';
   const searchMeta = sectionLabel
     ? `    <meta data-pagefind-filter="section[content]" data-pagefind-meta="section[content]" content="${escapeAttr(sectionLabel)}">\n`
@@ -3367,6 +3528,7 @@ function renderIndexHeader() {
 
 function generateIndexPage(template, filesBySection) {
   let cards = '';
+  filesBySectionForShelf = filesBySection;
 
   if (CONFIG.indexCards) {
     // Curated index (config: indexCards): one card per entry in a 2-column grid
@@ -3404,7 +3566,7 @@ function generateIndexPage(template, filesBySection) {
 
     for (const card of shelf) {
       cards += `
-        ${renderBookCover({ ...card, access: card.access || levelOf(card.href), osIllustration: illustrated ? card.osIllustration : '', headingLevel: 2 })}`;
+        ${renderBookCover({ ...card, access: card.access || levelOf(card.href), osIllustration: illustrated ? card.osIllustration : '', headingLevel: 2, attrs: shelfCardAccessAny(card.href) })}`;
     }
 
     cards += `
@@ -3496,7 +3658,7 @@ function generateIndexPage(template, filesBySection) {
  * page it will replace, and joins no navigation.
  */
 const DISCOVERY_ROW_KINDS = ['shelf', 'feature', 'note'];
-const DISCOVERY_CARD_MAX_WORDS = 14;
+const DISCOVERY_CARD_MAX_WORDS = 8;
 
 function discoveryNotes() {
   const file = path.join(DOCS_DIR, 'home', 'notes.json');
@@ -3555,7 +3717,7 @@ function discoveryCards(row, filesBySection, where) {
       const entry = GLOSSARY && GLOSSARY.bySlug.get(slug);
       if (!entry || !entry.published) throw new Error(`${where}: no published glossary entry "${slug}"`);
       const href = `/${GLOSSARY_FOLDER}/${slug}.html`;
-      return { href, title: escapeAttr(entry.title), subtitle: escapeAttr(entry.short), access: levelOf(href), osIllustration: hasOsIllustration(slug) ? slug : '', fallbackHue: row.hue || '' };
+      return { href, title: escapeAttr(entry.title), subtitle: escapeAttr(entry.card || entry.short), access: levelOf(href), osIllustration: hasOsIllustration(slug) ? slug : '', fallbackHue: row.hue || '' };
     });
   } else if (row.section) {
     if (!filesBySection[row.section]) throw new Error(`${where}: no section "${row.section}"`);
@@ -3580,35 +3742,16 @@ function discoveryCards(row, filesBySection, where) {
         if (isFeatured(file)) console.warn(`⚠️  ${where}: "${file.title}" is featured but has no drawing, so the row skips it`);
         continue;
       }
-      cards.push({ href: target.href, title: file.title, subtitle: file.frontmatter.subtitle, access: target.access, declaredHue: !!file.frontmatter.hue, ...art });
+      cards.push({ href: target.href, title: file.title, subtitle: file.frontmatter.card || file.frontmatter.subtitle, access: target.access, ...art });
     }
   } else {
     throw new Error(`${where}: a row needs section, glossary or cards`);
   }
   cards = cards.filter((card) => card.osIllustration).slice(0, row.count || 4);
-  // No two neighbours in one hue, or the row reads as one band (D18). A hue
-  // written down for the card (a page's `hue:`, a card's in config) is kept;
-  // one that came from the drawing or the section moves. Of a clashing pair
-  // the later card moves if it can, else the earlier one, to the next hue in
-  // the scope that neither of its neighbours has.
-  const fixed = cards.map((card) => !!(card.declaredHue || (row.cards && card.hue)));
-  const hues = cards.map((card) => resolveOsIllustration(card, where).color);
-  const moveHue = (i) => {
-    const avoid = [hues[i - 1], hues[i + 1]];
-    const start = OS_ILLUSTRATION_HUES.indexOf(hues[i]);
-    for (let step = 1; step < OS_ILLUSTRATION_HUES.length; step++) {
-      const candidate = OS_ILLUSTRATION_HUES[(start + step) % OS_ILLUSTRATION_HUES.length];
-      if (!avoid.includes(candidate)) return candidate;
-    }
-    return hues[i];
-  };
-  for (let i = 1; i < cards.length; i++) {
-    if (hues[i] !== hues[i - 1]) continue;
-    if (!fixed[i]) hues[i] = moveHue(i);
-    else if (!fixed[i - 1]) hues[i - 1] = moveHue(i - 1);
-    else console.warn(`⚠️  ${where}: "${cards[i - 1].title}" and "${cards[i].title}" are neighbours in the same hue (${hues[i]}), and both declare it`);
-  }
-  return cards.map((card, i) => ({ ...card, hue: hues[i] }));
+  // A row is one section, so it reads as one band in the section's hue
+  // (D29): the hue comes from resolveOsIllustration, never shifted to dodge a
+  // neighbour. Only a page's own `hue:` can set a card apart.
+  return cards.map((card) => ({ ...card, hue: resolveOsIllustration(card, where).color }));
 }
 
 function renderDiscoveryHeader(row) {
@@ -3628,17 +3771,10 @@ function renderDiscoveryRow(row, filesBySection, notes, index) {
   if (!DISCOVERY_ROW_KINDS.includes(row.kind)) throw new Error(`${where}: kind must be ${DISCOVERY_ROW_KINDS.join(', ')}`);
   if (row.kind === 'note') {
     const note = pickDiscoveryNote(notes, index);
-    return note ? renderNoteCard(note) : '';
+    return note ? { note } : '';
   }
   if (!row.label || !row.title) throw new Error(`${where}: a row needs a label and a title`);
   const cards = discoveryCards(row, filesBySection, where);
-  // Cards in a row sit level only if their copy is near the same length. A
-  // warning, not an error: the copy is each page's own subtitle, so a long one
-  // must not stop the whole build. The CSS clamp catches what slips through.
-  for (const card of cards) {
-    const words = String(card.subtitle || '').split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
-    if (words > DISCOVERY_CARD_MAX_WORDS) console.warn(`⚠️  ${where}: "${card.title}" description is ${words} words, the cap is ${DISCOVERY_CARD_MAX_WORDS}. Shorten its subtitle or short`);
-  }
   if (!cards.length) {
     console.warn(`⚠️  ${where}: no page with a drawing, so the row is left out`);
     return '';
@@ -3648,7 +3784,15 @@ function renderDiscoveryRow(row, filesBySection, notes, index) {
   // A feature is a lead, a pair and a quote. Short of any of them the layout
   // would leave a hole, so the row falls back to the plain shelf.
   const quote = notes.find((note) => note.kind === 'quote');
-  if (row.kind === 'feature' && cards.length >= 3 && quote) {
+  // Cards in a row sit level only if their copy is near the same length. A
+  // warning, not an error: the copy is each page's own subtitle, so a long one
+  // must not stop the whole build. The CSS clamp catches what slips through.
+  const isFeature = row.kind === 'feature' && cards.length >= 3 && quote;
+  for (const card of isFeature ? cards.slice(0, 3) : cards) {
+    const words = String(card.subtitle || '').split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+    if (words > DISCOVERY_CARD_MAX_WORDS) console.warn(`⚠️  ${where}: "${card.title}" description is ${words} words, the cap is ${DISCOVERY_CARD_MAX_WORDS}. ${row.cards ? 'Shorten its subtitle in docs.config.js' : 'Give it a card: line'}`);
+  }
+  if (isFeature) {
     shelf = `<div class="book-shelf" data-layout="feature"${MOTION.shelf}>
         ${cover(cards[0], { size: 'large' })}
         ${cards.slice(1, 3).map((card) => cover(card)).join('\n        ')}
@@ -3659,10 +3803,25 @@ function renderDiscoveryRow(row, filesBySection, notes, index) {
         ${cards.map((card) => cover(card)).join('\n        ')}
       </div>`;
   }
-  return `<section>
+  return { hues: cards.map((card) => card.hue), html: `<section>
       ${renderDiscoveryHeader(row)}
       ${shelf}
-    </section>`;
+    </section>` };
+}
+
+// A note between rows takes its written colour unless the row above or below
+// has that colour, where it would merge into the band (D29 made each row one
+// hue; a page's own `hue:` can still mix one). Then it takes the first hue in
+// scope that neither neighbour has. Two notes side by side are not checked
+// against each other; no config has that.
+function placeDiscoveryNotes(rows) {
+  return rows.map((row, i) => {
+    if (!row.note) return row.html;
+    const avoid = [rows[i - 1], rows[i + 1]].flatMap((r) => (r && r.hues) || []);
+    const note = row.note;
+    if (!note.color || !avoid.includes(note.color)) return renderNoteCard(note);
+    return renderNoteCard({ ...note, color: OS_ILLUSTRATION_HUES.find((hue) => !avoid.includes(hue)) || note.color });
+  });
 }
 
 function renderDiscoveryGreeting(greeting = {}) {
@@ -3686,7 +3845,7 @@ function renderDiscoveryGreeting(greeting = {}) {
 function generateDiscoveryPage(template, filesBySection) {
   const discovery = CONFIG.discovery;
   const notes = discoveryNotes();
-  const rows = (discovery.rows || []).map((row, i) => renderDiscoveryRow(row, filesBySection, notes, i)).filter(Boolean);
+  const rows = placeDiscoveryNotes((discovery.rows || []).map((row, i) => renderDiscoveryRow(row, filesBySection, notes, i)).filter(Boolean));
   const address = '/' + discovery.output;
   pageAccess.set(address, { level: 'team', section: '', type: 'shelf', title: 'Home' });
   return renderPage(template, {
@@ -3701,7 +3860,7 @@ function generateDiscoveryPage(template, filesBySection) {
     content: stampBodyLinks(`<div class="home-rows" data-pagefind-ignore>
     ${renderDiscoveryGreeting(discovery.greeting)}
     ${rows.join('\n    ')}
-    </div>`, address, 'team', { mark: CONFIG.accessNav === 'hidden' }),
+    </div>`, address, 'team', { mark: cutsNav }),
     // A preview beside the home page is not a second "Home" in search.
     searchable: discovery.output === 'index.html',
     access: deriveDataAccess(loadDefaults(DOCS_DIR)),
@@ -3835,6 +3994,10 @@ function generateSectionIndexPage(section, template, files, filesBySection) {
     }
     cards += `</div></div>`;
   }
+
+  // When the Worker cuts per reader, every card on this page may go for some
+  // reader (a community member on Docs); nav.js reveals this once none is left.
+  if (cutsNav) cards += `<p class="index-empty" hidden>Nothing in this section is open to your account yet.</p>`;
 
   const navBase = '../';
 
@@ -4158,8 +4321,8 @@ function buildPageHeaderHtml({ title, subtitle = '', eyebrow = '', actions = '',
 /**
  * A glossary term's drawing: the os-illustration named after its slug, when
  * one exists (the import names the glossary drawings by term). Coloured as a
- * page header is: the drawing's authored hue, else the Glossary home card's,
- * so a drawing with no authored hue still renders in the section's colour.
+ * page header is: the Glossary home card's hue, ahead of the drawing's
+ * authored one (D29), so every term renders in the section's colour.
  * Null when the term has none, which keeps its page and drawer as they were.
  * @param {string} slug - the entry's slug, cms/glossary/<slug>.md
  * @returns {{ svg: string, color: string, field: string, motion: boolean } | null}
@@ -4192,7 +4355,7 @@ function glossaryOsIllustration(slug) {
   if (claimedOsIllustrations().has(slug)) return null;
   const card = (CONFIG.indexCards || []).find(c => c.href === `/${GLOSSARY_FOLDER}.html`);
   return resolveOsIllustration(
-    { osIllustration: slug, fallbackHue: card ? card.hue : '' },
+    { osIllustration: slug, ...sectionHueFor(card) },
     `cms/${GLOSSARY_FOLDER}/${slug}.md`
   );
 }
@@ -4494,7 +4657,7 @@ In React, render this contract through the packaged adapter instead of writing t
 import { ${adapterName} } from '@bydefaultstudio/design-system/react';
 \`\`\`
 
-The adapter renders the contract above and bridges this component's events to props — see [React](/docs/react.html).`
+The adapter renders the contract above and bridges this component's events to props. Its guide is React, in Docs.`
     : '';
 
   return `
@@ -4881,9 +5044,9 @@ function generateBarePage(file, bareTemplate) {
   // nothing paints a lock from a link's level: the attribute would promise a
   // marking that never comes. Under 'hidden' the Worker reads it to cut the
   // link, so it stays. The links are checked either way.
-  const body = stampBodyLinks(signInBackground(expandHtmlBody(content, file), file, navBase), '/' + file.htmlPath, access, { mark: CONFIG.accessNav === 'hidden' });
+  const body = stampBodyLinks(signInBackground(expandHtmlBody(content, file), file, navBase), '/' + file.htmlPath, access, { mark: cutsNav });
   // Searchable as any page is: a door that is public or team-level, unless it opts out
-  const indexed = frontmatter.search !== 'false' && (access === 'public' || access === 'team');
+  const indexed = frontmatter.search !== 'false' && (access === 'public' || access === 'community' || access === 'team');
   const chrome = brandChromeSlots(ROOT_SPACE.manifest, navBase);
   const title = frontmatter.title || 'Untitled';
   // The description names the site the way the body does ({{brand:key}})
@@ -5092,7 +5255,7 @@ function generateNavJs(filesBySection) {
   // Build navigation HTML (no active page — active detection is done at runtime)
   // Under 'hidden' the list lives in each page (#site-nav-source), where the
   // Worker can cut it per reader; a list here would reach every reader.
-  const navSectionsHtml = CONFIG.accessNav === 'hidden' ? '' : buildNavSectionsHtml(filesBySection);
+  const navSectionsHtml = cutsNav ? '' : buildNavSectionsHtml(filesBySection);
 
   // Escape backticks and backslashes for embedding in a JS template literal
   const esc = (s) => s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$').replace(/'/g, "\\'");
@@ -5141,6 +5304,10 @@ function generateNavJs(filesBySection) {
 // page reads them here, so none names an address of its own. Set first, and
 // whether or not the page has the header mount: nav.js loads before them all.
 window.bdPaths = Object.freeze(${JSON.stringify(browserEnginePaths())});
+
+// What this deployment calls the community role (brand.json
+// access.communityLabel), for the scripts that name it (download-lock.js).
+window.bdCommunityLabel = ${JSON.stringify(siteTokens().communityLabel || 'Community')};
 
 // The site's own drawings of the icons the engine's scripts build at run time
 // (copy, toast, World Clock and the rest), from its icon set (iconsDir). A
@@ -5301,7 +5468,11 @@ window.bdIcons = Object.freeze(${JSON.stringify(runtimeIcons())});
   // mount, ships neither — no dialog to open and nothing to open it with.
   var searchDialogHtml = ${!CONFIG.search ? "''" : `(isBrandInstance || !hasSearch) ? '' : ('<dialog id="site-search" class="dialog search-dialog" aria-label="Search the system"'
     + ' data-symbols="${siteHref('/search-index/symbols.json')}"'
-    + ' data-pagefind="${siteHref('/pagefind/pagefind.js')}"'
+    + ' data-pagefind="${siteHref('/pagefind/pagefind.js')}"'${CONFIG.accessNav === 'earned' ? `
+    // The second index, public and community pages only, for a community
+    // reader (community-access-plan.md D11; tools/build-search.js).
+    + ' data-symbols-community="${siteHref('/search-index/community/symbols.json')}"'
+    + ' data-pagefind-community="${siteHref('/pagefind-community/pagefind.js')}"'` : ''}
     + ' data-search-page="${siteHref('/search.html')}">'
     // <search> carries an implicit role="search"; stating it again is noise.
     + '<search class="search-field">'
@@ -5388,7 +5559,7 @@ window.bdIcons = Object.freeze(${JSON.stringify(runtimeIcons())});
       // where labels show — the expanded sidebar and the mobile drawer. Every
       // locked item points at it with aria-describedby, which reads hidden
       // text too, so the reason reaches a screen reader on the rail as well.
-      + '<p class="sidebar-lock-note" id="sidebar-lock-note">Log in to access the rest of the system.</p>'`}
+      + '<p class="sidebar-lock-note" id="sidebar-lock-note">${CONFIG.accessNav === 'earned' ? 'Sign in to read the locked pages.' : 'Log in to access the rest of the system.'}</p>'`}
       + '<a href="${siteHref('/index.html')}" class="sidebar-nav-link sidebar-nav-home" data-access="team" aria-label="Home" data-tooltip="Home" data-tooltip-position="right"${MOTION.sidebarItem}>'
       + '<span class="svg-icn">' + ICON_HOME + '</span>'
       + '<span>Home</span>'
@@ -5405,13 +5576,13 @@ window.bdIcons = Object.freeze(${JSON.stringify(runtimeIcons())});
   // BEFORE the existing <main>, preserving it in place as a grid sibling.
   mount.insertAdjacentHTML('afterbegin', headerHtml + sidebarHtml + searchDialogHtml);
 
-${CONFIG.accessNav === 'hidden' ? `
-  // ── Hidden navigation (accessNav: 'hidden', levels-groups-plan.md D19) ──
+${cutsNav ? `
+  // ── Hidden navigation (accessNav: 'hidden' or 'earned', levels-groups-plan.md D19) ──
   // The sidebar list arrives in the page, already cut by the Worker to what
   // this reader may open (worker/hidden-nav.mjs). Its nodes move into the
   // sidebar here, and what the cut left empty goes: a list item with no
   // link, a subsection with none, a section with nothing but its Overview.
-  // Emitted only under 'hidden': under 'locked' nothing is ever cut.
+  // Emitted only when the Worker cuts: under 'locked' nothing is ever cut.
   var navSource = document.getElementById('site-nav-source');
   if (navSource) {
     var navContent = mount.querySelector('.site-sidebar-content');
@@ -5465,6 +5636,8 @@ ${CONFIG.accessNav === 'hidden' ? `
       var contents = groups[i].querySelector('.book-contents');
       if (contents && contents.children.length === 0) groups[i].remove();
     }
+    var empty = scope.querySelector('.index-empty');
+    if (empty && !scope.querySelector('.docs-section')) empty.hidden = false;
   }
   window.bdPruneEmptyCardSections = pruneEmptyCardSections;
 ` : `
@@ -5649,14 +5822,37 @@ ${CONFIG.accessNav === 'hidden' ? `
     // The signed-out words are the owner's (2026-10-01: no sign-in link, the
     // site is invite-only). A guest's note carries a real link, because every
     // locked row refuses the click - the note is where asking happens.
+${CONFIG.accessNav === 'earned' ? `    // accessNav 'earned' (community-access-plan.md D11): the only locks left
+    // are community pages, for a signed-out reader (who signs in to read
+    // them; SIGN_IN_TO_READ says "Sign up" once open sign-up ships) and a
+    // guest their groups do not reach. Everything else above a reader is
+    // already cut by the Worker, so nobody else has a lock to explain.
+    var SIGN_IN_TO_READ = 'Sign in to read';
+    var COMMUNITY_LABEL = ${JSON.stringify(siteTokens().communityLabel || 'Community')};
     var LOCK_NOTES = {
+      out: SIGN_IN_TO_READ + ' the locked pages.',
+      guest: 'Locked pages are for ' + COMMUNITY_LABEL + ' members. ',
+      community: '',
+      team: '',
+      admin: '',
+      owner: ''
+    };
+    var LOCK_TOOLTIPS = { out: SIGN_IN_TO_READ, guest: 'For ' + COMMUNITY_LABEL + ' members', community: '', team: '', admin: '', owner: '' };` : `    var LOCK_NOTES = {
       out: 'Log in to access the rest of the system.',
       guest: 'Locked pages are for the team. ',
+      community: 'Locked pages are for the team.',
       team: 'Locked pages are for admins.',
       admin: '',
       owner: ''
     };
-    var LOCK_TOOLTIPS = { out: 'Log in to access', guest: 'For the team', team: 'For admins', admin: 'For the owner', owner: '' };
+    var LOCK_TOOLTIPS = { out: 'Log in to access', guest: 'For the team', community: 'For the team', team: 'For admins', admin: 'For the owner', owner: '' };`}
+    // Under 'earned' a signed-out reader's community link is locked in look
+    // only: it is not aria-disabled, and a click goes on to the gate, which
+    // sends them to sign in. A disabled-looking link that still works would
+    // mislead a screen reader.
+    function signsIn(reader, level) {
+      return ${CONFIG.accessNav === 'earned' ? "reader.role === 'out' && level === 'community'" : 'false'};
+    }
     // The engine's Ask for access page, the same on every site (window.bdPaths, above)
     var SUPPORT_PATH = window.bdPaths.support;
     var lockNote = sidebarEl ? sidebarEl.querySelector('#' + LOCK_NOTE_ID) : null;
@@ -5675,13 +5871,13 @@ ${CONFIG.accessNav === 'hidden' ? `
       lockNote.appendChild(ask);
     }
 
-    // The reader, from the one session answer: 'out', 'guest', 'team' or
-    // 'admin' with the scopes a guest's groups grant. null until it lands.
+    // The reader, from the one session answer: 'out', 'guest', 'community',
+    // 'team', 'admin' or 'owner', with the scopes a guest's groups grant. null until it lands.
     function readerState() {
       var s = window.bdSession;
       if (!s) return null;
       if (!s.signedIn) return { role: 'out', scopes: [] };
-      var role = s.role === 'owner' || s.role === 'admin' || s.role === 'team' || s.role === 'guest' ? s.role : 'guest';
+      var role = s.role === 'owner' || s.role === 'admin' || s.role === 'team' || s.role === 'community' || s.role === 'guest' ? s.role : 'guest';
       return { role: role, scopes: Array.isArray(s.scopes) ? s.scopes : [] };
     }
 
@@ -5689,10 +5885,13 @@ ${CONFIG.accessNav === 'hidden' ? `
       try { return new URL(el.href, window.location.href).pathname; } catch (e) { return ''; }
     }
 
-    // The same rule as worker/gate.mjs isIndexPath: the home, or one
-    // folder's index, never deeper.
+    // The same rule as worker/gate.mjs isIndexPath: the home, or a real
+    // section's contents page, never deeper and never any other folder.
+    var SECTION_INDEX_FOLDERS = ${JSON.stringify([...new Set(Object.values(SECTION_FOLDERS || {}))].filter(Boolean).sort())};
     function isIndexPath(p) {
-      return p === '/' || p === '/index.html' || /^\\/[a-z0-9-]+\\/index\\.html$/.test(p);
+      if (p === '/' || p === '/index.html') return true;
+      var m = /^\\/([a-z0-9-]+)\\/index\\.html$/.exec(p);
+      return !!m && SECTION_INDEX_FOLDERS.indexOf(m[1]) !== -1;
     }
 
     function folderOf(p) {
@@ -5709,14 +5908,23 @@ ${CONFIG.accessNav === 'hidden' ? `
     function canOpen(reader, level, p) {
       // Under 'hidden' the Worker leaves a signed-out reader the public
       // pages only, so those stay open; under 'locked' everything locks.
-      if (reader.role === 'out') return ${CONFIG.accessNav === 'hidden' ? "level === 'public'" : 'false'};
+      if (reader.role === 'out') return ${cutsNav ? "level === 'public'" : 'false'};
       if (level === 'public') return true;
       if (reader.role === 'owner') return true;
       if (level === 'owner') return false;
       if (reader.role === 'admin') return true;
-      if (level === 'admin') return false;
+      // An internal group lifts a team member onto an admin page; an
+      // external one gives a guest community pages, never a team page
+      // (community-access-plan.md D8, D9; gate.mjs authorise()).
+      if (level === 'admin') return reader.role === 'team' && scoped(reader, p);
       if (reader.role === 'team') return true;
+      if (level === 'community' && reader.role === 'community') return true;
       if (isIndexPath(p)) return true;
+      return reader.role === 'guest' && level === 'community' && scoped(reader, p);
+    }
+
+    // Whether the reader's own groups grant this page (gate.mjs scopeAdmits).
+    function scoped(reader, p) {
       var folder = folderOf(p);
       for (var i = 0; i < reader.scopes.length; i++) {
         if (reader.scopes[i] === 'page:' + p) return true;
@@ -5734,9 +5942,19 @@ ${CONFIG.accessNav === 'hidden' ? `
       else if (el.getAttribute('aria-describedby') === LOCK_NOTE_ID) el.removeAttribute('aria-describedby');
     }
 
-    function lockItem(item, locked, reason) {
-      if (locked) item.setAttribute('aria-disabled', 'true');
+    // An admin page is hidden from everyone below admin (docs-site.css)
+    // unless an internal group opens it for this team member: .is-granted
+    // is the exception that keeps its link and card in view.
+    function markGranted(item, reader, level, locked) {
+      item.classList.toggle('is-granted', !!reader && level === 'admin' && !locked && reader.role === 'team');
+    }
+
+    // signIn: locked in look only (signsIn): a lock and a reason, but the
+    // link still goes, so the gate can send the reader to sign in.
+    function lockItem(item, locked, reason, signIn) {
+      if (locked && !signIn) item.setAttribute('aria-disabled', 'true');
       else item.removeAttribute('aria-disabled');
+      if (item.matches('a[href]')) item.classList.toggle('is-locked', !!(locked && signIn));
       // The section icon is a link inside its own section's <summary>: two
       // stops with one name, and locked neither does anything. The summary
       // stays the one stop.
@@ -5764,9 +5982,11 @@ ${CONFIG.accessNav === 'hidden' ? `
     function lockLinks(selector, reader, scope) {
       var links = (scope || document).querySelectorAll(selector);
       for (var i = 0; i < links.length; i++) {
-        var locked = !!reader && !canOpen(reader, links[i].getAttribute('data-access') || 'team', pathOf(links[i]));
+        var level = links[i].getAttribute('data-access') || 'team';
+        var locked = !!reader && !canOpen(reader, level, pathOf(links[i]));
         links[i].classList.toggle('is-locked', locked);
-        if (locked) links[i].setAttribute('aria-disabled', 'true');
+        markGranted(links[i], reader, level, locked);
+        if (locked && !signsIn(reader, level)) links[i].setAttribute('aria-disabled', 'true');
         else links[i].removeAttribute('aria-disabled');
         describeLock(links[i], locked);
       }
@@ -5788,7 +6008,10 @@ ${CONFIG.accessNav === 'hidden' ? `
       for (var li = 0; li < links.length; li++) {
         // The note's own link is the way to ask; it is never a locked row.
         if (lockNote && lockNote.contains(links[li])) continue;
-        lockItem(links[li], !canOpen(reader, links[li].getAttribute('data-access') || 'team', pathOf(links[li])), reason);
+        var linkLevel = links[li].getAttribute('data-access') || 'team';
+        var linkLocked = !canOpen(reader, linkLevel, pathOf(links[li]));
+        lockItem(links[li], linkLocked, reason, signsIn(reader, linkLevel));
+        markGranted(links[li], reader, linkLevel, linkLocked);
       }
       // A section or subsection is locked when nothing listed in it opens
       // for this reader; the Overview is listed, so a guest's sections stay
@@ -5803,7 +6026,10 @@ ${CONFIG.accessNav === 'hidden' ? `
         for (var ii = 0; ii < inner.length; ii++) {
           if (inner[ii].getAttribute('aria-disabled') !== 'true') anyOpen = true;
         }
-        var locked = out || !anyOpen;
+        // Under 'earned' whatever survived the Worker's cut is meant to be
+        // seen, a signed-out reader's community pages included: no section
+        // is ever locked shut.
+        var locked = ${CONFIG.accessNav === 'earned' ? 'false' : 'out || !anyOpen'};
         var toggle = groups[gi].querySelector(':scope > summary');
         if (toggle) lockItem(toggle, locked, reason);
         if (locked && groups[gi].open) {
@@ -6278,8 +6504,25 @@ ${CONFIG.accessNav === 'hidden' ? `
  * the Worker can drop the wrapper, label and all, when the reader may open
  * none of them (worker/hidden-nav.mjs). Empty under 'locked'.
  */
+/**
+ * A home shelf card points at a section index, which every signed-in reader
+ * opens. When the Worker cuts per reader, the card carries its section's own
+ * pages too, so it goes for a reader who may open none of them (a Docs card
+ * for a community member) rather than leading to an empty index.
+ */
+function shelfCardAccessAny(href) {
+  const folder = String(href || '').replace(/^\//, '').split('/')[0];
+  const section = Object.keys(SECTION_FOLDERS).find((label) => SECTION_FOLDERS[label] === folder);
+  if (!section || !filesBySectionForShelf || !filesBySectionForShelf[section]) return '';
+  const entries = filesBySectionForShelf[section]
+    .filter((file) => path.basename(file.htmlPath) !== 'index.html')
+    .map((file) => { const t = guideTarget(file, section); return { level: t.access, path: t.href }; });
+  return accessAnyAttr(entries);
+}
+let filesBySectionForShelf = null;
+
 function accessAnyAttr(entries) {
-  if (CONFIG.accessNav !== 'hidden' || entries.length === 0) return '';
+  if (!cutsNav || entries.length === 0) return '';
   return ` data-access-any="${escapeAttr(entries.map((e) => `${e.level}:${e.path}`).join(' '))}"`;
 }
 
@@ -6802,6 +7045,14 @@ function writePageAccess() {
  * ACCESS_NAV is docs.config.js accessNav: 'hidden' turns on the Worker's
  * per-reader cut of every page's links (worker/hidden-nav.mjs).
  *
+ * PROTECTED_SECTIONS is docs.config.js protectedSections: section folder →
+ * the lowest level Settings › Page levels may give it or its pages
+ * (levels-core.mjs sectionFloor). Settings itself is never settable.
+ *
+ * COMMUNITY_LABEL is brand.json access.communityLabel: what this deployment
+ * calls the community role, for the invite email. The stored value is always
+ * "community".
+ *
  * APPS is the installed apps and the brand's primary logo: createGate mounts
  * the Image Placeholder's and the Asset Library's routes from it.
  *
@@ -6824,9 +7075,12 @@ function writePageAccess() {
   const lines = entries.map(([p, e]) => `  [${JSON.stringify(p)}, { level: ${JSON.stringify(e.level)}${codeField(p, e)}, section: ${JSON.stringify(e.section)}, type: ${JSON.stringify(e.type)}, title: ${JSON.stringify(e.title)} }],`);
   const sources = [...sourcePages.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   const body = `export const ACCESS_NAV = ${JSON.stringify(CONFIG.accessNav)};\n\n`
+    + `export const COMMUNITY_LABEL = ${JSON.stringify(siteTokens().communityLabel || 'Community')};\n\n`
+    + `export const PROTECTED_SECTIONS = ${JSON.stringify(CONFIG.protectedSections)};\n\n`
     + `export const SECTIONS = Object.freeze(${JSON.stringify(sections)});\n\n`
     + `export const PAGE_ACCESS = new Map([\n${lines.join('\n')}\n]);\n\n`
     + `export const SOURCE_PAGES = new Map([\n${sources.map(([s, p]) => `  [${JSON.stringify(s)}, ${JSON.stringify(p)}],`).join('\n')}\n]);\n\n`
+    + `export const WITHHELD_SOURCES = ${JSON.stringify([...withheldSources].sort())};\n\n`
     + `export const APPS = Object.freeze(${JSON.stringify(installedAppsForWorker())});\n\n`
     + `export const NOT_INSTALLED = new Map([${[...notInstalledAddresses()].map(([a, n]) => `\n  [${JSON.stringify(a)}, ${JSON.stringify(n)}],`).join('')}\n]);\n\n`
     + `export const APPLIED_LEVELS = Object.freeze(${JSON.stringify(appliedLevelsForWorker(sections))});\n\n`
@@ -7252,7 +7506,7 @@ function unlinkMissingPages(allFiles) {
   if (!unlinked.length) return;
   // A link that is gone points nowhere, so it can't point above its page
   for (let i = bodyLinkViolations.length - 1; i >= 0; i--) {
-    if (unlinked.some((u) => bodyLinkViolations[i].startsWith(`  ${u.pagePath} (`) && bodyLinkViolations[i].includes(` links to ${u.target} (`))) bodyLinkViolations.splice(i, 1);
+    if (unlinked.some((u) => bodyLinkViolations[i].text.startsWith(`  ${u.pagePath} (`) && bodyLinkViolations[i].text.includes(` links to ${u.target} (`))) bodyLinkViolations.splice(i, 1);
   }
   console.log(`🔗 ${unlinked.length} link(s) in the package's guides point at a page this site doesn't have, and read as text:\n${unlinked.map((u) => `   ${u.pagePath.slice(1)} → ${u.target}`).join('\n')}`);
 }
@@ -7318,18 +7572,26 @@ function writeSiteMapData(allFiles, cmsDefaults) {
  * a path not in it is a 404 whatever the bucket holds. Written even when
  * there is no catalog, as an empty Map, so the import never dangles.
  */
+/**
+ * The level the library's downloads need when a catalog entry sets none, as
+ * the tool page's container says it (downloadAccess, else the page's access).
+ * The Worker checks every file at its own level or this one, so the lock in
+ * download-lock.js is never only a button.
+ */
+function libraryDownloadLevel() {
+  const libraryApp = installedApp('asset-library');
+  const app = libraryApp ? libraryApp.frontmatter : {};
+  return app.downloadAccess ? normaliseLevel(app.downloadAccess) : deriveDataAccess(app);
+}
+
 function writeLibraryIndex() {
   const workerDir = path.join(ROOT, 'worker');
   if (!fs.existsSync(workerDir)) return;
   const { catalog, lock } = loadValidatedLibrary();
-  const entries = assetLibrary.buildIndex(catalog, lock);
-  // The level the library's downloads need, as the tool page's container
-  // says it (downloadAccess, else the page's access): the Worker checks it on
-  // every original, so the lock in download-lock.js is never only a button.
-  const libraryApp = installedApp('asset-library');
-  const app = libraryApp ? libraryApp.frontmatter : {};
-  const level = app.downloadAccess ? normaliseLevel(app.downloadAccess) : deriveDataAccess(app);
-  fs.writeFileSync(path.join(workerDir, 'library-index.mjs'), assetLibrary.renderLibraryIndex(entries, level));
+  const level = libraryDownloadLevel();
+  const entries = assetLibrary.buildIndex(catalog, lock, level);
+  const thumbs = assetLibrary.buildThumbLevels(catalog, lock, level);
+  fs.writeFileSync(path.join(workerDir, 'library-index.mjs'), assetLibrary.renderLibraryIndex(entries, level, thumbs));
   console.log(`📄 Generated: worker/library-index.mjs (${entries.length} downloadable file${entries.length === 1 ? '' : 's'})`);
 }
 
@@ -7488,8 +7750,19 @@ function generateSourceDirPages(template, {
     // files (a public Icon Library whose SVGs are the team's). Defaults to
     // the page's own level, so a tool that says nothing changes nothing.
     // download-lock.js reads it off the container as data-download-access.
-    if (!isValidAccess(frontmatter.downloadAccess)) {
+    // No download is an owner's: the Worker's mayDownload and the lock's
+    // dialog have nothing to say to an admin below one.
+    if (!isValidAccess(frontmatter.downloadAccess) || String(frontmatter.downloadAccess || '').trim().toLowerCase() === 'owner') {
       closeErrors.push(`  ${dirName}/${slug}.md - invalid downloadAccess "${frontmatter.downloadAccess}" (must be one of: ${ACCESS_LEVELS.join(', ')}, or absent, which is the page's access)`);
+      continue;
+    }
+    // A level per asset, over downloadAccess (community-access-plan.md D14):
+    // "primary-left: community, mark: admin". download-lock.js reads it off
+    // the container as data-asset-access and matches the asset a control
+    // names (data-download-asset). A bad entry fails the build.
+    const assetProblem = assetAccessProblem(frontmatter.assetAccess, toolAssetIds(slug));
+    if (assetProblem) {
+      closeErrors.push(`  ${dirName}/${slug}.md - invalid assetAccess: ${assetProblem}`);
       continue;
     }
 
@@ -7646,7 +7919,7 @@ function generateSourceDirPages(template, {
       // email-signature.js already scopes every one of its queries to
       // [data-tool="email-signature"] and returns early without it, so the
       // tool goes silently dead if this is missing.
-      containerExtra: toolHook ? ` data-tool="${escapeAttr(slug)}" data-download-access="${downloadAccess}"` : '',
+      containerExtra: toolHook ? ` data-tool="${escapeAttr(slug)}" data-tool-name="${escapeAttr(frontmatter.title || slug)}" data-download-access="${downloadAccess}"${assetAccessAttr(frontmatter.assetAccess)}` : '',
     });
 
     const dir = path.join(OUTPUT_DIR, folder);
@@ -8196,7 +8469,9 @@ function applyTemplateChrome(rawTemplate) {
     .replace('{{DOCS_CSS}}', () => `<link rel="stylesheet" href="${docsCssHref}">`)
     .replace('{{EXTRA_STYLESHEETS}}', () => styleLinks)
     .replace('{{EXTRA_HEAD}}', () => CONFIG.extraHeadHtml.trimEnd())
-    .replace('{{BODY_ATTRS}}', () => CONFIG.bodyAttrs)
+    // Under 'earned' a community reader has a search index of their own, and
+    // the CSS that hides their search trigger reads this to stand down.
+    .replace('{{BODY_ATTRS}}', () => CONFIG.bodyAttrs + (CONFIG.accessNav === 'earned' && CONFIG.search ? ' data-community-search' : ''))
     .replace('{{EXTRA_BODY_START}}', () => CONFIG.extraBodyStartHtml.trimEnd())
     .replace('{{WRAPPER_ATTRS}}', () => wrapperAttrs)
     // {{CONTAINER_EXTRA}} rides along after the configured container attrs so
@@ -8332,8 +8607,8 @@ async function generateDocs() {
     const parsed = parseFrontmatter(content);
     // Merge folder defaults — page frontmatter wins
     const frontmatter = { ...cmsDefaults, ...parsed.frontmatter };
-    // A guide's title, subtitle and description can name the site too
-    for (const key of ['title', 'subtitle', 'description']) {
+    // A guide's title, subtitle, description and home card line can name the site too
+    for (const key of ['title', 'subtitle', 'description', 'card']) {
       if (typeof frontmatter[key] === 'string' && frontmatter.status !== 'draft') frontmatter[key] = expandBrandTokens(frontmatter[key], `cms/${filename} (${key})`);
     }
     const markdownContent = parsed.content;
@@ -8534,11 +8809,22 @@ async function generateDocs() {
     const own = app.access !== undefined && app.access !== null && app.access !== '' ? app.access : sectionLevel(appFolder);
     linkLevels.set(`/${appFolder}/${slug}.html`, effectiveBuildLevel(`/${appFolder}/${slug}.html`, own));
   }
+  // Glossary entry pages are written after the Glossary page that links to
+  // every one of them, at its level (generateGlossaryPages), so seed them here.
+  if (GLOSSARY) {
+    const glossaryPage = allFiles.find(f => f.htmlPath === 'glossary.html');
+    // The Glossary's applied level, so a Page levels setting on it carries.
+    const entryLevel = effectiveBuildLevel('/glossary.html', normaliseLevel(glossaryPage ? glossaryPage.ownAccess : undefined));
+    for (const entry of GLOSSARY.published) {
+      const entryPath = `/${GLOSSARY_FOLDER}/${entry.slug}.html`;
+      linkLevels.set(entryPath, effectiveBuildLevel(entryPath, entryLevel));
+    }
+  }
 
   console.log(`📂 Found sections: ${Object.keys(filesBySection).join(', ')}`);
   // Under accessNav 'hidden' every page carries the sidebar list itself, for
   // the Worker to cut per reader; nav.js then holds none of it.
-  if (CONFIG.accessNav === 'hidden') navSourceHtml = buildNavSectionsHtml(filesBySection);
+  if (cutsNav) navSourceHtml = buildNavSectionsHtml(filesBySection);
 
   // Fail the build if any file is missing a valid layer (see CLAUDE.md §17)
   if (layerErrors.length > 0) {
@@ -8737,7 +9023,7 @@ async function generateDocs() {
   // is one field in cms/glossary.md rather than one per entry.
   if (!isSingleFile && GLOSSARY) {
     const index = allFiles.find(f => f.htmlPath === 'glossary.html');
-    generateGlossaryPages(template, GLOSSARY, normaliseLevel(index ? index.ownAccess : undefined));
+    generateGlossaryPages(template, GLOSSARY, effectiveBuildLevel('/glossary.html', normaliseLevel(index ? index.ownAccess : undefined)));
   }
 
   // The site-map data behind experiments/site-map.html — every page with its
@@ -8785,13 +9071,35 @@ async function generateDocs() {
   // Body links that point above their page's level (stampBodyLinks). Under
   // 'hidden' the build fails: the Worker would cut the link, but a page that
   // names a higher page in its prose is a page written for the wrong reader.
+  // Under 'earned' only a link to a team, admin or owner page fails: those
+  // are hidden from some reader of the page, while a community page shows
+  // them locked, and the gate sends them to sign in or to Ask for access.
   // Under 'locked' every reader sees every title already, so it is a note.
   if (!isSingleFile && bodyLinkViolations.length) {
-    if (CONFIG.accessNav === 'hidden') {
-      console.error(`\n❌ ${bodyLinkViolations.length} body link(s) point at a page above the linking page's level. Under accessNav 'hidden' the reader would see a sentence about a page they cannot open. Reword or move the link:\n${bodyLinkViolations.join('\n')}\n`);
+    const fatal = (CONFIG.accessNav === 'hidden' ? bodyLinkViolations
+      : CONFIG.accessNav === 'earned' ? bodyLinkViolations.filter((v) => LEVEL_RANK[v.level] >= LEVEL_RANK.team)
+      : []).filter((v) => !v.fromSetting);
+    const bySetting = bodyLinkViolations.filter((v) => v.fromSetting);
+    if (CONFIG.accessNav !== 'locked' && bySetting.length) {
+      console.warn(`⚠️  ${bySetting.length} body link(s) point at a page a Page levels setting raised. The Worker cuts each for a reader who cannot open it; reword them when convenient:\n${bySetting.map((v) => v.text).join('\n')}`);
+      // The HTML link is cut per reader, but the published markdown source
+      // would still carry it as [Title](/path) for every reader of the page.
+      // So the source is withheld: not published (tools/build-site.js reads
+      // WITHHELD_SOURCES) and off the source map, which leaves the gate
+      // judging any stray copy as unmapped, admin only.
+      const pagesWithLinks = new Set(bySetting.map((v) => v.pagePath));
+      for (const [source, page] of [...sourcePages]) {
+        if (!pagesWithLinks.has(page)) continue;
+        sourcePages.delete(source);
+        withheldSources.add(source);
+      }
+      console.warn(`⚠️  ${withheldSources.size} markdown source(s) withheld from publishing for those links: ${[...withheldSources].join(', ')}`);
+    }
+    if (fatal.length) {
+      console.error(`\n❌ ${fatal.length} body link(s) point at a page hidden from some of the linking page's readers (accessNav '${CONFIG.accessNav}'). They would see a sentence about a page they cannot open. Reword or move the link:\n${fatal.map((v) => v.text).join('\n')}\n`);
       process.exit(1);
     }
-    console.log(`🔗 ${bodyLinkViolations.length} body link(s) point above their page's level (stamped; a note under accessNav 'locked', a build error under 'hidden')`);
+    console.log(`🔗 ${bodyLinkViolations.length} body link(s) point above their page's level (stamped; a note under accessNav '${CONFIG.accessNav}')`);
   }
 
   if (!isSingleFile && CONFIG.accessGate) writePageAccess();
@@ -8834,4 +9142,9 @@ module.exports = {
   suffixSvgIds,
   // For scripts/verify-kit-ui-scripts.js
   kitUiScriptNames,
+  // For scripts/verify-download-lock.js
+  parseAssetAccess,
+  assetAccessProblem,
+  assetAccessAttr,
+  toolAssetIds,
 };

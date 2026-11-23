@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * levels.js - the D1 reads behind Settings > People > Page levels
  * (levels-groups-plan.md D27).

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.5.0 */
+/* @bydefaultstudio/design-system v8.6.0 */
 /**
  * email-template.mjs — the sign-in code email (access-plan.md §4.4).
  *
@@ -193,6 +193,7 @@ function expiryLine(expiresAt) {
 function opensLine(role, opens) {
   if (role === 'owner') return 'You can open everything, and manage who signs in, admins included.';
   if (role === 'admin') return 'You can open every page but the owner pages, and manage who signs in.';
+  if (role === 'community') return `You can open the public pages and every ${SITE.communityLabel} page.`;
   if (role === 'guest') {
     return opens && opens.length ? `You can open ${opens.join(', ')}.` : 'You can open the pages your groups grant.';
   }

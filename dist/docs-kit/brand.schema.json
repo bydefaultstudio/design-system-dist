@@ -161,7 +161,15 @@
       "additionalProperties": false,
       "properties": {
         "requestRoute": { "anyOf": [{ "type": "string", "maxLength": 200, "pattern": "^/[^/\\\\?#\\s\\u0000-\\u001f\\u007f][^\\\\?#\\s\\u0000-\\u001f\\u007f]*$" }, { "type": "null" }], "deprecated": true, "description": "No longer read: Ask for access is the engine's /support.html on every site (phase D). Delete it." },
-        "turnstileSiteKey": { "anyOf": [{ "type": "string", "pattern": "^[0-9A-Za-z_-]{10,100}$" }, { "type": "null" }], "description": "The spam check's site key on the Ask for access page, given with the form service's address. Public. Left out, a signed-out reader's request is refused by the spam check." }
+        "turnstileSiteKey": { "anyOf": [{ "type": "string", "pattern": "^[0-9A-Za-z_-]{10,100}$" }, { "type": "null" }], "description": "The spam check's site key on the Ask for access page, given with the form service's address. Public. Left out, a signed-out reader's request is refused by the spam check." },
+        "communityLabel": { "type": "string", "minLength": 1, "maxLength": 40, "description": "What this deployment calls the community role and level: on the People page, the locked page, index tags, Settings levels and the invite email. The stored value stays community. Left out, Community." }
+      }
+    },
+    "adPreview": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "frameOrigin": { "type": "string", "pattern": "^https://[a-z0-9.-]+$", "description": "Where Ad Preview runs a pasted tag: the address of the frame Worker (wrangler.ad-frame.jsonc), on another site. Left out, the tag runs on this site in a sealed sandbox, which can't run tags that write into frames of their own. The build refuses an address on this site." }
       }
     },
     "emailSignature": {

@@ -38,7 +38,7 @@ const DATA_FILE = path.join('experiments', 'site-map-data.js');
 const PLANNED_FILE = path.join(__dirname, 'ia-planned.json');
 
 /** Levels a page can declare (permissions-plan.md §3.1). Anything else is team. */
-const LEVELS = ['public', 'team', 'admin'];
+const LEVELS = ['public', 'community', 'team', 'admin', 'owner'];
 const DEFAULT_LEVEL = 'team';
 
 /** Pinned so two machines with different process locales sort ties alike. */

@@ -8,7 +8,7 @@ layer: "app"
 subsection: ""
 order: 8
 status: "published"
-access: "team"
+access: "community"
 brand: "internal"
 actionUrl: "./svg-cleaner.html"
 actionLabel: "Open Tool"

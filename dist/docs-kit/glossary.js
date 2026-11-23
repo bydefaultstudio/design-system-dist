@@ -17,6 +17,7 @@
  *   title    the term, real capitalisation          required
  *   short    one sentence, no trailing full stop    required
  *   tags     subtag slugs from _tags.json           required, at least one
+ *   card     a shorter line for a home card, ~40ch  optional
  *   related  slugs of other entries                 optional
  *   source   one authoritative https link           optional
  *   aliases  former slugs, for redirects            optional
@@ -83,6 +84,7 @@ function loadGlossary(docsDir, parseFrontmatter) {
     }
     if (!frontmatter.short) errors.push(`${where} - missing short`);
     if (frontmatter.short && /\.$/.test(frontmatter.short)) errors.push(`${where} - short ends with a full stop`);
+    if (frontmatter.card && /\.$/.test(frontmatter.card)) errors.push(`${where} - card ends with a full stop`);
     if (!content.trim()) errors.push(`${where} - no body`);
 
     const entryTags = list(frontmatter.tags);
@@ -99,6 +101,7 @@ function loadGlossary(docsDir, parseFrontmatter) {
       slug,
       title: frontmatter.title || slug,
       short: frontmatter.short || '',
+      card: frontmatter.card || '',
       tags: entryTags,
       categories: [...entryCategories],
       related: list(frontmatter.related),
