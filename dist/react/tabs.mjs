@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v8.6.0 */
+/* @bydefaultstudio/design-system v8.6.1 */
 /**
  * <Tabs> — React adapter over the Tabs markup contract (cms/tabs.md).
  *

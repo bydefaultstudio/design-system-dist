@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.0 */
+/* @bydefaultstudio/design-system v8.6.1 */
 /**
  * gate-entry.mjs - createGate(), the access gate as one factory
  * (levels-groups-plan.md Phase 3, D21). Shipped as
@@ -156,20 +156,17 @@ async function hiddenNav(request, env, url, response, gated, reader, sessionCook
 
 /**
  * The search indexes (C1) are gated like every page, and always private, so
- * no shared cache ever holds a gated page's text. Pagefind's chunks carry a
- * content hash in their names, so a reader keeps them for an hour rather
- * than downloading the index on every hard load; every other index file
- * (pagefind.js, its worker and wasm, symbols.json) changes under the same
- * name on a deploy, so it is revalidated each time, which costs a 304. No
- * Vary: Cookie: the session cookie is re-issued every few minutes, which
- * would empty the cache, and sign-out clears it (Clear-Site-Data).
+ * no shared cache ever holds a gated page's text. Every index file is
+ * revalidated on each use, which costs a 304: the gate judges every read, and
+ * since sign-out clears no cache (worker/auth.js), a gated page's text never
+ * stays readable from the cache after it. No Vary: Cookie: the session cookie
+ * is re-issued every few minutes, which would empty the cache.
  */
 const SEARCH_INDEX_PREFIXES = ['/pagefind/', '/pagefind-community/', '/search-index/'];
-const HASHED_INDEX = /^\/pagefind(?:-community)?\/(?:fragment|index|filter)\//;
 function searchIndexCache(response, pathname) {
   if ((response.status !== 200 && response.status !== 304) || !SEARCH_INDEX_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return response;
   const out = new Response(response.body, response); // the asset layer's headers can be immutable
-  out.headers.set('Cache-Control', HASHED_INDEX.test(pathname) ? 'private, max-age=3600' : 'private, no-cache');
+  out.headers.set('Cache-Control', 'private, no-cache');
   out.headers.delete('Vary');
   return out;
 }

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.0 */
+/* @bydefaultstudio/design-system v8.6.1 */
 /**
  * auth-schema.mjs - the access vocabulary, and the one field this site adds
  * to Better Auth's own tables.

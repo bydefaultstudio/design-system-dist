@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.0 */
+/* @bydefaultstudio/design-system v8.6.1 */
 /**
  * ad-frame.js — the sandbox Ad Preview runs a pasted ad tag in, /ad-frame.
  *

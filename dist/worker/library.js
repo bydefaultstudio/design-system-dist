@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.0 */
+/* @bydefaultstudio/design-system v8.6.1 */
 /**
  * library.js — the Asset Library's files, streamed from R2 at /files/
  * (asset-library-plan.md §4.5).
@@ -10,7 +10,7 @@
  * answer below is private. Two kinds of path, decided by library-core.mjs:
  *
  *   thumbnails  /files/_t/<sha>…   straight to the bucket by content hash,
- *                                   cached privately for a year
+ *                                   private, revalidated on every view (304)
  *   originals   /files/<id>/<name>  through LIBRARY_INDEX — a generated map
  *                                   of what the catalog offers. A path not in
  *                                   it is a 404 whatever the bucket holds, so
@@ -81,8 +81,16 @@ async function serve(request, env, url, target, setCookies, LIBRARY_INDEX) {
   const { method } = request;
 
   if (target.kind === 'thumb') {
-    const object = method === 'HEAD' ? await env.LIBRARY.head(target.key) : await env.LIBRARY.get(target.key);
+    const object = method === 'HEAD' ? await env.LIBRARY.head(target.key) : await env.LIBRARY.get(target.key, { onlyIf: request.headers });
     if (!object) return plain(404, 'Not found', setCookies);
+    // no-cache thumbnails come back with If-None-Match on every view: R2
+    // returns no body when it matches, and that is a 304, not a re-send
+    if (method !== 'HEAD' && !object.body) {
+      const headers = thumbHeaders({ contentType: target.contentType, etag: object.httpEtag, setCookies });
+      const notModified = !request.headers.has('If-Match')
+        && (request.headers.has('If-None-Match') || request.headers.has('If-Modified-Since'));
+      return new Response(null, { status: notModified ? 304 : 412, headers });
+    }
     const headers = thumbHeaders({ contentType: target.contentType, size: object.size, etag: object.httpEtag, setCookies });
     return new Response(method === 'HEAD' ? null : object.body, { status: 200, headers });
   }

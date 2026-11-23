@@ -493,15 +493,18 @@ function indexLevel(folder) {
   const level = sectionLevel(folder);
   // A public section's index is public, so a signed-out reader's breadcrumb
   // and "Back to" land on it rather than the sign-in (community-access-plan.md
-  // step 6); the Worker cuts any card above the reader. Otherwise never below
-  // team, as it always was.
-  let base = level === 'public' ? 'public' : (level && LEVEL_RANK[level] > LEVEL_RANK.team ? level : 'team');
-  // D27: a page override on the index, or a section floor, raises it; still
-  // never below team (validateLevelSet enforces the same).
+  // step 6), and a community section's is community, so its files (which
+  // take the index's level, gate.mjs fileEntry) open to a community member as
+  // its pages do. The Worker and the community search build cut any card
+  // above the reader. Any other section's index is never below team.
+  const open = level === 'public' || level === 'community';
+  const base = open ? level : (level && LEVEL_RANK[level] > LEVEL_RANK.team ? level : 'team');
+  // D27: a page override on the index, or a section floor, raises it. Below
+  // team only for an open section, and never below the section's own level.
   const over = overlayLevel(`/${folder}/index.html`, base);
   const eff = over === undefined ? base : over;
-  if (eff === 'public' && base === 'public') return 'public';
-  return LEVEL_RANK[eff] < LEVEL_RANK.team ? 'team' : eff;
+  if (LEVEL_RANK[eff] >= LEVEL_RANK.team) return eff;
+  return open && LEVEL_RANK[eff] >= LEVEL_RANK[base] ? eff : 'team';
 }
 
 // Pages whose level came from a section default, listed at the end of a full

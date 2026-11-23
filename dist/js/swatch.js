@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.0 */
+/* @bydefaultstudio/design-system v8.6.1 */
 /**
  * Swatch component
  * Reads each swatch's live fill and writes what depends on it: the hex in

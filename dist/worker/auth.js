@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.0 */
+/* @bydefaultstudio/design-system v8.6.1 */
 /**
  * auth.js — Better Auth in the Worker: the sign-in endpoints (access-plan.md §4).
  *
@@ -211,8 +211,7 @@ export async function handleAuth(request, env, ctx) {
   // every anonymous visit wrote a row (security audit 2026-11-09, needs-
   // validation 10). The page gate makes the same check first (session.js).
   // Sign-out with no cookie has nothing to end: the library's 400 becomes
-  // the success the page expects, with no Clear-Site-Data, since nothing
-  // gated was fetched under this cookie-less visit.
+  // the success the page expects.
   if (!hasSessionCookie(request.headers.get('cookie'))) {
     if ((request.method === 'GET' || request.method === 'HEAD') && url.pathname === SESSION_PATH) return json(null, 200);
     if (request.method === 'POST' && url.pathname === SIGN_OUT_PATH) return json({ success: true }, 200);
@@ -292,16 +291,12 @@ export async function handleAuth(request, env, ctx) {
     return json(REJECTED_CODE, 400);
   }
 
-  // Signing out also empties what the browser cached behind the gate. The
-  // Asset Library serves its thumbnails `private, max-age=31536000, immutable`
-  // (asset-library-plan.md §3) — the one exception to the gate's no-store —
-  // so on a shared machine the next person must not find them in the cache.
-  // Clear-Site-Data takes the public /assets/ cache with it; accepted.
-  if (url.pathname === SIGN_OUT_PATH && response.ok) {
-    const cleared = new Response(response.body, response);
-    cleared.headers.set('Clear-Site-Data', '"cache"');
-    return cleared;
-  }
+  // Sign-out sends no Clear-Site-Data. Chromium holds the response until the
+  // whole cache is cleared, which on a real profile took about a minute, with
+  // the menu stuck on "Signing out…". Nothing gated is kept usable in the
+  // cache instead: pages are no-store, and Asset Library thumbnails and the
+  // search index are private, no-cache, so every use goes back through the
+  // gate. The public /assets/ cache now survives a sign-out too.
 
   // A successful sign-in answers with the user and without the session
   // token: the cookie carries it, and a token in a body any script can read
@@ -341,8 +336,8 @@ export async function handleAuth(request, env, ctx) {
  * reads as though it worked. A visitor with no session cookie, and a HEAD,
  * are sent to the login page with nothing changed. The sign-out itself is the
  * account menu's, Better Auth's POST /sign-out made here on the reader's
- * behalf through handleAuth, so its cookies are cleared and the cache emptied
- * (Clear-Site-Data) exactly as the menu's are. If that fails the reader is
+ * behalf through handleAuth, so its cookies are cleared exactly as the
+ * menu's are. If that fails the reader is
  * told so, never sent on as if signed out: on a shared machine the difference
  * matters.
  */
@@ -356,8 +351,6 @@ export async function handleSignOutLink(request, env, ctx) {
     const headers = new Headers({ Location: new URL(SITE.loginPath, url.origin).toString(), 'Cache-Control': 'private, no-store' });
     if (signedOut) {
       for (const cookie of signedOut.headers.getSetCookie()) headers.append('Set-Cookie', cookie);
-      const cleared = signedOut.headers.get('Clear-Site-Data');
-      if (cleared) headers.set('Clear-Site-Data', cleared);
     }
     return new Response(null, { status: 303, headers });
   };

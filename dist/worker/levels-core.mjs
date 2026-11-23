@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.0 */
+/* @bydefaultstudio/design-system v8.6.1 */
 /**
  * levels-core.mjs - the pure half of level settings (levels-groups-plan.md D27).
  *
@@ -125,9 +125,10 @@ export function isSettableSection(folder, sections) {
 }
 
 /**
- * The lowest a target may be set to. A section index never drops below team
- * (the existing indexLevel rule): its cards list the section's team and admin
- * pages. Everything else may go to public.
+ * The lowest a target may be set to. A page row never takes a section index
+ * below team: its cards list the section's team and admin pages. A public or
+ * community section's index takes its section's level from the build
+ * (indexLevel), not from a row. Everything else may go to public.
  */
 export function floorFor(kind, target) {
   // A section floor only ever raises its pages, so any floor is safe; the

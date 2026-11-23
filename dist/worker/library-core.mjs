@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.0 */
+/* @bydefaultstudio/design-system v8.6.1 */
 /**
  * library-core.mjs — the pure half of the Asset Library route: path parsing,
  * Range arithmetic and the download headers. No Workers APIs and no I/O, so
@@ -12,7 +12,7 @@
  */
 
 export const FILES_PREFIX = '/files/';
-export const THUMB_CACHE_CONTROL = 'private, max-age=31536000, immutable';
+export const THUMB_CACHE_CONTROL = 'private, no-cache';
 export const FILE_CACHE_CONTROL = 'private, no-cache';
 export const SVG_CSP = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
 
@@ -131,9 +131,10 @@ export function fileHeaders({ mime, size, etag, name, inline, range, setCookies 
 }
 
 /**
- * Headers for a thumbnail. Content-addressed, so it can be cached for a year
- * — privately: a deliberate exception to privateHeaders()' no-store, paid for
- * by `Clear-Site-Data: "cache"` on sign-out (worker/auth.js). An SVG also
+ * Headers for a thumbnail. Kept privately but revalidated on every use
+ * (no-cache with the object's ETag, so a repeat view costs a 304), so the
+ * gate judges each view and nothing private stays usable in the cache after
+ * sign-out, which clears no cache (worker/auth.js). An SVG also
  * gets a CSP that sandboxes it and refuses every script and fetch, in case it
  * is ever opened as a document rather than drawn in an <img>.
  */
