@@ -9,7 +9,7 @@ navigation, dark mode, and the design system's styling out of the box.
 ## Install
 
 ```bash
-npm install "github:bydefaultstudio/design-system-dist#semver:^8.4.1"
+npm install "github:bydefaultstudio/design-system-dist#semver:^8.5.0"
 ```
 
 The generator is a tool, not an asset — run it in place from `node_modules`.
@@ -112,7 +112,7 @@ automatically — external URLs pass through untouched.
 | `docsCss` | kit-bundled `docs.css` | href of the docs chrome stylesheet |
 | `brandCssPath` | none | optional brand stylesheet (e.g. your `theme.css`); copied into the output and linked after the framework CSS so brand overrides win the cascade |
 | `googleFontsUrl` | none | Google Fonts stylesheet URL |
-| `iconsDir` | kit-bundled icons | folder of SVG icons for `{{icon:...}}` and chrome |
+| `iconsDir` | kit-bundled icons | folder of SVG icons for `{{icon:...}}` and chrome. The scripts' own buttons (copy, check, download, toast close, World Clock grip) draw its `copy`, `check`, `download`, `close` and `menu`, and the sidebar toggles its `sidebar-chevron` (pointing right, drawn to fill its viewBox: it shows at 10px); each falls back to the engine's drawing when missing |
 | `highlightJs` | cdnjs highlight.js | syntax-highlighting script source |
 | `sectionFolders` | `{}` (flat output) | map of section label → output subfolder; mapped sections get overview index pages |
 | `retiredSections` | `{}` | map of renamed section label → its new label; docgen fails on a page that still names the old one |

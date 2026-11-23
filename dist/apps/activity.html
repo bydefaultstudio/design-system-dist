@@ -1,0 +1,129 @@
+      <!--
+        The Activity page: the owner's view of the sign-in activity log
+        (worker/activity.mjs), in Settings beside People. Built like Fleet,
+        from the components that exist - the bar, Table, Badge, the form
+        primitives - and nothing on the tool canvas: a log to read, not a
+        preview to shape.
+
+        Owner only twice over: the page by its `access:`, and its data by the
+        Worker, which checks the reader's role on every request. The script
+        (assets/js/activity.js) fills both tables from /api/activity;
+        everything here is the empty shell it fills. Copy link is in the
+        bar's overflow menu, the close is last: build-time contract.
+      -->
+      <div id="activity">
+
+        <div class="bar" data-sticky="true">
+          <div class="bar-container">
+            <div class="bar-content">
+              <h1 class="tool-canvas-title" data-priority="pinned">Activity</h1>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item js-copy-url">{{icon:link}}<span>Copy link</span></button>
+              </div>
+              <!-- Feedback: opens the shared dialog (cms/chrome/feedback-dialog.html) -->
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="share">{{icon:chat}}<span>Share feedback</span></button>
+              </div>
+              <div class="bar-group" data-priority="menu">
+                <button type="button" class="dropdown-item" data-feedback-open="problem">{{icon:warning}}<span>Report a problem</span></button>
+              </div>
+            </div><!-- /.bar-content -->
+            <div class="bar-actions">
+              <div class="dropdown bar-overflow" hidden>
+                <button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More controls">{{icon:ellipsis-large}}</button>
+                <div class="dropdown-menu is-right"></div>
+              </div>
+              <a class="bar-close" data-page-close aria-label="Back to Settings">{{close-icon}}</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="padding-global top-large bottom-large">
+          <div class="container-l">
+          <div class="block gap-3xl">
+
+            <p class="text-secondary" data-text-wrap="pretty">Who signed in to {{brand:siteName}}, which pages they opened and which files they downloaded. Kept for <span id="activity-retention">13 months</span>, then deleted. No IP address or device is recorded.</p>
+
+            <!-- Said when the log cannot be read: named, honest,
+                 forward-pointing. In the DOM and empty from first paint, so a
+                 screen reader hears it when it fills. -->
+            <p class="form-error" id="activity-load-error" role="alert"></p>
+            <!-- What a load found, for a screen reader: the tables change silently otherwise -->
+            <p class="visually-hidden" id="activity-status" role="status"></p>
+
+            <section class="block gap-l">
+              <div class="section-header">
+                <div class="block gap-xs">
+                  <h2 class="section-header-title" id="activity-people-heading">People</h2>
+                  <p class="text-secondary" data-text-wrap="pretty">Everyone the log holds, most recently seen first.</p>
+                </div>
+                <div class="section-header-actions">
+                  <button type="button" class="button" data-variant="outline" data-size="small" id="activity-reload">{{icon:refresh}}<span>Reload</span></button>
+                </div>
+              </div>
+              <p class="text-secondary" id="activity-people-empty" hidden>No one has signed in since the log started.</p>
+              <div class="table-scroll" tabindex="0" role="region" aria-labelledby="activity-people-heading">
+                <table class="table table-full table-hover" aria-labelledby="activity-people-heading">
+                  <thead>
+                    <tr>
+                      <th scope="col">Person</th>
+                      <th scope="col">Last sign-in</th>
+                      <th scope="col">Last seen</th>
+                      <th scope="col">Sign-ins</th>
+                      <th scope="col">Pages</th>
+                      <th scope="col">Downloads</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activity-people"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="block gap-l">
+              <div class="section-header">
+                <div class="block gap-xs">
+                  <h2 class="section-header-title" id="activity-log-heading">Log</h2>
+                  <p class="text-secondary" data-text-wrap="pretty">Newest first.</p>
+                </div>
+              </div>
+              <div class="grid cols-2">
+                <div class="block gap-s">
+                  <label data-variant="caption" for="activity-person">Person</label>
+                  <select id="activity-person">
+                    <option value="">Everyone</option>
+                  </select>
+                </div>
+                <div class="block gap-s">
+                  <label data-variant="caption" for="activity-kind">What</label>
+                  <select id="activity-kind">
+                    <option value="">Everything</option>
+                    <option value="sign-in">Sign-ins</option>
+                    <option value="page">Pages</option>
+                    <option value="download">Downloads</option>
+                  </select>
+                </div>
+              </div>
+              <p class="text-secondary" id="activity-log-empty" hidden>Nothing matches these filters.</p>
+              <div class="table-scroll" tabindex="0" role="region" aria-labelledby="activity-log-heading">
+                <table class="table table-full table-hover" aria-labelledby="activity-log-heading">
+                  <thead>
+                    <tr>
+                      <th scope="col">When</th>
+                      <th scope="col">Person</th>
+                      <th scope="col">What</th>
+                      <th scope="col">Page or file</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activity-rows"></tbody>
+                </table>
+              </div>
+              <div>
+                <button type="button" class="button" data-variant="outline" data-size="small" id="activity-more" hidden>Show older</button>
+              </div>
+            </section>
+
+          </div>
+          </div>
+        </div>
+
+      </div>

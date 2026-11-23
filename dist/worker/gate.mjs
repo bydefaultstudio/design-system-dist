@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.4.1 */
+/* @bydefaultstudio/design-system v8.5.0 */
 /**
  * gate.mjs — the pure half of the access gate: route lists and predicates.
  *
@@ -360,13 +360,29 @@ export function sectionOf(pathname) {
 }
 
 /**
+ * The section folder a FILE sits in at any depth - "brand" for
+ * /brand/media/logo/mark.svg - or '' for a page (.html), a folder address, or
+ * a file at the root. A section's artwork can then live in sub-folders and
+ * still open to the guests the section is granted to. Pages keep the
+ * one-level rule (sectionOf): a page deeper than its section folder is on no
+ * map, and must never open to a grant by its folder alone.
+ */
+export function fileSectionOf(pathname) {
+  if (typeof pathname !== 'string' || pathname.endsWith('/') || pathname.endsWith('.html')) return '';
+  const match = /^\/([a-z0-9-]+)\/(?:[^/]+\/)*[^/]+$/.exec(pathname);
+  if (!match || pathname.split('/').some((part) => part === '..' || part === '.')) return '';
+  return match[1];
+}
+
+/**
  * Whether a guest's scopes reach a path. A scope is 'section:<folder>' or
- * 'page:<path>'; the first admits every page in that output folder, the
- * second one page. Additive, exact, no wildcards (permissions-plan.md §3.3).
+ * 'page:<path>'; the first admits every page in that output folder, and every
+ * file under it at any depth (fileSectionOf), the second one page. Additive,
+ * exact, no wildcards (permissions-plan.md §3.3).
  */
 export function scopeAdmits(scopes, pathname) {
   if (!Array.isArray(scopes) || scopes.length === 0) return false;
-  const section = sectionOf(pathname);
+  const section = sectionOf(pathname) || fileSectionOf(pathname);
   for (const scope of scopes) {
     if (typeof scope !== 'string') continue;
     if (scope === `page:${pathname}`) return true;

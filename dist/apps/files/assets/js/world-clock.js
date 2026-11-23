@@ -387,9 +387,18 @@
     handleRemoveCity(btn.getAttribute('data-tz'));
   }
 
-  var GRIP_ICON = '<span class="svg-icn" data-icon="menu"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M3 18V16H21V18H3ZM3 13V11H21V13H3ZM3 8V6H21V8H3Z" fill="currentColor"/></svg></span>';
+  var GRIP_SVG = '<svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M3 18V16H21V18H3ZM3 13V11H21V13H3ZM3 8V6H21V8H3Z" fill="currentColor"/></svg>';
 
-  var REMOVE_ICON = '<span class="svg-icn" data-icon="close"><svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M7.4 18L6 16.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L6 7.4L7.4 6L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L16.6 6L18 7.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L18 16.6L16.6 18L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L7.4 18Z" fill="currentColor"/></svg></span>';
+  var REMOVE_SVG = '<svg viewBox="0 0 24 24" fill="none" width="100%" height="100%" aria-hidden="true"><path d="M7.4 18L6 16.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L6 7.4L7.4 6L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L16.6 6L18 7.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L18 16.6L16.6 18L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L7.4 18Z" fill="currentColor"/></svg>';
+
+  // An icon as the site draws it: the site's own, as nav.js hands it over
+  // (window.bdIcons, from the site's icon set), else this script's drawing.
+  // Read when the markup is built, not at load, so script order doesn't
+  // matter and a page without nav.js keeps the fallback.
+  function iconHtml(name, fallback) {
+    var icons = window.bdIcons;
+    return '<span class="svg-icn" data-icon="' + name + '">' + ((icons && icons[name]) || fallback) + '</span>';
+  }
 
   var MOVES = [
     { move: 'up', label: 'Move up' },
@@ -419,7 +428,7 @@
     grip.setAttribute('aria-expanded', 'false');
     if (canReorder) grip.setAttribute('aria-describedby', 'world-clock-reorder-help');
     grip.disabled = !canReorder;
-    grip.innerHTML = GRIP_ICON;
+    grip.innerHTML = iconHtml('menu', GRIP_SVG);
     dropdown.appendChild(grip);
 
     if (canReorder) {
@@ -477,7 +486,7 @@
       removeBtn.setAttribute('data-icon-only', '');
       removeBtn.setAttribute('data-tz', tz);
       removeBtn.setAttribute('aria-label', 'Remove ' + label);
-      removeBtn.innerHTML = REMOVE_ICON;
+      removeBtn.innerHTML = iconHtml('close', REMOVE_SVG);
       item.appendChild(removeBtn);
 
       tagContainer.appendChild(item);

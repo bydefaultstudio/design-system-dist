@@ -21,6 +21,14 @@
     + '<path d="M4 21V15H6V17C6 18.1046 6.89543 19 8 19H16C17.1046 19 18 18.1046 18 17V15H20V21H4Z" fill="currentColor"/>'
     + '</svg>';
 
+  // The site's drawing of an icon, as nav.js hands it over (window.bdIcons,
+  // from the site's icon set), else this script's own. Read when a button is
+  // built, not at load, so the order the scripts load in doesn't matter.
+  function siteIcon(name, fallback) {
+    var icons = window.bdIcons;
+    return (icons && icons[name]) || fallback;
+  }
+
   function copyToClipboard(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       return navigator.clipboard.writeText(text);
@@ -143,7 +151,7 @@
 
     copyToClipboard(window.location.href).then(function () {
       btn.classList.add('is-copied');
-      if (iconEl) iconEl.innerHTML = ICON_CHECK;
+      if (iconEl) iconEl.innerHTML = siteIcon('check', ICON_CHECK);
       if (label) label.textContent = 'Copied';
       announceCopy('Copied page link');
 
@@ -199,8 +207,8 @@
         copyBtn.className = 'copy-btn is-ghost';
         copyBtn.setAttribute('data-copy', iconHTML);
         copyBtn.setAttribute('aria-label', 'Copy ' + iconName + ' icon code');
-        copyBtn.innerHTML = '<span class="copy-btn-default"><span class="svg-icn">' + ICON_COPY + '</span> Copy</span>'
-          + '<span class="copy-btn-copied"><span class="svg-icn">' + ICON_CHECK + '</span> Copied</span>';
+        copyBtn.innerHTML = '<span class="copy-btn-default"><span class="svg-icn">' + siteIcon('copy', ICON_COPY) + '</span> Copy</span>'
+          + '<span class="copy-btn-copied"><span class="svg-icn">' + siteIcon('check', ICON_CHECK) + '</span> Copied</span>';
         copyTd.appendChild(copyBtn);
         row.appendChild(copyTd);
 
@@ -209,7 +217,7 @@
         var dlBtn = document.createElement('button');
         dlBtn.className = 'copy-btn is-ghost';
         dlBtn.setAttribute('aria-label', 'Download ' + iconName + ' SVG');
-        dlBtn.innerHTML = '<span class="svg-icn">' + ICON_DOWNLOAD + '</span> Download';
+        dlBtn.innerHTML = '<span class="svg-icn">' + siteIcon('download', ICON_DOWNLOAD) + '</span> Download';
         dlBtn.addEventListener('click', function () {
           var a = document.createElement('a');
           a.href = '../assets/images/svg-icons/' + encodeURIComponent(fileName);
@@ -312,8 +320,8 @@
     btn.setAttribute('data-size', 'small');
     btn.setAttribute('data-copy', value);
     btn.setAttribute('aria-label', 'Copy as ' + label.toLowerCase() + ': ' + value.slice(0, 60));
-    btn.innerHTML = '<span class="copy-btn-default"><span class="svg-icn">' + ICON_COPY + '</span> ' + label + '</span>'
-      + '<span class="copy-btn-copied"><span class="svg-icn">' + ICON_CHECK + '</span> Copied</span>';
+    btn.innerHTML = '<span class="copy-btn-default"><span class="svg-icn">' + siteIcon('copy', ICON_COPY) + '</span> ' + label + '</span>'
+      + '<span class="copy-btn-copied"><span class="svg-icn">' + siteIcon('check', ICON_CHECK) + '</span> Copied</span>';
     return btn;
   }
 

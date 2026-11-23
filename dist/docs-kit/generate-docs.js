@@ -994,8 +994,10 @@ function buildIconMap() {
     svg = svg.replace(/(<svg[^>]*)\s+width=["']\d+["']/i, '$1 width="100%"');
     svg = svg.replace(/(<svg[^>]*)\s+height=["']\d+["']/i, '$1 height="100%"');
 
-    // Add aria-hidden if not present
-    if (!svg.includes('aria-hidden')) {
+    // Add aria-hidden if the root <svg> lacks it. The root tag only: the word
+    // on a child or in a <title> would otherwise pass for it, and a <title>
+    // in an unhidden icon becomes part of a button named by its text.
+    if (!/<svg\b[^>]*\saria-hidden=/i.test(svg)) {
       svg = svg.replace(/<svg/, '<svg aria-hidden="true"');
     }
 
@@ -1044,6 +1046,26 @@ function getRawIcon(name) {
     return `<!-- unknown icon: ${name} -->`;
   }
   return entry.svg;
+}
+
+/**
+ * The icons the engine's scripts draw at run time, by name, as the site's
+ * icon set draws them: nav.js hands them over as window.bdIcons. Each script
+ * keeps its own drawing as the fallback, so a name the set lacks is left out
+ * rather than warned about.
+ */
+const RUNTIME_ICON_NAMES = ['copy', 'download', 'check', 'close', 'menu'];
+
+function runtimeIcons() {
+  const icons = {};
+  for (const name of RUNTIME_ICON_NAMES) {
+    // Without the <svg>'s own data-icon, as the scripts' fallbacks are: the
+    // wrapper they build carries the name, and docs-copy-chrome.js finds an
+    // icon table by an svg[data-icon] in its first cell, which a copy
+    // button's check there would otherwise fake.
+    if (ICON_MAP[name]) icons[name] = ICON_MAP[name].svg.replace(/(<svg[^>]*?)\s+data-icon="[^"]*"/, '$1');
+  }
+  return icons;
 }
 
 /**
@@ -5120,6 +5142,12 @@ function generateNavJs(filesBySection) {
 // whether or not the page has the header mount: nav.js loads before them all.
 window.bdPaths = Object.freeze(${JSON.stringify(browserEnginePaths())});
 
+// The site's own drawings of the icons the engine's scripts build at run time
+// (copy, toast, World Clock and the rest), from its icon set (iconsDir). A
+// script reads one by name and falls back to its own drawing for any name
+// missing here, so a set without one still draws it.
+window.bdIcons = Object.freeze(${JSON.stringify(runtimeIcons())});
+
 (function initSiteNav() {
   'use strict';
 
@@ -6304,12 +6332,15 @@ function buildNavSectionsHtml(filesBySection) {
   // instead. The icon would be 300-odd unused SVGs in every page.
   const navLock = CONFIG.accessNav === 'hidden' ? '' : lockIcon('sidebar-nav-lock');
 
-  // Shared chevron for section and subsection toggles
-  const navChevron = `<span class="sidebar-nav-toggle-icon">
-          <svg width="6" height="6" viewBox="0 0 6 6" fill="none" aria-hidden="true">
+  // Shared chevron for section and subsection toggles: the site's own
+  // sidebar-chevron when its icon set has one, else the engine's 6px drawing.
+  // Its own name, not chevron-right: a 24-grid chevron at the toggle's 10px
+  // would shrink to a sliver.
+  const navChevron = `<span class="sidebar-nav-toggle-icon">${ICON_MAP['sidebar-chevron']
+    ? getRawIcon('sidebar-chevron')
+    : `<svg width="6" height="6" viewBox="0 0 6 6" fill="none" aria-hidden="true">
             <path d="M3.58943 3L1.28943 0.7L1.98943 0L4.98943 3L1.98943 6L1.28943 5.3L3.58943 3Z" fill="currentColor"/>
-          </svg>
-        </span>`;
+          </svg>`}</span>`;
 
   // Section icons (config: sectionIcons — section label → icon key)
   const sectionIconMap = {};

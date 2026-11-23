@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.4.1 */
+/* @bydefaultstudio/design-system v8.5.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -98,7 +98,7 @@
   --pink-lighter: #FCE7F3;
   --pink-light: #FBCFE8;
   --pink: #F9A8D4;
-  --pink-dark: #831843;
+  --pink-dark: #610936;
   /* The saturated step pink's pastel base lacks, deep enough for light
      text (4.7:1): the annotation pink. Read through --annotation-pink. */
   --pink-vivid: #D61F69;

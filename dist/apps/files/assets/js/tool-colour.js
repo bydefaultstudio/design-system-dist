@@ -76,15 +76,24 @@
 
   var ERROR_MESSAGE = L('Use a hex color, like 1F1F1F or #1F1F1F.');
 
-  // The brand copy and check icons, inline: the hex field's copy button is
-  // built here, after docgen has expanded the page's {{icon:…}} tokens.
-  var ICON_COPY = '<span class="svg-icn" data-icon="copy"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+  // The copy and check icons' fallback drawings: the hex field's copy button
+  // is built here, after docgen has expanded the page's {{icon:…}} tokens.
+  var COPY_SVG = '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
     + '<path d="M8 14C8 15.1046 8.89543 16 10 16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V14ZM6 18V2H22V18H6ZM2 22V6H4V20H18V22H2Z" fill="currentColor"/>'
-    + '</svg></span>';
+    + '</svg>';
 
-  var ICON_CHECK = '<span class="svg-icn" data-icon="check"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+  var CHECK_SVG = '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
     + '<path d="M9.54998 18L3.84998 12.3L5.27498 10.875L8.13576 13.7358C8.91681 14.5168 10.1831 14.5168 10.9642 13.7358L18.725 5.97501L20.15 7.40001L9.54998 18Z" fill="currentColor"/>'
-    + '</svg></span>';
+    + '</svg>';
+
+  // An icon as the site draws it: the site's own, as nav.js hands it over
+  // (window.bdIcons, from the site's icon set), else this script's drawing.
+  // Read when the markup is built, not at load, so script order doesn't
+  // matter and a page without nav.js keeps the fallback.
+  function iconHtml(name, fallback) {
+    var icons = window.bdIcons;
+    return '<span class="svg-icn" data-icon="' + name + '">' + ((icons && icons[name]) || fallback) + '</span>';
+  }
 
   //
   //------- UTILITIES -------//
@@ -225,8 +234,8 @@
       +   '<input type="text" id="' + id + '-hex" maxlength="7" size="7" autocomplete="off" spellcheck="false"'
       +     ' aria-label="' + escapeHtml(label) + ' hex">'
       +   '<button type="button" class="field-action copy-btn" data-clipboard-target="#' + id + '-hex">'
-      +     '<span class="copy-btn-default">' + ICON_COPY + '<span class="visually-hidden">Copy ' + escapeHtml(label.toLowerCase()) + ' hex</span></span>'
-      +     '<span class="copy-btn-copied">' + ICON_CHECK + '<span class="visually-hidden">Copied!</span></span>'
+      +     '<span class="copy-btn-default">' + iconHtml('copy', COPY_SVG) + '<span class="visually-hidden">Copy ' + escapeHtml(label.toLowerCase()) + ' hex</span></span>'
+      +     '<span class="copy-btn-copied">' + iconHtml('check', CHECK_SVG) + '<span class="visually-hidden">Copied!</span></span>'
       +   '</button>'
       + '</div>'
       + '<p class="form-error is-hidden" role="alert" id="' + errorId + '"></p>';

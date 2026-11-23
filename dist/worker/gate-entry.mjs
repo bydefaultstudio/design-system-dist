@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.4.1 */
+/* @bydefaultstudio/design-system v8.5.0 */
 /**
  * gate-entry.mjs - createGate(), the access gate as one factory
  * (levels-groups-plan.md Phase 3, D21). Shipped as
@@ -45,11 +45,20 @@
  *                  (the CF_VERSION_METADATA binding), signed with SITE_KEY,
  *                  in the background (fleet-report.mjs). Off, with one log
  *                  line, without the binding or the key.
+ *   activity       { retentionDays }: the sign-in activity log, while the
+ *                  `activity` app is installed (activity.mjs). Records each
+ *                  signed-in reader's sign-ins, gated pages and Asset Library
+ *                  downloads, mounts the owner's GET /api/activity, and keeps
+ *                  rows for retentionDays (395 unless set). Needs migration
+ *                  0016_activity.sql.
  *
  * Static assets reach here too: wrangler.jsonc sets run_worker_first, so
  * the session decides what reaches the asset layer (access-plan.md §4.2).
  */
 import { AUTH_BASE_PATH, guestScopes, handleAuth, handleSignOutLink } from './auth.js';
+
+// The route a code is verified on (auth.js VERIFY_PATH): a 200 there is a sign-in
+const SIGN_IN_PATH = `${AUTH_BASE_PATH}/sign-in/email-otp`;
 import { PEOPLE_BASE_PATH, handlePeople } from './people.js';
 import { ENGINE_PATHS, SIGN_OUT_LINK, embeddableHeaders, hasSessionCookie, isConflictCopyPath, isEmbeddablePath, isNavigation, isPublicPath, isUnmappedSectionPage, notInstalledFor, privateHeaders, servesLanding } from './gate.mjs';
 import { requireSession } from './session.js';
@@ -59,6 +68,8 @@ import { handleImage } from './image.js';
 import { handleLibrary } from './library.js';
 import { SUBMIT_FORM_PATH, formsOption, handleFormsForward } from './forms-forward.mjs';
 import { createReporter, reportOption } from './fleet-report.mjs';
+import { ACTIVITY_API_PATH, activityOption, activityRow, handleActivityApi, isLoggedDownload, recordActivity } from './activity.mjs';
+import { parseFilesPath } from './library-core.mjs';
 import { LEVELS_BASE_PATH, handleLevels } from './levels-api.js';
 import { SITE, configureSite } from './site.mjs';
 
@@ -289,6 +300,7 @@ export function createGate(options = {}) {
   const cspReport = options.cspReport !== false;
   const forms = formsOption(options.forms);
   const reporter = createReporter(reportOption(options.report));
+  const activity = activityOption(options.activity);
 
   return {
     // Every request goes through answer(); anything it throws or rejects
@@ -306,6 +318,43 @@ export function createGate(options = {}) {
     },
   };
 
+  /** Whether this site keeps the activity log: the app is installed. */
+  function logsActivity() {
+    return SITE.apps.installed.includes('activity');
+  }
+
+  /**
+   * A gated page the reader opened: a browser navigation, or the router's
+   * fetch of the next page (x-barba: yes, a click through the sidebar), that
+   * served HTML. Any other fetch of a page is not a view, nor is a frame.
+   * Hover prefetch is off in the kit's router by default, so a router fetch
+   * is a page shown (a site that sets prefetchIgnore: false counts hovers);
+   * a page the router has cached is not fetched again, and not counted.
+   * Recorded after the response; never delays it.
+   */
+  function notePage(env, ctx, request, response, gated, reader, pathname) {
+    if (!logsActivity() || !gated || !reader || request.method !== 'GET') return;
+    if (response.status !== 200 || !isHtml(response)) return;
+    if (request.headers.get('x-barba') !== 'yes') {
+      if (!isNavigation(request.headers)) return;
+      // A page opened in a frame (an embed inside the site) is not a view
+      const dest = request.headers.get('sec-fetch-dest');
+      if (dest !== null && dest !== 'document') return;
+    }
+    recordActivity(env, ctx, activityRow('page', reader.email, pathname), activity);
+  }
+
+  /** A code that verified: the reader's email is in the answer's `user`. */
+  function noteSignIn(env, ctx, response) {
+    const work = response.clone().json()
+      .then((data) => {
+        const email = data && data.user && data.user.email;
+        recordActivity(env, ctx, activityRow('sign-in', email), activity);
+      })
+      .catch(() => {});
+    if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(work);
+  }
+
   async function answer(request, env, ctx) {
       const url = new URL(request.url);
       const { pathname } = url;
@@ -322,7 +371,9 @@ export function createGate(options = {}) {
 
       // Sign-in endpoints first: they must never sit behind the gate they serve.
       if (pathname.startsWith(`${AUTH_BASE_PATH}/`)) {
-        return handleAuth(request, env, ctx);
+        const authResponse = await handleAuth(request, env, ctx);
+        if (logsActivity() && request.method === 'POST' && pathname === SIGN_IN_PATH && authResponse.ok) noteSignIn(env, ctx, authResponse);
+        return authResponse;
       }
 
       // A sync-conflict duplicate's name ("people 3.html") is never a page the
@@ -465,6 +516,15 @@ export function createGate(options = {}) {
         return handlePeople(request, env, url, reader, sessionCookies);
       }
 
+      // ── The Activity API ──
+      //
+      // Gated by omission like the People API, while the app is installed:
+      // the session has run and `reader` is in hand. The owner reads the log;
+      // everyone else is refused inside the handler.
+      if (logsActivity() && pathname === ACTIVITY_API_PATH) {
+        return handleActivityApi(request, env, url, reader, sessionCookies, activity);
+      }
+
       // The site's gated routes: the reader is in hand, and each handler
       // answers for itself, never falling through to the asset layer.
       for (const route of gatedRoutes) {
@@ -474,7 +534,12 @@ export function createGate(options = {}) {
       // The Asset Library's files from R2 (binding LIBRARY), after the gate,
       // while the app is installed (B4). Never falls through to the assets.
       if (SITE.apps.installed.includes('asset-library') && pathname.startsWith('/files/')) {
-        return handleLibrary(request, env, url, sessionCookies, reader, SITE.library);
+        const fileResponse = await handleLibrary(request, env, url, sessionCookies, reader, SITE.library);
+        if (logsActivity() && reader && isLoggedDownload(request, url, fileResponse)) {
+          const file = parseFilesPath(pathname);
+          if (file && file.kind === 'file') recordActivity(env, ctx, activityRow('download', reader.email, pathname), activity);
+        }
+        return fileResponse;
       }
 
       // Directory-index resolution.
@@ -490,6 +555,7 @@ export function createGate(options = {}) {
         indexUrl.pathname = resolved;
         const indexResponse = await env.ASSETS.fetch(new Request(indexUrl, request));
         if (indexResponse.status !== 404) {
+          notePage(env, ctx, request, indexResponse, gated, reader, pathname);
           if (SITE.accessNav === 'hidden') return hiddenNav(request, env, url, indexResponse, gated, reader, sessionCookies);
           return gated ? privateHeaders(indexResponse, sessionCookies) : indexResponse;
         }
@@ -505,6 +571,7 @@ export function createGate(options = {}) {
       if (wantsNotFound(request, assetResponse, gated, reader)) {
         return notFoundResponse(request, env, url, privateHeaders(assetResponse, sessionCookies), reader, sessionCookies);
       }
+      notePage(env, ctx, request, assetResponse, gated, reader, pathname);
       if (SITE.accessNav === 'hidden') return searchIndexCache(await hiddenNav(request, env, url, assetResponse, gated, reader, sessionCookies), pathname);
       if (gated) return searchIndexCache(privateHeaders(assetResponse, sessionCookies), pathname);
       return isEmbeddablePath(pathname) ? embeddableHeaders(assetResponse) : assetResponse;

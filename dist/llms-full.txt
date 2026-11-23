@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v8.4.1 -->
+<!-- @bydefaultstudio/design-system v8.5.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 8.4.1 (package)**
+**Version: 8.5.0 (package)**
 
 ## Getting the System
 
@@ -755,7 +755,7 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--pink-lighter` | `#FCE7F3` |  |
 | `--pink-light` | `#FBCFE8` |  |
 | `--pink` | `#F9A8D4` |  |
-| `--pink-dark` | `#831843` |  |
+| `--pink-dark` | `#610936` |  |
 | `--pink-vivid` | `#D61F69` |  |
 | `--peach-lighter` | `#FFEDD5` |  |
 | `--peach-light` | `#FED7AA` |  |
@@ -14272,6 +14272,20 @@ The `local` key points at directories of icons the project owns but the design s
 Both checks are fail-fast by design: a build that quietly resolved the conflict would ship the wrong icon with nothing to chase.
 
 **Third-party brand marks are the canonical site-local case.** The Google and Apple sign-in marks live at `assets/icons/local/` in this repo, deliberately outside the shared registry, because a brand mark is a per-product licensing decision, not a system asset. They follow the same authoring rules as registry icons (24×24, monochrome `currentColor` paths, cleaned with `npx svg-cleaner`) and are inlined where used; the `{{icon:name}}` shorthand reads the shared registry only and will not resolve them. See [Login → Social sign-in](/components/login.html#social-sign-in) for usage.
+
+### Icons the Engine's Scripts Draw
+
+Some controls are built by script after the page loads, so no `{{icon:}}` reaches them: a copy button's copied check, a toast's dismiss, and the copy, download, remove and reorder buttons the engine's tools build. They draw from the site's own icon set (`iconsDir`) by name:
+
+| Name | What it draws |
+|---|---|
+| `copy` | a copy action |
+| `check` | the copied state |
+| `download` | a download action |
+| `close` | a dismiss, remove or delete action |
+| `menu` | a reorder grip |
+
+The build hands these to the scripts as `window.bdIcons`. A name the set lacks falls back to the engine's own drawing, so none is required. They show small, inside buttons, so draw them with `currentColor` fills and no ids. A product without the docs build can set `window.bdIcons` itself, before the first toast or copy button is built, to the same names mapped to SVG strings.
 
 ### Renamed Icons
 

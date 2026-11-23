@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.4.1 */
+/* @bydefaultstudio/design-system v8.5.0 */
 // Copy button — unified handler for all .copy-btn variants
 // Supports data-copy (static value), data-clipboard-target (element text
 // content) and data-download (fetch-free file download via a temporary link).
@@ -12,6 +12,8 @@
 //     // path data, keeping the module dependency-free.
 //     spritePath: "/assets/images/svg-icons/_sprite.svg"
 //   };
+// Without a sprite, the check is the site's own when nav.js has handed the
+// site's icons over (window.bdIcons), else the inline drawing below.
 //
 // A copy made by other code (a tool writing an image to the clipboard)
 // shows the same feedback by calling window.bdCopyButton.flash(button) once
@@ -28,14 +30,17 @@
     + '</svg>';
 
   // Config is read at render time, not at script load, so it works however
-  // the config block and this script are ordered.
+  // the config block and this script are ordered. A sprite set in the config
+  // comes first; then the site's own check, as nav.js hands it over
+  // (window.bdIcons, from the site's icon set); then the drawing above.
   function iconCheck() {
     var config = window.bdCopyButtonConfig;
     if (config && config.spritePath) {
       return '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
         + '<use href="' + config.spritePath + '#check"/></svg>';
     }
-    return ICON_CHECK_INLINE;
+    var icons = window.bdIcons;
+    return (icons && icons.check) || ICON_CHECK_INLINE;
   }
 
   function copyToClipboard(text) {

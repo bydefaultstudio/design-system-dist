@@ -259,6 +259,11 @@ module.exports = {
     init: "initQrCode",
     note: "starts itself on DOMContentLoaded and bd:after-nav (B1); initQrCode bails when its markup is absent",
   },
+  "activity.js": {
+    strategies: ["self-registered"],
+    init: "initActivity",
+    note: "the Activity page (owner, insights package); scoped to [data-tool=\"activity\"], idempotent on its init stamp; on bd:before-nav it aborts a load still out and marks it stale, so nothing is drawn into the leaving page",
+  },
   "people.js": {
     strategies: ["self-registered"],
     init: "initPeople",

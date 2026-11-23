@@ -11,7 +11,7 @@
  * comma-separated):
  *   version   the app's version, which /os.json reports (phase F)
  *   status    stable · beta · draft. A draft installs only with allowDraft
- *   package   core · brand · web · formats · utilities · internal
+ *   package   core · brand · web · formats · utilities · insights · internal
  *   needs     shared libraries (libraries.json), loaded once, before it
  *   scripts   its own scripts, styles its own stylesheets
  *   files     files it loads itself at runtime: shipped, never tagged
@@ -41,6 +41,9 @@ const PACKAGES = {
   web: {},
   formats: { needs: ['brand'] },
   utilities: {},
+  // Off unless a site names it: the sign-in activity log records named
+  // people, so a site opts in
+  insights: {},
   internal: { home: true },
 };
 const STATUSES = ['stable', 'beta', 'draft'];

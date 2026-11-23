@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.4.1 */
+/* @bydefaultstudio/design-system v8.5.0 */
 /**
  * levels-core.mjs - the pure half of level settings (levels-groups-plan.md D27).
  *

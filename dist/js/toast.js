@@ -1,15 +1,27 @@
-/* @bydefaultstudio/design-system v8.4.1 */
+/* @bydefaultstudio/design-system v8.5.0 */
 /**
  * Toast component
  * Call window.showToast(message, type, duration) to display a notification.
  * Types: 'default', 'success', 'warning', 'danger', 'info'
  *
- * @version 1.4.0
+ * @version 1.5.0
  */
 (function () {
   'use strict';
 
   var FALLBACK_EXIT_MS = 300;
+
+  // The dismiss button's close icon, drawn here as the fallback.
+  var CLOSE_ICON = '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7.4 18L6 16.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L6 7.4L7.4 6L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L16.6 6L18 7.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L18 16.6L16.6 18L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L7.4 18Z" fill="currentColor"/></svg>';
+
+  // An icon as the site draws it: the site's own, as nav.js hands it over
+  // (window.bdIcons, from the site's icon set), else this script's drawing.
+  // Read when a toast is built, not at load, so script order doesn't matter
+  // and a page without nav.js keeps the fallback.
+  function iconHtml(name, fallback) {
+    var icons = window.bdIcons;
+    return '<span class="svg-icn" data-icon="' + name + '">' + ((icons && icons[name]) || fallback) + '</span>';
+  }
 
   // The toasts showToast made and has not yet removed. A page's own static
   // toast markup (a demo) is not in here, and a page transition leaves it be.
@@ -90,7 +102,7 @@
     if (type === 'danger') toast.setAttribute('role', 'alert');
     toast.innerHTML =
       '<span class="toast-message">' + escapeHTML(message) + '</span>' +
-      '<button class="button close-btn" type="button" data-icon-only data-size="small" aria-label="Dismiss"><span class="svg-icn" data-icon="close"><svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7.4 18L6 16.6L9.18579 13.4142C9.96684 12.6332 9.96684 11.3668 9.18579 10.5858L6 7.4L7.4 6L10.5858 9.18579C11.3668 9.96684 12.6332 9.96684 13.4142 9.18579L16.6 6L18 7.4L14.8142 10.5858C14.0332 11.3668 14.0332 12.6332 14.8142 13.4142L18 16.6L16.6 18L13.4142 14.8142C12.6332 14.0332 11.3668 14.0332 10.5858 14.8142L7.4 18Z" fill="currentColor"/></svg></span></button>';
+      '<button class="button close-btn" type="button" data-icon-only data-size="small" aria-label="Dismiss">' + iconHtml('close', CLOSE_ICON) + '</button>';
 
     container.appendChild(toast);
     live.add(toast);
@@ -150,5 +162,5 @@
     initToast();
   }
 
-  console.log('[toast] v1.4.0 — init');
+  console.log('[toast] v1.5.0 — init');
 })();
