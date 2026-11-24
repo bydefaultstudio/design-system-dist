@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.2 */
+/* @bydefaultstudio/design-system v8.7.0 */
 /**
  * Shared internals for the React adapters — class joining, one-shot
  * warnings, and the inline icon markup the components reproduce from

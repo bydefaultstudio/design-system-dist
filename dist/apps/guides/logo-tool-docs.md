@@ -29,6 +29,8 @@ The logo is at the top. Beside it, three sections: **Settings** picks which logo
 3. Choose what to **export as**, and set a **width** — the height follows, locked to the artwork's ratio
 4. **Download** or **Copy** — each button names the format it makes
 
+A link can open the tool on one variation and color: `?variant=` takes a variation's id from the manifest and `?colour=` a color's id, which also brings that color's approved background into the preview. The edit buttons on the logo page link this way, so the tool opens on the logo you clicked. An id the manifest doesn't have is ignored, and the tool opens on its defaults.
+
 The preview is the file, except for one thing you choose: a background shows behind the logo even when Include background leaves it out of the file. With no background chosen, its ground follows the logo color — a light ground behind a dark logo, a dark one behind a light logo — so the logo always reads; with one, the preview stands the logo on it. The **Details** in the top-left corner say what the file is — variation, color and size. The **Preview** group in the top-right corner changes only what you see: **Transparent** shows it with nothing behind it, **Fill screen** draws it as large as the preview allows instead of at the export width, and **Clear space** draws the room it needs. Fill screen is on when the tool opens, so you see the whole drawing first; choosing a width turns it off, and the preview then shows that width. The frame is the artwork at true pixel size, scaled down to fit the screen, and the note at the foot of the preview says which — "Shown at 48%", beside the size in Details — so the preview never quietly misleads you about size or backing.
 
 ---

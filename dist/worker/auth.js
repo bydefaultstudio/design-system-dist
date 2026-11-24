@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.2 */
+/* @bydefaultstudio/design-system v8.7.0 */
 /**
  * auth.js — Better Auth in the Worker: the sign-in endpoints (access-plan.md §4).
  *
@@ -56,7 +56,7 @@ import {
   sweepSendLog,
 } from './gate.mjs';
 import { USER_ADDITIONAL_FIELDS } from './auth-schema.mjs';
-import { otpSubject, renderOtpEmail, renderOtpText } from './email-template.mjs';
+import { deviceFrom, otpSubject, placeFrom, renderOtpEmail, renderOtpText } from './email-template.mjs';
 
 export const AUTH_BASE_PATH = '/api/auth';
 const SEND_ROUTE = '/email-otp/send-verification-otp';
@@ -248,7 +248,10 @@ export async function handleAuth(request, env, ctx) {
   // preflight's caps. The demo answer stays the one deliberate difference
   // (see the file comment); it comes from the preflight's read of the row.
   if (url.pathname === SEND_PATH) {
-    const sending = execContext.run({ ctx, demo }, () => auth.handler(forwarded)).then(
+    // The sign-in email's From row reads the reader's browser and rough place
+    // from the original request (never stored, never the IP address)
+    const requester = { userAgent: request.headers.get('user-agent'), cf: request.cf };
+    const sending = execContext.run({ ctx, demo, requester }, () => auth.handler(forwarded)).then(
       async (response) => {
         if (!response.ok) {
           const reason = await response.clone().json().then((b) => b && (b.code || b.message), () => null);
@@ -714,12 +717,22 @@ async function sendCode(env, origin, { email, otp, type }) {
   // router ever accept one) still sends nothing to an address not on the list.
   const row = await allowedRow(env.DB, email);
   if (!row || isExpired(row)) return;
+  const requester = execContext.getStore()?.requester;
+  const details = {
+    otp,
+    expiresInMinutes: OTP_EXPIRES_SECONDS / 60,
+    origin,
+    email,
+    requestedAt: new Date(),
+    device: deviceFrom(requester?.userAgent),
+    place: placeFrom(requester?.cf),
+  };
   const message = {
     from: parseAddress(env.AUTH_EMAIL_FROM),
     to: email,
     subject: otpSubject(otp),
-    html: renderOtpEmail({ otp, expiresInMinutes: OTP_EXPIRES_SECONDS / 60, origin }),
-    text: renderOtpText({ otp, expiresInMinutes: OTP_EXPIRES_SECONDS / 60, origin }),
+    html: renderOtpEmail(details),
+    text: renderOtpText(details),
   };
   try {
     await env.EMAIL.send(message);

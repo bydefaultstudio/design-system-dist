@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v8.6.2 */
+/* @bydefaultstudio/design-system v8.7.0 */
 /**
  * <SegmentedControl> — React adapter over both segmented contracts
  * (cms/form.md): the button group (the default and `variant="underline"`)

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.2 */
+/* @bydefaultstudio/design-system v8.7.0 */
 /**
  * activity.mjs - the sign-in activity log (engine, off until a site installs
  * the `activity` app; migration 0016_activity.sql).

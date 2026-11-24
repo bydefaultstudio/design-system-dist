@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.2 */
+/* @bydefaultstudio/design-system v8.7.0 */
 /**
  * site.mjs - what the access gate needs to know about the site it guards
  * (levels-groups-plan.md Phase 3, D21).
@@ -20,17 +20,8 @@ import { ENGINE_PATHS } from './engine-paths.mjs';
 // locked page, Ask for access, the sign-out link and the engine's own pages.
 export { ENGINE_PATHS };
 
-/**
- * The tokens worker/email-template.mjs reads, by name. Listed here rather
- * than imported: the template imports this file, and the names change only
- * when the template does (scripts/verify-auth-gate.mjs checks they agree).
- */
-export const EMAIL_TOKEN_NAMES = Object.freeze([
-  'page', 'surface', 'ink', 'faded', 'rule', 'inverse', 'font', 'mono',
-  'size2xs', 'sizeXs', 'sizeS', 'sizeXl', 'size4xl', 'leadingM', 'leadingL',
-  'weightMedium', 'trackingM', 'trackingL', 'spaceS', 'spaceM', 'spaceL',
-  'spaceXl', 'space2xl', 'space3xl', 'radius', 'border',
-]);
+/** The locales a brand may write in (cms/generator/locale.js LOCALES), and each one's default zone for the sign-in email's time. */
+const EMAIL_LOCALES = Object.freeze({ 'en-GB': 'Europe/London', 'en-US': 'America/New_York' });
 
 export const SITE = {
   /** The product's name, in emails and as the sign-in app's name. */
@@ -74,8 +65,13 @@ export const SITE = {
   library: null,
   /** Where the docs kit publishes markdown sources; one it does not map is admin only. */
   sourcePrefix: '/cms/',
-  /** Overrides for the sign-in emails' literal tokens (email-template.mjs EMAIL_TOKENS): a client's own type and colour. */
-  emailTokens: Object.freeze({}),
+  /**
+   * What the sign-in emails say about the brand (page-access.mjs EMAIL, from
+   * brand.json): its company name, its logo { src, width, height } as a 2x
+   * PNG under /assets/ or null, and the locale and zone its dates use. The
+   * look is the engine's, the same for every brand.
+   */
+  email: Object.freeze({ company: 'Docs', logo: null, locale: 'en-GB', timeZone: 'Europe/London' }),
   /**
    * The level settings the LAST build baked in (page-access.mjs APPLIED_LEVELS):
    * { pages: Map<path, level>, sections: Map<folder, level> } (D27). The Levels
@@ -133,21 +129,31 @@ function deprecatedPath(value, name, enginePath) {
 }
 
 /**
- * Email token overrides land in style="..." attributes in every sign-in
- * email. A value may not carry a quote or an angle bracket (it would close
- * the attribute and write markup into a message we send), nor `;`, `(`,
- * `\` or `&` (a second declaration such as a background url() would make
- * the email fetch remote content). Names must be real tokens, so a typo
- * fails rather than being ignored.
+ * The brand's email content. Every value lands in the email escaped, so the
+ * checks are about what works: the logo must be a PNG under /assets/ (public
+ * on every site, so a mail client with no session can load it; Gmail drops
+ * SVG) with its real pixel size, and the zone must be one Intl knows.
  */
-function emailTokenMap(value, known) {
-  if (value === undefined) return Object.freeze({});
-  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('`emailTokens` must be an object of token names and values');
-  for (const [key, token] of Object.entries(value)) {
-    if (!known.includes(key)) fail(`\`emailTokens.${key}\` is not an email token (known: ${known.join(', ')})`);
-    if (typeof token !== 'string' || /["<>;(\\&]/.test(token)) fail(`\`emailTokens.${key}\` must be a plain value with no quotes, brackets, semicolons, parentheses, backslashes or ampersands`);
+function emailContent(value, name) {
+  const given = value === undefined ? {} : value;
+  if (!given || typeof given !== 'object' || Array.isArray(given)) fail('`email` must be the EMAIL object from page-access.mjs');
+  const locale = given.locale === undefined ? 'en-GB' : given.locale;
+  if (!Object.hasOwn(EMAIL_LOCALES, locale)) fail(`\`email.locale\` must be ${Object.keys(EMAIL_LOCALES).join(' or ')}`);
+  const timeZone = given.timeZone === undefined ? EMAIL_LOCALES[locale] : given.timeZone;
+  try {
+    new Intl.DateTimeFormat('en-GB', { timeZone });
+  } catch {
+    fail(`\`email.timeZone\` must be a time zone such as Europe/London, got ${JSON.stringify(timeZone)}`);
   }
-  return Object.freeze({ ...value });
+  let logo = null;
+  if (given.logo !== undefined && given.logo !== null) {
+    const { src, width, height } = given.logo;
+    if (typeof src !== 'string' || !src.startsWith('/assets/') || !src.toLowerCase().endsWith('.png') || !/^[a-z0-9._/-]+$/i.test(src) || src.split('/').includes('..')) fail('`email.logo.src` must be a .png path under /assets/, in letters, digits, dots, hyphens and underscores (an @ makes the server redirect)');
+    if (!Number.isInteger(width) || width <= 0 || !Number.isInteger(height) || height <= 0) fail('`email.logo` needs the PNG\'s width and height in pixels');
+    logo = Object.freeze({ src, width, height });
+  }
+  const company = typeof given.company === 'string' && given.company.trim() ? given.company.trim() : name;
+  return Object.freeze({ company, logo, locale, timeZone });
 }
 
 /** A domain sign-in answers on: a bare name with at least one dot, no scheme, no path. */
@@ -197,10 +203,16 @@ export function configureSite(options = {}) {
   }
   const sourcePrefix = onePath(options.sourcePrefix, 'sourcePrefix', '/cms/');
   if (!sourcePrefix.endsWith('/')) fail('`sourcePrefix` must end with /');
-  const emailTokens = emailTokenMap(options.emailTokens, EMAIL_TOKEN_NAMES);
+  // One engine look for every brand since 8.7.0: a site's email colours and type no longer apply
+  if (options.emailTokens !== undefined && !warnedPaths.has('emailTokens')) {
+    warnedPaths.add('emailTokens');
+    console.warn('createGate: `emailTokens` is ignored. The sign-in emails use the engine\'s look on every site; a brand sets its content with `email` (brand.json email). Remove the setting.');
+  }
+  const name = typeof options.name === 'string' && options.name.trim() ? options.name.trim() : SITE.name;
+  const email = emailContent(options.email, name);
   const appliedLevels = normaliseApplied(options.appliedLevels);
 
-  SITE.name = typeof options.name === 'string' && options.name.trim() ? options.name.trim() : SITE.name;
+  SITE.name = name;
   SITE.pages = options.pages;
   SITE.sections = options.sections;
   SITE.sources = options.sources || new Map();
@@ -219,7 +231,7 @@ export function configureSite(options = {}) {
   SITE.apps = Object.freeze({ installed: [...apps.installed], imageLogo: apps.imageLogo || null, embeds });
   SITE.library = library;
   SITE.sourcePrefix = sourcePrefix;
-  SITE.emailTokens = emailTokens;
+  SITE.email = email;
   SITE.appliedLevels = appliedLevels;
   SITE.levelsReadAt = Number.isFinite(options.levelsReadAt) && options.levelsReadAt > 0 ? Math.floor(options.levelsReadAt) : 0;
   return SITE;

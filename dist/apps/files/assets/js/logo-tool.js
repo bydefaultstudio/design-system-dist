@@ -48,7 +48,7 @@
  * decides whether it goes into the file. Transparent is preview-only and
  * always available.
  *
- * @version 3.8.1
+ * @version 3.9.0
  */
 (function () {
   'use strict';
@@ -58,7 +58,7 @@
   // words as written.
   function L(text) { return window.bdLocale ? window.bdLocale.text(text) : text; }
 
-  console.log('[logo-tool] v3.8.1 loaded');
+  console.log('[logo-tool] v3.9.0 loaded');
 
   //
   //------- FLATTEN — upstream candidate for @bydefaultstudio/svg-cleaner -------//
@@ -1489,6 +1489,26 @@
     fitState = null;
   }
 
+  // A link can open the tool on one version and colour:
+  // ?variant=<variant id>&colour=<colour id>, both from the manifest (the logo
+  // page's edit buttons use it). The colour brings its own approved ground into
+  // the preview. An unknown or missing value is ignored, so a stale link opens
+  // the defaults, never an empty state.
+  function applyLinkParams() {
+    if (!window.URLSearchParams) return;
+    var query = new URLSearchParams(window.location.search);
+    var variant = query.get('variant');
+    if (variant && M.variants.some(function (v) { return v.id === variant; })) {
+      params.variant = variant;
+    }
+    var colourId = query.get('colour');
+    var match = colourId ? M.colours.filter(function (c) { return c.id === colourId; })[0] : null;
+    if (match) {
+      params.fg = match.value;
+      params.bg = match.bg.value; // manifestProblem() already requires every colour's bg
+    }
+  }
+
   function initLogoTool() {
     var root = document.getElementById('logo-tool');
     if (!root) { releaseStage(); return; }     // tool not on this page
@@ -1530,6 +1550,7 @@
         fg: M.colours[0].value,
         bg: null
       });
+      applyLinkParams();
 
       // A browser can restore the field's last value on reload; the field
       // shows what the file will be, so it starts from the param.

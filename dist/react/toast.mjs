@@ -1,5 +1,5 @@
 'use client';
-/* @bydefaultstudio/design-system v8.6.2 */
+/* @bydefaultstudio/design-system v8.7.0 */
 /**
  * showToast — React bridge to the Toast module (cms/toast.md).
  *

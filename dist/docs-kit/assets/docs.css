@@ -424,6 +424,15 @@
 .glossary-drawer .glossary-topics-scroller {
   flex: 1 1 auto;
   min-inline-size: 0;
+  /* The row fills the bar, so it would cover the handle under it and leave
+     nowhere to pull from. Only the tags take the pointer; the room around
+     them falls through to the handle. A swipe that starts on a tag still
+     scrolls the row. */
+  pointer-events: none;
+}
+
+.glossary-drawer .glossary-topics > * {
+  pointer-events: auto;
 }
 
 /* The close is the engine's (design-system.css, "The close on a dialog or

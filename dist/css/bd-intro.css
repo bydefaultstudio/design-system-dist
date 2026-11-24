@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.2 */
+/* @bydefaultstudio/design-system v8.7.0 */
 /* ==========================================================================
    BD Intro — companion stylesheet for assets/js/bd-intro.js
    ==========================================================================
@@ -20,8 +20,6 @@
 */
 
 .bd-intro {
-  --bd-intro-background: var(--background-inverted, #1f1f1f);
-  --bd-intro-color: var(--text-inverted, #fffdfa);
   --bd-intro-vignette: color-mix(in srgb, currentColor 4%, transparent);
   --bd-intro-z: var(--z-intro, 2000);
   --bd-intro-fade-duration: var(--motion-page-fade-duration, 600ms);
@@ -32,8 +30,11 @@
   inset: 0;
   z-index: var(--bd-intro-z);
   overflow: hidden;
-  background: var(--bd-intro-background);
-  color: var(--bd-intro-color);
+  /* The two colours are read here with their defaults, not declared on the
+     curtain: a declaration on .bd-intro would beat one a theme sets on
+     :root, and a theme is where a brand pins the curtain to one ground. */
+  background: var(--bd-intro-background, var(--background-inverted, #1f1f1f));
+  color: var(--bd-intro-color, var(--text-inverted, #fffdfa));
   opacity: 1;
   transition: opacity var(--bd-intro-fade-duration) var(--bd-intro-fade-easing);
 }

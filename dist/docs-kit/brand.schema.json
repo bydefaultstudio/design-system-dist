@@ -191,10 +191,11 @@
     "email": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Reserved for phase G: the email header, footer and security notes.",
+      "description": "The sign-in email's content. The look is the engine's, the same for every brand.",
       "properties": {
-        "tokens": { "type": "object" },
-        "headerLogo": {},
+        "companyName": { "type": "string", "minLength": 1, "description": "Who sends the email, in its footer. Defaults to wording.organisation." },
+        "logo": { "type": "string", "pattern": "^assets/.+\\.png$", "description": "The logo as a PNG under assets/, 64px tall (shown at 32px), in one mid grey that reads on white and on near-black." },
+        "timeZone": { "type": "string", "description": "The zone the email's time is written in. Defaults to Europe/London for en-GB and America/New_York for en-US." },
         "footer": {},
         "securityNotes": {}
       }

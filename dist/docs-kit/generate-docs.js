@@ -7059,6 +7059,10 @@ function writePageAccess() {
  * APPS is the installed apps and the brand's primary logo: createGate mounts
  * the Image Placeholder's and the Asset Library's routes from it.
  *
+ * EMAIL is what the sign-in emails say about the brand (brand.json email):
+ * its company name, its logo PNG and size, and the locale and zone its dates
+ * use. createGate's email option.
+ *
  * NOT_INSTALLED maps the address of each app this site doesn't install, and
  * its guide's, to the app's name: the Worker answers them with the
  * not-installed page and a 404 (createGate notInstalled).
@@ -7085,6 +7089,7 @@ function writePageAccess() {
     + `export const SOURCE_PAGES = new Map([\n${sources.map(([s, p]) => `  [${JSON.stringify(s)}, ${JSON.stringify(p)}],`).join('\n')}\n]);\n\n`
     + `export const WITHHELD_SOURCES = ${JSON.stringify([...withheldSources].sort())};\n\n`
     + `export const APPS = Object.freeze(${JSON.stringify(installedAppsForWorker())});\n\n`
+    + `export const EMAIL = Object.freeze(${JSON.stringify(emailForWorker())});\n\n`
     + `export const NOT_INSTALLED = new Map([${[...notInstalledAddresses()].map(([a, n]) => `\n  [${JSON.stringify(a)}, ${JSON.stringify(n)}],`).join('')}\n]);\n\n`
     + `export const APPLIED_LEVELS = Object.freeze(${JSON.stringify(appliedLevelsForWorker(sections))});\n\n`
     + `export const LEVELS_READ_AT = ${LEVELS_READ_AT};\n`;
@@ -7417,6 +7422,31 @@ async function checkDoorPages(allFiles) {
     process.exit(1);
   }
   console.log(`🚪 Door pages checked: ${allFiles.filter((f) => resolvePageType(f.frontmatter).name === 'bare').length} bare page(s), each file they load is public at the gate`);
+}
+
+/**
+ * The sign-in email's brand content for createGate's `email` option
+ * (cms/email-template.md). The logo's pixel size is read from the PNG
+ * itself, so the email can state its display size without a second setting;
+ * a logo that is missing or not a PNG stops the build, because the email
+ * would otherwise show a broken image in every inbox.
+ */
+function emailForWorker() {
+  const e = (BRAND && BRAND.email) || {};
+  const locale = (BRAND && BRAND.wording && BRAND.wording.locale) || 'en-GB';
+  const out = { company: (e.companyName || siteTokens().organisation || '').trim(), logo: null, locale };
+  if (e.timeZone) out.timeZone = e.timeZone;
+  if (e.logo) {
+    const file = path.join(ROOT, e.logo);
+    const bytes = fs.existsSync(file) ? fs.readFileSync(file) : null;
+    // A PNG starts with its signature, then the IHDR chunk: width and height at bytes 16 and 20
+    if (!bytes || bytes.length < 24 || bytes.toString('latin1', 1, 4) !== 'PNG' || bytes.toString('latin1', 12, 16) !== 'IHDR') {
+      console.error(`\n❌ brand.json email.logo is ${e.logo}, which is ${bytes ? 'not a PNG' : 'missing'}. The sign-in email needs a PNG there.\n`);
+      process.exit(1);
+    }
+    out.logo = { src: '/' + e.logo, width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+  }
+  return out;
 }
 
 /**
@@ -8392,6 +8422,10 @@ function applyTemplateChrome(rawTemplate) {
     copyKitAsset('js/vendor/barba.min.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'vendor', 'barba.min.js'));
     copyKitAsset('js/vendor/barba-LICENSE.txt', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'vendor', 'barba-LICENSE.txt'));
     copyKitAsset('js/barba-docs.js', path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'barba-docs.js'));
+    // The sign-in email's icons, the same on every site (worker/email-template.mjs EMAIL_ICON_PATH)
+    for (const icon of ['mail', 'clock', 'pin']) {
+      copyKitAsset(`email/${icon}.png`, path.join(OUTPUT_DIR, 'assets', 'docs-kit', 'email', `${icon}.png`));
+    }
 
     // Before extraStylesheets so a site stylesheet can override; after
     // extraScripts so modules that set window.bdBarbaOptions or listen for

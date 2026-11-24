@@ -264,7 +264,7 @@ const KNOWN = {
   access: ['requestRoute', 'turnstileSiteKey', 'communityLabel', 'defaultRole'],
   adPreview: ['frameOrigin'],
   emailSignature: ['base', 'previewBase', 'logo', 'logoWidth', 'logoHeight', 'icons', 'cardBackground', 'disclaimer'],
-  email: ['tokens', 'headerLogo', 'footer', 'securityNotes'],
+  email: ['companyName', 'logo', 'timeZone', 'footer', 'securityNotes'],
 };
 
 /**
@@ -538,10 +538,26 @@ function validate(brand, opts = {}) {
     }
   }
 
-  // Reserved for later phases: accepted, shape-checked only
+  // The sign-in email's content (cms/email-template.md): the look is the
+  // engine's, so a brand names itself here and sets nothing about style.
+  // footer and securityNotes are reserved: accepted, shape-checked only.
   if (brand.email !== undefined) {
     if (!isObj(brand.email)) fail('"email" must be an object.');
-    else unknown(brand.email, KNOWN.email, 'email.');
+    else {
+      unknown(brand.email, KNOWN.email, 'email.');
+      const e = brand.email;
+      if (e.companyName !== undefined && !(str(e.companyName) && !/[<>"]/.test(e.companyName))) {
+        fail('"email.companyName" must be the company\'s name as text, or left out to use "wording.organisation".');
+      }
+      if (e.logo !== undefined && !(str(e.logo) && /^assets\/[a-z0-9._\/-]+\.png$/i.test(e.logo) && !e.logo.split('/').includes('..'))) {
+        fail(`"email.logo" is ${JSON.stringify(e.logo)}. It must be a PNG under assets/, in letters, digits, dots, hyphens and underscores only, such as "assets/images/logos/acme/email/logo-2x.png": Gmail drops SVG, only assets/ loads without signing in, and a character such as @ makes the server redirect, which some mail clients do not follow.`);
+      }
+      if (e.timeZone !== undefined) {
+        let known = str(e.timeZone);
+        try { if (known) new Intl.DateTimeFormat('en-GB', { timeZone: e.timeZone }); } catch { known = false; }
+        if (!known) fail(`"email.timeZone" is ${JSON.stringify(e.timeZone)}. It must be a time zone such as "Europe/London" or "America/New_York", or left out to follow "wording.locale".`);
+      }
+    }
   }
   if (brand.switches !== undefined && !isObj(brand.switches)) fail('"switches" must be an object.');
 
