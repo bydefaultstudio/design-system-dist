@@ -162,7 +162,8 @@
       "properties": {
         "requestRoute": { "anyOf": [{ "type": "string", "maxLength": 200, "pattern": "^/[^/\\\\?#\\s\\u0000-\\u001f\\u007f][^\\\\?#\\s\\u0000-\\u001f\\u007f]*$" }, { "type": "null" }], "deprecated": true, "description": "No longer read: Ask for access is the engine's /support.html on every site (phase D). Delete it." },
         "turnstileSiteKey": { "anyOf": [{ "type": "string", "pattern": "^[0-9A-Za-z_-]{10,100}$" }, { "type": "null" }], "description": "The spam check's site key on the Ask for access page, given with the form service's address. Public. Left out, a signed-out reader's request is refused by the spam check." },
-        "communityLabel": { "type": "string", "minLength": 1, "maxLength": 40, "description": "What this deployment calls the community role and level: on the People page, the locked page, index tags, Settings levels and the invite email. The stored value stays community. Left out, Community." }
+        "communityLabel": { "type": "string", "minLength": 1, "maxLength": 40, "description": "What this deployment calls the community role and level: on the People page, the locked page, index tags, Settings levels and the invite email. The stored value stays community. Left out, Community." },
+        "defaultRole": { "enum": ["community", "team", "guest"], "description": "The role People's Add person form starts on. Never admin or owner. Left out, community. A request that names no role still stores community." }
       }
     },
     "adPreview": {

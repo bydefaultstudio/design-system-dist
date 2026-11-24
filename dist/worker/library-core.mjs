@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.1 */
+/* @bydefaultstudio/design-system v8.6.2 */
 /**
  * library-core.mjs — the pure half of the Asset Library route: path parsing,
  * Range arithmetic and the download headers. No Workers APIs and no I/O, so

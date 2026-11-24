@@ -1253,12 +1253,18 @@
  * used in brand and design-system docs to flag prohibited
  * patterns.
  *
- *   <div class="card dont-card">
+ *   <div class="card dont-card" [data-variant="do"]>
  *     <img class="dont-card-media" src="..." width="800" height="450" loading="lazy" alt="">
- *     <div class="svg-icn dont-card-icon">{{icon:close-circled}}</div>
+ *     <div class="dont-card-icon">{{icon:close-circled}}</div>
  *     <h4 class="card-title">Rule title</h4>
  *     <p class="card-description">Why it's a don't.</p>
  *   </div>
+ *
+ * A two-column grid: the media and the description span both columns, the
+ * icon and the title share the first line. The media sits flush to the
+ * card's edge, the text in a --space-m inset (Figma › Website › dont-card).
+ * data-variant="do" turns the icon to --status-success, for the matching
+ * rule shown the right way (use {{icon:check-circled}}).
  *
  * Pair with .grid.cols-2.gap-m for a rules grid. The media slot shows
  * the failure it warns against; a placeholder holds it until the real
@@ -1266,32 +1272,56 @@
  */
 
 .dont-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-s);
+  --dont-card-inset: var(--space-m);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  column-gap: var(--space-m);
+  row-gap: var(--space-xs);
+  padding: var(--dont-card-inset);
+  /* Rounds the flush media into the card's corners. hidden first for
+     Safari before 16; clip where supported, so the card is not a scroll
+     container. */
+  overflow: hidden;
+  overflow: clip;
 }
 
 .dont-card-media {
+  grid-column: 1 / -1;
   display: block;
-  width: 100%;
+  width: calc(100% + 2 * var(--dont-card-inset));
+  max-width: none;
   height: auto;
+  margin: calc(-1 * var(--dont-card-inset)) calc(-1 * var(--dont-card-inset)) var(--space-s);
 }
 
+/* The icon box is one title line tall, so the icon centres on the first
+   line however many lines the title wraps to. Keep its font-l and
+   line-height-m in step with .dont-card .card-title below. */
 .dont-card-icon {
+  display: flex;
+  align-items: center;
+  height: calc(var(--font-l) * var(--line-height-m));
   color: var(--status-danger);
 }
 
+.dont-card[data-variant="do"] .dont-card-icon {
+  color: var(--status-success);
+}
+
 .dont-card-icon .svg-icn {
-  width: 2rem;
-  height: 2rem;
+  width: 1.375rem;
+  height: 1.375rem;
 }
 
 .dont-card .card-title {
   font-size: var(--font-l);
+  line-height: var(--line-height-m);
   margin-bottom: 0;
 }
 
 .dont-card .card-description {
+  grid-column: 1 / -1;
   font-size: var(--font-s);
 }
 

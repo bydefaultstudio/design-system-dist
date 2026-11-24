@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.1 */
+/* @bydefaultstudio/design-system v8.6.2 */
 /**
  * gate-entry.mjs - createGate(), the access gate as one factory
  * (levels-groups-plan.md Phase 3, D21). Shipped as

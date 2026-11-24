@@ -241,6 +241,9 @@ function viewBoxOf(markup) {
   return nums.length === 4 && nums.every(Number.isFinite) ? nums : null;
 }
 
+// The roles brand.json access.defaultRole may name
+const DEFAULT_ROLES = ['community', 'team', 'guest'];
+
 const KNOWN = {
   root: ['$schema', 'version', 'name', 'slug', 'url', 'description', 'footerText', 'fonts', 'favicons',
     'ogImage', 'colours', 'logos', 'icons', 'wording', 'access', 'adPreview', 'emailSignature', 'email', 'switches'],
@@ -258,7 +261,7 @@ const KNOWN = {
   // requestRoute is no longer read (phase D): Ask for access is the engine's
   // /support.html on every site. Still accepted, so no old file breaks; the
   // generator warns until it is deleted.
-  access: ['requestRoute', 'turnstileSiteKey', 'communityLabel'],
+  access: ['requestRoute', 'turnstileSiteKey', 'communityLabel', 'defaultRole'],
   adPreview: ['frameOrigin'],
   emailSignature: ['base', 'previewBase', 'logo', 'logoWidth', 'logoHeight', 'icons', 'cardBackground', 'disclaimer'],
   email: ['tokens', 'headerLogo', 'footer', 'securityNotes'],
@@ -507,6 +510,12 @@ function validate(brand, opts = {}) {
           ? plainTextProblem('access.communityLabel', label, 40)
           : `"access.communityLabel" is ${JSON.stringify(label)}. It must be a name in words, such as "Community" or "Partner", or left out.`;
         if (problem) fail(problem);
+      }
+      // The role People's Add person form starts on. Never admin or owner: a
+      // default that grants management is one slip from handing it out.
+      const role = brand.access.defaultRole;
+      if (role !== undefined && !DEFAULT_ROLES.includes(role)) {
+        fail(`"access.defaultRole" is ${JSON.stringify(role)}. It must be ${DEFAULT_ROLES.join(', ')} or left out (community); a new person never starts as admin or owner.`);
       }
     }
   }
@@ -811,6 +820,8 @@ function brandTokens(brand) {
     turnstileSiteKey: access.turnstileSiteKey || '',
     // What this deployment calls the community role (community-access-plan.md D2)
     communityLabel: access.communityLabel || 'Community',
+    // The role People's Add person form starts on (people.js marks it)
+    defaultRole: access.defaultRole || 'community',
     // Ad Preview's frame on another site; empty runs it on this one, sealed (worker/ad-frame.js)
     adFrameOrigin: (brand.adPreview && brand.adPreview.frameOrigin) || '',
   };

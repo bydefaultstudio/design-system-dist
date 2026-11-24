@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v8.6.1 -->
+<!-- @bydefaultstudio/design-system v8.6.2 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 8.6.1 (package)**
+**Version: 8.6.2 (package)**
 
 ## Getting the System
 
@@ -1208,9 +1208,13 @@ These are the actual CSS custom property values from `design-system.css`. Always
 | `--radius-detail` | `calc(var(--radius-xs) * var(--radius-scale))` | small finishing corners: code, kbd, badge, skeleton |
 | `--card-radius` | `var(--radius-surface)` |  |
 | `--tooltip-radius` | `var(--radius-surface)` | [data-tooltip] and .progress-tooltip |
+| `--callout-radius` | `var(--radius-surface)` |  |
+| `--toast-radius` | `var(--radius-surface)` |  |
 | `--code-radius` | `var(--radius-detail)` |  |
 | `--kbd-radius` | `var(--radius-detail)` |  |
 | `--number-input-radius` | `var(--field-radius)` |  |
+| `--callout-border-color` | `transparent` |  |
+| `--toast-border-color` | `transparent` |  |
 | `--media-radius` | `var(--radius-surface)` | follows --radius-scale |
 | `--media-border-width` | `var(--border-s)` | 0 removes every frame |
 | `--media-border-color` | `var(--border-faded)` |  |
@@ -2292,7 +2296,7 @@ A corner has three layers. Components read only the middle one, the roles.
 | Role | Step | Members |
 | --- | --- | --- |
 | `--radius-control` | `--radius-s` | Things you operate: button, field, select, segmented control, number input, chip |
-| `--radius-surface` | `--radius-m` | Things that contain: card, dialog, drawer, tooltip |
+| `--radius-surface` | `--radius-m` | Things that contain: card, dialog, drawer, tooltip, callout, toast |
 | `--radius-detail` | `--radius-xs` | Small finishing corners: `code`, `kbd`, badge, skeleton line |
 
 A new component declares its own token on `:root`, points it at a role (`--toast-radius: var(--radius-surface)`) and reads that token in `border-radius`. Re-point the token to re-skin one component; re-point the role to re-skin all of them. A brand re-points a token on `:root` from `theme.css`. Five components keep their radius token on the element, beside their other tokens (button, badge, tag, dialog, drawer); re-point those with the selector: `.dialog { --dialog-radius: 0; }`.
@@ -6535,7 +6539,8 @@ This section documents how the component is built. For usage, see the sections a
 | Padding | `var(--space-l)` |
 | Margin | none: the container spaces it, a block's gap or, on a docs page, the prose flow (`--space-l` above and below) |
 | Background | `var(--background-faded)` |
-| Border | `var(--border-s) solid var(--border-faded)` |
+| Border | `var(--border-s) solid var(--callout-border-color)`, transparent: the fill draws the box. A brand restores the edge by pointing the token at `--border-faded` on `:root` in `theme.css` |
+| Radius | `var(--callout-radius)` → `var(--radius-surface)`, so square until a brand turns `--radius-scale` on or re-points `--callout-radius` on `:root` in `theme.css` |
 
 ### Icon layout (`data-icon`)
 
@@ -13953,6 +13958,9 @@ The neutral toast, meaning one with no `data-type`, inverts with the theme:
 |---|---|
 | Background | `var(--background-inverted)` — swaps with the theme |
 | Text color | `var(--text-inverted)` — swaps with the theme |
+| Radius | `var(--toast-radius)` → `var(--radius-surface)`, so square until a brand turns `--radius-scale` on or re-points `--toast-radius` on `:root` in `theme.css` |
+
+Every toast has a `var(--border-s) solid var(--toast-border-color)` border, transparent: the fill draws the box. A brand restores the edge by pointing the token at `--border-faded` on `:root` in `theme.css`.
 
 A typed toast keeps its status color as text in both themes and reads its surface from the paired token:
 

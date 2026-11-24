@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.1 */
+/* @bydefaultstudio/design-system v8.6.2 */
 /**
  * hidden-nav.mjs - per-reader navigation for `accessNav: 'hidden'` and
  * `'earned'` (levels-groups-plan.md D19, §3.3; community-access-plan.md D11).

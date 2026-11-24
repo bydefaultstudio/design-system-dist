@@ -17,7 +17,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.4.0';
+  var VERSION = '1.5.0';
   var API = '/api/people/';
 
   // community's label is the deployment's (data-community-label), set at init.
@@ -793,12 +793,26 @@
 
   /* ------ Initialize ------ */
 
+  // The role the Add person form starts on (brand.json access.defaultRole),
+  // set as the option's default so every form.reset() returns to it. An
+  // unknown or missing value keeps the markup's own default, community.
+  function markDefaultRole() {
+    var select = byId('people-add-role');
+    var wanted = select && select.getAttribute('data-default-role');
+    if (!wanted || ['community', 'team', 'guest'].indexOf(wanted) === -1) return;
+    for (var i = 0; i < select.options.length; i++) {
+      select.options[i].defaultSelected = select.options[i].value === wanted;
+    }
+    select.value = wanted;
+  }
+
   function initPeople() {
     var root = document.querySelector('[data-tool="people"] #people');
     if (!root || root.dataset.peopleInit) return;
     root.dataset.peopleInit = 'true';
     state.root = root;
     ROLE_LABELS.community = root.getAttribute('data-community-label') || ROLE_LABELS.community;
+    markDefaultRole();
     // The group dialog has its own opener handler (it fills the form from
     // state), so the trigger loses dialog.js's attribute before the delegated
     // document listener sees the click.

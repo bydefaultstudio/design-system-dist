@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.6.1 */
+/* @bydefaultstudio/design-system v8.6.2 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -1268,9 +1268,20 @@
      re-pointed with its selector instead — see cms/border.md. */
   --card-radius: var(--radius-surface);
   --tooltip-radius: var(--radius-surface); /* [data-tooltip] and .progress-tooltip */
+  --callout-radius: var(--radius-surface);
+  --toast-radius: var(--radius-surface);
   --code-radius: var(--radius-detail);
   --kbd-radius: var(--radius-detail);
   --number-input-radius: var(--field-radius);
+
+  /* The border on a callout or toast. Transparent: the fill draws the box,
+     and the border keeps its width so a brand that wants the edge back
+     changes no size. To restore it, point these at --border-faded in
+     theme.css; set there, the value resolves on :root, so a dark section
+     inside a light page keeps the light edge, the limit of any :root token
+     that reads another token. */
+  --callout-border-color: transparent;
+  --toast-border-color: transparent;
 
   /* -- Media frame --
      One frame for everything a page embeds that is not text: Image, Asset
@@ -3070,7 +3081,8 @@ a:not([href], .button) {
 .callout {
   padding: var(--space-l);
   background-color: var(--background-faded);
-  border: var(--border-s) solid var(--border-faded);
+  border: var(--border-s) solid var(--callout-border-color);
+  border-radius: var(--callout-radius);
 }
 
 .callout > *:first-child {
@@ -5987,7 +5999,8 @@ a[data-tooltip],
   background-color: var(--background-inverted);
   color: var(--text-inverted);
   padding: var(--space-m) var(--space-l);
-  border: var(--border-s) solid var(--border-faded);
+  border: var(--border-s) solid var(--toast-border-color);
+  border-radius: var(--toast-radius);
   display: flex;
   align-items: center;
   gap: var(--space-m);
@@ -11380,8 +11393,7 @@ section[id] {
      rather than the fill — and that rule is itself faint, since --border-faded
      is also a wash: it lands at 1.40:1 on the header ground in light and
      1.92:1 in dark, both under the 3:1 of WCAG 1.4.11. Those figures are
-     unchanged by this swap (they were 1.41 and 1.91) and are the same defect
-     already recorded against .callout and .toast borders. */
+     unchanged by this swap (they were 1.41 and 1.91). */
   --page-header-background: var(--background-secondary);
   --page-header-border: var(--border-s) solid var(--border-faded);
   --page-header-color: var(--text-primary);

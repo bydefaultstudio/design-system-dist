@@ -44,10 +44,12 @@ Each person has exactly one. It is set when they are added and can be changed fr
 | **Owner** | Everything | Manage everyone, admins and other owners included |
 | **Admin** | Everything but owner pages | Manage team members, guests, other admins and groups. Sees an owner's row, read only |
 | **Team** | Every public, community and team page, and the admin pages their internal groups grant | Read |
-| **{{brand:communityLabel}}** | Public and community pages, the home and section indexes. **The default for a new person** | Read |
+| **{{brand:communityLabel}}** | Public and community pages, the home and section indexes. **The default for a new person**, unless the deployment sets another | Read |
 | **Guest** | Public pages, the home and section indexes, and the {{brand:communityLabel}} pages their external groups grant | Read |
 
 The same word names the page and the reader who may open it: a team page is for the team, a community page for the community. The community role's name is the deployment's own (`access.communityLabel` in `brand.json`, "Community" when left out); the stored value is always `community`. A community member may join external groups, which add nothing yet since they already open every community page, and search is closed to them, as to a guest, while the search index holds team pages. Under `accessNav: 'earned'` they have a search index of their own, public and {{brand:communityLabel}} pages only, so search opens for them. Public has no role, because it is the signed-out reader, and guest has no level, because guests are defined by their groups.
+
+The Add person form starts on the role `access.defaultRole` names in `brand.json`: community, team or guest, community when left out. On this site it starts on {{brand:defaultRole}}. A deployment whose people are mostly its own team sets team. Admin and owner are refused as defaults, and a request that names no role is still stored as community, the outside role, so a slip never opens team pages.
 
 An owner is the studio that runs the deployment, never a client or a member of their team. The owner named in the deployment's config is an owner whatever their row says, and the row is set to match the next time they sign in. A deployment cannot refuse the person who runs it, and the first owner needs no SQL to become one. Set `ACCESS_OWNER` on every deployment: without it nobody can become an owner, because only an owner makes one, and the owner pages stay shut to everyone. Changing it later leaves the previous owner an owner on the list; demote them on this page if that is not meant. The owner's own row never carries an end date or the demo switch.
 

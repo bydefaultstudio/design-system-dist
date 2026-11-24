@@ -883,7 +883,7 @@ function docFilenames() {
 function siteTokens() {
   if (BRAND) return brandFile.brandTokens(BRAND);
   // The engine's Ask for access page reads the last two; empty means none
-  const tokens = { name: CONFIG.siteName, siteName: CONFIG.siteName, organisation: CONFIG.siteName, supportEmail: '', turnstileSiteKey: '', communityLabel: 'Community', adFrameOrigin: '' };
+  const tokens = { name: CONFIG.siteName, siteName: CONFIG.siteName, organisation: CONFIG.siteName, supportEmail: '', turnstileSiteKey: '', communityLabel: 'Community', defaultRole: 'community', adFrameOrigin: '' };
   if (CONFIG.siteUrl) tokens.url = CONFIG.siteUrl;
   return tokens;
 }
