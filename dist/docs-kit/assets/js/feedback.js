@@ -243,7 +243,7 @@
   }
 
   // The controls an error can be about, so it is tied to the one that failed
-  // (cms/chip.md: .is-error and aria-invalid together, pointing at the message).
+  // (spec/chip.md: .is-error and aria-invalid together, pointing at the message).
   function fieldControls(field) {
     if (field === 'topic') return form.querySelectorAll('input[name="topic"]');
     if (field === 'message') return [q('.feedback-textarea')];

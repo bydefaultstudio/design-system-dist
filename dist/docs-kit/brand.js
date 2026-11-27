@@ -241,8 +241,70 @@ function viewBoxOf(markup) {
   return nums.length === 4 && nums.every(Number.isFinite) ? nums : null;
 }
 
-// The roles brand.json access.defaultRole may name
+// The roles brand.json access.defaultRole may name when access.roles is not set
 const DEFAULT_ROLES = ['community', 'team', 'guest'];
+
+// The roles a site has when brand.json sets no access.roles: the five every
+// site had before 8.8.0 (roles-engine-plan.md E1). The twin of worker/roles.mjs
+// FALLBACK_ROLES, which the generator cannot import (it ships without worker/).
+const FALLBACK_ROLES = [
+  { key: 'owner', label: 'Owner', internal: true },
+  { key: 'admin', label: 'Admin', internal: true },
+  { key: 'team', label: 'Team', internal: true },
+  { key: 'community', label: 'Community', internal: false },
+  { key: 'guest', label: 'Guest', internal: false },
+];
+const ROLE_KEY = /^[a-z][a-z0-9-]{1,23}$/;
+const RESERVED_KEYS = ['public', 'hidden', 'out', 'in'];
+
+/**
+ * Every problem with brand.json access.roles, as the sentences the build stops
+ * with (roles-engine-plan.md §4.1). Empty when the list is fine.
+ */
+function rolesProblems(roles) {
+  const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+  if (!Array.isArray(roles) || roles.length < 3 || roles.length > 8) {
+    return ['"access.roles" must list between 3 and 8 roles, highest first: "owner", then "admin", then the rest.'];
+  }
+  const problems = [];
+  const seen = new Set();
+  let external = null;
+  roles.forEach((role, i) => {
+    if (!isObj(role)) { problems.push(`"access.roles" entry ${i + 1} must be an object with "key", "label" and "internal".`); return; }
+    const extra = Object.keys(role).filter((k) => !['key', 'label', 'internal'].includes(k));
+    if (extra.length) problems.push(`"access.roles" entry ${i + 1} has ${extra.map((k) => `"${k}"`).join(', ')}, which is not read. Each role has "key", "label" and "internal".`);
+    const key = role.key;
+    if (typeof key !== 'string' || !ROLE_KEY.test(key)) {
+      problems.push(`"access.roles" key ${JSON.stringify(key)} must be lower case: 2 to 24 letters, numbers and hyphens, starting with a letter, such as "pro".`);
+      return;
+    }
+    if (RESERVED_KEYS.includes(key)) problems.push(`"access.roles" cannot use "${key}": the engine already uses that word${key === 'public' ? ' for signed-out readers' : ''}.`);
+    if (seen.has(key)) problems.push(`"access.roles" lists "${key}" twice. Each role appears once.`);
+    seen.add(key);
+    const labelProblem = typeof role.label === 'string' && role.label.trim()
+      ? plainTextProblem(`access.roles "${key}" label`, role.label, 40)
+      : `"access.roles" role "${key}" needs a "label", the name people see, such as "${key[0].toUpperCase()}${key.slice(1)}".`;
+    if (labelProblem) problems.push(labelProblem);
+    if (typeof role.internal !== 'boolean') problems.push(`"access.roles" role "${key}" needs "internal": true for your own people, false for everyone outside.`);
+    else if (role.internal && external) problems.push(`"access.roles" lists "${external}" (external) above "${key}" (internal). Internal roles come first, so no outsider ranks above your own people.`);
+    else if (!role.internal && !external) external = key;
+  });
+  const keyAt = (i) => (isObj(roles[i]) ? roles[i].key : undefined);
+  if (keyAt(0) !== 'owner') problems.push('"access.roles" must start with "owner". The owner runs the engine on every site.');
+  else if (roles[0].internal !== true) problems.push('"access.roles" "owner" must be internal.');
+  if (keyAt(1) !== 'admin') problems.push('"access.roles" must list "admin" second, after "owner". Admins manage people and page levels on every site.');
+  else if (roles[1].internal !== true) problems.push('"access.roles" "admin" must be internal.');
+  if (!external) problems.push('"access.roles" needs at least one external role, for the people you invite.');
+  return problems;
+}
+
+/** The site's roles, highest first: brand.json access.roles, else the fallback five with the community label. */
+function siteRoles(brand) {
+  const access = (brand && brand.access) || {};
+  if (Array.isArray(access.roles)) return access.roles.map((r) => ({ key: r.key, label: r.label.trim(), internal: r.internal }));
+  const label = typeof access.communityLabel === 'string' && access.communityLabel.trim() ? access.communityLabel.trim() : 'Community';
+  return FALLBACK_ROLES.map((r) => (r.key === 'community' ? { ...r, label } : { ...r }));
+}
 
 const KNOWN = {
   root: ['$schema', 'version', 'name', 'slug', 'url', 'description', 'footerText', 'fonts', 'favicons',
@@ -261,7 +323,7 @@ const KNOWN = {
   // requestRoute is no longer read (phase D): Ask for access is the engine's
   // /support.html on every site. Still accepted, so no old file breaks; the
   // generator warns until it is deleted.
-  access: ['requestRoute', 'turnstileSiteKey', 'communityLabel', 'defaultRole'],
+  access: ['requestRoute', 'turnstileSiteKey', 'communityLabel', 'defaultRole', 'roles'],
   adPreview: ['frameOrigin'],
   emailSignature: ['base', 'previewBase', 'logo', 'logoWidth', 'logoHeight', 'icons', 'cardBackground', 'disclaimer'],
   email: ['companyName', 'logo', 'timeZone', 'footer', 'securityNotes'],
@@ -329,16 +391,16 @@ function validate(brand, opts = {}) {
   if (brand.version !== BRAND_VERSION) fail(`"version" must be ${BRAND_VERSION}.`);
 
   // Identity
-  if (!str(brand.name)) fail('"name" is required: the brand\'s name, such as "BlackDoctor". The site is called "<name> OS".');
+  if (!str(brand.name)) fail('"name" is required: the brand\'s name, such as "Northwind". The site is called "<name> OS".');
   else if (/\bOS$/.test(brand.name.trim())) fail(`"name" is "${brand.name}". Leave "OS" off: the engine adds it (D9).`);
   if (!str(brand.slug) || !SLUG.test(brand.slug)) {
-    fail(`"slug" is ${brand.slug === undefined ? 'missing' : JSON.stringify(brand.slug)}. It must be lower-case letters, numbers and single hyphens, such as "blackdoctor": it names the sender address and the subdomain.`);
+    fail(`"slug" is ${brand.slug === undefined ? 'missing' : JSON.stringify(brand.slug)}. It must be lower-case letters, numbers and single hyphens, such as "northwind": it names the sender address and the subdomain.`);
   }
   if (!https(brand.url) || /\/$/.test(brand.url)) {
-    fail(`"url" is ${brand.url === undefined ? 'missing' : JSON.stringify(brand.url)}. It must be the site's https address with no trailing slash, such as "https://blackdoctor.design".`);
+    fail(`"url" is ${brand.url === undefined ? 'missing' : JSON.stringify(brand.url)}. It must be the site's https address with no trailing slash, such as "https://northwind.design".`);
   }
   if (!str(brand.description)) fail('"description" is required: one sentence describing the site.');
-  if (!str(brand.footerText)) fail('"footerText" is required, such as "© 2026 BlackDoctor".');
+  if (!str(brand.footerText)) fail('"footerText" is required, such as "© 2026 Northwind".');
   for (const field of ['name', 'description', 'footerText']) {
     const problem = str(brand[field]) ? plainTextProblem(field, brand[field], PLAIN_TEXT_LIMITS[field]) : null;
     if (problem) fail(problem);
@@ -504,8 +566,12 @@ function validate(brand, opts = {}) {
       if (key !== undefined && key !== null && !(typeof key === 'string' && /^[0-9A-Za-z_-]{10,100}$/.test(key))) {
         fail(`"access.turnstileSiteKey" is ${JSON.stringify(key)}. It must be the spam check's site key, letters, digits, - and _ only, or left out.`);
       }
+      const roles = brand.access.roles;
+      if (roles !== undefined) for (const problem of rolesProblems(roles)) fail(problem);
       const label = brand.access.communityLabel;
-      if (label !== undefined) {
+      if (label !== undefined && roles !== undefined) {
+        fail('"access.communityLabel" is set as well as "access.roles". Put the label on the community role in the list and delete "communityLabel".');
+      } else if (label !== undefined) {
         const problem = typeof label === 'string' && label.trim()
           ? plainTextProblem('access.communityLabel', label, 40)
           : `"access.communityLabel" is ${JSON.stringify(label)}. It must be a name in words, such as "Community" or "Partner", or left out.`;
@@ -514,7 +580,11 @@ function validate(brand, opts = {}) {
       // The role People's Add person form starts on. Never admin or owner: a
       // default that grants management is one slip from handing it out.
       const role = brand.access.defaultRole;
-      if (role !== undefined && !DEFAULT_ROLES.includes(role)) {
+      if (role !== undefined && Array.isArray(roles)) {
+        const listed = roles.find((r) => isObj(r) && r.key === role);
+        if (!listed) fail(`"access.defaultRole" is ${JSON.stringify(role)}, which "access.roles" does not list. It must be one of your external roles.`);
+        else if (listed.internal === true) fail(`"access.defaultRole" is "${role}", an internal role. A new person starts outside; make them internal by hand.`);
+      } else if (role !== undefined && !DEFAULT_ROLES.includes(role)) {
         fail(`"access.defaultRole" is ${JSON.stringify(role)}. It must be ${DEFAULT_ROLES.join(', ')} or left out (community); a new person never starts as admin or owner.`);
       }
     }
@@ -834,10 +904,11 @@ function brandTokens(brand) {
     // attribute as "not set" (phase D)
     supportEmail: (brand.wording && brand.wording.supportEmail) || '',
     turnstileSiteKey: access.turnstileSiteKey || '',
-    // What this deployment calls the community role (community-access-plan.md D2)
-    communityLabel: access.communityLabel || 'Community',
+    // What this deployment calls the community role (community-access-plan.md D2):
+    // its label in access.roles when the list sets one
+    communityLabel: (siteRoles(brand).find((r) => r.key === 'community') || {}).label || access.communityLabel || 'Community',
     // The role People's Add person form starts on (people.js marks it)
-    defaultRole: access.defaultRole || 'community',
+    defaultRole: access.defaultRole || (siteRoles(brand).some((r) => r.key === 'community') ? 'community' : siteRoles(brand).slice(-1)[0].key),
     // Ad Preview's frame on another site; empty runs it on this one, sealed (worker/ad-frame.js)
     adFrameOrigin: (brand.adPreview && brand.adPreview.frameOrigin) || '',
   };
@@ -924,6 +995,9 @@ function logoManifestJs(payload, engineVersion) {
 }
 
 module.exports = {
+  siteRoles,
+  rolesProblems,
+  FALLBACK_ROLES,
   BRAND_VERSION,
   ENGINE_NAME,
   ENGINE_CREDIT,

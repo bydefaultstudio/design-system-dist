@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * session.js - the gate itself (access-plan.md §4.2, §13.2; permissions-plan.md §4.3).
  *
@@ -40,6 +40,7 @@
  */
 import { hideForReader } from './hidden-nav.mjs';
 import { SITE } from './site.mjs';
+import { isExternalLevel } from './roles.mjs';
 import { getAuth, allowedRow, revokeSessions, setListedRole, setUserRole, readerScopes } from './auth.js';
 import {
   ENGINE_PATHS,
@@ -119,7 +120,7 @@ async function notFoundForHidden(request, env, url, setCookies, viewer) {
 async function denyLocked(request, env, url, level, setCookies, viewer) {
   // Under 'earned' a page above community is hidden from the reader: the
   // refusal names neither it nor its level (community-access-plan.md D11).
-  const shown = SITE.accessNav === 'earned' && level !== 'community' ? 'hidden' : level;
+  const shown = SITE.accessNav === 'earned' && !isExternalLevel(level) ? 'hidden' : level;
   // A page hidden from the reader answers as one that does not exist, so an
   // address cannot be used to learn whether an internal page is there.
   if (shown === 'hidden') return notFoundForHidden(request, env, url, setCookies, viewer);

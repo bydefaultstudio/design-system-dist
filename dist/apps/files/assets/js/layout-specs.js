@@ -212,7 +212,7 @@
     square: 'square', portrait: 'photo', landscape: 'video', blank: 'page'
   };
 
-  /* A segmented control holds five at most (cms/form.md, Segmented
+  /* A segmented control holds five at most (spec/form.md, Segmented
      Control); a longer list stays a menu. */
   var SEGMENT_MAX = 5;
 
@@ -2447,7 +2447,7 @@
   }
 
   /* Five options or fewer: all in view at once, as a segmented control
-     (cms/form.md, faded variant — native radios, so the arrow keys and one
+     (spec/form.md, faded variant — native radios, so the arrow keys and one
      tab stop come with it). Its options take their short names. */
   function segmentedField(layer, name, choices) {
     var id = fieldId(name);
@@ -2588,7 +2588,7 @@
 
   /* The letter before a value inside its field (PREFIXES), and the unit
      after a plain number (SUFFIXES): .field-affix, decoration — the input
-     keeps its label (cms/field.md, Affix and unit). */
+     keeps its label (spec/field.md, Affix and unit). */
   function affix(text) {
     var span = document.createElement('span');
     span.className = 'field-affix';
@@ -2710,7 +2710,7 @@
     return block;
   }
 
-  /* A row of colour chips as a radio group (cms/chip.md, colour variant):
+  /* A row of colour chips as a radio group (spec/chip.md, colour variant):
      each entry a value, the fill its chip shows (the value by default) and
      its name for a screen reader. */
   function swatchGroup(name, entries, current) {

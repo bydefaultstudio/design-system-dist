@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * auth.js — Better Auth in the Worker: the sign-in endpoints (access-plan.md §4).
  *
@@ -56,6 +56,7 @@ import {
   sweepSendLog,
 } from './gate.mjs';
 import { USER_ADDITIONAL_FIELDS } from './auth-schema.mjs';
+import { isRole } from './roles.mjs';
 import { deviceFrom, otpSubject, placeFrom, renderOtpEmail, renderOtpText } from './email-template.mjs';
 
 export const AUTH_BASE_PATH = '/api/auth';
@@ -572,7 +573,7 @@ function isDemoRow(row, email, ownerEmail) {
   // flag on it would be a codeless sign-in as the owner (code review,
   // 2026-11-08). Never, however the row was made.
   if (isOwnerEmail(email, ownerEmail)) return false;
-  return !!row && row.demo === 1 && ['team', 'community', 'guest'].includes(row.role);
+  return !!row && row.demo === 1 && isRole(row.role) && row.role !== 'owner' && row.role !== 'admin';
 }
 
 async function readJsonBody(request, maxBytes) {

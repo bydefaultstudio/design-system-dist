@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * site.mjs - what the access gate needs to know about the site it guards
  * (levels-groups-plan.md Phase 3, D21).
@@ -13,7 +13,7 @@
  * page), no host is trusted (sign-in answers 404), nothing extra is public.
  * A site that forgets a setting is refused, never opened.
  */
-import { LEVELS } from './auth-schema.mjs';
+import { LEVELS, FALLBACK_ROLES, ROLE_LABELS, rolesProblem, setRoles } from './roles.mjs';
 import { ENGINE_PATHS } from './engine-paths.mjs';
 
 // The engine's fixed addresses (engine-paths.mjs, PD-2): the login page, the
@@ -171,6 +171,16 @@ function hostList(value) {
  * would fail open or closed in ways nobody chose, so it refuses to start.
  */
 export function configureSite(options = {}) {
+  // Roles first: the levels every check below reads come from them. No list
+  // keeps the five every site had before 8.8.0 (roles-engine-plan.md E1),
+  // with the community label the site set.
+  const label = typeof options.communityLabel === 'string' && options.communityLabel.trim() ? options.communityLabel.trim() : 'Community';
+  const roles = options.roles === undefined || options.roles === null
+    ? FALLBACK_ROLES.map((r) => (r.key === 'community' ? { ...r, label } : r))
+    : options.roles;
+  const problem = rolesProblem(roles);
+  if (problem) fail(`\`roles\` is ROLES from page-access.mjs, highest first: ${problem}`);
+  setRoles(roles);
   if (!(options.pages instanceof Map)) fail('`pages` must be the PAGE_ACCESS Map from the generated page-access.mjs');
   for (const [path, entry] of options.pages) {
     if (!entry || !LEVELS.includes(entry.level)) fail(`page ${path} has no valid level`);
@@ -218,7 +228,7 @@ export function configureSite(options = {}) {
   SITE.sources = options.sources || new Map();
   SITE.accessNav = options.accessNav || 'locked';
   SITE.sectionFloors = new Map(Object.entries(floors));
-  SITE.communityLabel = typeof options.communityLabel === 'string' && options.communityLabel.trim() ? options.communityLabel.trim() : 'Community';
+  SITE.communityLabel = ROLE_LABELS.community || label;
   SITE.hosts = hosts;
   SITE.publicPaths = new Set([...publicPaths, ...embeds]);
   SITE.publicPrefixes = [...publicPrefixes];

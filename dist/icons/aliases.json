@@ -176,6 +176,10 @@
     "exclamation": {
       "renamedTo": "exclamation-circled",
       "since": "7.0.0"
+    },
+    "play-outline": {
+      "renamedTo": "play",
+      "since": "8.8.0"
     }
   }
 }

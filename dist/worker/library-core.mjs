@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * library-core.mjs — the pure half of the Asset Library route: path parsing,
  * Range arithmetic and the download headers. No Workers APIs and no I/O, so
@@ -10,6 +10,8 @@
  *   /files/_t/<sha256>-320.webp, -640.webp, .svg   thumbnails, content-addressed
  *   /files/<asset id>/<filename>                     an original, by the catalog's name
  */
+
+import { opensByRank } from './roles.mjs';
 
 export const FILES_PREFIX = '/files/';
 export const THUMB_CACHE_CONTROL = 'private, no-cache';
@@ -161,12 +163,8 @@ export function thumbHeaders({ contentType, size, etag, setCookies = [] }) {
 export function mayDownload(reader, level) {
   if (level === 'public') return true;
   if (!reader) return false;
-  if (level === 'owner') return reader.role === 'owner';
-  if (level === 'admin') return reader.role === 'admin' || reader.role === 'owner';
-  if (level === 'team') return ['team', 'admin', 'owner'].includes(reader.role);
-  if (level === 'community') return ['community', 'team', 'admin', 'owner'].includes(reader.role);
-  // An unknown level fails closed, never open.
-  return false;
+  // By rank (roles-engine-plan.md §1.2); an unknown level fails closed, never open.
+  return opensByRank(reader.role, level);
 }
 
 /**

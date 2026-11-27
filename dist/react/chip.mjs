@@ -1,7 +1,7 @@
 'use client';
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
- * <ChipGroup> — React adapter over the chip contract (cms/chip.md).
+ * <ChipGroup> — React adapter over the chip contract (spec/chip.md).
  *
  * A one-of-N control whose options wrap. Native radios inside labels, so the
  * browser carries radiogroup semantics, roving arrow keys and the posted
@@ -148,7 +148,7 @@ export function ChipGroup(props) {
       'aria-labelledby': labelledBy,
       // The class paints the border; the attribute is what assistive tech
       // reads. One without the other is a half-reported error — the rule is
-      // stated at cms/login.md and cell-input already follows it.
+      // stated at spec/login.md and cell-input already follows it.
       'aria-invalid': error ? 'true' : undefined,
       'aria-describedby': describedBy,
     },

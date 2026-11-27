@@ -183,7 +183,7 @@
     elements.codeInput.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  // The field and the message are marked together (cms/login.md): the field
+  // The field and the message are marked together (spec/login.md): the field
   // carries the state, its error line carries the words and announces them.
   function setInvalid(input, invalid, message) {
     if (!input) return;
@@ -191,7 +191,7 @@
     // thing a screen reader announces. The paint goes wherever the component
     // looks for it: a cell input colours its cells from .is-error on the BLOCK,
     // because the input itself is invisible and stretched over the cells
-    // (cms/cell-input.md → Verdicts). A plain field paints on itself.
+    // (spec/cell-input.md → Verdicts). A plain field paints on itself.
     var painted = input.closest('.cell-input') || input;
     painted.classList.toggle('is-error', invalid);
     if (invalid) input.setAttribute('aria-invalid', 'true');
@@ -339,7 +339,8 @@
           // admin links before paint for everyone but admins; 'in' when the
           // answer has none, which nav.js treats as signed in, role unknown.
           var role = result.data.user && result.data.user.role;
-          setSessionHint(role === 'owner' || role === 'admin' || role === 'team' || role === 'community' || role === 'guest' ? role : 'in');
+          var known = window.bdAccess ? window.bdAccess.normaliseRole(role) === role : ['owner', 'admin', 'team', 'community', 'guest'].indexOf(role) !== -1;
+          setSessionHint(known ? role : 'in');
           window.location.assign(destination());
           return;
         }

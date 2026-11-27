@@ -101,7 +101,7 @@
     // through change events would never learn the answer was cleared. Note
     // these are DOM events: assistive tech does not listen to them, so a
     // consumer wanting the clear announced pairs it with a role="status"
-    // region — the pattern documented on cms/cell-input.md.
+    // region — the pattern documented on spec/cell-input.md.
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
   }

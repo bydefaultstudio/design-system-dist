@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * logo.js — Prepare a brand logo SVG for embedding in a placeholder image.
  *

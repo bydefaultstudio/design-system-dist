@@ -1,7 +1,7 @@
 'use client';
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
- * <Rating> — React adapter over the Rating markup contract (cms/rating.md).
+ * <Rating> — React adapter over the Rating markup contract (spec/rating.md).
  *
  * Two renders, matching the contract's two modes. Read-only is pure
  * markup: spans with hand-set is-filled, no module involved. Interactive
@@ -45,7 +45,7 @@ export function Rating(props) {
   }
 
   if (max > 5) {
-    warnOnce("Rating: don't use more than 5 stars (cms/rating.md).");
+    warnOnce("Rating: don't use more than 5 stars (spec/rating.md).");
   }
 
   if (!label) {

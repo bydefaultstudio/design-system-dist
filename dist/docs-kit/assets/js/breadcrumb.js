@@ -16,7 +16,7 @@
  *
  * Open/close, focus return and dismissal belong to dropdown.js, which
  * delegates on document; nothing here binds the trigger. The menu is a
- * disclosure of links (cms/dropdown.md → Links between sibling pages), so
+ * disclosure of links (spec/dropdown.md → Links between sibling pages), so
  * its items are plain links in trail order.
  *
  * @version 1.0.0

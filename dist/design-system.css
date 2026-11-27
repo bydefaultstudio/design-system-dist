@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /* ─────────────────────────────
    DESIGN SYSTEM FRAMEWORK
    ───────────────────────────── */
@@ -11684,7 +11684,7 @@ section[id] {
   inset-inline-end: var(--space-s);
 }
 
-.page-header-illustration > .button:not([aria-pressed="true"]) .svg-icn[data-icon="play"],
+.page-header-illustration > .button:not([aria-pressed="true"]) .svg-icn[data-icon="play-filled"],
 .page-header-illustration > .button[aria-pressed="true"] .svg-icn[data-icon="pause"] {
   display: none;
 }

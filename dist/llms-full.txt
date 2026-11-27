@@ -1,9 +1,9 @@
-<!-- @bydefaultstudio/design-system v8.7.0 -->
+<!-- @bydefaultstudio/design-system v8.8.0 -->
 # By Default Design System
 
 > Complete design token, layout, component, and CSS reference for By Default Studio's design system. Use this as your authoritative guide for generating on-brand HTML and CSS.
 
-**Version: 8.7.0 (package)**
+**Version: 8.8.0 (package)**
 
 ## Getting the System
 
@@ -2671,6 +2671,166 @@ gsap.to(el, { opacity: 1, y: 0, ...enter });
 `assets/js/bd-animate.js` does this once at its first init; every tween it plays reads the element tokens and nothing below them. See [BD Animate](/components/bd-animate.html).
 
 ---
+
+---
+
+## Density
+Density decides how tall the controls in a working panel are: full size where a finger taps, smaller where a mouse does the work, so a tool's settings fit on one screen.
+
+For a form on a page the height is settled: 44px, the touch target a finger needs, and every text control, check and button in the system meets it by default. A panel of controls driven by a mouse is a different problem. No finger is involved, every row given to a tall control is a row taken from the work, and a dock of twenty controls at 44px pushes its last panel below the fold. Density is the one setting that solves the second problem without touching the first.
+
+---
+
+## Why it matters
+
+The 44px floor is right for the case it was written for: WCAG 2.5.5 (Target Size, Enhanced, a AAA criterion) and the Apple HIG, both written for a finger. WCAG 2.2's AA floor, 2.5.8, is 24px for every pointer, and the system's dense chrome, the [bar](/components/bar.html), already sits at 36px on that basis. A tool's dock is the same case as the bar: an application surface, not a form.
+
+Sizing each control by hand works, but it puts a `data-size` on every field, segment, stepper and button in the panel, and the next control added forgets it. One attribute on the container is one decision, made once, and the controls inherit it.
+
+---
+
+## How to answer it
+
+`data-density="compact"` on a container takes every control inside it to its small size: the field's small height (36px), the small type, no block padding. It applies on a fine pointer only, through `@media (pointer: fine)`. On a touch device the attribute does nothing, so the 44px floor holds there with no second rule and nothing to remember. A laptop with a touchscreen and a trackpad reports a fine primary pointer, so it takes compact, and a finger there meets 36px, above the 24px AA floor; an iPad with a trackpad reports a coarse one, so it does not.
+
+| Control | Default | Compact |
+|---|---|---|
+| Text input, select, [field](/components/field.html) | 44px, `--body-size` | 36px, `--font-xs` |
+| [Button](/components/button.html) | `--font-m` type, `--space-l` / `--space-xl` padding | `data-size="small"`: `--font-xs` type, `--space-m` / `--space-l` padding, about 37px; never under `--button-min-height-compact` (36px) |
+| [Segmented control](/components/form.html#segmented-control), every variant | padding plus line box, 42 to 48px | 36px, `--font-xs` |
+| [Number input](/components/number-input.html) | 48px | 36px, `--font-xs` |
+| Checkbox, radio, [toggle](/components/form.html#toggle-switch) | 24px box, 44px track | 16px box, 28px track; a mono toggle has its own 46 × 20px track and keeps its ON / OFF word at `--font-3xs` (10px) |
+| Field actions (clear, copy, password toggle) | 44px square | 36px square |
+| [Dropdown](/components/dropdown.html) trigger | `--space-l` block padding | no block padding, 36px minimum, type unchanged |
+
+What it leaves alone: [chips](/components/chip.html), captions, hints, headings and everything that is not a control. A chip row stays at 44px because it is a row of choices, not a row of fields.
+
+A `data-size` on a control, or on a nearer `.form-group` or `fieldset`, still wins. Compact declares tokens on the container and the controls inherit them, so a value declared closer to the control takes over by inheritance, not by specificity: a large search field in a compact panel stays large.
+
+**A compact mono toggle keeps its word.** A [mono toggle](/components/form.html#toggle-switch) at `data-size="small"` drops its ON / OFF word, because at the regular ratio a 16px track would set it under 7px. A dock is read at a glance, and the word is how a switch reads there, so compact keeps it on a track of its own, between Small and the default: 20px tall with a 14px knob, the word at `--font-3xs` (10px, the regular word's size), and 46px long. That is a 36px plain width plus 10px of `--toggle-mono-extra-width` rather than 6px, so the word has room past the knob. Checkboxes and plain toggles stay at the Small 16px. A mono toggle that carries `data-size="small"` itself, or sits in a small `.form-group` or `fieldset`, still drops it, because the nearer size wins.
+
+**Compact buttons have their own floor.** A button in a compact container reads `--button-min-height-compact`, not `--button-min-height-small`. It defaults to `--field-height-s`, 36px, the height every other compact control reads, so a dock has one row height. A brand that holds its Small buttons to 48px in `theme.css` keeps its compact docks at 36px; to hold them to a floor too, it sets `--button-min-height-compact` there.
+
+**Not the bar.** On a `.bar` the same attribute has an older meaning, the bar's own padding, and a bar's controls already sit at the small height with the bar's own type size. The compact rules exclude a bar that carries the attribute itself. A bar nested inside a compact container is a different case, and no page has one: it would keep its height and take the small type with everything else.
+
+---
+
+## This brand's dock
+
+Every tool's end dock carries it: the `.tool-dock[data-edge="end"]` in each `cms/apps/<slug>.html`, so its panels and its pinned actions (Download, Copy) are compact together. It goes on the dock, not on `.tool-panels`: on the panels alone the action buttons stay full size. A bottom dock, the icon library's grid, is a browsing surface rather than a column of settings and does not carry it.
+
+A compact panel, live. On a touch device every control below renders at its default size, which is the point.
+
+```html
+<div class="tool-dock" data-density="compact">
+  <!-- every field, segment, stepper, check and button inside is small on a fine pointer -->
+</div>
+```
+
+---
+
+## Usage rules
+
+- **Put it on the container that owns the panel**, a dock, an inspector, a toolbar's settings pane: the outermost element that holds every control in it, its actions included. Not on the page, and not on a form the reader fills in: a form on a page is the finger's problem, and the 44px floor is the answer there.
+- **One attribute, not one per control.** If a panel is compact, say so once. A `data-size="small"` on every control inside does the same thing today, and the next control added misses it.
+- **Let a control opt out by size, not by override.** A field that must stay large in a compact panel takes `data-size="large"`; nothing re-points the compact tokens by class.
+- **Do not reach for it on touch.** There is nothing to do: the attribute is inert where the pointer is coarse, by design.
+- **Keep the bar out of it.** A bar is already dense. The same attribute on a bar means the bar's padding, and the compact rules exclude it.
+
+---
+
+## Tokens
+
+Density has one token of its own, `--button-min-height-compact`. Everything else it re-points is a size token every control already reads, set to the value its `data-size="small"` rule uses, except the mono toggle's:
+
+| Token | Default | Purpose |
+|---|---|---|
+| `--button-min-height-compact` | `var(--field-height-s)` (36px) | Minimum height of a button in a compact container, and minimum width of an icon-only one. Declared on `:root` with the other button floors, so a brand re-points it in `theme.css` |
+
+| Token | Compact value | Read by |
+|---|---|---|
+| `--field-height`, `--field-font`, `--field-padding-y`, `--field-padding-x` | `--field-height-s`, `--font-xs`, `0`, `--space-m` | Text inputs, selects, `.field` ([Form](/components/form.html)) |
+| `--check-size`, `--check-mark-size`, `--radio-dot-inset`, `--check-gap`, `--check-label-font` | `--space-l`, `11px`, `3px`, `--space-xs`, `--font-xs` | Checkbox, radio, toggle labels |
+| `--toggle-width`, `--toggle-height`, `--toggle-knob-size` | `28px`, `--space-l`, `10px` | Toggle |
+| `--toggle-mono-extra-width` | `10px` | Mono toggle: the room its state word needs past the knob. Small sets `0px` on the input, so a nearer size still wins |
+| `--toggle-width`, `--toggle-height`, `--toggle-knob-size` on a mono toggle's input | `36px`, `20px`, `14px` | Mono toggle only: the taller track that holds its word. A mono Small rule restates the small values on the input and out-ranks it |
+| `--segmented-height`, `--segmented-font`, `--segmented-padding-y`, `--segmented-padding-x` | `--field-height-s`, `--font-xs`, `0`, `--space-s` | Segmented control |
+| `--number-input-height`, `--number-input-padding-y` | `--field-height-s`, `0` | Number input |
+| `--button-padding-y`, `--button-padding-x`, `--button-text-size`, `--button-min-size` | `--space-m`, `--space-l`, `--font-xs`, `--button-min-height-compact` | Button, by a descendant rule, because the button declares these on itself |
+| `--dropdown-trigger-padding-y` | `0`, with a `--field-height-s` minimum height | Dropdown trigger, by a descendant rule, for the same reason |
+
+---
+
+## CSS reference
+
+This section documents how the setting is built. For usage, see the sections above.
+
+### Selectors
+
+| Selector | Purpose |
+|---|---|
+| `@media (pointer: fine)` | Wraps every compact rule; nothing below applies on a coarse pointer |
+| `[data-density="compact"]:not(.bar)` | The container: re-points the field, check, toggle, segmented and number-input tokens, which the controls inherit |
+| `:where([data-density="compact"]:not(.bar)) :is(.button, button.button)` | Buttons take their small tokens by a descendant rule, held at `(0,1,1)` by `:where()` on the container, the same weight as the button's own rule, so `data-size`, `data-icon-only` and the text variant still out-rank it |
+| `:where([data-density="compact"]:not(.bar)) .dropdown-trigger` | No block padding and the small height as a minimum; the bar's own trigger rule still out-ranks it |
+| `:where([data-density="compact"]:not(.bar)) .form-toggle[data-variant="mono"] input[type="checkbox"]` | The mono toggle's own compact track, 20px tall with a 14px knob, at `(0,3,1)` so every mono Small rule still out-ranks it |
+| `[data-density="compact"]:not(.bar) .form-toggle[data-variant="mono"] input[type="checkbox"]::before` | Sets the mono state word at `--font-3xs` (10px) |
+
+---
+
+## Media Frame
+The media frame decides how everything a page shows that is not text sits on the page (an image, a logo on a ground, a social format, a video, a grid of pictures), so all of it looks like one family.
+
+## Why it matters
+
+A page that mixes a rounded video, a square image and a card with a heavier border reads as four systems, not one. Five components embed media (Image, Asset Card, Format Card, BD Video and Gallery). Each does a different job, so they stay separate components. What they share is the frame, and setting it in one place keeps them looking like one family on every page.
+
+## How it works
+
+The frame is a handful of tokens on `:root`. Every embed reads them, so a brand sets them once in `theme.css` and everything follows.
+
+| Token | Default | Does |
+|---|---|---|
+| `--media-radius` | `--radius-surface` | The corners. It follows `--radius-scale`, so a brand that rounds its corners rounds its media with no extra setting |
+| `--media-border-width` | `--border-s` | The border. `0` removes every frame |
+| `--media-border-color` | `--border-faded` | The border's color |
+| `--media-ground` | `--background-faded` | The ground behind an asset that is not a picture: a logo, a specimen, a format |
+| `--media-padding` | `--space-3xl` | The clear space round a centred asset |
+| `--media-ground-dark`, `--media-ink-dark` | `--neutral-950`, `--off-white` | A dark ground, and its text, for a light asset such as a white logo. Fixed: they stay dark in dark mode, where a semantic token would flip and put a white logo on near-white |
+| `--media-preview-ratio` | `4 / 3` | The shape of an asset or format card's preview |
+| `--media-preview-max` | `40rem` | The tallest a preview grows, so a full-width card stays on screen |
+| `--media-preview-screen` | `45svh` | The most of the window a stacked format preview takes, so the switches under it stay in reach on a laptop screen. `45vh` where `svh` is unknown |
+| `--media-preview-floor` | `16rem` | The least a stacked format preview takes, however short the window |
+| `--media-asset-max` | `50%` | The widest a centred logo or icon grows, of the preview's width |
+
+The last five are set in `docs-site.css`, because only the cards read them; `theme.css` loads after it, so a brand re-points them in the same place as the rest.
+
+Three looks come from the first two tokens alone:
+
+| Look | Set |
+|---|---|
+| Square, faded border | The defaults, with `--radius-scale: 0` |
+| Rounded, faded border | `--radius-scale: 1` |
+| Square, no border | `--media-border-width: 0`. Works only where the page ground differs from `--media-ground`, or a card loses its edge |
+
+### Which component
+
+- **A picture is an [Image](/components/image.html)**, even one shown on a ground the way a logo page does (`data-frame="ground"`).
+- **Anything that is not a picture is an [Asset Card](/components/asset-card.html)**: a font specimen, a swatch, an inline SVG logo, a light and dark pair, or anything with actions.
+- **A social or ad format is a [Format Card](/components/format-card.html).**
+- **A video is a [BD Video](/components/bd-video.html).** A grid of pictures or videos is a [Gallery](/components/gallery.html), each tile in its own frame.
+
+### How a preview fits what it holds
+
+An asset or format card's preview holds `--media-preview-ratio` and never grows past `--media-preview-max`; a stacked format card's preview also stops at `--media-preview-screen` of the window. What it holds is fitted inside the padding, the way `object-fit: contain` fits a picture: a format wider than the space fills its width, a taller one fills its height. Nothing is stretched or cropped, and cards in a row line up whatever they hold.
+
+This breaks down for a tall format in a wide card: a 9:16 story in an 816px card fills a third of the box. So a format card goes side by side, the drawing beside its details, when the format is taller than it is wide and the card is at least `45rem` (720px) wide. There the preview fills the card's full height, the drawing centred in it. A square or wide format stays stacked, as does a tall one in a narrow card, and its preview stops at `--media-preview-screen` of the window, never below `--media-preview-floor`, so the details below it are in reach. The width is the card's own, measured with a container query, never the screen's: a card in a two-column grid on a wide screen stays stacked.
+
+### Turning the frame off
+
+- **Every frame on a site:** `--media-border-width: 0` in `theme.css`.
+- **One image:** `data-frame="none"`, or `frame="none"` on `{{image:}}`.
+- **Inside another frame:** a component inside a card that draws its own frame (a card's image) draws none of its own. That is done in the component's CSS, not by the author.
 
 ---
 
@@ -14470,7 +14630,7 @@ Name the drawing, not the job. An edit button uses `pencil`, a measure button `r
 
 The full brand icon set, grouped by job. The `data-icon` value is the name to use with the wrapper, the shorthand and the sprite. These tables are where the set is named and grouped: the Icon Library takes its categories from them, and the build warns when an icon in `assets/images/svg-icons/` has no row here.
 
-`3d`, `accessibility`, `accessibility-circled`, `ad-left`, `ad-right`, `ad-top`, `add`, `add-circled`, `align-center`, `align-left`, `align-right`, `animation`, `ar`, `archive`, `arrow-corner-up-right`, `arrow-down`, `arrow-down-from-line`, `arrow-down-long`, `arrow-left`, `arrow-right`, `arrow-right-to-line`, `arrow-turn-up-left`, `arrow-turn-up-right`, `arrow-up`, `arrow-up-right`, `arrow-up-to-line`, `back-arrow`, `bold`, `bolt`, `book`, `book-cover`, `book-open`, `bookmark`, `browser`, `browser-stack`, `bullseye`, `calendar`, `cart`, `chart`, `chat`, `chat-sparkle`, `check`, `check-circled`, `check-filled-circled`, `check-squared`, `checklist`, `chess-knight`, `chess-pawn`, `chevron-down`, `chevron-down-large`, `chevron-left`, `chevron-left-large`, `chevron-right`, `chevron-right-large`, `chevron-up`, `chevron-up-large`, `chevrons-left-right`, `circle`, `circle-dashed`, `clock`, `close`, `close-circled`, `close-full`, `close-large`, `code`, `cog`, `columns`, `compass`, `component`, `contrast`, `contrast-reverse`, `copy`, `credit-card`, `crosshair`, `cursor`, `cursor-click`, `cursor-pointer`, `cursor-ripple`, `design`, `desktop`, `direction-circled`, `download`, `drag`, `easel`, `ellipsis`, `ellipsis-large`, `ellipsis-large-vertical`, `ellipsis-vertical`, `exclamation-circled`, `external-link`, `eye`, `eye-off`, `facebook`, `fast-forward`, `file`, `file-audio`, `file-css`, `file-doc`, `file-font`, `file-html`, `file-image`, `file-json`, `file-md`, `file-pdf`, `file-svg`, `file-txt`, `file-video`, `filter`, `flame`, `folder`, `folder-open`, `folder-zip`, `font-size`, `full-screen`, `game`, `gamepad`, `github`, `globe`, `grid`, `headphones`, `heart`, `height`, `home`, `info-circled`, `instagram`, `italic`, `layer-add`, `line`, `link`, `linkedin`, `list`, `list-123`, `list-abc`, `lock`, `login`, `logout`, `loop`, `loop-reverse`, `mail`, `map`, `mask`, `menu`, `mic`, `mic-off`, `minus`, `minus-circled`, `mobile`, `mobile-video`, `moon`, `motion`, `news`, `numbers`, `open-full`, `page`, `page-check`, `paint-bucket`, `paintbrush`, `partner`, `pause`, `pencil`, `pencil-draw`, `percent`, `photo`, `photos`, `pie-10-circled`, `pie-100-circled`, `pie-25-circled`, `pie-50-circled`, `pie-75-circled`, `pin`, `play`, `play-circled`, `play-outline`, `present`, `question-circled`, `reddit`, `refresh`, `repost`, `return-arrow`, `return-key`, `rewind`, `rows`, `ruler`, `search`, `search-large`, `search-scan`, `section`, `send`, `shapes`, `share`, `shopping-bag`, `shopping-bag-check`, `sidebar-left-close`, `sidebar-left-open`, `sidebar-right-close`, `sidebar-right-open`, `skip-back-10`, `skip-back-15`, `skip-back-5`, `skip-forward-10`, `skip-forward-15`, `skip-forward-5`, `sliders`, `sliders-vertical`, `smile`, `sound`, `sound-off`, `sound-on`, `sparkle`, `sparkle-large`, `spotify`, `square`, `square-dashed`, `square-rounded-dashed`, `stack`, `stacked`, `sticky-bottom`, `sticky-top`, `substack`, `sun`, `sun-2`, `swap`, `swords`, `t-shirt`, `tablet`, `tag`, `tag-rotated`, `tap`, `tap-ripple`, `text`, `thumbs-down`, `thumbs-up`, `tiktok`, `trash`, `trending-up`, `underline`, `unlock`, `upload`, `user`, `user-add`, `user-circled`, `users`, `video`, `warning`, `width`, `x`, `youtube`, `zoom-in`, `zoom-out`
+`3d`, `accessibility`, `accessibility-circled`, `ad-inline`, `ad-left`, `ad-right`, `ad-top`, `add`, `add-circled`, `add-squared`, `align-bottom`, `align-center`, `align-center-edge`, `align-left`, `align-left-edge`, `align-middle`, `align-right`, `align-right-edge`, `align-top`, `anchor-point`, `animation`, `ar`, `archive`, `arrow-corner-up-right`, `arrow-down`, `arrow-down-circled`, `arrow-down-from-line`, `arrow-down-left`, `arrow-down-long`, `arrow-down-right`, `arrow-down-to-line`, `arrow-left`, `arrow-left-circled`, `arrow-left-long`, `arrow-left-to-line`, `arrow-right`, `arrow-right-circled`, `arrow-right-long`, `arrow-right-to-line`, `arrow-turn-down-left`, `arrow-turn-down-right`, `arrow-turn-up-left`, `arrow-turn-up-right`, `arrow-up`, `arrow-up-circled`, `arrow-up-from-line`, `arrow-up-left`, `arrow-up-long`, `arrow-up-right`, `arrow-up-right-circled`, `arrow-up-to-line`, `aspect-ratio`, `back-arrow`, `bell`, `bleed`, `blocks`, `bold`, `bolt`, `book`, `book-cover`, `book-open`, `book-text`, `bookmark`, `border-width`, `browser`, `browser-stack`, `bulb`, `bullseye`, `calendar`, `cart`, `chart`, `chat`, `chat-bubble`, `chat-round`, `chat-sparkle`, `check`, `check-circled`, `check-filled-circled`, `check-squared`, `checklist`, `chess-knight`, `chess-pawn`, `chevron-down`, `chevron-down-circled`, `chevron-down-large`, `chevron-left`, `chevron-left-circled`, `chevron-left-large`, `chevron-right`, `chevron-right-circled`, `chevron-right-large`, `chevron-up`, `chevron-up-circled`, `chevron-up-large`, `chevrons-down`, `chevrons-left`, `chevrons-left-right`, `chevrons-right`, `chevrons-up`, `chevrons-up-down`, `circle`, `circle-dashed`, `clock`, `close`, `close-circled`, `close-full`, `close-large`, `close-squared`, `code`, `cog`, `columns`, `compass`, `component`, `contrast`, `contrast-reverse`, `copy`, `corner-radius`, `credit-card`, `crop`, `crosshair`, `cursor`, `cursor-arrow`, `cursor-click`, `cursor-pointer`, `cursor-ripple`, `design`, `desktop`, `direction-circled`, `distribute-horizontal`, `distribute-vertical`, `download`, `drag`, `droplet`, `easel`, `ellipsis`, `ellipsis-circled`, `ellipsis-large`, `ellipsis-large-vertical`, `ellipsis-vertical`, `exclamation-circled`, `exclude`, `external-link`, `eye`, `eye-off`, `facebook`, `fast-forward`, `file`, `file-audio`, `file-css`, `file-doc`, `file-font`, `file-html`, `file-image`, `file-json`, `file-md`, `file-pdf`, `file-svg`, `file-txt`, `file-video`, `filter`, `flag`, `flame`, `flip-horizontal`, `flip-vertical`, `folder`, `folder-open`, `folder-zip`, `font-size`, `full-screen`, `game`, `gamepad`, `github`, `globe`, `grid`, `group`, `headphones`, `heart`, `height`, `hexagon`, `home`, `image-frame`, `info-circled`, `instagram`, `intersect`, `italic`, `key`, `keyboard`, `laptop`, `layer-add`, `layer-back`, `layer-front`, `layers-merge`, `line`, `line-dashed`, `link`, `linkedin`, `list`, `list-123`, `list-abc`, `lock`, `login`, `logout`, `loop`, `loop-reverse`, `mail`, `map`, `mask`, `menu`, `mic`, `mic-off`, `minus`, `minus-circled`, `minus-squared`, `mobile`, `mobile-video`, `moon`, `motion`, `music-note`, `news`, `numbers`, `opacity`, `open-full`, `padding`, `padding-horizontal`, `padding-vertical`, `page`, `page-check`, `paint-bucket`, `paintbrush`, `partner`, `pause`, `pause-circled`, `pencil`, `pencil-draw`, `percent`, `photo`, `photos`, `pie-10-circled`, `pie-100-circled`, `pie-25-circled`, `pie-50-circled`, `pie-75-circled`, `pin`, `play`, `play-circled`, `play-filled`, `power`, `present`, `qr-code`, `qr-code-scan`, `question-circled`, `record`, `reddit`, `refresh`, `repost`, `return-arrow`, `return-key`, `rewind`, `rotate`, `rows`, `ruler`, `search`, `search-large`, `search-scan`, `section`, `selection`, `send`, `shapes`, `share`, `shield`, `shopping-bag`, `shopping-bag-check`, `sidebar-left-close`, `sidebar-left-open`, `sidebar-right-close`, `sidebar-right-open`, `skip-back-10`, `skip-back-15`, `skip-back-5`, `skip-forward-10`, `skip-forward-15`, `skip-forward-5`, `skip-next`, `skip-previous`, `sliders`, `sliders-vertical`, `smile`, `sound`, `sound-low`, `sound-off`, `sound-on`, `sparkle`, `sparkle-large`, `spotify`, `square`, `square-dashed`, `square-filled`, `square-half`, `square-rounded-dashed`, `squeeze-vertical`, `stack`, `stacked`, `star`, `sticky-bottom`, `sticky-top`, `stop`, `stop-circled`, `substack`, `subtract`, `sun`, `sun-2`, `sun-moon`, `swap`, `swords`, `t-shirt`, `tablet`, `tag`, `tag-rotated`, `tap`, `tap-ripple`, `terminal`, `text`, `text-cursor`, `thumbs-down`, `thumbs-up`, `tiktok`, `toggle-off`, `toggle-on`, `trash`, `trending-up`, `triangle`, `underline`, `ungroup`, `union`, `unlock`, `upload`, `user`, `user-add`, `user-circled`, `users`, `users-three`, `video`, `warning`, `width`, `x`, `youtube`, `zoom-in`, `zoom-out`
 
 ---
 

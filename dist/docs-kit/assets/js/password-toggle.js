@@ -4,7 +4,7 @@
  * Version: 1.2.0
  * Last Updated: 2026-09-30
  *
- * The toggle is a .field-toggle inside a .field (cms/field.md). The older
+ * The toggle is a .field-toggle inside a .field (spec/field.md). The older
  * .password-toggle / .password-field pair is accepted as an alias for one
  * release and goes at the next major.
  */

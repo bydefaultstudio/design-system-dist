@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * email-template.mjs — the sign-in code email (access-plan.md §4.4).
  *
@@ -24,6 +24,7 @@
  */
 
 import { SITE } from './site.mjs';
+import { LEVELS, ROLE_LABELS, isInternalRole, isLevel, opensByRank } from './roles.mjs';
 
 /**
  * The design system's tokens, copied as literal values: an inbox has no
@@ -345,11 +346,15 @@ function expiryLine(expiresAt) {
 function opensLine(role, opens) {
   if (role === 'owner') return 'You can open everything, and manage who signs in, admins included.';
   if (role === 'admin') return 'You can open every page but the owner pages, and manage who signs in.';
-  if (role === 'community') return `You can open the public pages and every ${SITE.communityLabel} page.`;
-  if (role === 'guest') {
+  if (role === 'team') return 'You can open every team page.';
+  if (isInternalRole(role)) return `You can open every ${ROLE_LABELS[role]} page.`;
+  // The lowest role has no pages of its own (roles-engine-plan.md E3): what its groups grant
+  if (!isLevel(role)) {
     return opens && opens.length ? `You can open ${opens.join(', ')}.` : 'You can open the pages your groups grant.';
   }
-  return 'You can open every team page.';
+  const names = LEVELS.filter((level) => level !== 'public' && !isInternalRole(level) && opensByRank(role, level)).map((level) => ROLE_LABELS[level]);
+  const listed = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0];
+  return `You can open the public pages and every ${listed} page.`;
 }
 
 /**

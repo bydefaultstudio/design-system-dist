@@ -1,7 +1,7 @@
 'use client';
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
- * showToast — React bridge to the Toast module (cms/toast.md).
+ * showToast — React bridge to the Toast module (spec/toast.md).
  *
  * Toast ships as a function, not a component: toast.js owns its DOM
  * outright — it builds the live-region container, appends and removes

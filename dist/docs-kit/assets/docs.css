@@ -565,7 +565,7 @@
   inset-inline-end: var(--space-s);
 }
 
-.glossary-art > .button:not([aria-pressed="true"]) .svg-icn[data-icon="play"],
+.glossary-art > .button:not([aria-pressed="true"]) .svg-icn[data-icon="play-filled"],
 .glossary-art > .button[aria-pressed="true"] .svg-icn[data-icon="pause"] {
   display: none;
 }
@@ -4127,12 +4127,12 @@ html:has(.login-page) {
 }
 
 /* One icon at a time: pause while it plays, play while it is paused */
-.login-slideshow-toggle [data-icon="play"],
+.login-slideshow-toggle [data-icon="play-filled"],
 .login-slideshow.is-paused .login-slideshow-toggle [data-icon="pause"] {
   display: none;
 }
 
-.login-slideshow.is-paused .login-slideshow-toggle [data-icon="play"] {
+.login-slideshow.is-paused .login-slideshow-toggle [data-icon="play-filled"] {
   display: flex;
 }
 
@@ -5456,7 +5456,7 @@ a.search-result.search-see-all:hover {
   background-color: color-mix(in srgb, var(--button-color) 5%, var(--color-background));
 }
 
-.os-illustration-frame > .button:not([aria-pressed="true"]) .svg-icn[data-icon="play"],
+.os-illustration-frame > .button:not([aria-pressed="true"]) .svg-icn[data-icon="play-filled"],
 .os-illustration-frame > .button[aria-pressed="true"] .svg-icn[data-icon="pause"] {
   display: none;
 }

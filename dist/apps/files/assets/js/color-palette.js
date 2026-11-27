@@ -137,7 +137,7 @@
   // has no neighbours to read the step against, so it keeps its full name.
   var NEUTRAL_STEP = /^neutral-(\d+)$/;
 
-  // A swatch (cms/swatch.md) the tool fills itself: the fill and the ink
+  // A swatch (spec/swatch.md) the tool fills itself: the fill and the ink
   // inline, the hex it measured, and the variant its list asks for.
   function buildTile(name, hex, ink, list) {
     var fragment = el.template.content.cloneNode(true);

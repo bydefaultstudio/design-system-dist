@@ -23,19 +23,48 @@
   var VERSION = '1.1.0';
   var API = '/api/people/levels';
 
-  var LEVELS = ['public', 'community', 'team', 'admin', 'owner'];
-  var LEVEL_RANK = { public: 0, community: 1, team: 2, admin: 3, owner: 4 };
-  // community's label is the deployment's (#people[data-community-label]), set at init.
-  var LEVEL_LABELS = { public: 'Public', community: 'Community', team: 'Team', admin: 'Admin', owner: 'Owner' };
-
+  // The site's levels (window.bdRoles from nav.js, highest first): public,
+  // then every role but the lowest, lowest first (roles-engine-plan.md §1.2).
+  // The five every site had before 8.8.0 when nav.js is missing.
+  var ROLES = window.bdRoles || [
+    { key: 'owner', label: 'Owner', internal: true },
+    { key: 'admin', label: 'Admin', internal: true },
+    { key: 'team', label: 'Team', internal: true },
+    { key: 'community', label: 'Community', internal: false },
+    { key: 'guest', label: 'Guest', internal: false }
+  ];
+  var LEVELS = ['public'];
+  var LEVEL_RANK = { public: 0 };
+  var LEVEL_LABELS = { public: 'Public' };
   // Who can open a page at each level, said as the outcome.
-  var AUDIENCE = {
-    public: 'Anyone with the link can open it.',
-    community: 'Community members, the team, admins and owners can open it.',
-    team: 'The team, admins and owners can open it.',
-    admin: 'Only admins and owners can open it.',
-    owner: 'Only owners can open it.'
-  };
+  var AUDIENCE = { public: 'Anyone with the link can open it.' };
+  (function readLevels() {
+    var n = ROLES.length;
+    for (var i = n - 2; i >= 0; i--) {
+      var key = ROLES[i].key;
+      LEVELS.push(key);
+      LEVEL_RANK[key] = n - 1 - i;
+      LEVEL_LABELS[key] = ROLES[i].label;
+    }
+    for (var j = 1; j < LEVELS.length; j++) {
+      var level = LEVELS[j];
+      if (level === 'owner') AUDIENCE.owner = 'Only owners can open it.';
+      else if (level === 'admin') AUDIENCE.admin = 'Only admins and owners can open it.';
+      else if (level === 'team') AUDIENCE.team = 'The team, admins and owners can open it.';
+      else AUDIENCE[level] = audienceFrom(j);
+    }
+    function audienceFrom(index) {
+      var names = LEVELS.slice(index).map(function (l) {
+        if (l === 'team') return 'the team';
+        if (l === 'admin') return 'admins';
+        if (l === 'owner') return 'owners';
+        var role = ROLES.filter(function (r) { return r.key === l; })[0];
+        return role && role.internal ? role.label + ' members' : (LEVEL_LABELS[l] + ' members');
+      });
+      var text = names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1] : names[0];
+      return text.charAt(0).toUpperCase() + text.slice(1) + ' can open it.';
+    }
+  })();
 
   var COPY = {
     loadFailed: 'The levels could not be loaded. Reload the page to try again.',
@@ -473,7 +502,8 @@
     root.dataset.levelsInit = 'true';
     var people = document.querySelector('[data-tool="people"] #people');
     var label = people && people.getAttribute('data-community-label');
-    if (label) {
+    // Without nav.js, the deployment's community label from the People page
+    if (label && !window.bdRoles && LEVEL_LABELS.community) {
       LEVEL_LABELS.community = label;
       AUDIENCE.community = label + ' members, the team, admins and owners can open it.';
     }

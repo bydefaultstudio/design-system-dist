@@ -259,7 +259,7 @@
   // button's aria-label — the display name, not the key, because the band and
   // the selection announcement both say the display name and one icon should
   // not have two nouns. It is also the tooltip, which is what gives a sighted
-  // reader the name back on hover (cms/tooltip.md). The key is a click away
+  // reader the name back on hover (spec/tooltip.md). The key is a click away
   // in the filename and Copy data-icon, and search still matches it.
   function renderGrid() {
     el.grid.innerHTML = icons.map(function (icon) {

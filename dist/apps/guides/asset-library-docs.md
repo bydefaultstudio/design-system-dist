@@ -37,7 +37,7 @@ From the search field, one Tab reaches the grid. The arrow keys move between til
 
 ## Search and filters
 
-**Search does most of the work.** It matches a file's title, its projects and their client, its tags, its type, its format and the words in its filename, so `banner` finds the website banners and `blackdoctor` finds the festival project. Every word has to match, and a few words stand in for each other: logo for mark, photo for image, deck for presentation.
+**Search does most of the work.** It matches a file's title, its projects and their client, its tags, its type, its format and the words in its filename, so `banner` finds the website banners and a client's name finds that client's projects. Every word has to match, and a few words stand in for each other: logo for mark, photo for image, deck for presentation.
 
 A word the library knows becomes a filter as soon as you finish it, with a space or Enter: a tag (`portrait`, `social`), a format (`svg`, `figma`) or a type (`logos`, `photo`). It presses that option in its row and matches that filter alone, never a word in a title. Words it does not know stay as text. Only what some file carries is recognised, so a filter never empties the grid on its own.
 

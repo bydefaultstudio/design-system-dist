@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * Dialog + Drawer component
  * Opens and closes native <dialog> elements declaratively.
@@ -40,7 +40,7 @@
  *
  * Put autofocus on the primary action — without it showModal() focuses the
  * first focusable element, which is the header Close button. On a
- * destructive dialog put autofocus on Cancel instead (see cms/dialog.md).
+ * destructive dialog put autofocus on Cancel instead (see spec/dialog.md).
  *
  * Attributes:
  *   data-dialog-open="id"        — on a trigger, opens that dialog

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * gate-entry.mjs - createGate(), the access gate as one factory
  * (levels-groups-plan.md Phase 3, D21). Shipped as
@@ -162,9 +162,10 @@ async function hiddenNav(request, env, url, response, gated, reader, sessionCook
  * stays readable from the cache after it. No Vary: Cookie: the session cookie
  * is re-issued every few minutes, which would empty the cache.
  */
-const SEARCH_INDEX_PREFIXES = ['/pagefind/', '/pagefind-community/', '/search-index/'];
+// The full pair, and one /pagefind-<level>/ per external level (build-search.js)
+const SEARCH_INDEX = /^\/(?:pagefind(?:-[a-z][a-z0-9-]*)?|search-index)\//;
 function searchIndexCache(response, pathname) {
-  if ((response.status !== 200 && response.status !== 304) || !SEARCH_INDEX_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return response;
+  if ((response.status !== 200 && response.status !== 304) || !SEARCH_INDEX.test(pathname)) return response;
   const out = new Response(response.body, response); // the asset layer's headers can be immutable
   out.headers.set('Cache-Control', 'private, no-cache');
   out.headers.delete('Vary');

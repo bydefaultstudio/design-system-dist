@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * auth-schema.mjs - the access vocabulary, and the one field this site adds
  * to Better Auth's own tables.
@@ -26,22 +26,30 @@
  * worker/session.js corrects it from the list within one cookie-cache cycle.
  */
 
-export const ROLES = Object.freeze(['owner', 'admin', 'team', 'community', 'guest']);
-// A new person is an outsider until made internal by hand (community-access-plan.md D3).
+import { ROLES, LEVELS, isRole, isLevel, lowestRole, lowestInternal } from './roles.mjs';
+
+// The site's role list lives in roles.mjs (roles-engine-plan.md §1); these
+// names stay so every module that read them keeps working.
+export { ROLES, LEVELS };
+
+// The column default Better Auth gives an existing user row when the role
+// column is added, corrected from the list within one cookie-cache cycle.
 export const DEFAULT_ROLE = 'community';
 
-export const LEVELS = Object.freeze(['public', 'community', 'team', 'admin', 'owner']);
-export const DEFAULT_LEVEL = 'team';
-
-/** A role string from the database or a cookie → one of ROLES. Unknown or missing → guest: the least access, never the most. */
-export function normaliseRole(value) {
-  return ROLES.includes(value) ? value : 'guest';
+/** The level a page with none takes: the lowest internal role, `team` on every site with a team (access-plan.md §4.2). */
+export function defaultLevel() {
+  return lowestInternal();
 }
 
-/** A level string from frontmatter → one of LEVELS. Unknown or missing → team: a new page ships gated to the team (access-plan.md §4.2). */
+/** A role string from the database or a cookie → one of ROLES. Unknown or missing → the lowest role: the least access, never the most. */
+export function normaliseRole(value) {
+  return isRole(value) ? value : lowestRole();
+}
+
+/** A level string from frontmatter → one of LEVELS. Unknown or missing → the default level: a new page ships gated. */
 export function normaliseLevel(value) {
   const level = String(value || '').trim().toLowerCase();
-  return LEVELS.includes(level) ? level : DEFAULT_LEVEL;
+  return isLevel(level) ? level : defaultLevel();
 }
 
 export const USER_ADDITIONAL_FIELDS = Object.freeze({

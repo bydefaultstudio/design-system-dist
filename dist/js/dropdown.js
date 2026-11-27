@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * Dropdown component — WAI-ARIA menu button pattern
  *
@@ -19,7 +19,7 @@
  * menuitemcheckbox, menuitemradio, group and separator. Non-interactive
  * content (section labels, a user identity row) must sit inside a
  * .dropdown-group or outside the role="menu" element entirely — see
- * cms/dropdown.md.
+ * spec/dropdown.md.
  *
  * ARIA wiring is applied here rather than authored: aria-controls on the
  * trigger, aria-labelledby on the menu, and tabindex="-1" on every item.

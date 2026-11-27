@@ -115,6 +115,8 @@
   // access, never the most. Fail closed, like worker/gate.mjs.
   function roleOf(data) {
     var role = data.role || (data.user && data.user.role);
+    // The site's roles (window.bdAccess, nav.js); the five every site had before 8.8.0 without it
+    if (window.bdAccess) return window.bdAccess.normaliseRole(role);
     return role === 'owner' || role === 'admin' || role === 'team' || role === 'community' || role === 'guest' ? role : 'guest';
   }
 

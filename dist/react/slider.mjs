@@ -1,7 +1,7 @@
 'use client';
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
- * <Slider> — React adapter over the Slider markup contract (cms/slider.md).
+ * <Slider> — React adapter over the Slider markup contract (spec/slider.md).
  *
  * The control is a native range input, so React can own its value: pass
  * `value` + `onChange` for a controlled slider, or `defaultValue` for an
@@ -84,13 +84,13 @@ export function Slider(props) {
   var current = controlled ? value : defaultValue;
 
   if (!label) {
-    warnOnce('Slider: provide `label` — the input is named by its visible label (cms/slider.md).');
+    warnOnce('Slider: provide `label` — the input is named by its visible label (spec/slider.md).');
   }
   if (controlled && !onChange) {
     warnOnce('Slider: `value` without `onChange` makes a slider that cannot move. Pass `onChange`, or use `defaultValue`.');
   }
   if (layout === 'compact' && stops) {
-    warnOnce('Slider: Compact with stops crowds the words on the track — use the default layout for stepped values (cms/slider.md).');
+    warnOnce('Slider: Compact with stops crowds the words on the track — use the default layout for stepped values (spec/slider.md).');
   }
   if (tickLabels && !stops) {
     warnOnce('Slider: `tickLabels` name the stops — turn `stops` on, or use `ends` for a free scale.');

@@ -98,7 +98,7 @@
   };
 
   /* A switch's note behind its info button: a Dropdown content panel
-     (cms/dropdown.md, Content panel) that opens under the button and floats
+     (spec/dropdown.md, Content panel) that opens under the button and floats
      over what is below, so the switches never move (owner, 2026-11-09,
      Experiment C option B). dropdown.js opens, places and closes it: a
      click outside, Escape or focus leaving closes it. The panel is not a

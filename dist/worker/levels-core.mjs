@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * levels-core.mjs - the pure half of level settings (levels-groups-plan.md D27).
  *
@@ -22,22 +22,22 @@
  *
  *   { pages: Map<path, level>, sections: Map<folder, level> }
  *
- * Levels rank public < community < team < admin < owner. "Raise" means a higher rank.
+ * Levels rank by the site's role list, public lowest. "Raise" means a higher rank.
  */
 
-import { LEVELS } from './auth-schema.mjs';
+import { LEVELS, LEVEL_RANK, lowestInternal } from './roles.mjs';
 import { SITE } from './site.mjs';
 
-export { LEVELS };
-export const LEVEL_RANK = Object.freeze({ public: 0, community: 1, team: 2, admin: 3, owner: 4 });
+// Both live, from the site's role list (roles-engine-plan.md §1.2)
+export { LEVELS, LEVEL_RANK };
 
 export function isLevel(value) {
   return typeof value === 'string' && LEVELS.includes(value);
 }
 
-/** A level's rank, or team's for anything unknown (fail to the gated default, never below it). */
+/** A level's rank, or the default level's for anything unknown (fail to the gated default, never below it). */
 export function rankOf(level) {
-  return Object.prototype.hasOwnProperty.call(LEVEL_RANK, level) ? LEVEL_RANK[level] : LEVEL_RANK.team;
+  return Object.prototype.hasOwnProperty.call(LEVEL_RANK, level) ? LEVEL_RANK[level] : LEVEL_RANK[lowestInternal()];
 }
 
 /** The higher of two levels. */
@@ -135,7 +135,7 @@ export function floorFor(kind, target) {
   // protected floor bounds a page setting, which can lower one.
   if (kind === 'section') return 'public';
   const protectedFloor = sectionFloor(sectionOfTarget(target));
-  if (kind === 'page' && /^\/[a-z0-9-]+\/index\.html$/.test(target || '')) return maxLevel('team', protectedFloor);
+  if (kind === 'page' && /^\/[a-z0-9-]+\/index\.html$/.test(target || '')) return maxLevel(lowestInternal(), protectedFloor);
   return protectedFloor;
 }
 
@@ -223,7 +223,7 @@ export function validateLevelChange(body, { pages, sections }) {
   if (!settable) return { ok: false, error: REFUSALS.unknown, unknown: true };
   const floor = floorFor(kind, target);
   if (level !== null && rankOf(level) < rankOf(floor)) {
-    const isOverview = /^\/[a-z0-9-]+\/index\.html$/.test(target) && floor === 'team' && sectionFloor(sectionOfTarget(target)) !== 'team';
+    const isOverview = /^\/[a-z0-9-]+\/index\.html$/.test(target) && floor === lowestInternal() && sectionFloor(sectionOfTarget(target)) !== lowestInternal();
     return { ok: false, error: isOverview ? 'A section overview stays at team or above.' : `This page stays at ${floor} or above.` };
   }
   return { ok: true, value: { kind, target, level } };

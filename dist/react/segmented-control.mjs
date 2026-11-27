@@ -1,8 +1,8 @@
 'use client';
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * <SegmentedControl> — React adapter over both segmented contracts
- * (cms/form.md): the button group (the default and `variant="underline"`)
+ * (spec/form.md): the button group (the default and `variant="underline"`)
  * and the faded variant's radio-backed markup (`variant="faded"`).
  * `variant="thumb"` is the 6.0 name for faded and still renders it.
  *
@@ -82,7 +82,7 @@ export function SegmentedControl(props) {
   if (variant === 'faded') {
     if (options.length < 2 || options.length > 5) {
       warnOnce(
-        'SegmentedControl: the faded variant supports two to five segments — a sixth renders flat by design (cms/form.md). Use the flat form or a dropdown.'
+        'SegmentedControl: the faded variant supports two to five segments — a sixth renders flat by design (spec/form.md). Use the flat form or a dropdown.'
       );
     }
     var groupName = name || autoId + '-segmented';

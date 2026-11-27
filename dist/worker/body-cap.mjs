@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * body-cap.mjs - a request body read with a hard byte limit. Engine code:
  * ships with createGate().

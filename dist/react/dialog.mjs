@@ -1,7 +1,7 @@
 'use client';
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
- * <Dialog> — React adapter over the Dialog markup contract (cms/dialog.md).
+ * <Dialog> — React adapter over the Dialog markup contract (spec/dialog.md).
  *
  * Renders the documented markup exactly; behaviour beyond the native
  * <dialog> element (backdrop light-dismiss, the close-button hook, the

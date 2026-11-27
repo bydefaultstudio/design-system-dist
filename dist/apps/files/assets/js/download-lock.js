@@ -102,21 +102,40 @@
     var verb = verbOf(control);
     var base = verb + ' ' + (verb === 'Downloading' ? 'is' : 'are') + ' for ' + whoFor(level);
     if (role === 'out') return base + '. Sign in';
-    if (role === 'guest' && guestsAllowed && level === 'community') return base + '. Ask for access';
+    if (role !== 'out' && !access().isInternal(role) && guestsAllowed && access().isExternal(level)) return base + '. Ask for access';
     return base;
   }
 
   console.log('[download-lock] v' + VERSION + ' loaded');
 
-  // The reader: 'out', 'guest', 'community', 'team', 'admin' or 'owner' with a guest's scopes.
+  // The site's roles and the gate's rule (window.bdAccess, written by nav.js,
+  // which loads first). Read at the call, never cached: nav.js may land later
+  // on a page this script was loaded into by hand.
+  // Without nav.js (a page that loads this alone, or a browser still holding
+  // an older nav.js) the lock fails closed: only public opens, and the owner.
+  var CLOSED = {
+    opens: function () { return false; },
+    byRank: function (role, level) { return level === 'public' || role === 'owner'; },
+    isExternal: function (level) { return level === 'public' || level === 'community'; },
+    isInternal: function (key) { return key === 'owner' || key === 'admin' || key === 'team'; },
+    isLevel: function () { return true; },
+    label: function (key) { return key ? key.charAt(0).toUpperCase() + key.slice(1) : ''; },
+    defaultLevel: 'team',
+    lowestRole: 'guest',
+    normaliseRole: function (role) { return typeof role === 'string' && role ? role : 'guest'; }
+  };
+  function access() {
+    return window.bdAccess || CLOSED;
+  }
+
+  // The reader: 'out' or one of the site's roles, with their groups' scopes.
   // Before the session answer, the pre-paint hint, which knows the role but
   // not a guest's scopes; with no hint at all, nothing is painted (null).
   function readerState() {
     var s = window.bdSession;
     if (s) {
       if (!s.signedIn) return { role: 'out', scopes: [] };
-      var role = s.role === 'owner' || s.role === 'admin' || s.role === 'team' || s.role === 'community' || s.role === 'guest' ? s.role : 'guest';
-      return { role: role, scopes: Array.isArray(s.scopes) ? s.scopes : [] };
+      return { role: access().normaliseRole(s.role), scopes: Array.isArray(s.scopes) ? s.scopes : [] };
     }
     var body = document.body;
     if (!body) return null;
@@ -125,43 +144,22 @@
     // A hinted guest is locked with no scopes until the answer says what
     // their groups grant: a file a guest should not have must not slip
     // out in the round trip, or for good when the answer never comes.
-    if (hinted === 'owner' || hinted === 'admin' || hinted === 'team' || hinted === 'community' || hinted === 'guest') return { role: hinted, scopes: [] };
+    if (hinted && access().normaliseRole(hinted) === hinted) return { role: hinted, scopes: [] };
     return null;
   }
 
-  function folderOf(p) {
-    var m = /^\/([a-z0-9-]+)\/[^/]+$/.exec(p);
-    return m ? m[1] : '';
-  }
-
   // The second question, as the Worker asks it, for a file rather than a
-  // page: public is for everyone, signed in or not; an admin takes
-  // everything; an admin level is for no one else; the team takes the
-  // rest; a guest takes what their groups grant, the page or its section.
+  // page: public is for everyone, signed in or not; a reader takes what
+  // their role reaches; an outsider also takes what their groups grant at an
+  // external level. Internal downloads are the role's alone: the Worker's
+  // mayDownload reads no grant, so a grant must not look like it opens one
+  // (community-access-plan.md D-l, D9).
   function canDownload(reader, level, p) {
     if (level === 'public') return true;
     if (reader.role === 'out') return false;
-    if (reader.role === 'owner') return true;
-    if (level === 'owner') return false;
-    if (reader.role === 'admin') return true;
-    // Admin downloads are the role's alone: the Worker's mayDownload checks
-    // the role and nothing else, so a grant must not look like it opens one.
-    // An external group gives a guest community downloads, never team ones
-    // (gate.mjs authorise(); community-access-plan.md D9).
-    if (level === 'admin') return false;
-    if (reader.role === 'team') return true;
-    if (level === 'community' && reader.role === 'community') return true;
-    return reader.role === 'guest' && level === 'community' && scoped(reader, p);
-  }
-
-  // Whether the reader's own groups grant this page (gate.mjs scopeAdmits).
-  function scoped(reader, p) {
-    var folder = folderOf(p);
-    for (var i = 0; i < reader.scopes.length; i++) {
-      if (reader.scopes[i] === 'page:' + p) return true;
-      if (folder && reader.scopes[i] === 'section:' + folder) return true;
-    }
-    return false;
+    if (access().byRank(reader.role, level)) return true;
+    if (level === 'owner' || access().isInternal(level) || access().isInternal(reader.role)) return false;
+    return access().opens(reader.role, reader.scopes, level, p);
   }
 
   // The control's own visually hidden description, beside it in the DOM
@@ -249,7 +247,6 @@
   // takes, or '' for none. A map that is there but broken, or a level that
   // is not one, fails closed to admin: the build validates the map, so
   // this only happens when the page was tampered with.
-  var LEVELS = ['public', 'community', 'team', 'admin', 'owner'];
   function assetLevel(container, control) {
     var asset = control.getAttribute('data-download-asset');
     var raw = container.getAttribute('data-asset-access');
@@ -258,7 +255,7 @@
     try { map = JSON.parse(raw); } catch (err) { return 'admin'; }
     if (!map || typeof map !== 'object') return 'admin';
     if (!Object.prototype.hasOwnProperty.call(map, asset)) return '';
-    return LEVELS.indexOf(map[asset]) !== -1 ? map[asset] : 'admin';
+    return access().isLevel(map[asset]) ? map[asset] : 'admin';
   }
 
   function apply(scope) {
@@ -268,8 +265,9 @@
     var containers = root.matches && root.matches(CONTAINER) ? [root] : root.querySelectorAll(CONTAINER);
     var here = window.location.pathname;
     Array.prototype.forEach.call(containers, function (container) {
-      var level = container.getAttribute('data-download-access') || 'team';
-      var noGuests = reader.role === 'guest' && (container.matches(GUESTS_NONE) || !!container.querySelector(GUESTS_NONE));
+      var level = container.getAttribute('data-download-access') || access().defaultLevel;
+      // A part marked for no guests is closed to the lowest role (guest on By Default)
+      var noGuests = reader.role === access().lowestRole && (container.matches(GUESTS_NONE) || !!container.querySelector(GUESTS_NONE));
       var controls = container.querySelectorAll(CONTROL);
       if (!controls.length) return;
       Array.prototype.forEach.call(controls, function (control) {
@@ -297,8 +295,9 @@
   function whoFor(level) {
     if (level === 'owner') return 'owners';
     if (level === 'admin') return 'admins';
-    if (level === 'community') return (window.bdCommunityLabel || 'Community') + ' members';
-    return 'the team';
+    if (level === 'team') return 'the team';
+    if (access().isExternal(level)) return access().label(level) + ' members';
+    return 'the ' + access().label(level) + ' role';
   }
 
   function closeIcon() {
@@ -346,13 +345,13 @@
   // The words and the ways in, for this reader and this control.
   function dialogContent(control) {
     var role = control.getAttribute('data-locked-for');
-    var level = control.getAttribute('data-locked-level') || 'team';
+    var level = control.getAttribute('data-locked-level') || access().defaultLevel;
     var container = control.closest(CONTAINER);
     var tool = (container && container.getAttribute('data-tool-name')) || 'tool';
     var verb = control.hasAttribute('data-download-lock') ? 'Copying and downloading' : 'Downloading';
     var way = paths();
     // A team member before an admin file: the reason, and nothing to sell.
-    if (role === 'team' || role === 'admin' || role === 'owner') {
+    if (access().isInternal(role)) {
       return { title: 'This one is for ' + whoFor(level), body: [verb + ' this in the ' + tool + ' is for ' + whoFor(level) + '.'], actions: [] };
     }
     var body = [verb + ' in the ' + tool + ' ' + (verb === 'Downloading' ? 'is' : 'are') + ' for ' + whoFor(level) + '.'];
@@ -363,7 +362,8 @@
     }
     if (role === 'out') {
       actions.push(linkButton('Sign in', way.login + '?next=' + encodeURIComponent(window.location.pathname + window.location.search), !way.demo));
-    } else if (role === 'guest') {
+    } else if (role === access().lowestRole || access().isExternal(level)) {
+      // A guest, or an outsider below an external level a group could grant
       actions.push(linkButton('Ask for access', way.support + '?from=' + encodeURIComponent(window.location.pathname), !way.demo));
     }
     return { title: way.demo ? 'Make this tool your own' : 'This is locked', body: body, actions: actions };

@@ -1,7 +1,7 @@
 'use client';
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
- * <Tabs> — React adapter over the Tabs markup contract (cms/tabs.md).
+ * <Tabs> — React adapter over the Tabs markup contract (spec/tabs.md).
  *
  * Uncontrolled by design: tabs.js owns switching (click activation,
  * roving arrow-key focus, is-active / aria-selected / is-hidden), and its

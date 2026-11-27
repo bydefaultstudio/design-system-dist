@@ -148,14 +148,23 @@
   // authored HTML body — /search.html's, for one — cannot.
   var indexUrls;
 
-  // Under accessNav 'earned' the dialog also names a second index, public and
-  // community pages only (community-access-plan.md D11). Only a team, admin
-  // or owner reader gets the full one: any other role, an unknown one
-  // included, gets the smaller index, and the Worker refuses the full one to
-  // them anyway.
+  // Under accessNav 'earned' the dialog also names one index per external
+  // level (community-access-plan.md D11, roles-engine-plan.md E4). Only an
+  // internal reader gets the full one: any other role, an unknown one
+  // included, gets its own level's index or none, and the Worker refuses the
+  // full one to them anyway.
+  function readerRole() {
+    return window.bdSession ? window.bdSession.role : document.body.getAttribute('data-role');
+  }
   function fullIndexReader() {
-    var role = window.bdSession ? window.bdSession.role : document.body.getAttribute('data-role');
-    return role === 'team' || role === 'admin' || role === 'owner';
+    var role = readerRole();
+    return !!window.bdAccess && window.bdAccess.isInternal(role);
+  }
+  // The reader's own level index, or '' when the dialog names none for them
+  function levelIndex(src) {
+    var levels = (src.getAttribute('data-search-levels') || '').split(' ');
+    var role = readerRole();
+    return role && levels.indexOf(role) !== -1 ? role : '';
   }
 
   // Which pair to load, from the session answer once it has landed (the
@@ -165,10 +174,11 @@
   function chooseUrls() {
     var src = document.querySelector('[data-symbols][data-pagefind]');
     if (!src) return null;
-    var community = src.hasAttribute('data-pagefind-community') && !fullIndexReader();
+    var level = src.hasAttribute('data-search-levels') && !fullIndexReader() ? levelIndex(src) : '';
+    if (!level) return { symbols: src.getAttribute('data-symbols'), pagefind: src.getAttribute('data-pagefind') };
     return {
-      symbols: src.getAttribute(community ? 'data-symbols-community' : 'data-symbols'),
-      pagefind: src.getAttribute(community ? 'data-pagefind-community' : 'data-pagefind')
+      symbols: src.getAttribute('data-symbols-level').replace('LEVEL', level),
+      pagefind: src.getAttribute('data-pagefind-level').replace('LEVEL', level)
     };
   }
 
@@ -1030,7 +1040,7 @@
       // One type is not a filter, it is a label. Show the row only when there is
       // a choice to make — or when a choice has already been made.
       if (types.length < 2 && !state.type) return hideFilters();
-      // The Segmented control's flat form (cms/form.md): toggle buttons, one
+      // The Segmented control's flat form (spec/form.md): toggle buttons, one
       // pressed.
       var html = [filterButton('', 'All', !state.type)];
       for (var j = 0; j < types.length; j++) {
@@ -1126,7 +1136,7 @@
     // still hears the outcome.
     //
     // .visually-hidden, never display:none. A live region revealed at announce
-    // time is not reliably announced (cms/login.md) — clipping keeps it rendered
+    // time is not reliably announced (spec/login.md) — clipping keeps it rendered
     // and in the accessibility tree throughout.
     //
     // The two halves move at different times on purpose. Hiding takes effect at
@@ -1359,8 +1369,9 @@
     var s = window.bdSession;
     // Signed out, search is closed: every index needs a sign-in.
     if (s ? !s.signedIn : document.body.classList.contains('is-signed-out')) return true;
-    var role = s ? s.role : document.body.getAttribute('data-role');
-    return role === 'guest' || (role === 'community' && !dialogEl.hasAttribute('data-pagefind-community'));
+    // An outsider searches only their own level's index; one with none (a
+    // guest, whose role is no level) has nothing they may search.
+    return !fullIndexReader() && !levelIndex(dialogEl);
   }
 
   function openDialog() {

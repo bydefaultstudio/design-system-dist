@@ -1,7 +1,7 @@
 'use client';
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
- * <Sheet> — React adapter over the Drawer markup contract (cms/drawer.md).
+ * <Sheet> — React adapter over the Drawer markup contract (spec/drawer.md).
  *
  * A Sheet is a drawer: a modal panel docked to an edge, `bottom` by
  * default — the mobile action-sheet shape. Same machinery as <Dialog>
@@ -166,7 +166,7 @@ export var Sheet = React.forwardRef(function Sheet(props, forwardedRef) {
   );
 });
 
-// The component is the Drawer (cms/drawer.md, `.drawer`, `drawer-hide`);
+// The component is the Drawer (spec/drawer.md, `.drawer`, `drawer-hide`);
 // `Sheet` is the app-facing name for its most common shape. Both point at
 // the same component so either doc leads somewhere.
 export { Sheet as Drawer };

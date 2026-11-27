@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { readIconAliases } = require('./icon-aliases');
+const { registrySection } = require('./icon-registry');
 const assetLibrary = require('./asset-library');
 const formatRegistry = require('./formats');
 const formatCard = require('./format-card');
@@ -168,8 +169,8 @@ const CONFIG = {
   // never settable whatever this says.
   protectedSections: (() => {
     const map = userConfig.protectedSections === undefined ? {} : userConfig.protectedSections;
-    const levels = ['public', 'community', 'team', 'admin', 'owner'];
-    if (!map || typeof map !== 'object' || Array.isArray(map) || !Object.entries(map).every(([f, l]) => /^[a-z0-9-]+$/.test(f) && levels.includes(l))) {
+    // Each level is checked against the site's roles once brand.json is read (applySiteRoles)
+    if (!map || typeof map !== 'object' || Array.isArray(map) || !Object.entries(map).every(([f, l]) => /^[a-z0-9-]+$/.test(f) && /^[a-z][a-z0-9-]*$/.test(l))) {
       throw new Error('docs.config.js protectedSections must map section folders to a level, e.g. { internal: \'team\' }');
     }
     // A typo would protect nothing and say nothing: every key names a section.
@@ -337,10 +338,37 @@ function levelOf(pathname) {
   // A folder link (/website/) is its index, as the gate and stampBodyLinks read it.
   if (pathname.endsWith('/')) pathname += 'index.html';
   const known = pageAccess.get(pathname);
-  return (known && known.level) || linkLevels.get(pathname) || 'team';
+  return (known && known.level) || linkLevels.get(pathname) || DEFAULT_LEVEL;
 }
 
+// The site's levels and their ranks, from its role list (brand.json
+// access.roles, roles-engine-plan.md §1.2): public, then every role but the
+// lowest, lowest first. Filled by applySiteRoles() once brand.json is read;
+// the five-role fallback until then. DEFAULT_LEVEL is the lowest internal
+// role, the level a page with none ships at (team on every site with a team).
 const LEVEL_RANK = { public: 0, community: 1, team: 2, admin: 3, owner: 4 };
+let DEFAULT_LEVEL = 'team';
+let SITE_ROLES = brandFile.FALLBACK_ROLES.map((r) => ({ ...r }));
+function applySiteRoles(roles) {
+  SITE_ROLES = roles;
+  for (const k of Object.keys(LEVEL_RANK)) delete LEVEL_RANK[k];
+  ACCESS_LEVELS.length = 0;
+  ACCESS_LEVELS.push('public');
+  LEVEL_RANK.public = 0;
+  for (let i = roles.length - 2; i >= 0; i--) {
+    ACCESS_LEVELS.push(roles[i].key);
+    LEVEL_RANK[roles[i].key] = roles.length - 1 - i;
+  }
+  DEFAULT_LEVEL = roles.filter((r) => r.internal).slice(-1)[0].key;
+}
+/** Whether a level opens to outsiders by rank or group: public or an external role's. */
+function isExternalLevel(level) {
+  return level === 'public' || SITE_ROLES.some((r) => r.key === level && !r.internal);
+}
+function roleLabel(key) {
+  const role = SITE_ROLES.find((r) => r.key === key);
+  return role ? role.label : key;
+}
 // Whether the Worker cuts navigation per reader: 'hidden' and 'earned' both
 // move the sidebar list into each page and stamp every link with its level.
 const cutsNav = CONFIG.accessNav !== 'locked';
@@ -389,7 +417,7 @@ function stampBodyLinks(html, pagePath, pageLevel, { mark = true } = {}) {
     // cannot open it, words and all.
     const fromSetting = (CODE_LEVELS.has(target) && CODE_LEVELS.get(target) !== level)
       || (CODE_LEVELS.has(pagePath) && CODE_LEVELS.get(pagePath) !== pageLevel);
-    if (LEVEL_RANK[level] > LEVEL_RANK[pageLevel] && !(isIndexPagePath(target) && LEVEL_RANK[level] <= LEVEL_RANK.team)) bodyLinkViolations.push({ text: `  ${pagePath} (${pageLevel}) links to ${target} (${level})`, level, fromSetting, pagePath });
+    if (LEVEL_RANK[level] > LEVEL_RANK[pageLevel] && !(isIndexPagePath(target) && LEVEL_RANK[level] <= LEVEL_RANK[DEFAULT_LEVEL])) bodyLinkViolations.push({ text: `  ${pagePath} (${pageLevel}) links to ${target} (${level})`, level, fromSetting, pagePath });
     return mark ? `<a${before} href="${href}"${after} data-access="${level}">` : match;
   });
 }
@@ -404,7 +432,7 @@ function stampBodyLinks(html, pagePath, pageLevel, { mark = true } = {}) {
  * worker/, so it cannot import it; scripts/verify-auth-gate.mjs reads the
  * frontmatter independently and counts the map against it.
  */
-const ACCESS_LEVELS = ['public', 'community', 'team', 'admin', 'owner'];
+const ACCESS_LEVELS = ['public', 'community', 'team', 'admin', 'owner']; // applySiteRoles() refills it
 
 /**
  * A tool's per-asset levels, from its `assetAccess:` frontmatter: one string,
@@ -420,7 +448,8 @@ function parseAssetAccess(raw) {
   for (const part of String(raw).split(',')) {
     const m = /^\s*([a-z0-9][a-z0-9-]*)\s*:\s*([a-z]+)\s*$/.exec(part);
     if (!m) return { map, problem: `"${part.trim()}" is not "asset-id: level"` };
-    if (!['public', 'community', 'team', 'admin'].includes(m[2])) return { map, problem: `"${m[1]}" has level "${m[2]}" (must be public, community, team or admin)` };
+    const levels = ACCESS_LEVELS.filter((l) => l !== 'owner');
+    if (!levels.includes(m[2])) return { map, problem: `"${m[1]}" has level "${m[2]}" (must be ${levels.join(', ')})` };
     if (Object.prototype.hasOwnProperty.call(map, m[1])) return { map, problem: `"${m[1]}" is listed twice` };
     map[m[1]] = m[2];
   }
@@ -465,7 +494,7 @@ function assetAccessAttr(raw) {
 }
 function normaliseLevel(value) {
   const level = String(value || '').trim().toLowerCase();
-  return ACCESS_LEVELS.includes(level) ? level : 'team';
+  return ACCESS_LEVELS.includes(level) ? level : DEFAULT_LEVEL;
 }
 function isValidAccess(value) {
   return value === undefined || value === null || value === '' || ACCESS_LEVELS.includes(String(value).trim().toLowerCase());
@@ -497,14 +526,14 @@ function indexLevel(folder) {
   // take the index's level, gate.mjs fileEntry) open to a community member as
   // its pages do. The Worker and the community search build cut any card
   // above the reader. Any other section's index is never below team.
-  const open = level === 'public' || level === 'community';
-  const base = open ? level : (level && LEVEL_RANK[level] > LEVEL_RANK.team ? level : 'team');
+  const open = !!level && isExternalLevel(level);
+  const base = open ? level : (level && LEVEL_RANK[level] > LEVEL_RANK[DEFAULT_LEVEL] ? level : DEFAULT_LEVEL);
   // D27: a page override on the index, or a section floor, raises it. Below
   // team only for an open section, and never below the section's own level.
   const over = overlayLevel(`/${folder}/index.html`, base);
   const eff = over === undefined ? base : over;
-  if (LEVEL_RANK[eff] >= LEVEL_RANK.team) return eff;
-  return open && LEVEL_RANK[eff] >= LEVEL_RANK[base] ? eff : 'team';
+  if (LEVEL_RANK[eff] >= LEVEL_RANK[DEFAULT_LEVEL]) return eff;
+  return open && LEVEL_RANK[eff] >= LEVEL_RANK[base] ? eff : DEFAULT_LEVEL;
 }
 
 // Pages whose level came from a section default, listed at the end of a full
@@ -616,7 +645,13 @@ function loadLevelSettingsSource() {
     process.exit(1);
   }
   for (const row of rows) {
-    if (!ACCESS_LEVELS.includes(row.level)) { console.warn(`⚠️  Level setting skipped (bad level ${JSON.stringify(row.level)}): ${row.kind} ${row.target}`); continue; }
+    // A row at a level the site no longer lists (a role taken out of
+    // brand.json access.roles) would drop its raise and reopen the page, so
+    // the build stops and names it (roles-engine-plan.md §4.2)
+    if (!ACCESS_LEVELS.includes(row.level)) {
+      console.error(`❌ Level settings: ${row.kind} ${row.target} is set to ${JSON.stringify(row.level)}, which brand.json access.roles does not list. Change it on Page levels, or keep the role. The build stops so the page is not reopened.`);
+      process.exit(1);
+    }
     if (row.kind !== 'section' && row.kind !== 'page') { console.warn(`⚠️  Level setting skipped (bad kind): ${JSON.stringify(row.kind)}`); continue; }
     if (isProtectedLevelTarget(row.kind, row.target)) { console.warn(`⚠️  Level setting skipped (protected target): ${row.kind} ${row.target}`); continue; }
     // A page row can lower a page; a section row only raises, so it needs no floor.
@@ -695,6 +730,12 @@ const ICONS_DIR = CONFIG.iconsDir
 // /os.json reports as `brand`, so an old file shows on the fleet dashboard.
 let BRAND_FILE_VERSION = null;
 const BRAND = ROOT_MANIFEST_PATH ? loadSiteBrand(ROOT_MANIFEST_PATH) : null;
+applySiteRoles(brandFile.siteRoles(BRAND));
+// protectedSections was read before the roles: its levels are checked now
+{
+  const bad = Object.entries(CONFIG.protectedSections).filter(([, l]) => !ACCESS_LEVELS.includes(l));
+  if (bad.length) throw new Error(`docs.config.js protectedSections: ${bad.map(([f, l]) => `${f}: "${l}"`).join(', ')} is not one of this site's levels (${ACCESS_LEVELS.join(', ')})`);
+}
 const ROOT_MANIFEST = BRAND ? brandFile.chromeManifest(BRAND) : null;
 // The spelling of the engine's own words (brand.json wording.locale,
 // locale.js): en-GB, as the engine is written, unless the brand says
@@ -1126,7 +1167,7 @@ function buildIconMap() {
  * Return icon wrapped in the standard .svg-icn container.
  *
  * The wrapper carries data-icon as well as the <svg> inside it: the wrapper
- * is the documented hook (cms/iconography.md, `<span class="svg-icn"
+ * is the documented hook (spec/iconography.md, `<span class="svg-icn"
  * data-icon="name">`) and component CSS keys on it — the password toggle's
  * eye swap reads `.svg-icn[data-icon="eye"]`, and without the attribute here
  * every generated page showed both eyes. The <svg> keeps its own copy for
@@ -1273,7 +1314,7 @@ function resolveOsIllustration({ osIllustration, hue, field, fallbackHue, ownHue
  */
 function renderOsIllustrationPause(illustration) {
   if (!illustration.motion) return '';
-  return `<button class="button" type="button" data-variant="transparent" data-icon-only data-size="small" aria-pressed="false" aria-label="Pause the illustration" data-os-illustration-pause>${getIcon('pause')}${getIcon('play')}</button>`;
+  return `<button class="button" type="button" data-variant="transparent" data-icon-only data-size="small" aria-pressed="false" aria-label="Pause the illustration" data-os-illustration-pause>${getIcon('pause')}${getIcon('play-filled')}</button>`;
 }
 
 // data-color and data-field go on the same element: §2d reads the field only
@@ -1363,26 +1404,31 @@ function warnBrandRegistryGaps() {
   const listed = new Set([...registry.matchAll(/\{\{icon:([a-z0-9-]+)\}\}/g)].map(m => m[1]));
   const missing = Object.keys(ICON_MAP).filter(name => !listed.has(name)).sort();
   if (missing.length) {
-    console.warn(`⚠️  ${missing.length} icon(s) not listed in the cms/iconography.md registry: ${missing.join(', ')}`);
+    console.warn(`⚠️  ${missing.length} icon(s) not listed in the iconography.md registry: ${missing.join(', ')}`);
   }
 }
 
 /**
- * The "## Registry" section of cms/iconography.md, up to the next "## "
+ * The "## Registry" section of the iconography spec, up to the next "## "
  * heading: the one place the icon set is grouped and named. The search does
  * not skip code fences, so keep "## " headings out of fenced examples above
  * or inside the section.
+ *
+ * Read from spec/iconography.md, the build rules beside the content folder
+ * (build-workflow-plan.md §8d), so a community rewrite of the page cannot
+ * lose the categories. A site without a spec/ folder (every client site)
+ * keeps reading its own cms/iconography.md.
  * @returns {string|null} the section's lines, or null when the file or section is missing
  */
 function readIconRegistrySection() {
-  const registryFile = path.join(DOCS_DIR, 'iconography.md');
+  const specFile = path.join(DOCS_DIR, '..', 'spec', 'iconography.md');
+  const pageFile = path.join(DOCS_DIR, 'iconography.md');
+  return registrySectionOf(specFile) ?? registrySectionOf(pageFile);
+}
+
+function registrySectionOf(registryFile) {
   if (!fs.existsSync(registryFile)) return null;
-  const body = parseFrontmatter(fs.readFileSync(registryFile, 'utf8')).content;
-  const start = body.search(/^## Registry\s*$/m);
-  if (start === -1) return null;
-  const rest = body.slice(start).split('\n').slice(1).join('\n');
-  const next = rest.search(/^## /m);
-  return next === -1 ? rest : rest.slice(0, next);
+  return registrySection(parseFrontmatter(fs.readFileSync(registryFile, 'utf8')).content);
 }
 
 //------- Icon Manifest -------//
@@ -1399,7 +1445,7 @@ function parseIconCategories() {
   const result = { order: [], byKey: {} };
   const registry = readIconRegistrySection();
   if (registry === null) {
-    console.warn('cms/iconography.md has no "## Registry" section — every icon in the manifest falls under "Other"');
+    console.warn('iconography.md has no "## Registry" section — every icon in the manifest falls under "Other"');
     return result;
   }
 
@@ -1416,13 +1462,13 @@ function parseIconCategories() {
     const key = row[1];
     const existing = result.byKey[key];
     if (existing) {
-      console.warn(`Icon "${key}" is listed twice in the cms/iconography.md registry (${existing.category}, ${category}) — the manifest keeps ${existing.category}`);
+      console.warn(`Icon "${key}" is listed twice in the iconography.md registry (${existing.category}, ${category}) — the manifest keeps ${existing.category}`);
       continue;
     }
     result.byKey[key] = { name: row[2].trim() || titleFromKey(key), category: category };
   }
   if (result.order.length === 0) {
-    console.warn('The cms/iconography.md registry has no "###" category headings — every icon in the manifest falls under "Other"');
+    console.warn('The iconography.md registry has no "###" category headings — every icon in the manifest falls under "Other"');
   }
   return result;
 }
@@ -1508,7 +1554,7 @@ function renderIconManifest() {
   // mentioned outside a row, or above the first category, can pass that check
   // and still land here. Name the ones that did.
   if (unlisted.length && categories.order.length) {
-    console.warn(`${unlisted.length} icon(s) have no category row in the cms/iconography.md registry and fall under "Other": ${unlisted.join(', ')}`);
+    console.warn(`${unlisted.length} icon(s) have no category row in the iconography.md registry and fall under "Other": ${unlisted.join(', ')}`);
   }
   const used = new Set(icons.map(icon => icon.category));
   const order = categories.order.filter(name => used.has(name));
@@ -1657,7 +1703,7 @@ function renderFormatManifest() {
  */
 function cardAccessAttrs(access) {
   if (!access) return '';
-  return LEVEL_RANK[access] > LEVEL_RANK.team ? ` data-access="${access}" data-pagefind-ignore` : ` data-access="${access}"`;
+  return LEVEL_RANK[access] > LEVEL_RANK[DEFAULT_LEVEL] ? ` data-access="${access}" data-pagefind-ignore` : ` data-access="${access}"`;
 }
 
 /**
@@ -1773,9 +1819,11 @@ function renderBookContentsItem(opts) {
  */
 function audienceTag(access) {
   if (access === 'public') return '<span class="tag">Public</span>';
-  if (access === 'community') return `<span class="tag">${escapeAttr(siteTokens().communityLabel || 'Community')}</span>`;
   if (access === 'admin') return '<span class="tag" data-color="warning">Admin</span>';
   if (access === 'owner') return '<span class="tag" data-color="warning">Owner</span>';
+  // An external role's level carries its label (Community, Pro); the default level carries none
+  if (isExternalLevel(access)) return `<span class="tag">${escapeAttr(roleLabel(access))}</span>`;
+  if (access !== DEFAULT_LEVEL && LEVEL_RANK[access] !== undefined) return `<span class="tag" data-color="warning">${escapeAttr(roleLabel(access))}</span>`;
   return '';
 }
 
@@ -2119,7 +2167,7 @@ function escapeAttr(text) {
  * line above it is therefore required, and cannot be inserted here: inside a
  * raw HTML block — a .demo-preview, a lab section — a blank line would end
  * the block and escape the rest of it. So it is documented instead
- * (cms/image.md), the way the no-blank-lines-in-a-demo rule is.
+ * (spec/image.md), the way the no-blank-lines-in-a-demo rule is.
  */
 
 // Closed value sets, checked so a typo fails the build rather than emitting
@@ -2308,7 +2356,7 @@ const VIDEO_PARAMS = ['src', 'poster', 'label', 'controls', 'captions'];
 /**
  * {{video: src="…" poster="…" label="Campaign film" controls="full"}}
  *
- * One BD Video player (cms/bd-video.md). label names the region and the
+ * One BD Video player (spec/bd-video.md). label names the region and the
  * video for a screen reader, so it is required, as alt is on {{image:}}.
  * controls="play" (the default) is the centre button alone; "full" adds the
  * scrubber, mute and fullscreen. captions="<file.vtt>" adds an English
@@ -2948,7 +2996,7 @@ const PAGE_TYPES = {
  * surface carries, chosen by the owner on 2026-10-14 from
  * experiments/motion.html and recorded in handovers/HANDOVER-motion.md.
  * One table, so a change is one edit and every emitter reads it; the
- * engine's doc page (cms/bd-animate.md) is the vocabulary. Nothing in a doc
+ * engine's doc page (spec/bd-animate.md) is the vocabulary. Nothing in a doc
  * body animates but demo frames, figures and scrolling tables: headings,
  * paragraphs, lists and code stay still, by the owner's word.
  *
@@ -3295,7 +3343,7 @@ function renderPage(template, {
   // The indexes are one file every team reader fetches, so a page above team
   // never enters them: its text would reach the team through search when the
   // page itself refuses them (security audit, 2026-11-08, finding 2).
-  const indexed = searchable && (access === 'public' || access === 'community' || access === 'team');
+  const indexed = searchable && LEVEL_RANK[access] !== undefined && LEVEL_RANK[access] <= LEVEL_RANK[DEFAULT_LEVEL];
   const sectionLabel = indexed ? sectionLabelFromSlug(pageSection) : '';
   const searchMeta = sectionLabel
     ? `    <meta data-pagefind-filter="section[content]" data-pagefind-meta="section[content]" content="${escapeAttr(sectionLabel)}">\n`
@@ -3739,7 +3787,7 @@ function discoveryCards(row, filesBySection, where) {
     for (const file of files) {
       if (file.frontmatter.layer === 'docs-site') continue;
       const target = guideTarget(file, row.section);
-      if (LEVEL_RANK[target.access] > LEVEL_RANK.team) continue;
+      if (LEVEL_RANK[target.access] > LEVEL_RANK[DEFAULT_LEVEL]) continue;
       const art = pageOsIllustration(file.frontmatter, file);
       if (!art.osIllustration) {
         if (isFeatured(file)) console.warn(`⚠️  ${where}: "${file.title}" is featured but has no drawing, so the row skips it`);
@@ -4397,7 +4445,7 @@ function buildBreadcrumb(crumbs) {
   });
   // A trail with a middle crumb carries the overflow item at position two,
   // hidden until breadcrumb.js finds the labels no longer fit. A disclosure
-  // of links (cms/dropdown.md), so no menu roles and no aria-haspopup.
+  // of links (spec/dropdown.md), so no menu roles and no aria-haspopup.
   if (crumbs.length > 2) {
     items.splice(1, 0, `<li class="breadcrumb-item breadcrumb-overflow" hidden><div class="dropdown"><button class="dropdown-trigger" type="button" aria-expanded="false" aria-label="More levels">${getIcon('ellipsis')}</button><div class="dropdown-menu"></div></div>${separator}</li>`);
   }
@@ -5049,7 +5097,7 @@ function generateBarePage(file, bareTemplate) {
   // link, so it stays. The links are checked either way.
   const body = stampBodyLinks(signInBackground(expandHtmlBody(content, file), file, navBase), '/' + file.htmlPath, access, { mark: cutsNav });
   // Searchable as any page is: a door that is public or team-level, unless it opts out
-  const indexed = frontmatter.search !== 'false' && (access === 'public' || access === 'community' || access === 'team');
+  const indexed = frontmatter.search !== 'false' && LEVEL_RANK[access] !== undefined && LEVEL_RANK[access] <= LEVEL_RANK[DEFAULT_LEVEL];
   const chrome = brandChromeSlots(ROOT_SPACE.manifest, navBase);
   const title = frontmatter.title || 'Untitled';
   // The description names the site the way the body does ({{brand:key}})
@@ -5312,6 +5360,80 @@ window.bdPaths = Object.freeze(${JSON.stringify(browserEnginePaths())});
 // access.communityLabel), for the scripts that name it (download-lock.js).
 window.bdCommunityLabel = ${JSON.stringify(siteTokens().communityLabel || 'Community')};
 
+// The site's roles, highest first (brand.json access.roles), and the gate's
+// rule for them (worker/gate.mjs navVisible, roles-engine-plan.md §1.3), for
+// every script that locks or labels by role. scripts/verify-roles.mjs runs
+// this block against the Worker's rule, so the two cannot drift.
+window.bdRoles = ${JSON.stringify(SITE_ROLES)};
+// bdAccess:start
+(function () {
+  var roles = window.bdRoles || [];
+  var n = roles.length;
+  var rank = {};
+  var levelRank = { public: 0 };
+  var internal = {};
+  var labels = {};
+  var lowestInternal = 'owner';
+  for (var i = 0; i < n; i++) {
+    rank[roles[i].key] = n - 1 - i;
+    labels[roles[i].key] = roles[i].label;
+    if (roles[i].internal) { internal[roles[i].key] = true; lowestInternal = roles[i].key; }
+    if (i < n - 1) levelRank[roles[i].key] = n - 1 - i;
+  }
+  function has(map, key) { return typeof key === 'string' && Object.prototype.hasOwnProperty.call(map, key); }
+  function folderOf(p) {
+    var m = /^\\/([a-z0-9-]+)\\/[^/]+$/.exec(p || '');
+    return m ? m[1] : '';
+  }
+  // Whether the reader's own groups grant this page (gate.mjs scopeAdmits)
+  function scoped(scopes, p) {
+    var folder = folderOf(p);
+    for (var i = 0; i < scopes.length; i++) {
+      if (scopes[i] === 'page:' + p) return true;
+      if (folder && scopes[i] === 'section:' + folder) return true;
+    }
+    return false;
+  }
+  function byRank(role, level) {
+    if (level === 'public') return true;
+    return has(rank, role) && has(levelRank, level) && rank[role] >= levelRank[level];
+  }
+  function isExternal(level) {
+    return level === 'public' || (has(levelRank, level) && !internal[level]);
+  }
+  // A signed-in reader and a link: open by rank, or by a group of the
+  // reader's own kind below an owner page. An outsider never reaches an internal page.
+  function opens(role, scopes, level, p) {
+    if (level === 'public') return true;
+    if (!has(rank, role)) return false;
+    if (role === 'owner') return true;
+    if (!has(levelRank, level)) return false;
+    if (byRank(role, level)) return true;
+    if (level === 'owner') return false;
+    if (!!internal[role] !== !!internal[level]) return false;
+    return scoped(Array.isArray(scopes) ? scopes : [], p);
+  }
+  window.bdAccess = Object.freeze({
+    opens: opens,
+    byRank: byRank,
+    isExternal: isExternal,
+    isInternal: function (key) { return !!internal[key]; },
+    isLevel: function (level) { return has(levelRank, level); },
+    label: function (key) { return has(labels, key) ? labels[key] : key; },
+    defaultLevel: lowestInternal,
+    lowestRole: n ? roles[n - 1].key : 'guest',
+    // An unknown role reads as the lowest: the least access, never the most
+    normaliseRole: function (role) { return has(rank, role) ? role : (n ? roles[n - 1].key : 'guest'); },
+    // External levels above a role, lowest first: what an outsider could still earn
+    externalAbove: function (role) {
+      var out = [];
+      for (var i = n - 2; i >= 0; i--) if (!internal[roles[i].key] && !byRank(role, roles[i].key)) out.push(roles[i].key);
+      return out;
+    }
+  });
+})();
+// bdAccess:end
+
 // The site's own drawings of the icons the engine's scripts build at run time
 // (copy, toast, World Clock and the rest), from its icon set (iconsDir). A
 // script reads one by name and falls back to its own drawing for any name
@@ -5406,7 +5528,7 @@ window.bdIcons = Object.freeze(${JSON.stringify(runtimeIcons())});
     + '<span class="svg-icn">' + ICON_SEARCH + '</span>'
     + '</button>')`};
 
-  // The account menu: the Dropdown's avatar-item pattern (cms/dropdown.md),
+  // The account menu: the Dropdown's avatar-item pattern (spec/dropdown.md),
   // anchored bottom-end because the trigger is the last thing on the right.
   // No aria-labelledby on the group: dropdown.js names the menu from its
   // trigger, so a reader hears "Account, Erlen Masson, menu" — what it is as
@@ -5472,10 +5594,12 @@ window.bdIcons = Object.freeze(${JSON.stringify(runtimeIcons())});
   var searchDialogHtml = ${!CONFIG.search ? "''" : `(isBrandInstance || !hasSearch) ? '' : ('<dialog id="site-search" class="dialog search-dialog" aria-label="Search the system"'
     + ' data-symbols="${siteHref('/search-index/symbols.json')}"'
     + ' data-pagefind="${siteHref('/pagefind/pagefind.js')}"'${CONFIG.accessNav === 'earned' ? `
-    // The second index, public and community pages only, for a community
-    // reader (community-access-plan.md D11; tools/build-search.js).
-    + ' data-symbols-community="${siteHref('/search-index/community/symbols.json')}"'
-    + ' data-pagefind-community="${siteHref('/pagefind-community/pagefind.js')}"'` : ''}
+    // One more index per external level, public pages and external pages at
+    // or below it, for a reader of that role (community-access-plan.md D11,
+    // roles-engine-plan.md E4; tools/build-search.js). LEVEL is the reader's role.
+    + ' data-search-levels="${ACCESS_LEVELS.filter((l) => l !== 'public' && isExternalLevel(l)).join(' ')}"'
+    + ' data-symbols-level="${siteHref('/search-index/LEVEL/symbols.json')}"'
+    + ' data-pagefind-level="${siteHref('/pagefind-LEVEL/pagefind.js')}"'` : ''}
     + ' data-search-page="${siteHref('/search.html')}">'
     // <search> carries an implicit role="search"; stating it again is noise.
     + '<search class="search-field">'
@@ -5498,11 +5622,11 @@ window.bdIcons = Object.freeze(${JSON.stringify(runtimeIcons())});
     + '<span class="svg-icn">' + ICON_CLOSE + '</span>'
     + '</button>'
     + '</search>'
-    // The Segmented control's flat form (cms/form.md). search.js fills it with
+    // The Segmented control's flat form (spec/form.md). search.js fills it with
     // one aria-pressed button per result type the query found, plus All.
     + '<div class="search-filters segmented-control" role="group" aria-label="Filter results by type" hidden></div>'
     // In the DOM from first render and never display:none — a live region
-    // revealed at announce time is not reliably announced (cms/login.md).
+    // revealed at announce time is not reliably announced (spec/login.md).
     + '<p class="search-status text-size-s text-faded" aria-live="polite"></p>'
     // role="listbox" may own only options and groups. The listbox therefore
     // takes result rows and nothing else; the panel beside it takes every other
@@ -5826,35 +5950,43 @@ ${cutsNav ? `
     // site is invite-only). A guest's note carries a real link, because every
     // locked row refuses the click - the note is where asking happens.
 ${CONFIG.accessNav === 'earned' ? `    // accessNav 'earned' (community-access-plan.md D11): the only locks left
-    // are community pages, for a signed-out reader (who signs in to read
-    // them; SIGN_IN_TO_READ says "Sign up" once open sign-up ships) and a
-    // guest their groups do not reach. Everything else above a reader is
-    // already cut by the Worker, so nobody else has a lock to explain.
+    // are external pages above the reader, for a signed-out reader (who signs
+    // in to read them; SIGN_IN_TO_READ says "Sign up" once open sign-up
+    // ships) and an outsider their role and groups do not reach. Everything
+    // else above a reader is already cut by the Worker.
     var SIGN_IN_TO_READ = 'Sign in to read';
-    var COMMUNITY_LABEL = ${JSON.stringify(siteTokens().communityLabel || 'Community')};
-    var LOCK_NOTES = {
-      out: SIGN_IN_TO_READ + ' the locked pages.',
-      guest: 'Locked pages are for ' + COMMUNITY_LABEL + ' members. ',
-      community: '',
-      team: '',
-      admin: '',
-      owner: ''
-    };
-    var LOCK_TOOLTIPS = { out: SIGN_IN_TO_READ, guest: 'For ' + COMMUNITY_LABEL + ' members', community: '', team: '', admin: '', owner: '' };` : `    var LOCK_NOTES = {
-      out: 'Log in to access the rest of the system.',
-      guest: 'Locked pages are for the team. ',
-      community: 'Locked pages are for the team.',
-      team: 'Locked pages are for admins.',
-      admin: '',
-      owner: ''
-    };
-    var LOCK_TOOLTIPS = { out: 'Log in to access', guest: 'For the team', community: 'For the team', team: 'For admins', admin: 'For the owner', owner: '' };`}
+    function labelList(keys) {
+      var names = keys.map(window.bdAccess.label);
+      return names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1] : (names[0] || '');
+    }
+    function lockNoteFor(role) {
+      if (role === 'out') return SIGN_IN_TO_READ + ' the locked pages.';
+      if (window.bdAccess.isInternal(role)) return '';
+      var above = window.bdAccess.externalAbove(role);
+      return above.length ? 'Locked pages are for ' + labelList(above) + ' members. ' : '';
+    }
+    function lockReasonFor(role, level) {
+      if (role === 'out') return SIGN_IN_TO_READ;
+      if (window.bdAccess.isInternal(role)) return '';
+      return 'For ' + window.bdAccess.label(level) + ' members';
+    }` : `    function lockNoteFor(role) {
+      if (role === 'out') return 'Log in to access the rest of the system.';
+      if (role === 'owner' || role === 'admin') return '';
+      if (!window.bdAccess.isInternal(role)) return 'Locked pages are for the team. ';
+      return 'Locked pages are for admins.';
+    }
+    function lockReasonFor(role) {
+      if (role === 'out') return 'Log in to access';
+      if (role === 'owner') return '';
+      if (role === 'admin') return 'For the owner';
+      return window.bdAccess.isInternal(role) ? 'For admins' : 'For the team';
+    }`}
     // Under 'earned' a signed-out reader's community link is locked in look
     // only: it is not aria-disabled, and a click goes on to the gate, which
     // sends them to sign in. A disabled-looking link that still works would
     // mislead a screen reader.
     function signsIn(reader, level) {
-      return ${CONFIG.accessNav === 'earned' ? "reader.role === 'out' && level === 'community'" : 'false'};
+      return ${CONFIG.accessNav === 'earned' ? "reader.role === 'out' && level !== 'public' && window.bdAccess.isExternal(level)" : 'false'};
     }
     // The engine's Ask for access page, the same on every site (window.bdPaths, above)
     var SUPPORT_PATH = window.bdPaths.support;
@@ -5866,21 +5998,23 @@ ${CONFIG.accessNav === 'earned' ? `    // accessNav 'earned' (community-access-p
 
     function writeLockNote(role) {
       if (!lockNote) return;
-      lockNote.replaceChildren(document.createTextNode(LOCK_NOTES[role] || ''));
-      if (role !== 'guest') return;
+      var note = lockNoteFor(role);
+      lockNote.replaceChildren(document.createTextNode(note));
+      // An outsider with something to earn is offered the way to ask
+      if (role === 'out' || window.bdAccess.isInternal(role) || !note) return;
       var ask = document.createElement('a');
       ask.href = askHref();
       ask.textContent = 'Ask for access';
       lockNote.appendChild(ask);
     }
 
-    // The reader, from the one session answer: 'out', 'guest', 'community',
-    // 'team', 'admin' or 'owner', with the scopes a guest's groups grant. null until it lands.
+    // The reader, from the one session answer: 'out' or one of the site's
+    // roles, with the scopes their groups grant. null until it lands.
     function readerState() {
       var s = window.bdSession;
       if (!s) return null;
       if (!s.signedIn) return { role: 'out', scopes: [] };
-      var role = s.role === 'owner' || s.role === 'admin' || s.role === 'team' || s.role === 'community' || s.role === 'guest' ? s.role : 'guest';
+      var role = window.bdAccess.normaliseRole(s.role);
       return { role: role, scopes: Array.isArray(s.scopes) ? s.scopes : [] };
     }
 
@@ -5897,43 +6031,18 @@ ${CONFIG.accessNav === 'earned' ? `    // accessNav 'earned' (community-access-p
       return !!m && SECTION_INDEX_FOLDERS.indexOf(m[1]) !== -1;
     }
 
-    function folderOf(p) {
-      var m = /^\\/([a-z0-9-]+)\\/[^/]+$/.exec(p);
-      return m ? m[1] : '';
-    }
-
-    // The second question, as the Worker asks it (worker/gate.mjs authorise):
-    // public opens for everyone; an admin opens everything; an admin page
-    // opens for no one else; a team member opens the rest; a guest opens the
-    // indexes and what their groups grant. Signed out opens nothing - the
+    // The second question, as the Worker asks it (worker/gate.mjs navVisible,
+    // through window.bdAccess). Signed out opens nothing under 'locked' - the
     // sidebar locks even links to other public pages, by the 2026-10-01
-    // decision, so a signed-out reader is told to log in once, not page by page.
+    // decision, so a signed-out reader is told to log in once, not page by
+    // page. A section index opens to every signed-in reader at or below the
+    // default level; the Worker decides what is on it.
     function canOpen(reader, level, p) {
       // Under 'hidden' the Worker leaves a signed-out reader the public
       // pages only, so those stay open; under 'locked' everything locks.
       if (reader.role === 'out') return ${cutsNav ? "level === 'public'" : 'false'};
-      if (level === 'public') return true;
-      if (reader.role === 'owner') return true;
-      if (level === 'owner') return false;
-      if (reader.role === 'admin') return true;
-      // An internal group lifts a team member onto an admin page; an
-      // external one gives a guest community pages, never a team page
-      // (community-access-plan.md D8, D9; gate.mjs authorise()).
-      if (level === 'admin') return reader.role === 'team' && scoped(reader, p);
-      if (reader.role === 'team') return true;
-      if (level === 'community' && reader.role === 'community') return true;
-      if (isIndexPath(p)) return true;
-      return reader.role === 'guest' && level === 'community' && scoped(reader, p);
-    }
-
-    // Whether the reader's own groups grant this page (gate.mjs scopeAdmits).
-    function scoped(reader, p) {
-      var folder = folderOf(p);
-      for (var i = 0; i < reader.scopes.length; i++) {
-        if (reader.scopes[i] === 'page:' + p) return true;
-        if (folder && reader.scopes[i] === 'section:' + folder) return true;
-      }
-      return false;
+      if (window.bdAccess.opens(reader.role, reader.scopes, level, p)) return true;
+      return isIndexPath(p) && (window.bdAccess.isExternal(level) || level === window.bdAccess.defaultLevel);
     }
 
     // The reason, for assistive tech: the name stays exactly the visible
@@ -5949,7 +6058,8 @@ ${CONFIG.accessNav === 'earned' ? `    // accessNav 'earned' (community-access-p
     // unless an internal group opens it for this team member: .is-granted
     // is the exception that keeps its link and card in view.
     function markGranted(item, reader, level, locked) {
-      item.classList.toggle('is-granted', !!reader && level === 'admin' && !locked && reader.role === 'team');
+      item.classList.toggle('is-granted', !!reader && reader.role !== 'out' && !locked && window.bdAccess.isInternal(level)
+        && window.bdAccess.isInternal(reader.role) && !window.bdAccess.byRank(reader.role, level));
     }
 
     // signIn: locked in look only (signsIn): a lock and a reason, but the
@@ -5985,7 +6095,7 @@ ${CONFIG.accessNav === 'earned' ? `    // accessNav 'earned' (community-access-p
     function lockLinks(selector, reader, scope) {
       var links = (scope || document).querySelectorAll(selector);
       for (var i = 0; i < links.length; i++) {
-        var level = links[i].getAttribute('data-access') || 'team';
+        var level = links[i].getAttribute('data-access') || window.bdAccess.defaultLevel;
         var locked = !!reader && !canOpen(reader, level, pathOf(links[i]));
         links[i].classList.toggle('is-locked', locked);
         markGranted(links[i], reader, level, locked);
@@ -6000,9 +6110,9 @@ ${CONFIG.accessNav === 'earned' ? `    // accessNav 'earned' (community-access-p
       var body = document.body;
       var wasOut = body.classList.contains('is-signed-out');
       var out = reader.role === 'out';
-      var reason = LOCK_TOOLTIPS[reader.role] || '';
       body.classList.toggle('is-signed-out', out);
-      body.classList.toggle('is-guest', reader.role === 'guest');
+      // is-guest shows the lock note (docs-site.css): any outsider, whose note says what they could earn
+      body.classList.toggle('is-guest', !out && !window.bdAccess.isInternal(reader.role));
       if (out) body.removeAttribute('data-role');
       else body.setAttribute('data-role', reader.role);
       writeLockNote(reader.role);
@@ -6011,9 +6121,9 @@ ${CONFIG.accessNav === 'earned' ? `    // accessNav 'earned' (community-access-p
       for (var li = 0; li < links.length; li++) {
         // The note's own link is the way to ask; it is never a locked row.
         if (lockNote && lockNote.contains(links[li])) continue;
-        var linkLevel = links[li].getAttribute('data-access') || 'team';
+        var linkLevel = links[li].getAttribute('data-access') || window.bdAccess.defaultLevel;
         var linkLocked = !canOpen(reader, linkLevel, pathOf(links[li]));
-        lockItem(links[li], linkLocked, reason, signsIn(reader, linkLevel));
+        lockItem(links[li], linkLocked, lockReasonFor(reader.role, linkLevel), signsIn(reader, linkLevel));
         markGranted(links[li], reader, linkLevel, linkLocked);
       }
       // A section or subsection is locked when nothing listed in it opens
@@ -6034,7 +6144,7 @@ ${CONFIG.accessNav === 'earned' ? `    // accessNav 'earned' (community-access-p
         // is ever locked shut.
         var locked = ${CONFIG.accessNav === 'earned' ? 'false' : 'out || !anyOpen'};
         var toggle = groups[gi].querySelector(':scope > summary');
-        if (toggle) lockItem(toggle, locked, reason);
+        if (toggle) lockItem(toggle, locked, lockReasonFor(reader.role));
         if (locked && groups[gi].open) {
           // A late lock can shut the section holding focus; hand focus to
           // its toggle rather than let it fall to <body>.
@@ -6348,7 +6458,7 @@ ${CONFIG.accessNav === 'earned' ? `    // accessNav 'earned' (community-access-p
     }
 
     // Focus landing inside a group still opening completes it at once
-    // (cms/motion.md): its links take focus straight away but are clipped
+    // (spec/motion.md): its links take focus straight away but are clipped
     // until the travel ends. A focused toggle's own group is left out, so a
     // click that turns a group round does not complete it first. Not
     // finish(): its event comes a frame later, holding the clipped height.
@@ -6615,6 +6725,12 @@ function buildNavSectionsHtml(filesBySection) {
       console.error(`❌ rootLinks entry needs both title and href: ${JSON.stringify(link)}`);
       process.exit(1);
     }
+    // Every root link names its level: a missing one once fell to team and
+    // hid the public Glossary from signed-out readers (2026-11-26)
+    if (!ACCESS_LEVELS.includes(link.access)) {
+      console.error(`❌ rootLinks entry "${link.title}" needs access: one of ${ACCESS_LEVELS.join(', ')}, the level of the page it links to.`);
+      process.exit(1);
+    }
     if (link.icon && !ICON_MAP[link.icon]) {
       console.error(`❌ rootLinks icon not in the registry: "${link.icon}" (${link.title})`);
       process.exit(1);
@@ -6625,7 +6741,7 @@ function buildNavSectionsHtml(filesBySection) {
     // gated in the emitted script rather than here.
     const engineOnly = link.requires === 'search' ? ' data-engine-only' : '';
     const rootIconHtml = link.icon ? `<span class="svg-icn">${getRawIcon(link.icon)}</span>` : '';
-    const linkHtml = `<a href="${siteHref(link.href)}" class="sidebar-nav-link sidebar-nav-root-link" data-access="${escapeAttr(link.access || 'team')}"${engineOnly}${MOTION.sidebarItem} aria-label="${escapeAttr(link.title)}" data-tooltip="${escapeAttr(link.title)}" data-tooltip-position="right">${rootIconHtml}<span>${escapeAttr(link.title)}</span>${navLock}</a>`;
+    const linkHtml = `<a href="${siteHref(link.href)}" class="sidebar-nav-link sidebar-nav-root-link" data-access="${escapeAttr(link.access)}"${engineOnly}${MOTION.sidebarItem} aria-label="${escapeAttr(link.title)}" data-tooltip="${escapeAttr(link.title)}" data-tooltip-position="right">${rootIconHtml}<span>${escapeAttr(link.title)}</span>${navLock}</a>`;
     if (link.after && presentSections.has(link.after)) (linksAfter[link.after] = linksAfter[link.after] || []).push(linkHtml);
     else html += linkHtml;
   }
@@ -7083,6 +7199,7 @@ function writePageAccess() {
   const sources = [...sourcePages.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   const body = `export const ACCESS_NAV = ${JSON.stringify(CONFIG.accessNav)};\n\n`
     + `export const COMMUNITY_LABEL = ${JSON.stringify(siteTokens().communityLabel || 'Community')};\n\n`
+    + `export const ROLES = Object.freeze(${JSON.stringify(SITE_ROLES)});\n\n`
     + `export const PROTECTED_SECTIONS = ${JSON.stringify(CONFIG.protectedSections)};\n\n`
     + `export const SECTIONS = Object.freeze(${JSON.stringify(sections)});\n\n`
     + `export const PAGE_ACCESS = new Map([\n${lines.join('\n')}\n]);\n\n`
@@ -8041,7 +8158,7 @@ function showcaseConfigBlock() {
 }
 
 // The drawn cursor's shapes, from the site's two-colour cursor set
-// (assets/images/svg-cursors/, cms/iconography.md "Cursor Sprite"): fixed
+// (assets/images/svg-cursors/, spec/iconography.md "Cursor Sprite"): fixed
 // black-and-white artwork with its own white edge, as a real pointer has, so
 // it reads on any ground. Not brand icons, so not .svg-icn; the runtime
 // clones them by data-cursor. The set's files carry xmlns and a fixed size
@@ -8050,7 +8167,7 @@ const SHOWCASE_CURSORS = { arrow: 'cursor-arrow', pointer: 'cursor-hand-pointing
 
 /** The brand icons and cursor drawings the runtime clones. */
 function showcaseIconsBlock() {
-  const names = ['play-outline', 'pause', 'stack'];
+  const names = ['play', 'pause', 'stack'];
   const cursors = Object.entries(SHOWCASE_CURSORS).map(([shape, name]) => {
     const file = path.join(ROOT, 'assets/images/svg-cursors', `${name}.svg`);
     if (!fs.existsSync(file)) {
@@ -9114,7 +9231,7 @@ async function generateDocs() {
   // Under 'locked' every reader sees every title already, so it is a note.
   if (!isSingleFile && bodyLinkViolations.length) {
     const fatal = (CONFIG.accessNav === 'hidden' ? bodyLinkViolations
-      : CONFIG.accessNav === 'earned' ? bodyLinkViolations.filter((v) => LEVEL_RANK[v.level] >= LEVEL_RANK.team)
+      : CONFIG.accessNav === 'earned' ? bodyLinkViolations.filter((v) => LEVEL_RANK[v.level] >= LEVEL_RANK[DEFAULT_LEVEL])
       : []).filter((v) => !v.fromSetting);
     const bySetting = bodyLinkViolations.filter((v) => v.fromSetting);
     if (CONFIG.accessNav !== 'locked' && bySetting.length) {

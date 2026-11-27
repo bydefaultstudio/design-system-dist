@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * library.js — the Asset Library's files, streamed from R2 at /files/
  * (asset-library-plan.md §4.5).
@@ -24,6 +24,7 @@
  */
 import { contentDisposition, fileHeaders, fileLevel, mayDownload, parseFilesPath, parseRange, thumbHeaders } from './library-core.mjs';
 import { SITE } from './site.mjs';
+import { ROLE_LABELS, isInternalLevel } from './roles.mjs';
 
 function plain(status, text, setCookies = []) {
   const headers = new Headers({ 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'private, no-store' });
@@ -69,10 +70,12 @@ const UNAVAILABLE = 'The file store is not available right now. Try again in a m
 // What a refused reader is told: who the file is for. A signed-in guest can
 // meet the community wording too, so it names the members, not a sign-in.
 function refusal(level) {
-  if (level === 'community') return `This file is for ${SITE.communityLabel} members.`;
   if (level === 'admin') return 'This file is for admins.';
   if (level === 'owner') return 'This file is for the owner.';
-  return 'This file is for the team.';
+  if (level === 'team') return 'This file is for the team.';
+  const label = ROLE_LABELS[level];
+  if (!label) return 'This file is for the team.';
+  return isInternalLevel(level) ? `This file is for the ${label} role.` : `This file is for ${label} members.`;
 }
 
 

@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * people-core.mjs - the pure half of the People API (permissions-plan.md §5).
  *
@@ -7,7 +7,7 @@
  * and to describe, and writes what they return. Everything a request can get
  * wrong is named here, in the words the page shows.
  */
-import { ROLES } from './auth-schema.mjs';
+import { ROLES, ROLE_RANK, isInternalRole, isRole } from './roles.mjs';
 import { GROUP_KINDS, isGrantableScope, memberKindFor, normalizeEmail } from './gate.mjs';
 
 export const PEOPLE_BASE_PATH = '/api/people/';
@@ -15,6 +15,8 @@ export const PEOPLE_BASE_PATH = '/api/people/';
 export const NOTE_MAX_LENGTH = 200;
 export const GROUP_NAME_MAX_LENGTH = 60;
 export const INVITE_MAX_ADDRESSES = 20;
+// A paid list (roles-engine-plan.md §6.4): no email goes out, so no send limit
+export const LIST_MAX_ADDRESSES = 500;
 
 const DAY_SECONDS = 24 * 60 * 60;
 
@@ -72,7 +74,7 @@ export function slugify(name) {
     .slice(0, 40);
 }
 
-function cleanNote(value) {
+export function cleanNote(value) {
   if (value === null || value === undefined) return null;
   const note = String(value).trim();
   if (note === '') return null;
@@ -122,7 +124,7 @@ export function expiryChange(stored, submitted) {
 export function validatePerson(body, { groups: known = [], now }) {
   const errors = [];
   const role = typeof body.role === 'string' ? body.role : '';
-  if (!ROLES.includes(role)) errors.push('The role is owner, admin, team, community or guest.');
+  if (!ROLES.includes(role)) errors.push(`The role is ${ROLES.slice(0, -1).join(', ')} or ${ROLES[ROLES.length - 1]}.`);
 
   const groups = Array.isArray(body.groups) ? body.groups.map(String) : [];
   const kinds = new Map(known.map((group) => [group.id, group.kind]));
@@ -132,8 +134,8 @@ export function validatePerson(body, { groups: known = [], now }) {
   if (groups.length && ROLES.includes(role) && !kind) errors.push('An owner opens everything, so joins no group.');
   else if (kind && groups.some((id) => kinds.has(id) && kinds.get(id) !== kind)) {
     errors.push(kind === 'internal'
-      ? 'A team member or an admin joins internal groups only.'
-      : 'Internal groups are for the team and admins only. A guest or a community member joins external groups.');
+      ? 'An internal role joins internal groups only.'
+      : 'Internal groups are for internal roles only. An external role joins external groups.');
   }
 
   const expiry = parseExpiry(body.expiresAt, now);
@@ -159,6 +161,49 @@ export function validateInvite(body, context) {
   if (emails.length === 0 && invalid.length === 0) errors.push('Enter at least one email address.');
   if (emails.length > INVITE_MAX_ADDRESSES) errors.push(`Up to ${INVITE_MAX_ADDRESSES} addresses at a time.`);
   return { ok: errors.length === 0, errors, value: { ...person.value, emails } };
+}
+
+/**
+ * Apply to a list (roles-engine-plan.md §6.4, E5): a paid list of addresses,
+ * one external role and optionally one external group. Validated here; what
+ * happens to each address is planList's.
+ */
+export function validateList(body, { groups: known = [] }) {
+  const errors = [];
+  const { emails, invalid } = parseEmails(body.emails);
+  if (invalid.length) errors.push(`Not an email address: ${invalid.join(', ')}.`);
+  if (emails.length === 0 && invalid.length === 0) errors.push('Enter at least one email address.');
+  if (emails.length > LIST_MAX_ADDRESSES) errors.push(`Up to ${LIST_MAX_ADDRESSES} addresses at a time.`);
+  const role = typeof body.role === 'string' ? body.role : '';
+  if (!isRole(role) || isInternalRole(role)) errors.push('A list gives an external role only. Make someone internal on their own row.');
+  const group = typeof body.group === 'string' && body.group.trim() ? body.group.trim() : null;
+  const kind = group ? (known.find((g) => g.id === group) || {}).kind : null;
+  if (group && !kind) errors.push(`No such group: ${group}.`);
+  else if (group && kind !== 'external') errors.push('A list joins an external group only.');
+  return { ok: errors.length === 0, errors, value: { emails, role, group } };
+}
+
+/**
+ * What a list does to each address, from the rows already listed:
+ *   add    not listed: a new row at the role, in the group
+ *   raise  listed below the role: raised to it, and joins the group
+ *   join   listed at or above the role: keeps their role, joins the group
+ *   skip   internal people and the owner: never changed by a list, named
+ * Nobody is ever lowered. Pure, so the rules are tested without a database.
+ * `rows` are { email, role } with the ACCESS_OWNER row already read as owner.
+ */
+export function planList(rows, emails, role) {
+  const listed = new Map(rows.map((row) => [row.email, row.role]));
+  const plan = { add: [], raise: [], join: [], skip: [] };
+  for (const email of emails) {
+    if (!listed.has(email)) { plan.add.push(email); continue; }
+    const current = listed.get(email);
+    if (current === 'owner' || isInternalRole(current)) plan.skip.push(email);
+    // An unknown stored role reads as the lowest (roles.mjs), so it is raised
+    else if (!isRole(current) || ROLE_RANK[current] < ROLE_RANK[role]) plan.raise.push(email);
+    else plan.join.push(email);
+  }
+  return plan;
 }
 
 /**

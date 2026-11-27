@@ -6,7 +6,7 @@
  *   - one control per colour ROLE — Colour when a tool has one, Foreground and
  *     Background when it has two — each the brand palette as colour chips,
  *     then a picker and a hex field that always show the chosen value, the
- *     field carrying a copy button for the hex (cms/field.md, Colour). Picking
+ *     field carrying a copy button for the hex (spec/field.md, Colour). Picking
  *     a chip fills the field; a hex that is not a palette colour checks none.
  *   - an optional None chip, first, where a file can have no background.
  *   - an optional Pairs row above a two-colour tool's controls: one chip sets

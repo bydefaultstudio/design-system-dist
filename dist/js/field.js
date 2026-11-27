@@ -1,10 +1,10 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * Field — the controls inside a text input
  * Gives every .field its .is-filled state and makes its clear button work.
  *
  * A .field is a box around one input with an icon, a clear or a toggle
- * beside it (cms/field.md). The script keeps `.is-filled` on the box in
+ * beside it (spec/field.md). The script keeps `.is-filled` on the box in
  * step with the input's value — the CSS shows the clear only then — and a
  * click on .field-clear empties the input, dispatches `input` then `change`
  * so form code sees a user edit, and hands focus back to the input. A click

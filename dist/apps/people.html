@@ -61,6 +61,7 @@
               <div class="section-header">
                 <h2 class="section-header-title" id="people-list-heading">Who can sign in</h2>
                 <div class="section-header-actions">
+                  <button type="button" class="button" data-variant="outline" data-size="small" data-dialog-open="people-list">{{icon:users}}<span>Apply to a list</span></button>
                   <button type="button" class="button" data-size="small" data-dialog-open="people-add">{{icon:user-add}}<span>Add people</span></button>
                 </div>
               </div>
@@ -203,6 +204,43 @@
           <div class="dialog-footer">
             <button type="button" class="button" data-variant="faded" data-dialog-close>Cancel</button>
             <button type="submit" form="people-add-form" class="button" id="people-add-submit">Add</button>
+          </div>
+        </dialog>
+
+        <!-- Apply to a list (roles-engine-plan.md §6.4): a paid cohort list
+             gets one external role and one external group, new addresses
+             added, outsiders below the role raised, nobody lowered, internal
+             people and the owner left alone. No email goes out. -->
+        <dialog id="people-list" class="dialog" aria-labelledby="people-list-title" data-static>
+          <div class="dialog-header">
+            <h2 class="dialog-title" id="people-list-title">Apply to a list</h2>
+            <button class="button close-btn" type="button" data-icon-only data-size="small" data-dialog-close aria-label="Close">{{icon:close}}</button>
+          </div>
+          <div class="dialog-body">
+            <form id="people-list-form" class="people-form" novalidate>
+              <div class="form-group">
+                <label for="people-list-emails">Email addresses <span class="form-required" aria-hidden="true">*</span></label>
+                <textarea id="people-list-emails" name="emails" rows="6" required aria-required="true" autofocus autocapitalize="none" spellcheck="false" placeholder="one@example.com, two@example.com" aria-describedby="people-list-emails-hint"></textarea>
+                <p class="form-hint" id="people-list-emails-hint">Up to 500, separated by commas or lines. New addresses are added; people already listed below the role are raised to it. Nobody is lowered, the team is never changed, and no email is sent.</p>
+              </div>
+              <div class="form-group">
+                <label for="people-list-role">Role</label>
+                <select id="people-list-role" name="role"></select>
+              </div>
+              <div class="form-group">
+                <label for="people-list-group">Group <span class="form-optional">(optional)</span></label>
+                <select id="people-list-group" name="group"><option value="">No group</option></select>
+              </div>
+              <div class="form-group">
+                <label for="people-list-note">Note for new people <span class="form-optional">(optional)</span></label>
+                <input type="text" id="people-list-note" name="note" maxlength="200" placeholder="Cohort 1, January 2027">
+              </div>
+              <p class="form-error" id="people-list-error" role="alert" aria-live="assertive"></p>
+            </form>
+          </div>
+          <div class="dialog-footer">
+            <button type="button" class="button" data-variant="faded" data-dialog-close>Cancel</button>
+            <button type="submit" form="people-list-form" class="button" id="people-list-submit">Apply</button>
           </div>
         </dialog>
 

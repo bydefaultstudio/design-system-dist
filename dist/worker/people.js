@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * people.js - the People API (permissions-plan.md §5): the list, invites,
  * roles, groups and removal, so adding a person never needs a terminal.
@@ -29,9 +29,13 @@
 import { allowedRow, parseAddress } from './auth.js';
 import { FAIL_KEY_PREFIX, FAIL_LIMITS, SEND_LIMITS, evaluateRateLimit, isClosedToGroups, isOwnerEmail, isSameOrigin, managesPeople, privateHeaders, sweepSendLog } from './gate.mjs';
 import { SITE } from './site.mjs';
+import { ROLE_RANK } from './roles.mjs';
 import { inviteSubject, renderInviteEmail, renderInviteText } from './email-template.mjs';
 import {
   PEOPLE_BASE_PATH,
+  cleanNote,
+  planList,
+  validateList,
   canAssignRole,
   canManageRow,
   expiryChange,
@@ -48,6 +52,8 @@ import {
 export { PEOPLE_BASE_PATH };
 
 const BODY_MAX_BYTES = 16 * 1024;
+// A paid list holds up to 500 addresses (LIST_MAX_ADDRESSES), long ones included
+const LIST_BODY_MAX_BYTES = 128 * 1024;
 
 // Invites are sends, so they are limited like the sign-in code is
 // (access-plan.md §4.8), on the same log: per acting admin and per address.
@@ -55,6 +61,7 @@ const INVITE_LIMITS = { windowSeconds: SEND_LIMITS.windowSeconds, ip: 30, email:
 
 const COPY = {
   forbidden: 'This page is for admins.',
+  olderDatabase: 'This site\'s database is older than its role list. Apply migration 0019, then try again.',
   notFound: 'No one on the list has that address.',
   self: 'You cannot remove yourself. Another admin can.',
   selfRole: 'You cannot change your own level. Another admin or an owner can.',
@@ -79,8 +86,6 @@ const COPY = {
   failed: 'Something went wrong on our side. Try again.',
 };
 
-const ROLE_RANK = { guest: 0, community: 1, team: 2, admin: 3, owner: 4 };
-
 export async function handlePeople(request, env, url, reader, setCookies = []) {
   if (!reader || !managesPeople(reader.role)) return respond({ error: COPY.forbidden }, 403, setCookies);
   if (!isSameOrigin(request.headers, url.origin, request.method)) return respond({ error: COPY.notThrough }, 403, setCookies);
@@ -92,13 +97,14 @@ export async function handlePeople(request, env, url, reader, setCookies = []) {
     }
     if (request.method !== 'POST') return respond({ error: COPY.failed }, 405, setCookies);
 
-    const body = await readJson(request);
+    const body = await readJson(request, route === 'list' ? LIST_BODY_MAX_BYTES : BODY_MAX_BYTES);
     if (!body) return respond({ error: COPY.notThrough }, 400, setCookies);
 
     const now = Math.floor(Date.now() / 1000);
     let result;
     switch (route) {
       case 'invite': result = await invite(env, url, reader, body, now); break;
+      case 'list': result = await applyList(env, reader, body); break;
       case 'update': result = await update(env, reader, body, now); break;
       case 'resend': result = await resend(env, url, reader, body, now); break;
       case 'remove': result = await remove(env, reader, body, now); break;
@@ -240,6 +246,66 @@ async function invite(env, url, reader, body, now) {
     }
   }
   return { status: 200, body: { ok: true, added: emails, sent, unsent } };
+}
+
+/**
+ * Apply to a list (roles-engine-plan.md §6.4, E5): a paid list of addresses
+ * gets one external role and joins one external group, as allowlist rows, so
+ * it holds at first sign-in and for accounts that already exist. New
+ * addresses are added; listed outsiders below the role are raised; anyone at
+ * or above it only joins the group. Internal people and the owner are never
+ * touched, and nobody is lowered. No email goes out. The payment step will
+ * call this same function, so access has one write path.
+ */
+export async function applyList(env, reader, body) {
+  const checked = validateList(body, { groups: await listGroups(env) });
+  if (!checked.ok) return { status: 400, body: { error: checked.errors.join(' ') } };
+  const { emails, role, group } = checked.value;
+  if (!canAssignRole(reader.role, role)) return { status: 403, body: { error: COPY.makeOwner } };
+  const note = cleanNote(body.note);
+
+  // The ACCESS_OWNER address may have no row; it is the owner all the same
+  const owners = emails.filter((email) => isOwner(env, email));
+  const rows = await listRows(env);
+  const plan = planList(rows, emails.filter((email) => !isOwner(env, email)), role);
+  plan.skip.push(...owners);
+  // Already at the role with an end date of their own: kept, and named so the admin can extend it
+  const ending = new Set(rows.filter((row) => row.expires_at).map((row) => row.email));
+  const endDated = plan.join.filter((email) => ending.has(email));
+
+  // D1 binds at most 100 parameters a statement, so rows go in chunks
+  const chunks = (list, size) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, i * size + size));
+  const marks = (n, width, at = 1) => Array.from({ length: n }, (_, i) => `(${Array.from({ length: width }, (__, j) => `?${at + i * width + j}`).join(', ')})`).join(', ');
+  const list = (n, at = 1) => Array.from({ length: n }, (_, i) => `?${at + i}`).join(', ');
+  const statements = [];
+  for (const part of chunks(plan.add, 20)) {
+    statements.push(env.DB.prepare(`INSERT INTO allowed_email (email, note, role, invited_by) VALUES ${marks(part.length, 4)}`)
+      .bind(...part.flatMap((email) => [email, note, role, reader.email])));
+  }
+  for (const part of chunks(plan.raise, 90)) {
+    // A paid raise is open-ended: an old guest end date would cut it short
+    statements.push(env.DB.prepare(`UPDATE allowed_email SET role = ?1, expires_at = NULL WHERE email IN (${list(part.length, 2)})`).bind(role, ...part));
+    // The signed-in record follows the list, so the next cookie rebuild carries it
+    statements.push(env.DB.prepare(`UPDATE user SET role = ?1 WHERE email IN (${list(part.length, 2)})`).bind(role, ...part));
+  }
+  if (group) {
+    for (const part of chunks([...plan.add, ...plan.raise, ...plan.join], 45)) {
+      statements.push(env.DB.prepare(`INSERT OR IGNORE INTO access_group_member (group_id, email) VALUES ${marks(part.length, 2)}`)
+        .bind(...part.flatMap((email) => [group, email])));
+    }
+  }
+  try {
+    if (statements.length) await env.DB.batch(statements);
+  } catch (error) {
+    // Before 0019 the database refuses any role outside the five
+    if (/CHECK constraint failed/i.test(String(error && error.message))) return { status: 409, body: { error: COPY.olderDatabase } };
+    throw error;
+  }
+  console.info(JSON.stringify({
+    event: 'people.list_applied', by: reader.email, role, group,
+    added: plan.add.length, raised: plan.raise.length, joined: plan.join.length, skipped: plan.skip.length,
+  }));
+  return { status: 200, body: { ok: true, added: plan.add, raised: plan.raise, joined: plan.join, skipped: plan.skip, endDated } };
 }
 
 async function update(env, reader, body, now) {
@@ -540,13 +606,13 @@ async function sendInvite(env, origin, { email, invitedBy, expiresAt, role, open
   }
 }
 
-async function readJson(request) {
+async function readJson(request, max = BODY_MAX_BYTES) {
   const declared = Number(request.headers.get('content-length'));
-  if (declared > BODY_MAX_BYTES) return null;
+  if (declared > max) return null;
   let body;
   try {
     const text = await request.text();
-    if (text.length > BODY_MAX_BYTES) return null;
+    if (text.length > max) return null;
     body = JSON.parse(text);
   } catch {
     return null;

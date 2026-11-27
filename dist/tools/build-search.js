@@ -106,7 +106,9 @@ function refuseRepoRoot(site) {
 // for inspection and is never served.
 async function refusePublicOut(site, out) {
   const rel = path.relative(site, out);
-  if (rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel)) return;
+  // Outside the site nothing is served, so nothing to refuse; the site is
+  // still configured, so the level indexes follow its own roles
+  const outside = rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel);
   const { isPublicPath } = await import('../worker/gate.mjs');
   // Judged with this site's public lists, as the deployed Worker judges them:
   // the gate alone knows only the engine's own. A site's worker/site-config.mjs
@@ -127,9 +129,11 @@ async function refusePublicOut(site, out) {
     console.warn('  No worker/site-config.mjs here: the indexes are checked against the engine\'s public paths only.' +
       '\n  Run bd-search from the site root, and keep /pagefind/ and /search-index/ out of the site\'s public lists.');
   }
+  if (outside) return;
   const base = rel ? '/' + rel.split(path.sep).join('/') : '';
-  for (const url of [`${base}/${SYMBOLS_DIR}/symbols.json`, `${base}/${PAGEFIND_DIR}/pagefind.js`,
-    `${base}/${COMMUNITY_SYMBOLS_DIR}/symbols.json`, `${base}/${COMMUNITY_PAGEFIND_DIR}/pagefind.js`]) {
+  await readSearchLevels();
+  const levelUrls = SEARCH_LEVELS.flatMap((level) => [`${base}/${symbolsDir(level)}/symbols.json`, `${base}/${pagefindDir(level)}/pagefind.js`]);
+  for (const url of [`${base}/${SYMBOLS_DIR}/symbols.json`, `${base}/${PAGEFIND_DIR}/pagefind.js`, ...levelUrls]) {
     if (!isPublicPath(url)) continue;
     console.error(
       `\n  ${url} is public (worker/gate.mjs). The search indexes hold the text of` +
@@ -145,24 +149,35 @@ async function refusePublicOut(site, out) {
 // the walk below and the two writers cannot drift apart.
 const SYMBOLS_DIR = 'search-index';
 const PAGEFIND_DIR = 'pagefind';
-// accessNav 'earned' (community-access-plan.md D11): a second pair of indexes,
-// public and community pages only, for a community reader. The gate opens
-// these folders at community (gate.mjs COMMUNITY_SEARCH_PREFIXES); the full
-// pair above stays team.
-const COMMUNITY_SYMBOLS_DIR = `${SYMBOLS_DIR}/community`;
-const COMMUNITY_PAGEFIND_DIR = 'pagefind-community';
-const COMMUNITY_LEVELS = new Set(['public', 'community']);
+// accessNav 'earned' (community-access-plan.md D11, roles-engine-plan.md E4):
+// one more pair of indexes for each external level, holding public pages and
+// external pages at or below it, for a reader of that role: community's at
+// /search-index/community/ and /pagefind-community/, Pro's at
+// /search-index/pro/ and /pagefind-pro/. The gate opens each at its level
+// (gate.mjs searchEntry); the full pair above stays at the default level.
+const symbolsDir = (level) => `${SYMBOLS_DIR}/${level}`;
+const pagefindDir = (level) => `${PAGEFIND_DIR}-${level}`;
+// The site's external levels, lowest first, and which page levels each index
+// may hold. Read from the site's role list (worker/roles.mjs, configured from
+// worker/site-config.mjs); the five-role fallback names community alone.
+let SEARCH_LEVELS = ['community'];
+let LEVELS_WITHIN = new Map([['community', new Set(['public', 'community'])]]);
+async function readSearchLevels() {
+  const roles = await import('../worker/roles.mjs');
+  SEARCH_LEVELS = roles.LEVELS.filter((level) => level !== 'public' && roles.isExternalLevel(level));
+  LEVELS_WITHIN = new Map(SEARCH_LEVELS.map((level) => [level, new Set(['public', ...SEARCH_LEVELS.filter((l) => roles.LEVEL_RANK[l] <= roles.LEVEL_RANK[level])])]));
+}
 
 // Directories that hold no pages. Not an exclusion policy — that is the
 // data-pagefind-body attribute — just parse time saved on images and bundles.
 // The two index dirs are this script's own output from an earlier run.
-const NON_PAGE_DIRS = new Set(['assets', 'cdn', SYMBOLS_DIR, PAGEFIND_DIR, COMMUNITY_PAGEFIND_DIR]);
+const NON_PAGE_DIRS = new Set(['assets', 'cdn', SYMBOLS_DIR, PAGEFIND_DIR]);
 
 function walkHtml(dir, base = dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const abs = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (dir === base && NON_PAGE_DIRS.has(entry.name)) continue;
+      if (dir === base && (NON_PAGE_DIRS.has(entry.name) || entry.name.startsWith(`${PAGEFIND_DIR}-`))) continue;
       walkHtml(abs, base, out);
     } else if (entry.name.endsWith('.html')) {
       out.push(path.relative(base, abs).split(path.sep).join('/'));
@@ -498,7 +513,7 @@ function kb(str) {
 /** A page's own level, read from <body data-access> without parsing the page. */
 function bodyLevel(site, rel) {
   const html = fs.readFileSync(path.join(site, rel), 'utf8');
-  const m = html.match(/<body[^>]*\sdata-access="([a-z]+)"/);
+  const m = html.match(/<body[^>]*\sdata-access="([a-z][a-z0-9-]*)"/);
   return m ? m[1] : 'team';
 }
 
@@ -508,18 +523,19 @@ function communityTarget(url, communityPagesByUrl) {
   return pathPart === '/search.html' || communityPagesByUrl.has(pathPart);
 }
 
-async function buildSymbols(site, out, { community = false } = {}) {
+async function buildSymbols(site, out, { level = null } = {}) {
   const mentions = new Map();
-  // Community: only public and community pages are parsed at all, so the
-  // second pass costs a few pages, not the whole site.
-  const rels = walkHtml(site).filter((rel) => !community || COMMUNITY_LEVELS.has(bodyLevel(site, rel)));
+  // A level's index: only the pages it may hold are parsed at all, so each
+  // further pass costs a few pages, not the whole site.
+  const within = level ? LEVELS_WITHIN.get(level) : null;
+  const rels = walkHtml(site).filter((rel) => !within || within.has(bodyLevel(site, rel)));
   const allPages = [];
   for (const rel of rels) {
     const page = extractPage(site, rel, mentions);
     if (page) allPages.push(page);
     await new Promise((resolve) => setImmediate(resolve));
   }
-  const pages = community ? allPages.filter((p) => COMMUNITY_LEVELS.has(p.access)) : allPages;
+  const pages = within ? allPages.filter((p) => within.has(p.access)) : allPages;
   const pagesByUrl = new Map(pages.map((p) => [p.url, p]));
   const suffix = commonTitleSuffix(pages.map((p) => p.title));
   pages.forEach((p) => { p.title = suffix && p.title.endsWith(suffix) ? p.title.slice(0, -suffix.length) : p.title; });
@@ -562,16 +578,16 @@ async function buildSymbols(site, out, { community = false } = {}) {
     ...extractTerms(site).map((g) => ({ t: 'term', n: g.n, d: g.d, u: withVerifiedAnchor(g.u, pagesByUrl) })),
     ...extractFormats().map((f) => ({ t: 'format', n: f.n, d: f.d, u: f.u })),
     ...pages.map((p) => ({ t: 'page', n: p.title, d: p.description, u: p.url, s: p.section, l: p.level, a: p.access })),
-  ].filter((sym) => !community || communityTarget(sym.u, pagesByUrl));
+  ].filter((sym) => !within || communityTarget(sym.u, pagesByUrl));
 
-  const dir = path.join(out, community ? COMMUNITY_SYMBOLS_DIR : SYMBOLS_DIR);
+  const dir = path.join(out, level ? symbolsDir(level) : SYMBOLS_DIR);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   const json = JSON.stringify(symbols);
   fs.writeFileSync(path.join(dir, 'symbols.json'), json);
 
   const counts = symbols.reduce((acc, s) => ((acc[s.t] = (acc[s.t] || 0) + 1), acc), {});
-  console.log(`${community ? 'community/' : ''}symbols.json  ${kb(json)}`);
+  console.log(`${level ? `${level}/` : ''}symbols.json  ${kb(json)}`);
   console.log(`  ${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(' · ')}`);
   console.log(`  sections: ${[...new Set(pages.map((p) => p.section))].filter(Boolean).join(', ')}`);
   const undoc = undocumented.token.length + undocumented.class.length;
@@ -584,7 +600,8 @@ async function buildSymbols(site, out, { community = false } = {}) {
 
 /* ------ Prose index: Pagefind ------ */
 
-async function buildPagefind(pagefind, site, out, { community = false } = {}) {
+async function buildPagefind(pagefind, site, out, { level = null } = {}) {
+  const within = level ? LEVELS_WITHIN.get(level) : null;
   // forceLanguage keeps every page in one index rather than splitting by a
   // per-page lang attribute. It does not drop the `unknown` WASM bundle from
   // the output — that ships either way and is only fetched by a client that
@@ -592,26 +609,26 @@ async function buildPagefind(pagefind, site, out, { community = false } = {}) {
   const { index, errors } = await pagefind.createIndex({ forceLanguage: 'en' });
   if (!index) throw new Error(`Pagefind could not start: ${(errors || []).join('; ')}`);
   let added;
-  if (community) {
-    // Public and community pages only, each with every link or card to a
-    // page above community taken out first, so no team title reaches the
-    // fragments a community reader downloads.
+  if (within) {
+    // The pages this level's index holds, each with every link or card to a
+    // page above it taken out first, so no title above the reader reaches
+    // the fragments they download.
     let pageCount = 0;
     for (const rel of walkHtml(site)) {
-      if (!COMMUNITY_LEVELS.has(bodyLevel(site, rel))) continue;
+      if (!within.has(bodyLevel(site, rel))) continue;
       const html = fs.readFileSync(path.join(site, rel), 'utf8');
       if (!html.includes('data-pagefind-body')) continue;
       const dom = new JSDOM(html);
       const { document } = dom.window;
-      if (!COMMUNITY_LEVELS.has(document.body && document.body.getAttribute('data-access'))) { dom.window.close(); continue; }
+      if (!within.has(document.body && document.body.getAttribute('data-access'))) { dom.window.close(); continue; }
       for (const el of document.querySelectorAll('[data-access]')) {
         if (el.tagName === 'BODY' || el.tagName === 'HTML' || el.tagName === 'MAIN') continue;
-        if (!COMMUNITY_LEVELS.has(el.getAttribute('data-access'))) el.remove();
+        if (!within.has(el.getAttribute('data-access'))) el.remove();
       }
       const content = document.documentElement.outerHTML;
       dom.window.close();
       const result = await index.addHTMLFile({ sourcePath: rel, content });
-      if (result.errors && result.errors.length) throw new Error(`Pagefind (community): ${result.errors.join('; ')}`);
+      if (result.errors && result.errors.length) throw new Error(`Pagefind (${level}): ${result.errors.join('; ')}`);
       pageCount += 1;
     }
     added = { page_count: pageCount };
@@ -619,7 +636,7 @@ async function buildPagefind(pagefind, site, out, { community = false } = {}) {
     added = await index.addDirectory({ path: site });
     if (added.errors && added.errors.length) throw new Error(`Pagefind: ${added.errors.join('; ')}`);
   }
-  const outDir = path.join(out, community ? COMMUNITY_PAGEFIND_DIR : PAGEFIND_DIR);
+  const outDir = path.join(out, level ? pagefindDir(level) : PAGEFIND_DIR);
 
   // The data and the client runtime are written in the same call, and only the
   // data is checked further down. Pagefind has twice written every fragment,
@@ -674,7 +691,7 @@ async function buildPagefind(pagefind, site, out, { community = false } = {}) {
     const m = text.match(/"url":"([^"]+)"/);
     if (m) urls.add(m[1]);
   }
-  console.log(`${community ? 'pagefind-community/' : 'pagefind/    '} ${urls.size} pages indexed of ${added.page_count} walked → ${path.relative(ROOT, outDir)}`);
+  console.log(`${level ? `${pagefindDir(level)}/` : 'pagefind/    '} ${urls.size} pages indexed of ${added.page_count} walked → ${path.relative(ROOT, outDir)}`);
   return urls;
 }
 
@@ -710,25 +727,34 @@ async function main() {
   // A mismatch is a real defect and stops the deploy, naming the pages.
   checkAgreement(symbolUrls, proseUrls, '');
 
-  const communityDirs = [path.join(args.out, COMMUNITY_SYMBOLS_DIR), path.join(args.out, COMMUNITY_PAGEFIND_DIR)];
-  if (await accessNavMode() === 'earned') {
+  await readSearchLevels();
+  const earned = await accessNavMode() === 'earned';
+  const built = earned ? SEARCH_LEVELS : [];
+  for (const level of built) {
     const started = Date.now();
-    const communitySymbols = await buildSymbols(args.site, args.out, { community: true });
-    const communityProse = await buildPagefind(pagefind, args.site, args.out, { community: true });
-    checkAgreement(communitySymbols, communityProse, 'community ');
-    // The self-check: nothing above community in the community index. The
-    // page list above is filtered by level already; this re-reads what was
-    // written, so a later change to either builder cannot slip one in.
+    const levelSymbols = await buildSymbols(args.site, args.out, { level });
+    const levelProse = await buildPagefind(pagefind, args.site, args.out, { level });
+    checkAgreement(levelSymbols, levelProse, `${level} `);
+    // The self-check: nothing above the level in its index. The page list
+    // above is filtered by level already; this re-reads what was written,
+    // so a later change to either builder cannot slip one in.
     const levels = new Map(walkHtml(args.site).map((rel) => [canonicalUrl(rel), bodyLevel(args.site, rel)]));
-    const leaked = [...communityProse].filter((u) => !COMMUNITY_LEVELS.has(levels.get(u.split('#')[0]) || 'team'));
+    const within = LEVELS_WITHIN.get(level);
+    const leaked = [...levelProse].filter((u) => !within.has(levels.get(u.split('#')[0]) || 'team'));
     if (leaked.length) {
-      console.error(`\n  The community search index holds pages above community: ${leaked.join(', ')}\n`);
+      console.error(`\n  The ${level} search index holds pages above ${level}: ${leaked.join(', ')}\n`);
       process.exit(1);
     }
-    console.log(`  community indexes built in ${((Date.now() - started) / 1000).toFixed(1)}s`);
-  } else {
-    // A site that leaves 'earned' must not keep serving a stale second index.
-    for (const dir of communityDirs) fs.rmSync(dir, { recursive: true, force: true });
+    console.log(`  ${level} indexes built in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+  }
+  // A level the site no longer has, or a site that left 'earned', must not
+  // keep serving a stale index.
+  for (const name of fs.existsSync(args.out) ? fs.readdirSync(args.out) : []) {
+    if (name.startsWith(`${PAGEFIND_DIR}-`) && !built.includes(name.slice(PAGEFIND_DIR.length + 1))) fs.rmSync(path.join(args.out, name), { recursive: true, force: true });
+  }
+  const symbolsRoot = path.join(args.out, SYMBOLS_DIR);
+  for (const name of fs.existsSync(symbolsRoot) ? fs.readdirSync(symbolsRoot, { withFileTypes: true }) : []) {
+    if (name.isDirectory() && !built.includes(name.name)) fs.rmSync(path.join(symbolsRoot, name.name), { recursive: true, force: true });
   }
   await pagefind.close();
 }

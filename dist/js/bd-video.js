@@ -1,11 +1,13 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * Script Purpose: Configurable video player — play/pause, scrubber, mute, fullscreen, keyboard shortcuts, timed cues
  * Author: By Default
  * Created: 2026-04-12
- * Version: 0.9.1
- * Last Updated: 2026-11-11
+ * Version: 0.9.2
+ * Last Updated: 2026-11-27
  *
+ * 0.9.2 — the cursor badge shows play-filled, since play now draws the
+ *         outline; it matches the filled centre button again
  * 0.9.0 — starts and stops itself on bd:after-nav and bd:before-nav (engine
  *         parity C3), so no router has to name it; a deferred autoplay on a
  *         player built during bd:after-nav plays at once, since the event it
@@ -372,7 +374,7 @@ function initPlayerInstance(video) {
     root.setAttribute("data-bd-state", state);
     dispatch(root, "bd-video:statechange", { state: state });
     if (root.hasAttribute("data-cursor-icon")) {
-      root.setAttribute("data-cursor-icon", state === "playing" ? "pause" : "play");
+      root.setAttribute("data-cursor-icon", state === "playing" ? "pause" : "play-filled");
       root.setAttribute(
         "data-cursor-label",
         state === "preview" ? "Play Reel" : (state === "playing" ? "Pause" : "Play")

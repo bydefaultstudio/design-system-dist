@@ -373,7 +373,7 @@
   }
 
   // The system's colour chip: a label wrapping a covered radio, the paint on
-  // .chip-swatch, the name moved to .visually-hidden. See cms/chip.md.
+  // .chip-swatch, the name moved to .visually-hidden. See spec/chip.md.
   function makeChip(groupName, side, value, fill) {
     var label = document.createElement('label');
     label.className = 'chip tool-chip';
@@ -826,7 +826,7 @@
   // covers its top as it scrolls. On hover or keyboard focus the bubble is
   // measured where it would open: turned to the side with room at either end
   // of a row, else under the chip when there is no room above it, using the
-  // tooltip's own positions (cms/tooltip.md) — tool-colour.js's pattern,
+  // tooltip's own positions (spec/tooltip.md) — tool-colour.js's pattern,
   // bounded by the section rather than the screen.
   function placeTooltip(event) {
     if (!isLive(event) || !(event.target instanceof Element)) return;

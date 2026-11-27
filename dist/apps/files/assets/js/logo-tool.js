@@ -759,7 +759,7 @@
   //------- CONTROL SURFACES BUILT FROM THE MANIFEST -------//
   //
 
-  // Variation chips: native radios in labels (cms/chip.md), so the group name,
+  // Variation chips: native radios in labels (spec/chip.md), so the group name,
   // the arrow keys and the focus ring come from the component.
   function buildVariantChips() {
     if (!el.variants) return;

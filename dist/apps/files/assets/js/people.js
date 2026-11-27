@@ -17,11 +17,30 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.5.0';
+  var VERSION = '1.6.0';
   var API = '/api/people/';
 
-  // community's label is the deployment's (data-community-label), set at init.
-  var ROLE_LABELS = { owner: 'Owner', admin: 'Admin', team: 'Team', community: 'Community', guest: 'Guest' };
+  // The site's roles (window.bdRoles, from brand.json access.roles via nav.js),
+  // highest first; the five every site had before 8.8.0 when nav.js is missing.
+  var ROLES = window.bdRoles || [
+    { key: 'owner', label: 'Owner', internal: true },
+    { key: 'admin', label: 'Admin', internal: true },
+    { key: 'team', label: 'Team', internal: true },
+    { key: 'community', label: 'Community', internal: false },
+    { key: 'guest', label: 'Guest', internal: false }
+  ];
+  var ROLE_LABELS = {};
+  ROLES.forEach(function (role) { ROLE_LABELS[role.key] = role.label; });
+  function roleOf(key) {
+    for (var i = 0; i < ROLES.length; i++) if (ROLES[i].key === key) return ROLES[i];
+    return null;
+  }
+  function externalLabels() {
+    return ROLES.filter(function (r) { return !r.internal; }).map(function (r) { return r.label; });
+  }
+  function joinLabels(names) {
+    return names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1] : (names[0] || '');
+  }
   var STATUS_COLOURS = { invited: 'info', active: 'success', expiring: 'warning', expired: 'danger' };
 
   var COPY = {
@@ -49,7 +68,7 @@
     kindFixed: function (kind) {
       return kind === 'internal'
         ? 'Internal group: for the team and admins only. A group stays the kind it was made as.'
-        : 'External group: for guests and ' + ROLE_LABELS.community + ' members. A group stays the kind it was made as.';
+        : 'External group: for ' + joinLabels(externalLabels()) + ' members. A group stays the kind it was made as.';
     },
     typeName: 'Type the group\'s name exactly to delete it.',
     confirmRemove: function (email) { return email + ' comes off the list and is signed out everywhere. You can add them again later.'; },
@@ -58,16 +77,43 @@
     }
   };
 
-  // The kind of group a role joins (worker/gate.mjs memberKindFor): an owner none.
+  // The kind of group a role joins (worker/roles.mjs memberKindFor): an owner none.
   function memberKindFor(role) {
-    if (role === 'guest' || role === 'community') return 'external';
-    if (role === 'team' || role === 'admin') return 'internal';
-    return null;
+    var found = roleOf(role);
+    if (!found || role === 'owner') return null;
+    return found.internal ? 'internal' : 'external';
   }
 
-  // What an external group may open (worker/gate.mjs isClosedToGroups).
+  // What a group of this kind may open (worker/gate.mjs isClosedToGroups):
+  // an internal one everything but owner pages, an external one public and
+  // the external roles' pages.
   function openToKind(level, kind) {
-    return kind === 'internal' ? level !== 'owner' : level === 'public' || level === 'community';
+    if (kind === 'internal') return level !== 'owner';
+    var found = roleOf(level);
+    return level === 'public' || (!!found && !found.internal);
+  }
+
+  // What each role opens, in the Role menus: the site's roles, highest first.
+  function roleOption(role, index) {
+    var label = role.label;
+    if (role.key === 'owner') return label + ' - opens everything, and manages admins and owners';
+    if (role.key === 'admin') return label + ' - opens everything but owner pages, and manages people';
+    if (role.internal) return label + ' - opens every ' + (role.key === 'team' ? 'team' : label) + ' page';
+    if (index === ROLES.length - 1) return label + ' - opens what their groups grant';
+    var reach = ROLES.slice(index, ROLES.length - 1).filter(function (r) { return !r.internal; }).reverse().map(function (r) { return r.label; });
+    return label + ' - opens the public and ' + joinLabels(reach) + ' pages';
+  }
+  function fillRoleOptions(select) {
+    if (!select || !window.bdRoles) return;
+    var options = ROLES.map(function (role, i) {
+      var option = document.createElement('option');
+      option.value = role.key;
+      option.textContent = roleOption(role, i);
+      // Only an owner makes an owner (offerOwner shows it)
+      if (role.key === 'owner') { option.hidden = true; option.disabled = true; }
+      return option;
+    });
+    select.replaceChildren.apply(select, options);
   }
 
   // `data` starts as an empty answer rather than null, so a dialog opened
@@ -465,6 +511,7 @@
     var form = byId('people-add-form');
     form.reset();
     byId('people-add-error').textContent = '';
+    markInvalid(form.elements.emails, byId('people-add-error'), false);
     toggleGroupsField(form, []);
   }
 
@@ -500,6 +547,76 @@
         // region into an open modal, which would take the toast down with it.
         closeDialog(byId('people-add'));
         toast(message, unsent ? 'warning' : 'success');
+        return load();
+      })
+      .catch(function () { error.textContent = COPY.offline; })
+      .then(function () { setBusy(button, false); });
+  }
+
+  /* ------ Apply to a list (roles-engine-plan.md §6.4) ------ */
+
+  // The external roles, highest first, and the external groups, by name
+  function resetListForm() {
+    var form = byId('people-list-form');
+    form.reset();
+    byId('people-list-error').textContent = '';
+    markInvalid(form.elements.emails, byId('people-list-error'), false);
+    var role = byId('people-list-role');
+    role.replaceChildren.apply(role, ROLES.filter(function (r) { return !r.internal; }).map(function (r) {
+      var option = document.createElement('option');
+      option.value = r.key;
+      option.textContent = r.label;
+      return option;
+    }));
+    var group = byId('people-list-group');
+    var none = document.createElement('option');
+    none.value = '';
+    none.textContent = 'No group';
+    var groups = (state.data.groups || []).filter(function (g) { return g.kind === 'external'; }).map(function (g) {
+      var option = document.createElement('option');
+      option.value = g.id;
+      option.textContent = g.name;
+      return option;
+    });
+    group.replaceChildren.apply(group, [none].concat(groups));
+  }
+
+  function countOf(list, one, many) {
+    var n = list ? list.length : 0;
+    return n ? n + ' ' + (n === 1 ? one : many) : '';
+  }
+
+  function submitList(event) {
+    event.preventDefault();
+    if (state.busy) return;
+    var form = event.target;
+    var error = byId('people-list-error');
+    var button = byId('people-list-submit');
+    error.textContent = '';
+    var body = {
+      emails: form.elements.emails.value,
+      role: form.elements.role.value,
+      group: form.elements.group.value || null,
+      note: form.elements.note.value
+    };
+    markInvalid(form.elements.emails, error, false);
+    setBusy(button, true);
+    request('list', body)
+      .then(function (result) {
+        if (!result.ok) {
+          error.textContent = errorMessage(result);
+          markInvalid(form.elements.emails, error, result.status === 400);
+          return;
+        }
+        var d = result.data || {};
+        var parts = [countOf(d.added, 'added', 'added'), countOf(d.raised, 'raised', 'raised'), countOf(d.joined, 'already at the role', 'already at the role')]
+          .filter(Boolean);
+        var message = (parts.length ? parts.join(', ') : 'Nothing changed') + '.';
+        // A count, not the addresses: a toast is read once and goes, and a list can run to hundreds
+        if (d.skipped && d.skipped.length) message += ' ' + d.skipped.length + ' left alone: internal people and the owner are never changed by a list.';
+        if (d.endDated && d.endDated.length) message += ' ' + d.endDated.length + (d.endDated.length === 1 ? ' already had the role with an end date, kept: extend it from Edit.' : ' already had the role with end dates, kept: extend them from Edit.');
+        closeDialog(byId('people-list'));
+        toast(message, (d.skipped && d.skipped.length) || (d.endDated && d.endDated.length) ? 'warning' : 'success');
         return load();
       })
       .catch(function () { error.textContent = COPY.offline; })
@@ -770,6 +887,7 @@
     var editGroup = target.closest('[data-edit-group]');
     if (editGroup) { openGroup(editGroup.getAttribute('data-edit-group')); return; }
     if (target.closest('[data-dialog-open="people-add"]')) { resetAddForm(); return; }
+    if (target.closest('[data-dialog-open="people-list"]')) { resetListForm(); return; }
     if (target.closest('#people-group-add')) { event.preventDefault(); openGroup(null); return; }
     if (target.closest('#people-edit-resend')) { resendInvite(); return; }
     if (target.closest('#people-edit-unlock')) { liftLockout(); return; }
@@ -799,7 +917,8 @@
   function markDefaultRole() {
     var select = byId('people-add-role');
     var wanted = select && select.getAttribute('data-default-role');
-    if (!wanted || ['community', 'team', 'guest'].indexOf(wanted) === -1) return;
+    var found = roleOf(wanted);
+    if (!found || wanted === 'owner' || wanted === 'admin') return;
     for (var i = 0; i < select.options.length; i++) {
       select.options[i].defaultSelected = select.options[i].value === wanted;
     }
@@ -811,7 +930,9 @@
     if (!root || root.dataset.peopleInit) return;
     root.dataset.peopleInit = 'true';
     state.root = root;
-    ROLE_LABELS.community = root.getAttribute('data-community-label') || ROLE_LABELS.community;
+    if (!window.bdRoles && roleOf('community')) ROLE_LABELS.community = root.getAttribute('data-community-label') || ROLE_LABELS.community;
+    fillRoleOptions(byId('people-add-role'));
+    fillRoleOptions(byId('people-edit-role'));
     markDefaultRole();
     // The group dialog has its own opener handler (it fills the form from
     // state), so the trigger loses dialog.js's attribute before the delegated
@@ -820,6 +941,7 @@
     root.addEventListener('click', onClick);
     root.addEventListener('change', onChange);
     byId('people-add-form').addEventListener('submit', submitAdd);
+    byId('people-list-form').addEventListener('submit', submitList);
     byId('people-edit-form').addEventListener('submit', submitEdit);
     byId('people-group-form').addEventListener('submit', submitGroup);
     load();

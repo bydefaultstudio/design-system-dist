@@ -796,7 +796,7 @@
   // ── Motion tokens ──
   // Read from --motion-page-* custom properties (design-system.css), cached
   // once at init. The literal fallbacks are the tokens' own values
-  // (cms/motion.md), so a site without the tokens gets the documented motion.
+  // (spec/motion.md), so a site without the tokens gets the documented motion.
   // Durations are read in milliseconds, as the tokens are written.
 
   function readToken(name) {

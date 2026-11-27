@@ -146,7 +146,7 @@ function renderBackground(config, { href, escape, icon }) {
     ? `<div class="login-slideshow-caption" aria-hidden="true"><p class="login-slideshow-title">${escape(first.title)}</p><p class="login-slideshow-text">${escape(first.text)}</p></div>`
     : '';
   const toggle = moves
-    ? `<button type="button" class="button login-slideshow-toggle" data-variant="transparent" data-icon-only aria-label="Pause slideshow">${icon('pause')}${icon('play')}</button>`
+    ? `<button type="button" class="button login-slideshow-toggle" data-variant="transparent" data-icon-only aria-label="Pause slideshow">${icon('pause')}${icon('play-filled')}</button>`
     : '';
   // No words on any slide: the panel is only the controls, which a wide
   // screen draws as a slim row rather than a caption-sized box

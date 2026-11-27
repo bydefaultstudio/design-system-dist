@@ -29,7 +29,7 @@
  * "Structure", which are notes to whoever edits the stylesheet next.
  *
  * Consumers: tools/build-search.js (the symbol index). ROADMAP wants
- * cms/tokens.md generated from the same data rather than hand-maintained; this
+ * spec/tokens.md generated from the same data rather than hand-maintained; this
  * module is where that generator would start.
  */
 

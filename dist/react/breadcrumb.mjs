@@ -1,8 +1,8 @@
 'use client';
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * <Breadcrumb> — React adapter over the Breadcrumb markup contract
- * (cms/breadcrumb.md).
+ * (spec/breadcrumb.md).
  *
  * Renders the trail as the contract's list, current page last. A trail with
  * a middle crumb also renders the hidden overflow item, which breadcrumb.js

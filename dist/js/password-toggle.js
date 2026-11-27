@@ -1,11 +1,11 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * Script Purpose: Password show/hide toggle for auth forms
  * Author: By Default Studio
  * Version: 1.2.0
  * Last Updated: 2026-09-30
  *
- * The toggle is a .field-toggle inside a .field (cms/field.md). The older
+ * The toggle is a .field-toggle inside a .field (spec/field.md). The older
  * .password-toggle / .password-field pair is accepted as an alias for one
  * release and goes at the next major.
  */

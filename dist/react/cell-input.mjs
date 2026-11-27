@@ -1,8 +1,8 @@
 'use client';
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * <CellInput> — React adapter over the Cell Input markup contract
- * (cms/cell-input.md).
+ * (spec/cell-input.md).
  *
  * Renders the block, the aria-hidden cells label and the single real
  * <input>; cell-input.js builds and paints the cells and owns the value.
@@ -90,7 +90,7 @@ export function CellInput(props) {
     warnOnce('CellInput: `format` is required — cell-input.js binds only .cell-input[data-format], so the block stays inert without it.');
   }
   if (!isStatic && !label) {
-    warnOnce('CellInput: provide `label` — the input carries the accessible name, and the generated fallback describes shape only (cms/cell-input.md).');
+    warnOnce('CellInput: provide `label` — the input carries the accessible name, and the generated fallback describes shape only (spec/cell-input.md).');
   }
 
   React.useEffect(
@@ -141,7 +141,7 @@ export function CellInput(props) {
   }
 
   var blockProps = {
-    // Format and wiring are read once at bind (cms/cell-input.md); a new
+    // Format and wiring are read once at bind (spec/cell-input.md); a new
     // shape must be a new block, so the key remounts it.
     key: (format || '') + '|' + (mode || '') + '|' + (mask ? 'masked' : ''),
     ref: blockRef,

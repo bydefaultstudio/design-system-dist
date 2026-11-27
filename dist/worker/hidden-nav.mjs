@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * hidden-nav.mjs - per-reader navigation for `accessNav: 'hidden'` and
  * `'earned'` (levels-groups-plan.md D19, §3.3; community-access-plan.md D11).
@@ -22,6 +22,7 @@
  */
 import { navVisible } from './gate.mjs';
 import { mayDownload } from './library-core.mjs';
+import { isExternalLevel } from './roles.mjs';
 
 // Elements that carry data-access for their own sake, not for a link: the
 // page's own level sits on <body>, and is never removed.
@@ -45,7 +46,7 @@ function hrefPath(href, base) {
  * it, or, under 'earned', it is a community page they could earn.
  */
 function keeps(role, scopes, level, path, mode) {
-  return navVisible(role, scopes, level, path) || (mode === 'earned' && level === 'community');
+  return navVisible(role, scopes, level, path) || (mode === 'earned' && level !== 'public' && isExternalLevel(level));
 }
 
 /**
@@ -63,7 +64,19 @@ export function hidingHandler(reader, base, mode = 'hidden') {
       // Every marked element is the link itself: a sidebar link, a card or
       // the pager. Its href names the page whose level it carries.
       const href = el.getAttribute('href') || '';
-      if (!keeps(role, scopes, level, hrefPath(href, base), mode)) el.remove();
+      if (keeps(role, scopes, level, hrefPath(href, base), mode)) return;
+      // A section's icon is its mark in the sidebar and the collapsed rail:
+      // when its contents page is above the reader only the link goes, so the
+      // section never shows a gap where its icon was. The summary beside it
+      // carries the name, so the bare icon is hidden from assistive tech.
+      if ((el.getAttribute('class') || '').split(/\s+/).includes('sidebar-nav-section-icon')) {
+        el.removeAttribute('href');
+        el.removeAttribute('aria-label');
+        el.removeAttribute('data-access');
+        el.setAttribute('aria-hidden', 'true');
+        return;
+      }
+      el.remove();
     },
   };
 }

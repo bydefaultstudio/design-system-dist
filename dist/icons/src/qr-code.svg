@@ -1,0 +1,18 @@
+<svg viewBox="0 0 24 24" fill="none" width="100%" height="100%">
+<path d="M9 22H2V15H9V22ZM5 17C4.44772 17 4 17.4477 4 18V19C4 19.5523 4.44772 20 5 20H6C6.55228 20 7 19.5523 7 19V18C7 17.4477 6.55228 17 6 17H5Z" fill-rule="evenodd" clip-rule="evenodd" fill="currentColor"/>
+<path d="M13 22H11V17H13V22Z" fill="currentColor"/>
+<path d="M17 22H15V19H17V22Z" fill="currentColor"/>
+<path d="M22 22H20V19H22V22Z" fill="currentColor"/>
+<path d="M20 19H17V17H20V19Z" fill="currentColor"/>
+<path d="M17 17H15V15H17V17Z" fill="currentColor"/>
+<path d="M22 17H20V15H22V17Z" fill="currentColor"/>
+<path d="M13 15H11V13H13V15Z" fill="currentColor"/>
+<path d="M4 13H2V11H4V13Z" fill="currentColor"/>
+<path d="M11 13H6V11H11V13Z" fill="currentColor"/>
+<path d="M15 13H13V11H15V13Z" fill="currentColor"/>
+<path d="M22 13H17V11H22V13Z" fill="currentColor"/>
+<path d="M13 11H11V6H13V11Z" fill="currentColor"/>
+<path d="M9 9H2V2H9V9ZM5 4C4.44772 4 4 4.44772 4 5V6C4 6.55228 4.44772 7 5 7H6C6.55228 7 7 6.55228 7 6V5C7 4.44772 6.55228 4 6 4H5Z" fill-rule="evenodd" clip-rule="evenodd" fill="currentColor"/>
+<path d="M22 9H15V2H22V9ZM18 4C17.4477 4 17 4.44772 17 5V6C17 6.55228 17.4477 7 18 7H19C19.5523 7 20 6.55228 20 6V5C20 4.44772 19.5523 4 19 4H18Z" fill-rule="evenodd" clip-rule="evenodd" fill="currentColor"/>
+<path d="M13 4H11V2H13V4Z" fill="currentColor"/>
+</svg>

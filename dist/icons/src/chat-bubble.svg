@@ -1,0 +1,6 @@
+<svg viewBox="0 0 24 24" fill="none" width="100%" height="100%">
+<path d="M9 13H7V11H9V13Z" fill="currentColor"/>
+<path d="M13 13H11V11H13V13Z" fill="currentColor"/>
+<path d="M17 13H15V11H17V13Z" fill="currentColor"/>
+<path d="M15 5C18.3137 5 21 7.68629 21 11V13C21 16.2102 18.4789 18.8316 15.3086 18.9922L15 19H3V11C3 7.68629 5.68629 5 9 5H15ZM9 7C6.79086 7 5 8.79086 5 11V17H15C17.2091 17 19 15.2091 19 13V11C19 8.79086 17.2091 7 15 7H9Z" fill-rule="evenodd" clip-rule="evenodd" fill="currentColor"/>
+</svg>

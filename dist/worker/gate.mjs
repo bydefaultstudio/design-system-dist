@@ -1,4 +1,4 @@
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * gate.mjs — the pure half of the access gate: route lists and predicates.
  *
@@ -35,10 +35,18 @@
  * file it did not is a copy nobody chose to ship. Fail closed.
  */
 import { LEVELS, normaliseRole } from './auth-schema.mjs';
+import {
+  LEVEL_RANK, ROLE_LABELS, isRole, isExternalLevel, isInternalLevel, isInternalRole, isLevel, lowestInternal, memberKindFor, opensByRank, scopeKindFor,
+} from './roles.mjs';
+
+/** A label as HTML text: brand.json allows no markup in one, so this is belt and braces. */
+function escapeText(value) {
+  return String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 import { ENGINE_PATHS, SITE } from './site.mjs';
 import { FILES_PREFIX, parseFilesPath } from './library-core.mjs';
 
-export { normaliseRole, ENGINE_PATHS };
+export { normaliseRole, ENGINE_PATHS, memberKindFor, scopeKindFor };
 
 // The login page, the same on every site (engine-paths.mjs, PD-2). A site
 // that still passes createGate a loginPath of its own is warned and
@@ -178,10 +186,23 @@ export function isConflictCopyPath(pathname) {
  * D11): public and community pages only, so it opens at community. The full
  * index under /pagefind/ and /search-index/symbols.json stays team.
  */
-const COMMUNITY_SEARCH_PREFIXES = ['/pagefind-community/', '/search-index/community/'];
-const COMMUNITY_SEARCH_ENTRY = Object.freeze({ level: 'community', section: '', type: '' });
+// One pair per external level since 8.8.0 (roles-engine-plan.md E4):
+// /pagefind-<level>/ and /search-index/<level>/, each opening at its level.
+const SEARCH_LEVEL = /^\/(?:pagefind-([a-z][a-z0-9-]*)|search-index\/([a-z][a-z0-9-]*))\//;
+function searchEntry(pathname) {
+  const m = SEARCH_LEVEL.exec(pathname);
+  const level = m && (m[1] || m[2]);
+  return level && level !== 'public' && isExternalLevel(level) ? levelEntry(level) : null;
+}
 
-const LEVEL_ENTRIES = new Map(LEVELS.map((level) => [level, Object.freeze({ level, section: '', type: '' })]));
+const LEVEL_ENTRIES = new Map();
+/** A frozen entry for a level, or undefined for anything that is not one of this site's levels. */
+function levelEntry(level) {
+  if (!isLevel(level)) return undefined;
+  let entry = LEVEL_ENTRIES.get(level);
+  if (!entry) LEVEL_ENTRIES.set(level, (entry = Object.freeze({ level, section: '', type: '' })));
+  return entry;
+}
 
 /**
  * A file's own level, where it has one (community-access-plan.md D13 and the
@@ -212,12 +233,12 @@ function fileEntry(pathname, pages, sections) {
     const level = target.kind === 'thumb'
       ? (library.thumbs instanceof Map ? library.thumbs.get(target.key) : undefined)
       : fileIndexLevel(library.index.get(target.lookup), library);
-    return LEVEL_ENTRIES.get(level) || null;
+    return levelEntry(level) || null;
   }
   const section = fileSectionOf(pathname);
   if (section === '' || !Object.prototype.hasOwnProperty.call(sections, section)) return null;
   const index = pages.get(`/${section}/index.html`);
-  return index && !isClosedToGroups(index.level, 'external') ? LEVEL_ENTRIES.get(index.level) : null;
+  return index && !isClosedToGroups(index.level, 'external') ? levelEntry(index.level) : null;
 }
 
 export function isUnmappedSectionPage(pathname, pages = SITE.pages, sections = SITE.sections) {
@@ -229,12 +250,14 @@ export function isUnmappedSectionPage(pathname, pages = SITE.pages, sections = S
 export function pageEntry(pathname, pages = SITE.pages, sections = SITE.sections) {
   const entry = pages.get(pathname) || fileEntry(pathname, pages, sections);
   if (entry) return entry;
-  if (COMMUNITY_SEARCH_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return COMMUNITY_SEARCH_ENTRY;
+  const search = searchEntry(pathname);
+  if (search) return search;
   // Under 'locked' isPublicPath opens them before this is asked.
   if (LLM_FILES.has(pathname)) return llmEntry(pages);
   if (isSourcePath(pathname)) return UNMAPPED_SOURCE_ENTRY;
   if (isUnmappedSectionPage(pathname, pages, sections)) return UNMAPPED_PAGE_ENTRY;
-  return DEFAULT_ENTRY;
+  // The lowest internal level: `team` on every site that has a team
+  return lowestInternal() === DEFAULT_ENTRY.level ? DEFAULT_ENTRY : levelEntry(lowestInternal());
 }
 
 /**
@@ -254,9 +277,10 @@ const llmEntries = new WeakMap();
 function llmEntry(pages) {
   let entry = llmEntries.get(pages);
   if (entry) return entry;
-  let level = 'community';
+  // Never below the lowest signed-in level (community on By Default)
+  let level = LEVELS[1];
   for (const [pathname, e] of pages) {
-    if (LLM_SECTIONS.has(e.section) && !INDEX_SHAPE.test(pathname) && LEVELS.indexOf(e.level) > LEVELS.indexOf(level)) level = e.level;
+    if (LLM_SECTIONS.has(e.section) && !INDEX_SHAPE.test(pathname) && LEVEL_RANK[e.level] > LEVEL_RANK[level]) level = e.level;
   }
   entry = Object.freeze({ level, section: '', type: '' });
   llmEntries.set(pages, entry);
@@ -295,7 +319,7 @@ export function indexShows(pathname, pages = SITE.pages, accessNav = SITE.access
   if (!shown) {
     shown = new Set();
     for (const [p, e] of pages) {
-      if (!INDEX_SHAPE.test(p) && (e.level === 'public' || e.level === 'community')) shown.add(sectionOf(p));
+      if (!INDEX_SHAPE.test(p) && isExternalLevel(e.level)) shown.add(sectionOf(p));
     }
     SECTION_SHOWS.set(pages, shown);
   }
@@ -385,39 +409,21 @@ export function isOwner(role) {
 export const GROUP_KINDS = Object.freeze(['external', 'internal']);
 
 /**
- * The kind of group a role may join: guests and community members external,
- * team members and admins internal. An owner opens everything, so no group
- * is for them (null).
+ * The kind of group a role may join (memberKindFor) and the kind whose grants
+ * the gate reads for it (scopeKindFor) live in roles.mjs, by the role's
+ * `internal` flag and rank (roles-engine-plan.md §1.3).
  */
-export function memberKindFor(role) {
-  if (role === 'guest' || role === 'community') return 'external';
-  if (role === 'team' || role === 'admin') return 'internal';
-  return null;
-}
-
-/**
- * The kind of group whose grants change what a role opens, so the only kind
- * the gate ever reads for them: a guest's external groups (community pages),
- * a team member's internal ones (admin pages). A community member already
- * opens every community page and an admin every admin page, so neither
- * costs a database read (null).
- */
-export function scopeKindFor(role) {
-  if (role === 'guest') return 'external';
-  if (role === 'team') return 'internal';
-  return null;
-}
 
 /**
  * The levels a group of this kind can never open (D17, D23, and
  * community-access-plan.md D8, D9). An owner page runs the engine: closed to
  * every group. An internal group stops there. An external group reaches
- * public and community pages only, so a team page stays internal whatever an
- * outsider's groups say.
+ * public and the external roles' levels only, so an internal page stays
+ * internal whatever an outsider's groups say.
  */
 export function isClosedToGroups(level, kind = 'external') {
   if (kind === 'internal') return level === 'owner';
-  return level !== 'public' && level !== 'community';
+  return !isExternalLevel(level);
 }
 
 /**
@@ -440,22 +446,26 @@ export function isClosedToGroups(level, kind = 'external') {
 export function authorise(role, pathname, pages = SITE.pages, sections = SITE.sections) {
   if (isConflictCopyPath(pathname)) return 'deny';
   const entry = pageEntry(pathname, pages, sections);
-  if (entry.level === 'public') return 'allow';
+  const level = entry.level;
+  if (level === 'public') return 'allow';
   if (role === 'owner') return 'allow';
+  // A level this site does not have, or a role it does not, opens for no one but the owner
+  if (!isLevel(level) || !isRole(role)) return 'deny';
+  if (opensByRank(role, level)) return 'allow';
   // An owner page runs the engine and the deployment (D23): closed to a
-  // client's admin as much as to anyone else.
-  if (entry.level === 'owner') return 'deny';
-  if (role === 'admin') return 'allow';
-  // Only a mapped admin page: an unmapped source is admin by default
+  // client's admin as much as to anyone else, and to every group.
+  if (level === 'owner') return 'deny';
+  // An internal reader below an internal page: an internal group may open it,
+  // a mapped page only. An unmapped source is admin by default
   // (UNMAPPED_SOURCE_ENTRY), and no group ever names one.
-  if (entry.level === 'admin') return role === 'team' && pages.has(pathname) ? 'grant' : 'deny';
-  if (role === 'team') return 'allow';
-  if (entry.level === 'community' && role === 'community') return 'allow';
-  if (isIndexPath(pathname, sections, pages)) return indexShows(pathname, pages) ? 'allow' : 'deny';
-  if (role !== 'guest') return 'deny';
-  // A section's files take its level (fileEntry), so a community section's
-  // file asks the guest's groups like a community page does.
-  return entry.level === 'community' ? 'grant' : 'deny';
+  if (isInternalRole(role)) return isInternalLevel(level) && pages.has(pathname) ? 'grant' : 'deny';
+  // An outsider never reaches an internal page by any group (D9). The section
+  // indexes keep their rule: an outsider opens one at the default level when
+  // the section shows them a page.
+  if ((level === lowestInternal() || !isInternalLevel(level)) && isIndexPath(pathname, sections, pages)) return indexShows(pathname, pages) ? 'allow' : 'deny';
+  if (isInternalLevel(level)) return 'deny';
+  // An outsider below an external page or a section's file: their external groups may open it
+  return 'grant';
 }
 
 /**
@@ -467,10 +477,14 @@ export function authorise(role, pathname, pages = SITE.pages, sections = SITE.se
 export function lockedFor(html, level) {
   // 'hidden' is accessNav 'earned' refusing a page the reader may not even
   // see: its wording names neither the page nor its level.
-  const shown = ['community', 'admin', 'owner', 'hidden'].includes(level) ? level : 'team';
+  // Any other external level (Pro) takes the community wording with its own
+  // label: "This page is for Pro members." (roles-engine-plan.md §5)
+  const other = level !== 'public' && level !== 'community' && isExternalLevel(level);
+  const shown = other ? 'community' : ['community', 'admin', 'owner', 'hidden'].includes(level) ? level : 'team';
+  const relabel = (text) => (other ? text.split(SITE.communityLabel).join(escapeText(ROLE_LABELS[level])) : text);
   return html
     .replace('data-locked-level=""', `data-locked-level="${shown}"`)
-    .replace(/<span data-for="(community|team|admin|owner|hidden)">([^<]*)<\/span>/g, (match, who, text) => (who === shown ? text : ''));
+    .replace(/<span data-for="(community|team|admin|owner|hidden)">([^<]*)<\/span>/g, (match, who, text) => (who === shown ? relabel(text) : ''));
 }
 
 /**
@@ -497,13 +511,13 @@ export function navVisible(role, scopes, level, pathname) {
   if (level === 'public') return true;
   if (!role) return false;
   if (role === 'owner') return true;
+  if (!isLevel(level)) return false;
+  if (opensByRank(role, level)) return true;
   if (level === 'owner') return false;
-  if (role === 'admin') return true;
-  if (level === 'admin') return role === 'team' && scopeAdmits(scopes, pathname);
-  if (role === 'team') return true;
-  if (level === 'community' && role === 'community') return true;
-  if (isIndexPath(pathname)) return indexShows(pathname);
-  return role === 'guest' && level === 'community' && scopeAdmits(scopes, pathname);
+  if (isInternalRole(role)) return isInternalLevel(level) && scopeAdmits(scopes, pathname);
+  if ((level === lowestInternal() || !isInternalLevel(level)) && isIndexPath(pathname)) return indexShows(pathname);
+  if (isInternalLevel(level)) return false;
+  return scopeAdmits(scopes, pathname);
 }
 
 /** The output folder a path sits in - "tools" for /tools/x.html, '' at the root. */

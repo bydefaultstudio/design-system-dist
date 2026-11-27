@@ -1,8 +1,8 @@
 'use client';
-/* @bydefaultstudio/design-system v8.7.0 */
+/* @bydefaultstudio/design-system v8.8.0 */
 /**
  * <DatePicker> — React adapter over the Date Picker markup contract
- * (cms/date-picker.md).
+ * (spec/date-picker.md).
  *
  * Renders the root, the field(s) with their native <input type="date">,
  * the calendar trigger and the empty panel; date-picker.js builds the grid
@@ -150,7 +150,7 @@ export function DatePicker(props) {
   );
 
   var rootProps = {
-    // Mode, months and the rules are read once at bind (cms/date-picker.md);
+    // Mode, months and the rules are read once at bind (spec/date-picker.md);
     // a new shape must be a new block, so the key remounts it.
     key: bindKey,
     ref: ref,
